@@ -1,0 +1,21 @@
+
+syntax: regexp
+^brackitdb-server/target$
+syntax: regexp
+^brackitdb-driver/target$
+syntax: regexp
+^brackitdb-server/\.settings$
+syntax: regexp
+^brackitdb-server/\.classpath$
+syntax: regexp
+^brackitdb-server/\.project$
+syntax: regexp
+^brackitdb-driver/\.project$
+syntax: regexp
+^brackitdb-driver/\.classpath$
+syntax: regexp
+^brackitdb-driver/\.settings$
+syntax: regexp
+^\.project$
+syntax: regexp
+^\.settings$
