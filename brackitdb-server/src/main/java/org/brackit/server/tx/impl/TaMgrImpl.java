@@ -78,11 +78,10 @@ public class TaMgrImpl implements TxMgr {
 		this.txTable = new TxTable(this);
 		this.TSNSequence = new AtomicLong(0);
 
-		maxTransactions = Cfg.asInt(TxMgr.MAX_TRANSACTIONS, 100);
+		maxTransactions = Cfg.asInt(TxMgr.MAX_TX, 100);
 		timeout = Cfg.asInt(TxMgr.LOCK_WAIT_TIMEOUT, 20000);
 
-		this.maxTransactionRuntime = Cfg.asLong(TxMgr.MAX_TRANSACTION_RUNTIME,
-				900000);
+		this.maxTransactionRuntime = Cfg.asLong(TxMgr.MAX_TX_RUNTIME, 900000);
 		this.patrol = new TxPatrol(this, Cfg.asInt(
 				TxMgr.DEADLOCK_DETECTION_INTERVAL, 300));
 		this.patrol.start();

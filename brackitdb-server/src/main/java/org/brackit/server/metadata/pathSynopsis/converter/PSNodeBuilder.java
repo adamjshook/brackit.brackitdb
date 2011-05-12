@@ -45,7 +45,7 @@ public class PSNodeBuilder extends PSNodeRecordAccess {
 			PathSynopsis ps, byte[] key, byte[] value) throws DocumentException {
 		PathSynopsisNode parent = null;
 		int[] info = decode(value[0]);
-		int pcr = Calc.toInt(key);
+		int pcr = Calc.toUIntVar(key);
 		int type = info[0];
 		int vocID = Calc.toInt(value, 1, info[1]);
 

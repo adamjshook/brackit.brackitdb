@@ -51,7 +51,7 @@ public class PageContextFactory {
 	private static final Logger log = Logger
 			.getLogger(PageContextFactory.class);
 
-	public static int type = Cfg.asInt(Index.PAGE_VERSION, 2);
+	public static int type = Cfg.asInt(Index.PAGE_VERSION, 1);
 
 	protected final BufferMgr bufferMgr;
 

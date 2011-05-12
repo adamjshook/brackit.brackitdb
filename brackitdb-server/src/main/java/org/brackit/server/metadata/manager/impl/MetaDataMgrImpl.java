@@ -126,7 +126,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		collectionCache = new HookedCache<DocID, DBCollection<?>>();
 		blobCache = new HookedCache<DocID, BlobHandle>();
 		defaultDictionary = new DictionaryMgr03(bufferMgr);
-		int maxTransactions = Cfg.asInt(TxMgr.MAX_TRANSACTIONS, 100);
+		int maxTransactions = Cfg.asInt(TxMgr.MAX_TX, 100);
 		int maxLocks = Cfg.asInt(TxMgr.MAX_LOCKS, 200000);
 		mls = new UnifiedMetaLockService("DocumentLockService", maxLocks,
 				maxTransactions);

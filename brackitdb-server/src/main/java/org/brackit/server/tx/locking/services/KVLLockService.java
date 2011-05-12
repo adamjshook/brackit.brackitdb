@@ -52,8 +52,8 @@ public class KVLLockService extends GenericLockServiceImpl<URIX.Mode> implements
 	private static final Logger log = Logger.getLogger(KVLLockService.class);
 
 	public KVLLockService(String name) {
-		this(name, Cfg.asInt(TxMgr.MAX_LOCKS, 20000), Cfg.asInt(
-				TxMgr.MAX_TRANSACTIONS, 100));
+		this(name, Cfg.asInt(TxMgr.MAX_LOCKS, 20000), Cfg.asInt(TxMgr.MAX_TX,
+				100));
 	}
 
 	public KVLLockService(String name, int maxLocks, int maxTransactions) {

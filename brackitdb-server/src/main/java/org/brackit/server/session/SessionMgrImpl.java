@@ -85,8 +85,9 @@ public final class SessionMgrImpl implements SessionMgr, InfoContributor {
 	public SessionMgrImpl(TxMgr taMgr) {
 		this.taMgr = taMgr;
 		this.scheduler = new JobScheduler();
-		maxConnections = Cfg.asInt(MAX_CONNECTIONS, 25);
-		connectionTimeout = Cfg.asInt(CONNECTION_TIMEOUT, 30000);
+		maxConnections = Cfg.asInt(MAX_CONNECTIONS, DEFAULT_MAX_CONNECTIONS);
+		connectionTimeout = Cfg.asInt(CONNECTION_TIMEOUT,
+				DEFAULT_CONNECTION_TIMEOUT);
 		sessions = new Session[maxConnections];
 		ProcedureUtil.register(ListConnections.class, this);
 	}

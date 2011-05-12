@@ -59,31 +59,22 @@ public final class MetaLockServiceImpl implements
 	private final EdgeLockService edgeLockService;
 
 	public MetaLockServiceImpl() {
-		this(MetaLockServiceImpl.class.getName(), Cfg.asInt(TxMgr.MAX_LOCKS),
-				Cfg.asInt(TxMgr.MAX_TRANSACTIONS));
+		this(MetaLockServiceImpl.class.getName(), Cfg.asInt(TxMgr.MAX_LOCKS,
+				TxMgr.DEFAULT_MAX_LOCKS), Cfg.asInt(TxMgr.MAX_TX,
+				TxMgr.DEFAULT_MAX_TX));
 	}
 
 	public MetaLockServiceImpl(String name, int maxLocks, int maxTransactions) {
 		this.name = name;
-
-		boolean useLevelLockEscalation = Cfg.asBool(USE_LEVEL_LOCK_ESCALATION);
-		boolean simulateSequentialLabeling = Cfg
-				.asBool(SIMULATE_SEQUENTIAL_LABELING);
-
-		if (simulateSequentialLabeling) {
-			nodeLockService = new NodeLockServiceImpl<TaDOM3Plus.Mode>(
-					new TaDOM3Plus(), name + "#node", maxLocks, maxTransactions);
-		} else {
-			nodeLockService = new NodeLockServiceImpl<TaDOM3Plus.Mode>(
-					new TaDOM3Plus(), name + "#node", maxLocks, maxTransactions);
-		}
+		this.nodeLockService = new NodeLockServiceImpl<TaDOM3Plus.Mode>(
+				new TaDOM3Plus(), name + "#node", maxLocks, maxTransactions);
 
 		edgeLockService = new EdgeLockServiceImpl<RUX.Mode>(
 				new RUXEdgeLockProtocol(), name + "#edge", maxLocks,
 				maxTransactions);
 
-		this.escalationGain = Cfg.asDouble(LOCK_ESCALATION_GAIN);
-		this.maxEscalationCount = Cfg.asInt(LOCK_MAX_ESCALATION_COUNT);
+		this.escalationGain = Cfg.asDouble(LOCK_ESCALATION_GAIN, 2);
+		this.maxEscalationCount = Cfg.asInt(LOCK_MAX_ESCALATION_COUNT, 1920);
 	}
 
 	public String getName() {

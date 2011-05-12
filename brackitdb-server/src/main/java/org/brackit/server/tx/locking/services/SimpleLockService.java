@@ -109,8 +109,8 @@ public class SimpleLockService<E> extends GenericLockServiceImpl<URIX.Mode> {
 	}
 
 	public SimpleLockService(String name) {
-		this(name, Cfg.asInt(TxMgr.MAX_LOCKS, 200000), Cfg.asInt(
-				TxMgr.MAX_TRANSACTIONS, 100));
+		this(name, Cfg.asInt(TxMgr.MAX_LOCKS, 200000), Cfg.asInt(TxMgr.MAX_TX,
+				100));
 	}
 
 	public SimpleLockService(String name, int maxLocks, int maxTransactions) {

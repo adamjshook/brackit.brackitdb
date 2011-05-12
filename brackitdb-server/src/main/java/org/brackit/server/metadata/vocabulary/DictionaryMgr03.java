@@ -93,7 +93,7 @@ public class DictionaryMgr03 implements DictionaryMgr, PreCommitHook {
 
 	public synchronized int create(Tx transaction) throws DocumentException {
 		try {
-			vocIdxNo = index.createIndex(transaction, -1, Field.INTEGER,
+			vocIdxNo = index.createIndex(transaction, -1, Field.UINTEGER,
 					Field.STRING, true, true, -1).value();
 			transaction.addPreCommitHook(this);
 			return vocIdxNo;
@@ -112,7 +112,7 @@ public class DictionaryMgr03 implements DictionaryMgr, PreCommitHook {
 
 			if (iterator.getKey() != null) {
 				do {
-					int vocID = Calc.toInt(iterator.getKey());
+					int vocID = Calc.toUIntVar(iterator.getKey());
 					String name = Calc.toString(iterator.getValue());
 					vocabulary.add(name);
 					minVolatileVocID = vocID + 1;
@@ -131,7 +131,7 @@ public class DictionaryMgr03 implements DictionaryMgr, PreCommitHook {
 		int vocIDSize = vocabulary.size();
 
 		for (int vocID = minVolatileVocID; vocID < vocIDSize; vocID++) {
-			byte[] vocIDBytes = Calc.fromInt(vocID);
+			byte[] vocIDBytes = Calc.fromUIntVar(vocID);
 			String string = vocabulary.resolve(vocID);
 
 			if (string != null) {

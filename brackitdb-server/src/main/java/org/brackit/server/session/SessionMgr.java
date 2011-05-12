@@ -51,6 +51,10 @@ public interface SessionMgr {
 	public static final String FTP_PORT = "org.brackit.server.connection.ftpPort";
 
 	public static final String FTP_MAX_CLIENTS = "org.brackit.server.connection.ftpMaxClients";
+	
+	public static final int DEFAULT_MAX_CONNECTIONS = 50;
+	
+	public static final int DEFAULT_CONNECTION_TIMEOUT = 50;
 
 	public SessionID login() throws SessionException;
 

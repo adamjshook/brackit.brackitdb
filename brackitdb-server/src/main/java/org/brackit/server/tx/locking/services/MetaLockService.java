@@ -37,6 +37,4 @@ public interface MetaLockService<T extends TreeLockMode<T>> extends
 		NodeLockService<T>, EdgeLockService {
 	public final static String LOCK_MAX_ESCALATION_COUNT = "org.brackit.server.tx.taMgr.locking.services.metaLockService.lockMaxEscalationCount";
 	public final static String LOCK_ESCALATION_GAIN = "org.brackit.server.tx.taMgr.locking.services.metaLockService.lockEscalationGain";
-	public final static String USE_LEVEL_LOCK_ESCALATION = "org.brackit.server.tx.taMgr.locking.services.metaLockService.useLevelLockEscalation";
-	public final static String SIMULATE_SEQUENTIAL_LABELING = "org.brackit.server.tx.taMgr.locking.services.metaLockService.simulateSequentialLabeling";
 }

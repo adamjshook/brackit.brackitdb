@@ -48,6 +48,7 @@ public final class Server {
 	public static final int STOP_BYTE = 123;
 	public static final int PING_BYTE = 012;
 	public static final int PONG_BYTE = 210;
+	public static final int DEFAULT_DB_PORT = 24201;
 
 	private static class StartOption {
 		boolean install;
@@ -294,7 +295,7 @@ public final class Server {
 
 	private void stopSingleton() throws ServerException {
 		try {
-			int dbPort = Cfg.asInt(SessionMgr.DB_PORT);
+			int dbPort = Cfg.asInt(SessionMgr.DB_PORT, DEFAULT_DB_PORT);
 			boolean serverStopped = false;
 			Socket socket = new Socket("localhost", dbPort);
 			OutputStream out = socket.getOutputStream();
@@ -322,7 +323,7 @@ public final class Server {
 	}
 
 	private void makeSingleton() throws ServerException {
-		int dbPort = Cfg.asInt(SessionMgr.DB_PORT);
+		int dbPort = Cfg.asInt(SessionMgr.DB_PORT, DEFAULT_DB_PORT);
 		SingletonThread singletonThread = new SingletonThread(dbPort);
 		singletonThread.start();
 
@@ -332,7 +333,7 @@ public final class Server {
 	}
 
 	private void checkSingleton() throws ServerException {
-		int dbPort = Cfg.asInt(SessionMgr.DB_PORT);
+		int dbPort = Cfg.asInt(SessionMgr.DB_PORT, DEFAULT_DB_PORT);
 		SingletonThread singletonThread = new SingletonThread(dbPort);
 		singletonThread.start();
 
@@ -344,7 +345,7 @@ public final class Server {
 	private static int check() {
 		Socket socket;
 
-		int dbPort = Cfg.asInt(SessionMgr.DB_PORT);
+		int dbPort = Cfg.asInt(SessionMgr.DB_PORT, DEFAULT_DB_PORT);
 		try {
 			socket = new Socket("localhost", dbPort);
 			socket.setSoTimeout(1000);
