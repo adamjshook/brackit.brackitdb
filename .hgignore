@@ -19,3 +19,9 @@ syntax: regexp
 ^\.project$
 syntax: regexp
 ^\.settings$
+syntax: regexp
+^brackitdb-server/logfiles$
+syntax: regexp
+^brackitdb-server/log$
+syntax: regexp
+^brackitdb-server/container$
