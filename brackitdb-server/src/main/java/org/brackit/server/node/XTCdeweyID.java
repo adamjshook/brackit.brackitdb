@@ -29,6 +29,7 @@ package org.brackit.server.node;
 
 import java.util.Arrays;
 
+import org.brackit.server.store.page.bracket.SimpleDeweyID;
 import org.brackit.xquery.xdm.DocumentException;
 
 /**
@@ -38,7 +39,7 @@ import org.brackit.xquery.xdm.DocumentException;
  * @author Sebastian Baechle
  * 
  */
-public class XTCdeweyID implements java.io.Serializable, Comparable<XTCdeweyID> {
+public class XTCdeweyID implements java.io.Serializable, Comparable<XTCdeweyID>, SimpleDeweyID {
 
 	public final static String documentSeparator = ":";
 	public final static String divisionSeparator = ".";
