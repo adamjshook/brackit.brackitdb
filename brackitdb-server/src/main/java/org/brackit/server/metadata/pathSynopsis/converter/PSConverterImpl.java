@@ -67,7 +67,7 @@ public class PSConverterImpl implements PSConverter {
 	@Override
 	public PathSynopsis create(Tx tx, int cntNo) throws ServerException {
 		try {
-			PageID psIdxNo = index.createIndex(tx, cntNo, Field.INTEGER,
+			PageID psIdxNo = index.createIndex(tx, cntNo, Field.UINTEGER,
 					Field.PS_REC, true, true, -1);
 			PathSynopsis ps = new PathSynopsis(psIdxNo.value());
 

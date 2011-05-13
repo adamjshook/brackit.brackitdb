@@ -52,17 +52,13 @@ public class UnifiedMetaLockService extends
 	private int maxEscalationCount = -1;
 
 	public UnifiedMetaLockService() {
-		this(UnifiedMetaLockService.class.getName(),
-				Cfg.asInt(TxMgr.MAX_LOCKS), Cfg.asInt(TxMgr.MAX_TRANSACTIONS));
+		this(UnifiedMetaLockService.class.getName(), Cfg.asInt(TxMgr.MAX_LOCKS,
+				TxMgr.DEFAULT_MAX_LOCKS), Cfg.asInt(TxMgr.MAX_TX,
+				TxMgr.DEFAULT_MAX_TX));
 	}
 
 	public UnifiedMetaLockService(String name, int maxLocks, int maxTransactions) {
 		super(new TaDOM3Plus(), name, maxLocks, maxTransactions);
-		boolean useLevelLockEscalation = Cfg.asBool(USE_LEVEL_LOCK_ESCALATION,
-				false);
-		boolean simulateSequentialLabeling = Cfg.asBool(
-				SIMULATE_SEQUENTIAL_LABELING, false);
-
 		this.escalationGain = Cfg.asDouble(LOCK_ESCALATION_GAIN, 2);
 		this.maxEscalationCount = Cfg.asInt(LOCK_MAX_ESCALATION_COUNT, 1920);
 	}

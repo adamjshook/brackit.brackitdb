@@ -207,8 +207,8 @@ public class DeadlockDetector {
 			DateFormat df = new SimpleDateFormat("MM-dd-HHmm-ssSS");
 			String timestamp = df.format(now);
 
-			File logFile = new File(Cfg.asString("dirLogFiles") + "/deadlock."
-					+ timestamp + ".log");
+			File logFile = new File(Cfg.asString(TxMgr.DEADLOCK_LOG_DIR, "log")
+					+ "/deadlock." + timestamp + ".log");
 			BufferedWriter out = new BufferedWriter(new PrintWriter(
 					new FileOutputStream(logFile)));
 

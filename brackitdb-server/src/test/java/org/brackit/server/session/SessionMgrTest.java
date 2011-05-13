@@ -60,7 +60,8 @@ public class SessionMgrTest {
 		List<Session> staleSessions = new ArrayList<Session>();
 		List<Tx> staleTransactions = new ArrayList<Tx>();
 		List<Session> activeSessions = new ArrayList<Session>();
-		int maxConnections = Cfg.asInt(SessionMgr.MAX_CONNECTIONS);
+		int maxConnections = Cfg.asInt(SessionMgr.MAX_CONNECTIONS,
+				SessionMgr.DEFAULT_MAX_CONNECTIONS);
 
 		for (int i = 0; i < maxConnections; i++) {
 			final SessionID sessionID = sm.login();
@@ -74,7 +75,8 @@ public class SessionMgrTest {
 		}
 
 		try {
-			Thread.sleep(Cfg.asInt(SessionMgr.CONNECTION_TIMEOUT) + 10);
+			Thread.sleep(Cfg.asInt(SessionMgr.CONNECTION_TIMEOUT,
+					SessionMgr.DEFAULT_CONNECTION_TIMEOUT) + 10);
 		} catch (InterruptedException e) {
 		}
 
