@@ -230,9 +230,9 @@ public class BracketPage extends BasePage {
 
 	/**
 	 * Returns the low key (i.e. the DeweyID of the first node stored in this
-	 * page).
+	 * page). If this page is empty, null will be returned.
 	 * 
-	 * @return the low key
+	 * @return the low key or null, if the page is empty
 	 */
 	public XTCdeweyID getLowKey() {
 
@@ -253,8 +253,232 @@ public class BracketPage extends BasePage {
 		return new XTCdeweyID(docID, lowIDBytes);
 	}
 
+	/**
+	 * Returns the encoded low key (i.e. the DeweyID of the first node stored in
+	 * this page). If this page is empty, null will be returned.
+	 * 
+	 * @return the encoded low key (as byte array) or null, if the page is empty
+	 */
+	public byte[] getLowKeyBytes() {
+
+		if (getRecordCount() == 0) {
+			return null;
+		}
+
+		int lowIDLength = page[LOW_KEY_LENGTH_FIELD_NO] & 255;
+
+		// load lowID from page
+		byte[] lowIDBytes = new byte[lowIDLength];
+		System.arraycopy(page, LOW_KEY_START_FIELD_NO, lowIDBytes, 0,
+				lowIDLength);
+
+		return lowIDBytes;
+	}
+
 	private BracketKey.Type getLowKeyType() {
 		return BracketKey.Type.getByPhysicalValue(page[LOW_KEY_TYPE_FIELD_NO]);
 	}
 
+	/**
+	 * Returns the offset where the next value reference is located.
+	 * 
+	 * @param keyOffset
+	 *            the key offset to start the search
+	 * @return offset of next value reference or 0, if the given key offset is
+	 *         not pointing to the key area
+	 */
+	private int getNextValueRefOffset(int keyOffset) {
+
+		// if key offset belongs to lowID
+		if (keyOffset == LOW_KEY_OFFSET) {
+			keyOffset = getKeyAreaStartOffset();
+			if (getLowKeyType().getDataReferenceLength() > 0) {
+				return keyOffset;
+			}
+		}
+
+		// if key offset is pointing to the end of the key area
+		if (keyOffset >= getKeyAreaEndOffset()) {
+			return 0;
+		}
+
+		while (!BracketKey.hasDataReference(page, keyOffset)) {
+			keyOffset += BracketKey.PHYSICAL_LENGTH;
+		}
+		keyOffset += BracketKey.PHYSICAL_LENGTH;
+
+		return keyOffset;
+	}
+
+	/**
+	 * Returns the length of the value beginning at 'valueOffset'.
+	 * 
+	 * @param valueOffset
+	 *            the offset where the value starts
+	 * @param inclusiveLengthField
+	 *            true if the length of the length field shall be added to the
+	 *            result
+	 * @return value length (in bytes)
+	 */
+	private int getValueLength(int valueOffset,
+			final boolean inclusiveLengthField) {
+		return getValueLength(valueOffset, inclusiveLengthField, page);
+	}
+
+	/**
+	 * Returns the length of the value beginning at 'valueOffset'.
+	 * 
+	 * @param valueOffset
+	 *            the offset where the value starts
+	 * @param inclusiveLengthField
+	 *            true if the length of the length field shall be added to the
+	 *            result
+	 * @param storage
+	 *            the byte array to read from (usually the page array)
+	 * @return value length (in bytes)
+	 */
+	protected static int getValueLength(int valueOffset,
+			final boolean inclusiveLengthField, byte[] storage) {
+
+		int result = 0;
+
+		int valueLength = storage[valueOffset++] & 255;
+		if (inclusiveLengthField) {
+			result++;
+		}
+
+		if (valueLength == 255) {
+
+			int byte1 = storage[valueOffset++] & 255;
+			int byte2 = storage[valueOffset++] & 255;
+
+			if (byte1 == 255 && byte2 == 255) {
+				valueLength = PageID.getSize();
+			} else {
+				valueLength = (byte1 << 8) | byte2;
+			}
+
+			if (inclusiveLengthField) {
+				result += 2;
+			}
+
+		}
+
+		result += valueLength;
+
+		return result;
+	}
+
+	/**
+	 * Returns the value for the key beginning at 'keyOffset'.
+	 * 
+	 * @param keyOffset
+	 *            the offset where the key starts
+	 * @return value
+	 */
+	public BracketValue getValue(int keyOffset) {
+
+		if (keyOffset == BEFORE_LOW_KEY_OFFSET) {
+			return new BracketValue(false, null);
+		}
+
+		// look for next value reference
+		int valueRefOffset = getNextValueRefOffset(keyOffset);
+
+		// load value part
+		byte[][] valuePart = getValueParts(valueRefOffset);
+
+		// check if externalized
+		boolean externalized = (valuePart[0].length == 3
+				&& valuePart[0][1] == (byte) 255 && valuePart[0][2] == (byte) 255);
+
+		BracketValue result = new BracketValue(externalized, valuePart[1]);
+
+		return result;
+	}
+
+	/**
+	 * Returns the value parts (valueLength field and value field) for the value
+	 * referenced at 'valueRefOffset'.
+	 * 
+	 * @param valueRefOffset
+	 *            the offset where the reference to the value starts
+	 * @return value part (first element: valueLength field, second element:
+	 *         value field)
+	 */
+	private byte[][] getValueParts(int valueRefOffset) {
+
+		byte[][] result = new byte[2][];
+
+		// jump to offset where the value is located
+		int valueOffset = getValueOffset(valueRefOffset);
+		int currentOffset = valueOffset;
+
+		// determine value length
+		int valueLength = page[currentOffset++] & 255;
+		int valueLengthLength = 1;
+
+		if (valueLength == 255) {
+
+			int byte1 = page[currentOffset++] & 255;
+			int byte2 = page[currentOffset++] & 255;
+
+			if (byte1 == 255 && byte2 == 255) {
+				valueLength = PageID.getSize();
+			} else {
+				valueLength = (byte1 << 8) | byte2;
+			}
+
+			valueLengthLength += 2;
+		}
+
+		// copy value length field
+		result[0] = new byte[valueLengthLength];
+		System.arraycopy(page, valueOffset, result[0], 0, valueLengthLength);
+
+		// copy value field
+		result[1] = new byte[valueLength];
+		System.arraycopy(page, currentOffset, result[1], 0, valueLength);
+
+		return result;
+	}
+
+	/**
+	 * Returns the value offset of the given value reference offset.
+	 * 
+	 * @param valueRefOffset
+	 *            the offset where the value reference is stored
+	 * @return the offset where the value (data record) starts
+	 */
+	private int getValueOffset(int valueRefOffset) {
+		return ((page[valueRefOffset] & 255) << 8)
+				| (page[valueRefOffset + 1] & 255);
+	}
+	
+	/**
+	 * Generates the value length field for a given value. 
+	 * @param value the value to generate the length field for
+	 * @param externalized indicates whether the value is an external PageID
+	 * @return the value length field
+	 */
+	protected static byte[] getValueLengthField(byte[] value, boolean externalized) {
+		
+		byte[] valueLengthField = null;
+		
+		if (externalized) {
+			valueLengthField = new byte[]{(byte) 255, (byte) 255, (byte) 255};
+		} else {	
+			if (value.length < 255) {
+				valueLengthField = new byte[1];
+				valueLengthField[0] = (byte) value.length;
+			} else {
+				valueLengthField = new byte[3];
+				valueLengthField[0] = (byte) 255;
+				valueLengthField[1] = (byte) ((value.length >> 8) & 255);
+				valueLengthField[2] = (byte) ((value.length) & 255);
+			}	
+		}
+		
+		return valueLengthField;
+	}
 }
