@@ -39,7 +39,8 @@ import org.brackit.xquery.xdm.DocumentException;
  * @author Sebastian Baechle
  * 
  */
-public class XTCdeweyID implements java.io.Serializable, Comparable<XTCdeweyID>, SimpleDeweyID {
+public class XTCdeweyID implements java.io.Serializable,
+		Comparable<XTCdeweyID>, SimpleDeweyID {
 
 	public final static String documentSeparator = ":";
 	public final static String divisionSeparator = ".";
@@ -1256,5 +1257,28 @@ public class XTCdeweyID implements java.io.Serializable, Comparable<XTCdeweyID>,
 
 	public boolean isDocument() {
 		return level == 0;
+	}
+
+	/**
+	 * Checks whether this DeweyID is a prefix of the other. The DocID is not
+	 * considered here.
+	 * 
+	 * @param other
+	 *            the other DeweyID
+	 * @return true if this DeweyID is a prefix of the other DeweyID
+	 */
+	public boolean isPrefixOf(XTCdeweyID other) {
+
+		if (other.divisionValues.length < this.divisionValues.length) {
+			return false;
+		}
+
+		for (int i = 0; i < this.divisionValues.length; i++) {
+			if (this.divisionValues[i] != other.divisionValues[i]) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 }
