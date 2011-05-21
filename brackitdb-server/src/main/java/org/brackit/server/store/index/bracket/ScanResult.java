@@ -25,43 +25,54 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.store.page.bracket;
+package org.brackit.server.store.index.bracket;
 
-import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.store.index.bracket.page.Leaf;
 
 /**
- * This interface is used by the BracketPage during delete preparation in order
- * to inform the leaf context about the currently processed node. The level
- * argument is the current node's level relative to the subtree root.
+ * This class is used as the return type of the scan method in
+ * {@link BracketTree}.
  * 
  * @author Martin Hiller
  * 
  */
-public interface DeletePrepareListener {
-	
-	/**
-	 * Informs about the currently processed node during delete preparation.
-	 * @param deweyID the DeweyID
-	 * @param value the value
-	 * @param level the level relative to the subtree root
-	 * @throws BracketPageException
-	 */
-	public void node(XTCdeweyID deweyID, byte[] value, int level) throws BracketPageException;
-	
-	/**
-	 * Informs about the currently processed (externalized) node during delete preparation. 
-	 * @param deweyID the DeweyID
-	 * @param externalPageID the external PageID
-	 * @param level the level relative to the subtree root
-	 * @throws BracketPageException
-	 */
-	public void externalNode(XTCdeweyID deweyID, PageID externalPageID, int level) throws BracketPageException;
-	
-	/**
-	 * Informs about the end of the subtree.
-	 * @throws BracketPageException
-	 */
-	public void subtreeEnd() throws BracketPageException;
+public class ScanResult {
+	public final boolean nodeFound;
+	public final Leaf resultLeaf;
+	public final XTCdeweyID targetDeweyID;
 
+	/**
+	 * The requested node was found and is located in the result leaf.
+	 * 
+	 * @param result
+	 *            the leaf context where the node was found
+	 */
+	public ScanResult(Leaf result) {
+		this.nodeFound = true;
+		this.resultLeaf = result;
+		this.targetDeweyID = null;
+	}
+
+	/**
+	 * The requested node was not found, but at least the DeweyID of the
+	 * requested node is known by now.
+	 * 
+	 * @param targetDeweyID
+	 *            the DeweyID of the target node
+	 */
+	public ScanResult(XTCdeweyID targetDeweyID) {
+		this.nodeFound = false;
+		this.resultLeaf = null;
+		this.targetDeweyID = targetDeweyID;
+	}
+
+	/**
+	 * The node was not found (yet).
+	 */
+	public ScanResult() {
+		this.nodeFound = false;
+		this.resultLeaf = null;
+		this.targetDeweyID = null;
+	}
 }

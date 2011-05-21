@@ -25,43 +25,22 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.store.page.bracket;
+package org.brackit.server.store.index.bracket.bulkinsert;
 
 import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.node.XTCdeweyID;
 
 /**
- * This interface is used by the BracketPage during delete preparation in order
- * to inform the leaf context about the currently processed node. The level
- * argument is the current node's level relative to the subtree root.
+ * Represents a separator in a bracket tree.
  * 
  * @author Martin Hiller
  * 
  */
-public interface DeletePrepareListener {
-	
-	/**
-	 * Informs about the currently processed node during delete preparation.
-	 * @param deweyID the DeweyID
-	 * @param value the value
-	 * @param level the level relative to the subtree root
-	 * @throws BracketPageException
-	 */
-	public void node(XTCdeweyID deweyID, byte[] value, int level) throws BracketPageException;
-	
-	/**
-	 * Informs about the currently processed (externalized) node during delete preparation. 
-	 * @param deweyID the DeweyID
-	 * @param externalPageID the external PageID
-	 * @param level the level relative to the subtree root
-	 * @throws BracketPageException
-	 */
-	public void externalNode(XTCdeweyID deweyID, PageID externalPageID, int level) throws BracketPageException;
-	
-	/**
-	 * Informs about the end of the subtree.
-	 * @throws BracketPageException
-	 */
-	public void subtreeEnd() throws BracketPageException;
+public class SeparatorEntry {
+	public final byte[] deweyID;
+	public final PageID pageID;
 
+	public SeparatorEntry(byte[] deweyID, PageID pageID) {
+		this.deweyID = deweyID;
+		this.pageID = pageID;
+	}
 }

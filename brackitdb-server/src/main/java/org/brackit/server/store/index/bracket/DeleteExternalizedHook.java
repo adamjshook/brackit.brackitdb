@@ -25,43 +25,56 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.store.page.bracket;
+package org.brackit.server.store.index.bracket;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.store.blob.BlobStore;
+import org.brackit.server.store.blob.BlobStoreAccessException;
+import org.brackit.server.tx.PostCommitHook;
+import org.brackit.server.tx.Tx;
 
 /**
- * This interface is used by the BracketPage during delete preparation in order
- * to inform the leaf context about the currently processed node. The level
- * argument is the current node's level relative to the subtree root.
+ * Deletes a list of externalized value given by their PageID.
  * 
  * @author Martin Hiller
  * 
  */
-public interface DeletePrepareListener {
-	
+public class DeleteExternalizedHook implements PostCommitHook {
+
+	private final BlobStore blobStore;
+	private final List<PageID> externalPageIDs;
+
+	public DeleteExternalizedHook(BlobStore blobStore,
+			List<PageID> externalPageIDs) {
+		this.blobStore = blobStore;
+		this.externalPageIDs = externalPageIDs;
+	}
+
 	/**
-	 * Informs about the currently processed node during delete preparation.
-	 * @param deweyID the DeweyID
-	 * @param value the value
-	 * @param level the level relative to the subtree root
-	 * @throws BracketPageException
+	 * @see org.brackit.server.tx.PostCommitHook#execute(org.brackit.server.tx.Tx)
 	 */
-	public void node(XTCdeweyID deweyID, byte[] value, int level) throws BracketPageException;
-	
-	/**
-	 * Informs about the currently processed (externalized) node during delete preparation. 
-	 * @param deweyID the DeweyID
-	 * @param externalPageID the external PageID
-	 * @param level the level relative to the subtree root
-	 * @throws BracketPageException
-	 */
-	public void externalNode(XTCdeweyID deweyID, PageID externalPageID, int level) throws BracketPageException;
-	
-	/**
-	 * Informs about the end of the subtree.
-	 * @throws BracketPageException
-	 */
-	public void subtreeEnd() throws BracketPageException;
+	@Override
+	public void execute(Tx tx) throws ServerException {
+
+		List<PageID> exceptionPageIDs = null;
+		for (PageID pageID : externalPageIDs) {
+			try {
+				blobStore.drop(tx, pageID);
+			} catch (BlobStoreAccessException e) {
+				if (exceptionPageIDs == null) {
+					exceptionPageIDs = new ArrayList<PageID>();
+				}
+				exceptionPageIDs.add(pageID);
+			}
+		}
+		if (exceptionPageIDs != null) {
+			throw new ServerException(String.format(
+					"Error deleting overflow values %s.", exceptionPageIDs));
+		}
+	}
 
 }
