@@ -25,43 +25,19 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.store.page.bracket;
-
-import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.node.XTCdeweyID;
+package org.brackit.server.store.index.bracket.page;
 
 /**
- * This interface is used by the BracketPage during delete preparation in order
- * to inform the leaf context about the currently processed node. The level
- * argument is the current node's level relative to the subtree root.
+ * Is thrown during subtree deletion to tell the
+ * {@link org.brackit.server.store.index.bracket.BracketTree} that the current
+ * page needs to be unchained.
  * 
  * @author Martin Hiller
  * 
  */
-public interface DeletePrepareListener {
-	
-	/**
-	 * Informs about the currently processed node during delete preparation.
-	 * @param deweyID the DeweyID
-	 * @param value the value
-	 * @param level the level relative to the subtree root
-	 * @throws BracketPageException
-	 */
-	public void node(XTCdeweyID deweyID, byte[] value, int level) throws BracketPageException;
-	
-	/**
-	 * Informs about the currently processed (externalized) node during delete preparation. 
-	 * @param deweyID the DeweyID
-	 * @param externalPageID the external PageID
-	 * @param level the level relative to the subtree root
-	 * @throws BracketPageException
-	 */
-	public void externalNode(XTCdeweyID deweyID, PageID externalPageID, int level) throws BracketPageException;
-	
-	/**
-	 * Informs about the end of the subtree.
-	 * @throws BracketPageException
-	 */
-	public void subtreeEnd() throws BracketPageException;
+public class EmptyLeafException extends Exception {
 
+	private static final long serialVersionUID = 1L;
+
+	public static final EmptyLeafException EMPTY_LEAF_EXCEPTION = new EmptyLeafException();
 }

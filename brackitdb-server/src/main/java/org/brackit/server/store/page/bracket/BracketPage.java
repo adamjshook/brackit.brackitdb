@@ -35,6 +35,7 @@ import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.el.ElRecordAccess;
 import org.brackit.server.node.el.index.ElPlaceHolderHelper;
 import org.brackit.server.store.index.bracket.IndexOperationException;
+import org.brackit.server.store.index.bracket.page.LeafBPContext;
 import org.brackit.server.store.page.BasePage;
 import org.brackit.server.store.page.bracket.navigation.NavigationProfiles;
 import org.brackit.server.store.page.bracket.navigation.NavigationProperties;
@@ -134,7 +135,7 @@ import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
  */
 public class BracketPage extends BasePage {
 
-	private static final int RESERVED_FOR_CONTEXT = 0;
+	private static final int RESERVED_FOR_CONTEXT = LeafBPContext.RESERVED_SIZE;
 	private static final int CONTEXT_DATA_FIELD_NO = BASE_PAGE_START_OFFSET
 			+ RESERVED_FOR_CONTEXT;
 	private static final int KEY_AREA_END_FIELD_NO = CONTEXT_DATA_FIELD_NO + 2;
@@ -166,11 +167,8 @@ public class BracketPage extends BasePage {
 	 * 
 	 * @param buffer
 	 * @param pageHandle
-	 * @param reservedForContext
-	 *            specifies how many bytes in the header need to be reserved for
-	 *            the upper layer (-> page context)
 	 */
-	public BracketPage(Buffer buffer, Handle pageHandle, int reservedForContext) {
+	public BracketPage(Buffer buffer, Handle pageHandle) {
 		super(buffer, pageHandle, LOW_KEY_START_FIELD_NO
 				- BASE_PAGE_START_OFFSET);
 		this.page = pageHandle.page;
@@ -2575,7 +2573,7 @@ public class BracketPage extends BasePage {
 	 */
 	public DeletePreparation deleteRemainingSubtreePrepare(
 			XTCdeweyID subtreeRoot, DeweyIDBuffer tempDeweyID,
-			DeletePrepareListener delPrepLis) throws IndexOperationException {
+			DeletePrepareListener delPrepLis) throws BracketPageException {
 
 		if (getRecordCount() == 0) {
 			return null;
@@ -2707,7 +2705,7 @@ public class BracketPage extends BasePage {
 	 */
 	public DeletePreparation deletePrepare(int currentOffset,
 			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID,
-			DeletePrepareListener delPrepLis) throws IndexOperationException {
+			DeletePrepareListener delPrepLis) throws BracketPageException {
 		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
 			throw new IllegalArgumentException();
 		}
@@ -2968,11 +2966,11 @@ public class BracketPage extends BasePage {
 	 *            externalized value, this interface is used to load the
 	 *            external value.
 	 * @return the offset of the previous node
-	 * @throws IndexOperationException
+	 * @throws BracketPageException
 	 */
 	public int delete(DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID,
 			DeletePreparation delPrep, ExternalValueLoader externalValueLoader)
-			throws IndexOperationException {
+			throws BracketPageException {
 
 		int returnOffset = 0;
 
@@ -3260,9 +3258,10 @@ public class BracketPage extends BasePage {
 				splitDeweyID, splitOffset, null, KEY_AREA_END_OFFSET,
 				numberOfNodes, numberOfDataRecords, dataRecordSize, 0);
 	}
-	
+
 	/**
-	 * Checks the integrity of this bracket page. Throws a RuntimeException if there is something wrong.
+	 * Checks the integrity of this bracket page. Throws a RuntimeException if
+	 * there is something wrong.
 	 */
 	private void checkPageIntegrity() {
 
@@ -3285,7 +3284,7 @@ public class BracketPage extends BasePage {
 		int currentOffset = getKeyAreaStartOffset();
 
 		int numberOfNodes = 0;
-		
+
 		int dataSize = (page[LOW_KEY_LENGTH_FIELD_NO] & 255);
 		int contextDataOffset = getContextDataOffset();
 		if (contextDataOffset != 0) {
@@ -3338,6 +3337,271 @@ public class BracketPage extends BasePage {
 			throw new RuntimeException("UsedSpace has a wrong value! ("
 					+ getUsedSpace() + " instead of " + dataSize + ")");
 		}
+	}
+
+	/**
+	 * Inserts a sequence of bracket nodes after the current one. If successful,
+	 * the currentDeweyID buffer will contain the new node's DeweyID.
+	 * 
+	 * @param nodes
+	 *            the nodes to insert
+	 * @param currentOffset
+	 *            offset of the current node
+	 * @param currentDeweyID
+	 *            DeweyIDBuffer containing the DeweyID of the current node
+	 * @param tempDeweyID
+	 *            DeweyIDBuffer needed for temporary DeweyIDs
+	 * @return offset of the LAST inserted node or an errorcode (if new node is
+	 *         a duplicate or there is not enough space)
+	 */
+	public int insertAfter(BracketNodeSequence nodes, int currentOffset,
+			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
+
+		final byte[] data = nodes.getData();
+
+		if (data == null || data.length == 0) {
+			return currentOffset;
+		}
+
+		final XTCdeweyID dataLowID = nodes.getLowKey();
+		final BracketKey.Type dataLowIDType = nodes.getLowKeyType();
+
+		// set tempDeweyID to last DeweyID
+		final int lastNodeOffset = nodes.setToLastNode(tempDeweyID);
+		final XTCdeweyID lastNodeDeweyID = tempDeweyID.getDeweyID();
+		boolean removeLastDataRecord = false;
+		boolean removeCurrentDataRecord = false;
+
+		final boolean insertAtBeginning = (currentOffset == BEFORE_LOW_KEY_OFFSET);
+		byte[] beforeKeys = null;
+		byte[] afterKeys = null;
+		int currentValueOffset = 0;
+		int currentRecordLength = 0;
+		int currentValueRefOffset = 0;
+		int nextKeyOffset = 0;
+
+		final boolean currentNodeIsLowKey = (currentOffset == LOW_KEY_OFFSET);
+
+		// read current bracket key type
+		BracketKey.Type currentKeyType = insertAtBeginning ? null
+				: (currentNodeIsLowKey ? getLowKeyType() : BracketKey.loadType(
+						page, currentOffset));
+
+		// determine required space
+		int requiredSpace = 0;
+
+		if (insertAtBeginning) {
+
+			requiredSpace = data.length - 2 /* LowID length + LowID type */
+					+ nodes.getNumberOfDataRecords()
+					* BracketKey.DATA_REF_LENGTH /* for data references */;
+
+			if (this.getRecordCount() > 0) {
+				// there are already records stored in this page
+
+				// calculate keys between last DeweyID and current low key
+				afterKeys = BracketKey.generateBracketKeys(lastNodeDeweyID,
+						getLowKey());
+				BracketKey.updateType(getLowKeyType(), afterKeys,
+						afterKeys.length - BracketKey.PHYSICAL_LENGTH);
+
+				// adjust required space
+				requiredSpace += afterKeys.length
+						- (page[LOW_KEY_LENGTH_FIELD_NO] & 255);
+
+				// determine whether last data record is necessary
+				if (lastNodeDeweyID.isPrefixOf(getLowKey())) {
+					removeLastDataRecord = true;
+					requiredSpace -= (BracketKey.DATA_REF_LENGTH + nodes
+							.getValueLength(lastNodeOffset));
+				}
+			}
+		} else {
+			// insert node chain between two nodes
+
+			// calculate beforeKeys
+			beforeKeys = BracketKey.generateBracketKeys(currentDeweyID,
+					dataLowID);
+			// update last bracket key's type
+			BracketKey.updateType(dataLowIDType, beforeKeys, beforeKeys.length
+					- BracketKey.PHYSICAL_LENGTH);
+
+			requiredSpace = beforeKeys.length + data.length
+					- nodes.getStartOffset() /* bracket keys + data records */
+					+ nodes.getNumberOfDataRecords()
+					* BracketKey.DATA_REF_LENGTH /* data references */;
+
+			// check whether current record can be removed
+			if (currentKeyType == BracketKey.Type.DATA
+					&& currentDeweyID.isPrefixOf(dataLowID)) {
+
+				// data record can be removed
+				removeCurrentDataRecord = true;
+
+				// determine current record length
+				currentValueRefOffset = currentNodeIsLowKey ? getKeyAreaStartOffset()
+						: currentOffset + BracketKey.PHYSICAL_LENGTH;
+				currentValueOffset = getValueOffset(currentValueRefOffset);
+				currentRecordLength = getValueLength(currentValueOffset, true);
+
+				// adjust required space
+				requiredSpace -= (BracketKey.DATA_REF_LENGTH + currentRecordLength);
+
+			}
+
+			// determine offset for the next key
+			nextKeyOffset = (currentNodeIsLowKey ? getKeyAreaStartOffset()
+					: currentOffset + BracketKey.PHYSICAL_LENGTH)
+					+ currentKeyType.getDataReferenceLength();
+
+			// calculate afterKey(s)
+			if (nextKeyOffset < getKeyAreaEndOffset()) {
+				// determine next node's DeweyID
+				tempDeweyID.setTo(currentDeweyID);
+				tempDeweyID.update(BracketKey.loadNew(page, nextKeyOffset),
+						false);
+
+				afterKeys = BracketKey.generateBracketKeys(lastNodeDeweyID,
+						tempDeweyID);
+			}
+
+		}
+
+		// required space determined
+
+		// reservedSpace for the highKey
+		int reservedSpace = 2 * lastNodeDeweyID.toBytes().length;
+		// allocate required space
+		if (!allocateRequiredSpace(requiredSpace, reservedSpace)) {
+			// page is full
+			return INSERTION_NO_SPACE;
+		}
+
+		// check whether a defragmentation is needed
+		int reqSpaceBetweenKeyAndValueArea = requiredSpace
+				+ (removeCurrentDataRecord ? currentRecordLength : 0);
+		if (reqSpaceBetweenKeyAndValueArea > getFreeSpaceOffset()
+				- getKeyAreaEndOffset()) {
+			// defragmentation
+			defragment(removeCurrentDataRecord ? currentValueRefOffset : 0);
+		}
+
+		// buffer key area
+		byte[] keyBuffer = null;
+		if (afterKeys != null) {
+			int startIndex = insertAtBeginning ? getKeyAreaStartOffset()
+					: nextKeyOffset;
+
+			keyBuffer = new byte[getKeyAreaEndOffset() - startIndex];
+			System.arraycopy(page, startIndex, keyBuffer, 0, keyBuffer.length);
+
+			if (!insertAtBeginning) {
+				// update the afterKey in the buffer
+				BracketKey.loadNew(afterKeys, 0).store(keyBuffer, 0, true);
+			}
+		}
+
+		// write new LowID / write beforeKeys
+		int pageOffset = 0;
+		int returnOffset = 0;
+		if (insertAtBeginning) {
+			BracketKey.Type newLowIDType = (removeLastDataRecord && lastNodeOffset == BracketNodeSequence.LOW_KEY_OFFSET) ? BracketKey.Type.NODATA
+					: dataLowIDType;
+			// write lowID
+			initializeLowKey(newLowIDType, dataLowID.toBytes(), dataLowID);
+			pageOffset = getKeyAreaStartOffset();
+			returnOffset = LOW_KEY_OFFSET;
+			addRecord(); /* LowID added */
+		} else {
+			// change current node's key type to NODATA, if necessary
+			if (removeCurrentDataRecord) {
+				currentKeyType = BracketKey.Type.NODATA;
+				if (currentNodeIsLowKey) {
+					setLowKeyType(currentKeyType);
+				} else {
+					BracketKey.updateType(currentKeyType, page, currentOffset);
+				}
+				pageOffset = currentValueRefOffset;
+			} else {
+				pageOffset = nextKeyOffset;
+			}
+
+			// write beforeKeys
+			System.arraycopy(beforeKeys, 0, page, pageOffset, beforeKeys.length);
+			pageOffset += beforeKeys.length;
+
+			returnOffset = pageOffset - BracketKey.PHYSICAL_LENGTH;
+
+			// count newly inserted nodes
+			for (int i = 0; i < beforeKeys.length; i += BracketKey.PHYSICAL_LENGTH) {
+				if (BracketKey.loadType(beforeKeys, i) != BracketKey.Type.OVERFLOW) {
+					addRecord();
+				}
+			}
+		}
+
+		// beforeKeys written; copy BracketNodeSequence
+		int dataOffset = nodes.getStartOffset();
+		if (dataLowIDType.getDataReferenceLength() > 0) {
+			// copy first data record
+			if (removeLastDataRecord
+					&& lastNodeOffset == BracketNodeSequence.LOW_KEY_OFFSET) {
+				dataOffset = data.length;
+			} else {
+				int valueLength = getValueLength(dataOffset, true, data);
+				writeValueReference(pageOffset,
+						copyValue(data, dataOffset, valueLength));
+				pageOffset += BracketKey.DATA_REF_LENGTH;
+				dataOffset += valueLength;
+			}
+		}
+		// copy remaining keys + records
+		BracketKey.Type keyType = null;
+		while (dataOffset < data.length) {
+			// write bracket key
+			System.arraycopy(data, dataOffset, page, pageOffset,
+					BracketKey.PHYSICAL_LENGTH);
+			keyType = BracketKey.loadType(data, dataOffset);
+			returnOffset = pageOffset;
+			pageOffset += BracketKey.PHYSICAL_LENGTH;
+			dataOffset += BracketKey.PHYSICAL_LENGTH;
+			if (keyType != BracketKey.Type.OVERFLOW) {
+				addRecord();
+				if (keyType != BracketKey.Type.NODATA) {
+					// write data record
+					if (removeLastDataRecord && lastNodeOffset <= dataOffset) {
+						// do not copy record; update last written key to NODATA
+						BracketKey.updateType(BracketKey.Type.NODATA, page,
+								pageOffset - BracketKey.PHYSICAL_LENGTH);
+						dataOffset = data.length;
+					} else {
+						int valueLength = getValueLength(dataOffset, true, data);
+						writeValueReference(pageOffset,
+								copyValue(data, dataOffset, valueLength));
+						pageOffset += BracketKey.DATA_REF_LENGTH;
+						dataOffset += valueLength;
+					}
+				}
+			}
+		}
+
+		// bracket node chain stored -> deal with afterKeys
+		if (insertAtBeginning && afterKeys != null) {
+			System.arraycopy(afterKeys, 0, page, pageOffset, afterKeys.length);
+			pageOffset += afterKeys.length;
+		}
+
+		// write back the buffered keys
+		if (keyBuffer != null) {
+			System.arraycopy(keyBuffer, 0, page, pageOffset, keyBuffer.length);
+			pageOffset += keyBuffer.length;
+		}
+
+		// adjust key area end offset
+		setKeyAreaEndOffset(pageOffset);
+
+		currentDeweyID.setTo(lastNodeDeweyID);
+		return returnOffset;
 	}
 
 }

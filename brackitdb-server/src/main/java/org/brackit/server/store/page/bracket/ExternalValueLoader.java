@@ -28,7 +28,6 @@
 package org.brackit.server.store.page.bracket;
 
 import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.store.index.bracket.IndexOperationException;
 
 /**
  * Responsible for loading external values by their PageID.
@@ -42,8 +41,8 @@ public interface ExternalValueLoader {
 	 * Loads an external value by its PageID.
 	 * @param externalPageID the external PageID
 	 * @return the external value
-	 * @throws IndexOperationException
+	 * @throws BracketPageException
 	 */
-	public byte[] loadExternalValue(PageID externalPageID) throws IndexOperationException;
+	public byte[] loadExternalValue(PageID externalPageID) throws BracketPageException;
 	
 }

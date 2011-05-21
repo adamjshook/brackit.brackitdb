@@ -25,43 +25,23 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.store.page.bracket;
+package org.brackit.server.store.index.bracket;
 
-import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.xquery.xdm.DocumentException;
 
 /**
- * This interface is used by the BracketPage during delete preparation in order
- * to inform the leaf context about the currently processed node. The level
- * argument is the current node's level relative to the subtree root.
+ * This interface is used as a callback for the
+ * {@link org.brackit.server.node.bracket.BracketNode} class. It is invoked
+ * during subtree deletion in the bracket tree. The level argument is the
+ * current node's level relative to the subtree root.
  * 
  * @author Martin Hiller
  * 
  */
-public interface DeletePrepareListener {
-	
-	/**
-	 * Informs about the currently processed node during delete preparation.
-	 * @param deweyID the DeweyID
-	 * @param value the value
-	 * @param level the level relative to the subtree root
-	 * @throws BracketPageException
-	 */
-	public void node(XTCdeweyID deweyID, byte[] value, int level) throws BracketPageException;
-	
-	/**
-	 * Informs about the currently processed (externalized) node during delete preparation. 
-	 * @param deweyID the DeweyID
-	 * @param externalPageID the external PageID
-	 * @param level the level relative to the subtree root
-	 * @throws BracketPageException
-	 */
-	public void externalNode(XTCdeweyID deweyID, PageID externalPageID, int level) throws BracketPageException;
-	
-	/**
-	 * Informs about the end of the subtree.
-	 * @throws BracketPageException
-	 */
-	public void subtreeEnd() throws BracketPageException;
+public interface SubtreeDeleteListener {
+	public void deleteNode(XTCdeweyID deweyID, byte[] value, int level)
+			throws IndexOperationException;
 
+	public void subtreeEnd() throws IndexOperationException;
 }

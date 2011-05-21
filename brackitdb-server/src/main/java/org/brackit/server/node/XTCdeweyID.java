@@ -899,6 +899,46 @@ public class XTCdeweyID implements java.io.Serializable,
 
 	}
 
+	/**
+	 * Like {@link #getAncestor(int)} but it checks in addition whether the
+	 * ancestor has the given DeweyID as prefix (or whether the ancestor is
+	 * itself a prefix of the given DeweyID). If the prefix condition is not
+	 * satisfied, null is returned.
+	 * 
+	 * @param level
+	 * @param requiredPrefix
+	 * @return
+	 */
+	public XTCdeweyID getAncestor(int level, XTCdeweyID requiredPrefix) {
+		if (this.level < level) {
+			return null;
+		}
+
+		int currDivision = 0;
+		for (int i = 0; i < level; i++) {
+			while (this.divisionValues[currDivision] % 2 == 0) {
+				if (currDivision < requiredPrefix.divisionValues.length
+						&& this.divisionValues[currDivision] != requiredPrefix.divisionValues[currDivision]) {
+					return null;
+				}
+				currDivision++;
+			}
+
+			if (currDivision < requiredPrefix.divisionValues.length
+					&& this.divisionValues[currDivision] != requiredPrefix.divisionValues[currDivision]) {
+				return null;
+			}
+			currDivision++;
+		}
+
+		if (this.level == level) {
+			return this;
+		} else {
+			return new XTCdeweyID(docID, Arrays.copyOf(divisionValues,
+					currDivision), level);
+		}
+	}
+
 	public XTCdeweyID[] getAncestors() {
 		if (level == 0) {
 			return null;
@@ -1280,5 +1320,116 @@ public class XTCdeweyID implements java.io.Serializable,
 		}
 
 		return true;
+	}
+
+	/**
+	 * Like {@link #compareTo(XTCdeweyID)} but without checking the document ID.
+	 * Only the divisions are considered.
+	 * 
+	 * @param deweyID
+	 *            the other DeweyID
+	 * @return -1 if this DeweyID is less than the other, 0 if they are equal,
+	 *         and 1 if this DeweyID is greater than the other
+	 */
+	public int compareDivisions(XTCdeweyID deweyID) {
+		if (this == deweyID) {
+			return 0;
+		}
+
+		int[] myD = this.divisionValues;
+		int[] oD = deweyID.divisionValues;
+		int myLen = myD.length;
+		int oLen = oD.length;
+		int len = ((myLen <= oLen) ? myLen : oLen);
+
+		int pos = -1;
+		while (++pos < len) {
+			if (myD[pos] != oD[pos]) {
+				return myD[pos] - oD[pos];
+			}
+		}
+
+		return (myLen == oLen) ? 0 : (myLen < oLen) ? -1 : 1;
+	}
+
+	/**
+	 * Compares this DeweyID's parent with the given DeweyID.
+	 * 
+	 * @param other
+	 *            the other DeweyID
+	 * @return -1 if the parent is less than the other DeweyID, 0 if they are
+	 *         equal, and 1 if the parent is greater than the other DeweyID
+	 */
+	public int compareParentTo(XTCdeweyID other) {
+
+		int parentLength = this.divisionValues.length - 1;
+		while (this.divisionValues[parentLength - 1] % 2 == 0) {
+			parentLength--;
+		}
+
+		int upperBound = Math.min(parentLength, other.divisionValues.length);
+
+		for (int i = 0; i < upperBound; i++) {
+			if (this.divisionValues[i] != other.divisionValues[i]) {
+				return (this.divisionValues[i] < other.divisionValues[i]) ? -1
+						: 1;
+			}
+		}
+
+		return Integer.signum(parentLength - other.divisionValues.length);
+	}
+
+	/**
+	 * Checks whether this DeweyID is either a prefix or greater than the other
+	 * DeweyID.
+	 * 
+	 * @param other
+	 *            the other DeweyID
+	 * @return true if this DeweyID is a prefix or greater than the other
+	 *         DeweyID
+	 */
+	public boolean isPrefixOrGreater(XTCdeweyID other) {
+
+		int upperBound = (this.divisionValues.length <= other.divisionValues.length) ? this.divisionValues.length
+				: other.divisionValues.length;
+
+		for (int i = 0; i < upperBound; i++) {
+			if (this.divisionValues[i] != other.divisionValues[i]) {
+				return (this.divisionValues[i] > other.divisionValues[i]);
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Checks whether this DeweyID appended by the extraDivision is either a
+	 * prefix or greater than the other DeweyID.
+	 * 
+	 * @param other
+	 *            the other DeweyID
+	 * @return true if this DeweyID appended by the extraDivision is a prefix or
+	 *         greater than the other DeweyID
+	 */
+	public boolean isPrefixOrGreater(int extraDivision, XTCdeweyID other) {
+
+		boolean isPrefix = (this.divisionValues.length < other.divisionValues.length);
+		int upperBound = (isPrefix ? this.divisionValues.length
+				: other.divisionValues.length);
+
+		for (int i = 0; i < upperBound; i++) {
+			if (this.divisionValues[i] != other.divisionValues[i]) {
+				return (this.divisionValues[i] > other.divisionValues[i]);
+			}
+		}
+
+		// check extra division
+		if (isPrefix) {
+			if (extraDivision != other.divisionValues[upperBound]) {
+				return (extraDivision > other.divisionValues[upperBound]);
+			}
+		}
+
+		return isPrefix;
 	}
 }

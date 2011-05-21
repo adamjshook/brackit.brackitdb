@@ -25,43 +25,54 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.store.page.bracket;
+package org.brackit.server.store.index.bracket;
 
-import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.store.index.IndexAccessException;
 
 /**
- * This interface is used by the BracketPage during delete preparation in order
- * to inform the leaf context about the currently processed node. The level
- * argument is the current node's level relative to the subtree root.
- * 
  * @author Martin Hiller
  * 
  */
-public interface DeletePrepareListener {
-	
-	/**
-	 * Informs about the currently processed node during delete preparation.
-	 * @param deweyID the DeweyID
-	 * @param value the value
-	 * @param level the level relative to the subtree root
-	 * @throws BracketPageException
-	 */
-	public void node(XTCdeweyID deweyID, byte[] value, int level) throws BracketPageException;
-	
-	/**
-	 * Informs about the currently processed (externalized) node during delete preparation. 
-	 * @param deweyID the DeweyID
-	 * @param externalPageID the external PageID
-	 * @param level the level relative to the subtree root
-	 * @throws BracketPageException
-	 */
-	public void externalNode(XTCdeweyID deweyID, PageID externalPageID, int level) throws BracketPageException;
-	
-	/**
-	 * Informs about the end of the subtree.
-	 * @throws BracketPageException
-	 */
-	public void subtreeEnd() throws BracketPageException;
+public interface BracketIter {
 
+	public boolean navigate(NavigationMode navMode) throws IndexAccessException;
+
+	public XTCdeweyID getKey() throws IndexAccessException;
+
+	public byte[] getValue() throws IndexAccessException;
+
+	public void insert(XTCdeweyID deweyID, byte[] value, int ancestorsToInsert)
+			throws IndexAccessException;
+
+	public void insertPrefixAware(XTCdeweyID deweyID, byte[] value,
+			int ancestorsToInsert) throws IndexAccessException;
+
+	public void deleteSubtree(SubtreeDeleteListener deleteListener)
+			throws IndexAccessException;
+
+	public void update(byte[] newValue) throws IndexAccessException;
+
+	public void close() throws IndexAccessException;
+
+	/**
+	 * Moves the pointer to the next index entry
+	 * 
+	 * @return <code>TRUE</code>, iff the iterator has found another entry
+	 * @throws IndexAccessException
+	 *             if there was an error moving the pointer to the next record
+	 */
+	public boolean next() throws IndexAccessException;
+
+	/**
+	 * Returns information (PageID, LSN, Offset) of the current page.
+	 * 
+	 * @return information (PageID, LSN, Offset) of the current page
+	 * @throws IndexAccessException
+	 */
+	public HintPageInformation getPageInformation() throws IndexAccessException;
+
+	public void startBulkInsert() throws IndexAccessException;
+
+	public void endBulkInsert() throws IndexAccessException;
 }
