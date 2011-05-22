@@ -83,6 +83,7 @@ public class BracketTree extends PageContextFactory {
 			NavigationMode.class);
 
 	private static class KeyNotExistentException extends IndexAccessException {
+		private static final long serialVersionUID = 1L;
 	}
 
 	private class LeafScanner {
@@ -1527,18 +1528,7 @@ public class BracketTree extends PageContextFactory {
 		LeafBuffers buffers = (leafBuffers != null) ? leafBuffers
 				: new LeafBuffers();
 
-		if (hintPageInfo != null && navMode != NavigationMode.TO_INSERT_POS) // to
-																				// determine
-																				// the
-																				// correct
-																				// insertion
-																				// position,
-																				// access
-																				// to
-																				// the
-																				// index
-																				// is
-																				// needed
+		if (hintPageInfo != null && navMode != NavigationMode.TO_INSERT_POS)
 		{
 			try {
 				BPContext hintPage = getPage(tx, hintPageInfo.pageID,

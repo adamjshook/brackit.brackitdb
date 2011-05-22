@@ -92,8 +92,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 			try {
 				deleteListener.deleteNode(deweyID, value, level);
 			} catch (IndexOperationException e) {
-				throw new BracketPageException(e,
-						"Error notifying listeners about node deletion.");
+				throw new BracketPageException(e);
 			}
 		}
 
@@ -103,8 +102,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 			try {
 				deleteListener.deleteNode(deweyID, value, level);
 			} catch (IndexOperationException e) {
-				throw new BracketPageException(e,
-						"Error notifying listeners about node deletion.");
+				throw new BracketPageException(e);
 			}
 		}
 
@@ -113,8 +111,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 			try {
 				deleteListener.subtreeEnd();
 			} catch (IndexOperationException e) {
-				throw new BracketPageException(e,
-						"Error notifying listeners about node deletion.");
+				throw new BracketPageException(e);
 			}
 		}
 	}

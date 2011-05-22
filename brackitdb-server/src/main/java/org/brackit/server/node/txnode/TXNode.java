@@ -273,7 +273,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	}
 
 	@Override
-	public final Stream<E> getChildren() throws DocumentException {
+	public Stream<E> getChildren() throws DocumentException {
 		return (getKind() != Kind.ATTRIBUTE) ? new ChildrenStream<E>(
 				getFirstChild()) : new EmptyStream<E>();
 	}
