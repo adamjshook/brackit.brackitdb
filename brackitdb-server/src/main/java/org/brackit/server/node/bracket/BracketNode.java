@@ -515,6 +515,11 @@ public class BracketNode extends TXNode<BracketNode> {
 
 	@Override
 	public BracketNode getParentInternal() throws DocumentException {
+		XTCdeweyID parentDeweyID = deweyID.getParent();
+		if (parentDeweyID.isDocument()) {
+			return new BracketNode(locator);
+		}
+		
 		return getNodeGeneric(NavigationMode.TO_KEY, deweyID.getParent());
 	}
 

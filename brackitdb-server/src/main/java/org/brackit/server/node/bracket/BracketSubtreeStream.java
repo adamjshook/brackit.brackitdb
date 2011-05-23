@@ -137,7 +137,7 @@ public class BracketSubtreeStream implements Stream<BracketNode> {
 	public BracketNode next() throws DocumentException {
 		if ((next == null) && (!hasNext())) {
 			close();
-			throw new DocumentException("No next node present.");
+			return null;
 		}
 
 		BracketNode out = next;

@@ -141,7 +141,7 @@ public class BracketPage extends BasePage {
 	private static final int KEY_AREA_END_FIELD_NO = CONTEXT_DATA_FIELD_NO + 2;
 	private static final int LOW_KEY_TYPE_FIELD_NO = KEY_AREA_END_FIELD_NO + 2;
 	private static final int LOW_KEY_LENGTH_FIELD_NO = LOW_KEY_TYPE_FIELD_NO + 1;
-	private static final int LOW_KEY_START_FIELD_NO = LOW_KEY_TYPE_FIELD_NO + 1;
+	private static final int LOW_KEY_START_FIELD_NO = LOW_KEY_LENGTH_FIELD_NO + 1;
 
 	// special key offsets
 	public static final int LOW_KEY_OFFSET = -1;
@@ -191,10 +191,8 @@ public class BracketPage extends BasePage {
 	@Override
 	public void clear() {
 
-		// TODO: buffer context data
-
-		// // buffer highKey
-		// XTCdeweyID highKey = getHighKey();
+		// buffer context data
+		byte[] contextData = getContextData();
 
 		super.clear();
 		setFreeSpaceOffset(handle.getPageSize());
@@ -202,9 +200,9 @@ public class BracketPage extends BasePage {
 		setContextDataOffset(0);
 		setKeyAreaEndOffset(getKeyAreaStartOffset());
 
-		// if (highKey != null) {
-		// setHighKey(highKey);
-		// }
+		if (contextData != null) {
+			setContextData(contextData);
+		}
 	}
 
 	private int getKeyAreaStartOffset() {
@@ -216,9 +214,9 @@ public class BracketPage extends BasePage {
 				| (page[CONTEXT_DATA_FIELD_NO + 1] & 255);
 	}
 
-	private void setContextDataOffset(int keyAreaEndOffset) {
-		page[CONTEXT_DATA_FIELD_NO] = (byte) ((keyAreaEndOffset >> 8) & 255);
-		page[CONTEXT_DATA_FIELD_NO + 1] = (byte) (keyAreaEndOffset & 255);
+	private void setContextDataOffset(int contextDataOffset) {
+		page[CONTEXT_DATA_FIELD_NO] = (byte) ((contextDataOffset >> 8) & 255);
+		page[CONTEXT_DATA_FIELD_NO + 1] = (byte) (contextDataOffset & 255);
 	}
 
 	private int getKeyAreaEndOffset() {
@@ -400,7 +398,7 @@ public class BracketPage extends BasePage {
 		int valueRefOffset = getNextValueRefOffset(keyOffset);
 
 		// load value part
-		byte[][] valuePart = getValueParts(valueRefOffset);
+		byte[][] valuePart = getValueParts(getValueOffset(valueRefOffset));
 
 		// check if externalized
 		boolean externalized = (valuePart[0].length == 3
@@ -413,19 +411,17 @@ public class BracketPage extends BasePage {
 
 	/**
 	 * Returns the value parts (valueLength field and value field) for the value
-	 * referenced at 'valueRefOffset'.
+	 * at 'valueOffset'.
 	 * 
-	 * @param valueRefOffset
-	 *            the offset where the reference to the value starts
+	 * @param valueOffset
+	 *            the offset where the value starts
 	 * @return value part (first element: valueLength field, second element:
 	 *         value field)
 	 */
-	private byte[][] getValueParts(int valueRefOffset) {
+	private byte[][] getValueParts(int valueOffset) {
 
 		byte[][] result = new byte[2][];
 
-		// jump to offset where the value is located
-		int valueOffset = getValueOffset(valueRefOffset);
 		int currentOffset = valueOffset;
 
 		// determine value length
@@ -1441,6 +1437,7 @@ public class BracketPage extends BasePage {
 		out.append(getFreeSpaceOffset());
 
 		out.append("\nPage Context Information:\n");
+		LeafBPContext.appendPageContextInfo(page, this, out);
 
 		out.append("\nBracket Page Information:\n");
 		out.append("\tKey Area End: ");

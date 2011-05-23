@@ -832,5 +832,16 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 			throw new IndexOperationException(e);
 		}
 	}
+	
+	public static void appendPageContextInfo(byte[] buffer, BracketPage page, StringBuilder out) {
+		
+		out.append("\tPrevious Page: ");
+		out.append(PageID.fromBytes(buffer, BasePage.BASE_PAGE_START_OFFSET	+ PREV_PAGE_FIELD_NO));
+		out.append("\n\tNext Page: ");
+		out.append(PageID.fromBytes(buffer, BasePage.BASE_PAGE_START_OFFSET	+ NEXT_PAGE_FIELD_NO));
+		out.append("\n\tHighKey: ");
+		out.append(page.getContextDataAsDeweyID());
+		
+	}
 
 }

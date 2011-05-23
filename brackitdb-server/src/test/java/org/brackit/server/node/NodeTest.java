@@ -225,29 +225,63 @@ public abstract class NodeTest<E extends Node<E>> {
 					.newInstance();
 			DocumentBuilder builder = factory.newDocumentBuilder();
 			Document document = builder.parse(source);
-			return document.getDocumentElement();
+			org.w3c.dom.Node root = document.getDocumentElement();
+			removeWhitespaceNodes(root);
+			return root;
 		} catch (Exception e) {
 			throw new DocumentException(
-					"An error occured while creating DOM input source: %s", e
-							.getMessage());
+					"An error occured while creating DOM input source: %s",
+					e.getMessage());
 		}
+	}
+
+	/**
+	 * Removes text nodes that contain only whitespace (e.g. spaces, newlines)
+	 * from the given tree.
+	 * 
+	 * @param node
+	 *            the subtree root
+	 * @return true if current node was deleted
+	 */
+	private boolean removeWhitespaceNodes(org.w3c.dom.Node node) {
+		if (node == null) {
+			return false;
+		}
+		if (node.getNodeType() == org.w3c.dom.Node.TEXT_NODE) {
+			String trimmed = node.getTextContent().trim();
+			if (trimmed.isEmpty()) {
+				node.getParentNode().removeChild(node);
+				return true;
+			} else {
+				node.setNodeValue(trimmed);
+			}
+		} else if (node.getNodeType() == org.w3c.dom.Node.ELEMENT_NODE) {
+			NodeList children = node.getChildNodes();
+			for (int i = 0; i < children.getLength(); i++) {
+				if (removeWhitespaceNodes(children.item(i))) {
+					i--; // child deleted, step one back
+				}
+			}
+		}
+		return false;
 	}
 
 	protected void checkSubtreePreOrder(QueryContext ctx, final E node,
 			org.w3c.dom.Node domNode) throws Exception {
 		E child = null;
+		String nodeString = node.toString();
 
 		if (domNode instanceof Element) {
 			Element element = (Element) domNode;
-			assertEquals(node + " is of type element", Kind.ELEMENT, node
-					.getKind());
+			assertEquals(nodeString + " is of type element", Kind.ELEMENT,
+					node.getKind());
 
 			// System.out.println("Checking name of element " +
 			// node.getDeweyID() + " level " + node.getDeweyID().getLevel() +
 			// " is " + element.getNodeName());
 
-			assertEquals(String.format("Name of node %s", node), element
-					.getNodeName(), node.getName());
+			assertEquals(String.format("Name of node %s", nodeString),
+					element.getNodeName(), node.getName());
 			compareAttributes(ctx, node, element);
 
 			NodeList domChildNodes = element.getChildNodes();
@@ -256,55 +290,58 @@ public abstract class NodeTest<E extends Node<E>> {
 			for (E c = node.getFirstChild(); c != null; c = c.getNextSibling()) {
 				// System.out.println(String.format("-> Found child of %s : %s",
 				// node, c));
+				String cString = c.toString();
 
 				int ancestorLevel = 0;
 				for (E ancestor = node; ancestor != null; ancestor = ancestor
 						.getParent()) {
+					String ancestorString = ancestor.toString();
 					if (ancestorLevel == 0) {
-						assertTrue(String.format("node %s is child of %s", c,
-								ancestor), c.isChildOf(ancestor));
+						assertTrue(String.format("node %s is child of %s", cString,
+								ancestorString), c.isChildOf(ancestor));
 						assertTrue(String.format("node %s is parent of %s",
-								ancestor, c), ancestor.isParentOf(c));
+								ancestorString, cString), ancestor.isParentOf(c));
 					}
-					assertTrue(String.format("node %s is descendant of %s", c,
-							ancestor), c.isDescendantOf(ancestor));
+					assertTrue(String.format("node %s is descendant of %s", cString,
+							ancestorString), c.isDescendantOf(ancestor));
 					assertTrue(String.format("node %s is ancestor of %s",
-							ancestor, c), ancestor.isAncestorOf(c));
+							ancestorString, cString), ancestor.isAncestorOf(c));
 					ancestorLevel++;
 				}
 
 				for (E sibling : children) {
-					assertTrue(String.format("node %s is sibling of %s", c,
-							sibling), c.isSiblingOf(sibling));
+					String siblingString = sibling.toString();
+					assertTrue(String.format("node %s is sibling of %s", cString,
+							siblingString), c.isSiblingOf(sibling));
 					assertTrue(String.format("node %s is sibling of %s",
-							sibling, c), sibling.isSiblingOf(c));
+							siblingString, cString), sibling.isSiblingOf(c));
 					assertTrue(String.format(
-							"node %s is preceding sibling of %s", sibling, c),
+							"node %s is preceding sibling of %s", siblingString, cString),
 							sibling.isPrecedingSiblingOf(c));
 					assertTrue(String.format(
-							"node %s is following sibling of %s", c, sibling),
+							"node %s is following sibling of %s", cString, siblingString),
 							c.isFollowingSiblingOf(sibling));
 					assertTrue(String.format("node %s is preceding of %s",
-							sibling, c), sibling.isPrecedingOf(c));
-					assertTrue(String.format("node %s is following of %s", c,
-							sibling), c.isFollowingOf(sibling));
+							siblingString, cString), sibling.isPrecedingOf(c));
+					assertTrue(String.format("node %s is following of %s", cString,
+							siblingString), c.isFollowingOf(sibling));
 
 					try {
 						assertFalse(String.format(
-								"node %s is not preceding sibling of %s", c,
-								sibling), c.isPrecedingSiblingOf(sibling));
+								"node %s is not preceding sibling of %s", cString,
+								siblingString), c.isPrecedingSiblingOf(sibling));
 					} catch (AssertionError e) {
 						c.isPrecedingSiblingOf(sibling);
 						throw e;
 					}
 					assertFalse(String.format(
-							"node %s is following sibling of %s", sibling, c),
+							"node %s is following sibling of %s", siblingString, cString),
 							sibling.isFollowingSiblingOf(c));
 
 					assertFalse(String.format("node %s is not preceding of %s",
-							c, sibling), c.isPrecedingOf(sibling));
+							cString, siblingString), c.isPrecedingOf(sibling));
 					assertFalse(String.format("node %s is following of %s",
-							sibling, c), sibling.isFollowingOf(c));
+							siblingString, cString), sibling.isFollowingOf(c));
 				}
 
 				children.add(c);
@@ -321,31 +358,283 @@ public abstract class NodeTest<E extends Node<E>> {
 					// System.out.println(String.format("First child of %s is %s",
 					// node, child));
 				} else {
-					E oldChild = child;
 					child = child.getNextSibling();
 					// System.out.println(String.format("Next sibling of %s is %s",
 					// oldChild, child));
 				}
 
-				assertNotNull(String
-						.format("child node %s of node %s", i, node), child);
+				assertNotNull(
+						String.format("child node %s of node %s", i, nodeString),
+						child);
 
 				checkSubtreePreOrder(ctx, child, domChild);
 			}
 
-			assertEquals(String.format("child count of element %s", node),
+			assertEquals(String.format("child count of element %s", nodeString),
 					domChildNodes.getLength(), children.size());
 
 		} else if (domNode instanceof Text) {
 			Text text = (Text) domNode;
 
-			assertEquals(node + " is of type text : \"" + text.getNodeValue()
+			assertEquals(nodeString + " is of type text : \"" + text.getNodeValue()
 					+ "\"", Kind.TEXT, node.getKind());
-			assertEquals(String.format("Text of node %s", node), text
+			assertEquals(String.format("Text of node %s", nodeString), text
 					.getNodeValue().trim(), node.getValue());
 		} else {
-			throw new DocumentException("Unexpected dom node: %s", domNode
-					.getClass());
+			throw new DocumentException("Unexpected dom node: %s",
+					domNode.getClass());
+		}
+	}
+	
+	protected void checkSubtreePreOrderReduced(QueryContext ctx, final E node,
+			org.w3c.dom.Node domNode) throws Exception {
+		E child = null;
+		String nodeString = node.toString();
+
+		if (domNode instanceof Element) {
+			Element element = (Element) domNode;
+			assertEquals(nodeString + " is of type element", Kind.ELEMENT,
+					node.getKind());
+
+			// System.out.println("Checking name of element " +
+			// node.getDeweyID() + " level " + node.getDeweyID().getLevel() +
+			// " is " + element.getNodeName());
+
+			assertEquals(String.format("Name of node %s", nodeString),
+					element.getNodeName(), node.getName());
+			compareAttributes(ctx, node, element);
+
+			NodeList domChildNodes = element.getChildNodes();
+			ArrayList<E> children = new ArrayList<E>();
+
+			for (E c = node.getFirstChild(); c != null; c = c.getNextSibling()) {
+				// System.out.println(String.format("-> Found child of %s : %s",
+				// node, c));
+				children.add(c);
+			}
+
+			for (int i = 0; i < domChildNodes.getLength(); i++) {
+				org.w3c.dom.Node domChild = domChildNodes.item(i);
+				// System.out.println("Checking if child  " + ((domChild
+				// instanceof Element) ? domChild.getNodeName() :
+				// domChild.getNodeValue()) + " exists under " + node);
+
+				if (child == null) {
+					child = node.getFirstChild();
+					// System.out.println(String.format("First child of %s is %s",
+					// node, child));
+				} else {
+					child = child.getNextSibling();
+					// System.out.println(String.format("Next sibling of %s is %s",
+					// oldChild, child));
+				}
+
+				assertNotNull(
+						String.format("child node %s of node %s", i, nodeString),
+						child);
+
+				checkSubtreePreOrderReduced(ctx, child, domChild);
+			}
+
+			assertEquals(String.format("child count of element %s", nodeString),
+					domChildNodes.getLength(), children.size());
+
+		} else if (domNode instanceof Text) {
+			Text text = (Text) domNode;
+
+			assertEquals(nodeString + " is of type text : \"" + text.getNodeValue()
+					+ "\"", Kind.TEXT, node.getKind());
+			assertEquals(String.format("Text of node %s", nodeString), text
+					.getNodeValue().trim(), node.getValue());
+		} else {
+			throw new DocumentException("Unexpected dom node: %s",
+					domNode.getClass());
+		}
+	}
+	
+	protected void checkSubtreePostOrder(QueryContext ctx, final E node,
+			org.w3c.dom.Node domNode) throws Exception {
+		E child = null;
+		String nodeString = node.toString();
+
+		if (domNode instanceof Element) {
+			Element element = (Element) domNode;
+			assertEquals(nodeString + " is of type element", Kind.ELEMENT,
+					node.getKind());
+
+			// System.out.println("Checking name of element " +
+			// node.getDeweyID() + " level " + node.getDeweyID().getLevel() +
+			// " is " + element.getNodeName());
+
+			assertEquals(String.format("Name of node %s", nodeString),
+					element.getNodeName(), node.getName());
+			compareAttributes(ctx, node, element);
+
+			NodeList domChildNodes = element.getChildNodes();
+			ArrayList<E> children = new ArrayList<E>();
+
+			for (E c = node.getLastChild(); c != null; c = c.getPreviousSibling()) {
+				// System.out.println(String.format("-> Found child of %s : %s",
+				// node, c));
+				String cString = c.toString();
+
+				int ancestorLevel = 0;
+				for (E ancestor = node; ancestor != null; ancestor = ancestor
+						.getParent()) {
+					String ancestorString = ancestor.toString();
+					if (ancestorLevel == 0) {
+						assertTrue(String.format("node %s is child of %s", cString,
+								ancestorString), c.isChildOf(ancestor));
+						assertTrue(String.format("node %s is parent of %s",
+								ancestorString, cString), ancestor.isParentOf(c));
+					}
+					assertTrue(String.format("node %s is descendant of %s", cString,
+							ancestorString), c.isDescendantOf(ancestor));
+					assertTrue(String.format("node %s is ancestor of %s",
+							ancestorString, cString), ancestor.isAncestorOf(c));
+					ancestorLevel++;
+				}
+
+				for (E sibling : children) {
+					String siblingString = sibling.toString();
+					assertTrue(String.format("node %s is sibling of %s", cString,
+							siblingString), c.isSiblingOf(sibling));
+					assertTrue(String.format("node %s is sibling of %s",
+							siblingString, cString), sibling.isSiblingOf(c));
+					assertTrue(String.format(
+							"node %s is preceding sibling of %s", siblingString, cString),
+							sibling.isPrecedingSiblingOf(c));
+					assertTrue(String.format(
+							"node %s is following sibling of %s", cString, siblingString),
+							c.isFollowingSiblingOf(sibling));
+					assertTrue(String.format("node %s is preceding of %s",
+							siblingString, cString), sibling.isPrecedingOf(c));
+					assertTrue(String.format("node %s is following of %s", cString,
+							siblingString), c.isFollowingOf(sibling));
+
+					try {
+						assertFalse(String.format(
+								"node %s is not preceding sibling of %s", cString,
+								siblingString), c.isPrecedingSiblingOf(sibling));
+					} catch (AssertionError e) {
+						c.isPrecedingSiblingOf(sibling);
+						throw e;
+					}
+					assertFalse(String.format(
+							"node %s is following sibling of %s", siblingString, cString),
+							sibling.isFollowingSiblingOf(c));
+
+					assertFalse(String.format("node %s is not preceding of %s",
+							cString, siblingString), c.isPrecedingOf(sibling));
+					assertFalse(String.format("node %s is following of %s",
+							siblingString, cString), sibling.isFollowingOf(c));
+				}
+
+				children.add(c);
+			}
+
+			for (int i = domChildNodes.getLength() - 1; i >= 0; i--) {
+				org.w3c.dom.Node domChild = domChildNodes.item(i);
+				// System.out.println("Checking if child  " + ((domChild
+				// instanceof Element) ? domChild.getNodeName() :
+				// domChild.getNodeValue()) + " exists under " + node);
+
+				if (child == null) {
+					child = node.getLastChild();
+					// System.out.println(String.format("First child of %s is %s",
+					// node, child));
+				} else {
+					child = child.getPreviousSibling();
+					// System.out.println(String.format("Next sibling of %s is %s",
+					// oldChild, child));
+				}
+
+				assertNotNull(
+						String.format("child node %s of node %s", i, nodeString),
+						child);
+
+				checkSubtreePostOrder(ctx, child, domChild);
+			}
+
+			assertEquals(String.format("child count of element %s", nodeString),
+					domChildNodes.getLength(), children.size());
+
+		} else if (domNode instanceof Text) {
+			Text text = (Text) domNode;
+
+			assertEquals(nodeString + " is of type text : \"" + text.getNodeValue()
+					+ "\"", Kind.TEXT, node.getKind());
+			assertEquals(String.format("Text of node %s", nodeString), text
+					.getNodeValue().trim(), node.getValue());
+		} else {
+			throw new DocumentException("Unexpected dom node: %s",
+					domNode.getClass());
+		}
+	}
+	
+	protected void checkSubtreePostOrderReduced(QueryContext ctx, final E node,
+			org.w3c.dom.Node domNode) throws Exception {
+		E child = null;
+		String nodeString = node.toString();
+
+		if (domNode instanceof Element) {
+			Element element = (Element) domNode;
+			assertEquals(nodeString + " is of type element", Kind.ELEMENT,
+					node.getKind());
+
+			// System.out.println("Checking name of element " +
+			// node.getDeweyID() + " level " + node.getDeweyID().getLevel() +
+			// " is " + element.getNodeName());
+
+			assertEquals(String.format("Name of node %s", nodeString),
+					element.getNodeName(), node.getName());
+			compareAttributes(ctx, node, element);
+
+			NodeList domChildNodes = element.getChildNodes();
+			ArrayList<E> children = new ArrayList<E>();
+
+			for (E c = node.getLastChild(); c != null; c = c.getPreviousSibling()) {
+				// System.out.println(String.format("-> Found child of %s : %s",
+				// node, c));
+				children.add(c);
+			}
+
+			for (int i = domChildNodes.getLength() - 1; i >= 0; i--) {
+				org.w3c.dom.Node domChild = domChildNodes.item(i);
+				// System.out.println("Checking if child  " + ((domChild
+				// instanceof Element) ? domChild.getNodeName() :
+				// domChild.getNodeValue()) + " exists under " + node);
+
+				if (child == null) {
+					child = node.getLastChild();
+					// System.out.println(String.format("First child of %s is %s",
+					// node, child));
+				} else {
+					child = child.getPreviousSibling();
+					// System.out.println(String.format("Next sibling of %s is %s",
+					// oldChild, child));
+				}
+
+				assertNotNull(
+						String.format("child node %s of node %s", i, nodeString),
+						child);
+
+				checkSubtreePostOrderReduced(ctx, child, domChild);
+			}
+
+			assertEquals(String.format("child count of element %s", nodeString),
+					domChildNodes.getLength(), children.size());
+
+		} else if (domNode instanceof Text) {
+			Text text = (Text) domNode;
+
+			assertEquals(nodeString + " is of type text : \"" + text.getNodeValue()
+					+ "\"", Kind.TEXT, node.getKind());
+			assertEquals(String.format("Text of node %s", nodeString), text
+					.getNodeValue().trim(), node.getValue());
+		} else {
+			throw new DocumentException("Unexpected dom node: %s",
+					domNode.getClass());
 		}
 	}
 
@@ -364,76 +653,11 @@ public abstract class NodeTest<E extends Node<E>> {
 			domRoot = document.getDocumentElement();
 		} catch (Exception e) {
 			throw new DocumentException(
-					"An error occured while creating DOM input source: %s", e
-							.getMessage());
+					"An error occured while creating DOM input source: %s",
+					e.getMessage());
 		}
 
 		checkSubtreePostOrder(ctx, root, domRoot); // check document index
-	}
-
-	protected void checkSubtreePostOrder(QueryContext ctx, E node,
-			org.w3c.dom.Node domNode) throws Exception {
-		E child = null;
-
-		if (domNode instanceof Element) {
-			Element element = (Element) domNode;
-			assertEquals(node + " is of type element", Kind.ELEMENT, node
-					.getKind());
-
-			// //System.out.println("Checking name of element " + node +
-			// " level " + node.getLevel() + " is " + element.getNodeName());
-
-			assertEquals(String.format("Name of node %s", node), element
-					.getNodeName(), node.getName());
-			compareAttributes(ctx, node, element);
-
-			NodeList domChildNodes = element.getChildNodes();
-			ArrayList<E> children = new ArrayList<E>();
-
-			for (E c = node.getLastChild(); c != null; c = c
-					.getPreviousSibling()) {
-				// //System.out.println(String.format("Parent of %s is %s.", c,
-				// c.getParent(transaction)));
-				children.add(c);
-			}
-
-			for (int i = domChildNodes.getLength() - 1; i >= 0; i--) {
-				org.w3c.dom.Node domChild = domChildNodes.item(i);
-				// //System.out.println("Checking if child  " + ((domChild
-				// instanceof Element) ? domChild.getNodeName() :
-				// domChild.getNodeValue()) + " exists under " + node);
-
-				if (child == null) {
-					child = node.getLastChild();
-					// System.out.println(String.format("Last child of %s is %s",
-					// node, child));
-
-				} else {
-					E oldChild = child;
-					child = child.getPreviousSibling();
-					// System.out.println(String.format("Prev sibling of %s is %s",
-					// oldChild, child));
-				}
-
-				assertNotNull(String
-						.format("child node %s of node %s", i, node), child);
-
-				checkSubtreePostOrder(ctx, child, domChild);
-			}
-
-			assertEquals(String.format("child count of element %s", node),
-					domChildNodes.getLength(), children.size());
-
-		} else if (domNode instanceof Text) {
-			Text text = (Text) domNode;
-
-			assertEquals(node + " is of type text", Kind.TEXT, node.getKind());
-			assertEquals(String.format("Text of node %s", node), text
-					.getNodeValue().trim(), node.getValue());
-		} else {
-			throw new DocumentException("Unexpected dom node: %s", domNode
-					.getClass());
-		}
 	}
 
 	protected void compareAttributes(QueryContext ctx, E node, Element element)
@@ -460,8 +684,9 @@ public abstract class NodeTest<E extends Node<E>> {
 					assertTrue(String.format("node %s is parent of %s",
 							ancestor, c), ancestor.isParentOf(c));
 				}
-				assertTrue(String.format("node %s is ancestor of %s", ancestor,
-						c), ancestor.isAncestorOf(c));
+				assertTrue(
+						String.format("node %s is ancestor of %s", ancestor, c),
+						ancestor.isAncestorOf(c));
 				ancestorLevel++;
 			}
 		}
@@ -474,14 +699,15 @@ public abstract class NodeTest<E extends Node<E>> {
 		for (int i = 0; i < domAttributes.getLength(); i++) {
 			Attr domAttribute = (Attr) domAttributes.item(i);
 			E attribute = node.getAttribute(domAttribute.getName());
-			assertNotNull(String.format("Attribute \"%s\" of node %s",
-					domAttribute.getName(), node), attribute);
+			assertNotNull(
+					String.format("Attribute \"%s\" of node %s",
+							domAttribute.getName(), node), attribute);
 			assertEquals(attribute + " is of type attribute", Kind.ATTRIBUTE,
 					attribute.getKind());
 			assertEquals(String.format(
-					"Value of attribute \"%s\" (%s) of node %s", domAttribute
-							.getName(), attribute, node), domAttribute
-					.getValue(), attribute.getValue());
+					"Value of attribute \"%s\" (%s) of node %s",
+					domAttribute.getName(), attribute, node),
+					domAttribute.getValue(), attribute.getValue());
 		}
 	}
 
