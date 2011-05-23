@@ -53,6 +53,8 @@ public class DeweyIDBuffer implements SimpleDeweyID {
 	private int[] compareDivisions;
 	private int commonPrefix;
 	private int compareValue;
+	
+	private XTCdeweyID bufferedKey = null;
 
 	/**
 	 * Constructor for DeweyIDBuffer.
@@ -172,7 +174,11 @@ public class DeweyIDBuffer implements SimpleDeweyID {
 	 * @return the converted XTCdeweyID
 	 */
 	public XTCdeweyID getDeweyID() {
-		return new XTCdeweyID(docID, divisions, length);
+		if (bufferedKey != null) {
+			return bufferedKey;
+		}
+		bufferedKey = new XTCdeweyID(docID, length, divisions);
+		return bufferedKey;
 	}
 
 	/**
@@ -261,6 +267,7 @@ public class DeweyIDBuffer implements SimpleDeweyID {
 		this.compareDivisions = other.compareDivisions;
 		this.commonPrefix = other.commonPrefix;
 		this.compareValue = other.compareValue;
+		this.bufferedKey = other.bufferedKey;		
 	}
 
 	/**
@@ -283,8 +290,10 @@ public class DeweyIDBuffer implements SimpleDeweyID {
 		// copy divisions
 		System.arraycopy(otherDivisions, 0, this.divisions, 0,
 				otherDivisions.length);
-
+			
 		this.length = otherDivisions.length;
+		this.bufferedKey = other;
+		
 		disableCompareMode();
 	}
 
@@ -490,6 +499,7 @@ public class DeweyIDBuffer implements SimpleDeweyID {
 
 		disableCompareMode();
 
+		bufferedKey = null;
 		return true;
 	}
 
@@ -557,7 +567,8 @@ public class DeweyIDBuffer implements SimpleDeweyID {
 		if (compareMode) {
 			determineCompareValue();
 		}
-
+		
+		bufferedKey = null;
 	}
 
 	/**
@@ -605,6 +616,7 @@ public class DeweyIDBuffer implements SimpleDeweyID {
 	public void setAttributeToRelatedElement() {
 		if (isAttribute()) {
 			removeLastDivisions(2);
+			bufferedKey = null;
 		}
 	}
 }

@@ -355,13 +355,25 @@ public class XTCdeweyID implements java.io.Serializable,
 		this.docID = docID;
 		this.divisionValues = Arrays.copyOf(divisionValues,
 				divisionValues.length);
-		this.level = calcLevel(divisionValues);
+		this.level = calcLevel(this.divisionValues);
 	}
 
 	public XTCdeweyID(DocID docID, int[] divisionValues, int level) {
 		this.docID = docID;
 		this.divisionValues = Arrays.copyOf(divisionValues,
 				divisionValues.length);
+		this.level = level;
+	}
+	
+	public XTCdeweyID(DocID docID, int length, int[] divisionValues) {
+		this.docID = docID;
+		this.divisionValues = Arrays.copyOf(divisionValues, length);
+		this.level = calcLevel(this.divisionValues);
+	}
+
+	public XTCdeweyID(DocID docID, int length, int[] divisionValues, int level) {
+		this.docID = docID;
+		this.divisionValues = Arrays.copyOf(divisionValues, length);
 		this.level = level;
 	}
 

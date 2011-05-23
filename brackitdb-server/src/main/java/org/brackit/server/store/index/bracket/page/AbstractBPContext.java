@@ -376,7 +376,7 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements BPCon
 	public static boolean isLeaf(byte[] page) {
 		
 		int offset = BasePage.BASE_PAGE_START_OFFSET + LEAF_FLAG_FIELD_NO;
-		int value = ((page[offset] & 255) << 8) | (page[offset + 1] & 255);
+		int value = page[offset] & 255;
 		
 		if (value == 0) {
 			return false;
