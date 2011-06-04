@@ -34,6 +34,7 @@ import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.SubtreeDeleteListener;
+import org.brackit.server.store.page.bracket.DeweyIDBuffer;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 
 /**
@@ -95,13 +96,7 @@ public interface Leaf extends BPContext {
 
 	public BracketContext getContext();
 
-	public LeafBuffers getDeweyIDBuffers();
-
-	public void setDeweyIDBuffers(LeafBuffers deweyIDBuffers);
-
 	public int getOffset();
-
-	public void useBuffersFrom(Leaf other);
 
 	public boolean split(Leaf emptyRightPage, XTCdeweyID key,
 			boolean forUpdate, boolean compact, boolean splitAfterCurrent,
@@ -166,5 +161,33 @@ public interface Leaf extends BPContext {
 			SubtreeDeleteListener deleteListener, List<PageID> externalPageIDs,
 			boolean isStructureModification, boolean logged, long undoNextLSN)
 			throws IndexOperationException;
+
+	/**
+	 * Assigns the given DeweyIDBuffer to this leaf.
+	 * 
+	 * @param deweyIDBuffer
+	 *            the DeweyIDBuffer that is supposed to be used by this leaf
+	 */
+	public void assignDeweyIDBuffer(DeweyIDBuffer deweyIDBuffer);
+
+	/**
+	 * Assigns the DeweyIDBuffer of the given leaf to this leaf.
+	 * 
+	 * @param other
+	 *            the other leaf's DeweyIDBuffer that is supposed to be used by
+	 *            this leaf
+	 */
+	public void assignDeweyIDBuffer(Leaf other);
+
+	/**
+	 * Deassigns the DeweyIDBuffer from this page and returns the newly
+	 * available buffer. After this deassignment, this leaf will point before
+	 * the first node.
+	 * 
+	 * @return the deassigned DeweyIDBuffer
+	 */
+	public DeweyIDBuffer deassignDeweyIDBuffer();
+
+	public DeweyIDBuffer getDeweyIDBuffer();
 
 }

@@ -637,6 +637,13 @@ public class BracketKey {
 	public int getDataReferenceLength() {
 		return type.getDataReferenceLength();
 	}
+	
+	/**
+	 * @return true if a data reference has to follow this bracket key
+	 */
+	public boolean hasDataReference() {
+		return type.hasDataReference();
+	}
 
 	/**
 	 * Updates the key type of the bracket key at position 'keyPosition'.
