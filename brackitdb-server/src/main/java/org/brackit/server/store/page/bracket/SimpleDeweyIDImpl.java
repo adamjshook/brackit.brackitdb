@@ -25,17 +25,51 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.store.index.bracket.page;
-
-import org.brackit.server.store.page.bracket.DeweyIDBuffer;
+package org.brackit.server.store.page.bracket;
 
 /**
- * Contains the DeweyID buffers that are needed by the leaf page context.
+ * Object containing a simple DeweyID (consisting of an int array and a length indicator).
  * 
  * @author Martin Hiller
- * 
+ *
  */
-public class LeafBuffers {
-	public final DeweyIDBuffer currentDeweyID = new DeweyIDBuffer();
-	public final DeweyIDBuffer tempDeweyID = new DeweyIDBuffer();
+public class SimpleDeweyIDImpl implements SimpleDeweyID {
+	
+	private int[] divisions;
+	private int length;
+	
+	/**
+	 * Creates a simple DeweyID.
+	 * @param divisions the DeweyID divisions
+	 * @param length indicates how many divisions from the divisions array are valid
+	 */
+	public SimpleDeweyIDImpl(int[] divisions, int length) {
+		this.divisions = divisions;
+		this.length = length;
+	}
+
+	/**
+	 * @see org.brackit.server.store.page.bracket.SimpleDeweyID#getDivisionValues()
+	 */
+	@Override
+	public int[] getDivisionValues() {
+		return divisions;
+	}
+
+	/**
+	 * @see org.brackit.server.store.page.bracket.SimpleDeweyID#getNumberOfDivisions()
+	 */
+	@Override
+	public int getNumberOfDivisions() {
+		return length;
+	}
+
+	/**
+	 * @see org.brackit.server.store.page.bracket.SimpleDeweyID#isAttribute()
+	 */
+	@Override
+	public boolean isAttribute() {
+		return length > 2 && divisions[length - 2] == 1;
+	}
+
 }

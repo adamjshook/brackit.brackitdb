@@ -34,7 +34,7 @@ import org.brackit.server.store.OpenMode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.bulkinsert.BulkInsertContext;
 import org.brackit.server.store.index.bracket.page.Leaf;
-import org.brackit.server.store.index.bracket.page.LeafBuffers;
+import org.brackit.server.store.page.bracket.DeweyIDBuffer;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 import org.brackit.server.tx.Tx;
 
@@ -51,7 +51,7 @@ public class BracketIterImpl implements BracketIter {
 	protected final PageID rootPageID;	
 	protected final OpenMode openMode;		
 	protected Leaf page;	
-	protected LeafBuffers leafBuffers;
+	protected DeweyIDBuffer deweyIDBuffer;
 	protected XTCdeweyID key;	
 	protected XTCdeweyID insertKey;	
 	protected byte[] value;	
@@ -71,7 +71,7 @@ public class BracketIterImpl implements BracketIter {
 			this.tree = tree;
 			this.rootPageID = rootPageID;
 			this.page = page;
-			this.leafBuffers = page.getDeweyIDBuffers();
+			this.deweyIDBuffer = page.getDeweyIDBuffer();
 			this.openMode = openMode;
 			this.key = page.getKey();
 			this.value = page.getValue();
@@ -147,7 +147,7 @@ public class BracketIterImpl implements BracketIter {
 							
 							if (!checkThisPageOnly) {
 								// descend down the index tree to the last seen record again
-								page = tree.navigate(tx, rootPageID, NavigationMode.TO_KEY, key, openMode, null, leafBuffers);
+								page = tree.navigate(tx, rootPageID, NavigationMode.TO_KEY, key, openMode, null, deweyIDBuffer);
 							}
 						}
 					}
@@ -155,13 +155,13 @@ public class BracketIterImpl implements BracketIter {
 					{
 						// descend down the index tree to the insertion position
 						page.cleanup();	
-						page = tree.navigate(tx, rootPageID, NavigationMode.TO_INSERT_POS, insertKey, openMode, null, leafBuffers);
+						page = tree.navigate(tx, rootPageID, NavigationMode.TO_INSERT_POS, insertKey, openMode, null, deweyIDBuffer);
 					}
 				}
 			} else if (!checkThisPageOnly) {
 				// page is null
 				refreshBufferedValues = true;
-				page = tree.openInternal(tx, rootPageID, NavigationMode.TO_KEY, key, openMode, new HintPageInformation(rememberedPageID, rememberedLSN, rememberedOffset), leafBuffers);
+				page = tree.openInternal(tx, rootPageID, NavigationMode.TO_KEY, key, openMode, new HintPageInformation(rememberedPageID, rememberedLSN, rememberedOffset), deweyIDBuffer);
 			}
 
 			if (page != null) {
@@ -211,7 +211,7 @@ public class BracketIterImpl implements BracketIter {
 			page.cleanup();
 			page = null;
 		}
-		leafBuffers = null;
+		deweyIDBuffer = null;
 	}
 
 	@Override
@@ -289,7 +289,7 @@ public class BracketIterImpl implements BracketIter {
 			
 			on(true);
 					
-			page = tree.navigate(tx, rootPageID, navMode, key, openMode, page, leafBuffers);
+			page = tree.navigate(tx, rootPageID, navMode, key, openMode, page, deweyIDBuffer);
 			
 			if (page == null) {
 				return false;
@@ -486,24 +486,13 @@ public class BracketIterImpl implements BracketIter {
 
 		try
 		{
-			page = tree.deleteFromLeaf(tx, rootPageID, page, deleteListener, -1, openMode.doLog());
-			key = page.getKey();
-			value = page.getValue();
-			off();
+			tree.deleteFromLeaf(tx, rootPageID, page, deleteListener, -1, openMode.doLog());
+			page = null;
 		}
 		catch (IndexAccessException e)
 		{
 			page = null;
 			throw e;
-		}
-		catch (IndexOperationException e)
-		{
-			try {
-				page.cleanup();
-				page = null;
-			} catch (Exception ex) {
-			}
-			throw new IndexAccessException(e, "Error deleting subtree.");
 		}
 	}
 }

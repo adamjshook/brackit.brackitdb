@@ -137,9 +137,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	private final BracketPage page;
 
 	private int currentOffset;
-	private LeafBuffers deweyIDBuffers;
 	private DeweyIDBuffer currentDeweyID;
-	private DeweyIDBuffer tempDeweyID;
 
 	private byte[] bufferedValue;
 	private BracketKey.Type bufferedKeyType;
@@ -150,20 +148,16 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	}
 
 	private void initBuffers() {
-		if (deweyIDBuffers == null) {
-			deweyIDBuffers = new LeafBuffers();
-			currentDeweyID = deweyIDBuffers.currentDeweyID;
-			tempDeweyID = deweyIDBuffers.tempDeweyID;
+		if (currentDeweyID == null) {
+			currentDeweyID = new DeweyIDBuffer(this.getPageID());
 		}
 	}
 
 	@Override
 	public void setContext(XTCdeweyID deweyID, int offset) {
 
-		if (deweyIDBuffers == null) {
-			deweyIDBuffers = new LeafBuffers();
-			currentDeweyID = deweyIDBuffers.currentDeweyID;
-			tempDeweyID = deweyIDBuffers.tempDeweyID;
+		if (currentDeweyID == null) {
+			currentDeweyID = new DeweyIDBuffer(this.getPageID());
 		}
 
 		currentDeweyID.setTo(deweyID);
@@ -185,12 +179,15 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	}
 
 	@Override
-	public void useBuffersFrom(Leaf otherLeaf) {
+	public void assignDeweyIDBuffer(Leaf otherLeaf) {
+		if (currentDeweyID != null) {
+			throw new RuntimeException("DeweyID buffer can only be set, if it is not initialized yet.");
+		}
 		LeafBPContext other = (LeafBPContext) otherLeaf;
-		this.deweyIDBuffers = other.getDeweyIDBuffers();
-		if (deweyIDBuffers != null) {
-			currentDeweyID = deweyIDBuffers.currentDeweyID;
-			tempDeweyID = deweyIDBuffers.tempDeweyID;
+		DeweyIDBuffer deweyIDBuffer = other.currentDeweyID;
+		if (deweyIDBuffer != null) {
+			deweyIDBuffer.assignToPage(this.getPageID());
+			this.currentDeweyID = deweyIDBuffer;
 		}
 	}
 
@@ -284,8 +281,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	public boolean moveFirst() {
 		initBuffers();
 
-		NavigationResult navRes = page.navigateFirstCF(currentDeweyID,
-				tempDeweyID);
+		NavigationResult navRes = page.navigateFirstCF(currentDeweyID);
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
@@ -302,8 +298,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	public boolean moveLast() {
 		initBuffers();
 
-		NavigationResult navRes = page.navigateLastCF(currentDeweyID,
-				tempDeweyID);
+		NavigationResult navRes = page.navigateLastCF(currentDeweyID);
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
@@ -321,7 +316,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 		initBuffers();
 
 		NavigationResult navRes = page.navigateNext(currentOffset,
-				currentDeweyID, tempDeweyID, bufferedKeyType);
+				currentDeweyID, bufferedKeyType);
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
@@ -380,7 +375,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 		}
 
 		int returnVal = page.insertAfter(deweyID, record, ancestorsToInsert,
-				externalize, currentOffset, currentDeweyID, tempDeweyID);
+				externalize, currentOffset, currentDeweyID);
 
 		if (returnVal != BracketPage.INSERTION_NO_SPACE) {
 			currentOffset = returnVal;
@@ -402,27 +397,23 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 		// call corresponding bracket page method
 		switch (navMode) {
 		case NEXT_SIBLING:
-			navRes = page.navigateNextSibling(currentOffset, currentDeweyID,
-					tempDeweyID);
+			navRes = page.navigateNextSibling(currentOffset, currentDeweyID);
 			break;
 		case FIRST_CHILD:
-			navRes = page.navigateFirstChild(currentOffset, currentDeweyID,
-					tempDeweyID);
+			navRes = page.navigateFirstChild(currentOffset, currentDeweyID);
 			break;
 		case LAST_CHILD:
-			navRes = page.navigateLastChild(currentOffset, currentDeweyID,
-					tempDeweyID);
+			navRes = page.navigateLastChild(currentOffset, currentDeweyID);
 			break;
 		case PARENT:
-			navRes = page.navigateParent(currentDeweyID, tempDeweyID);
+			navRes = page.navigateParent(currentDeweyID);
 			break;
 		case PREVIOUS_SIBLING:
-			navRes = page.navigatePreviousSibling(currentOffset,
-					currentDeweyID, tempDeweyID);
+			navRes = page
+					.navigatePreviousSibling(currentOffset, currentDeweyID);
 			break;
 		case NEXT_ATTRIBUTE:
-			navRes = page.navigateNextAttribute(currentOffset, currentDeweyID,
-					tempDeweyID);
+			navRes = page.navigateNextAttribute(currentOffset, currentDeweyID);
 			break;
 		case TO_INSERT_POS:
 		case TO_KEY:
@@ -438,6 +429,8 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 			// adjust current offset
 			bufferedKeyType = navRes.keyType;
 			currentOffset = navRes.keyOffset;
+		} else {
+			moveBeforeFirst();
 		}
 
 		return navRes.status;
@@ -460,36 +453,32 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 		// call corresponding bracket page method
 		switch (navMode) {
 		case TO_KEY:
-			navRes = page.navigateToKey(referenceDeweyID, currentDeweyID,
-					tempDeweyID);
+			navRes = page.navigateToKey(referenceDeweyID, currentDeweyID);
 			break;
 		case TO_INSERT_POS:
-			navRes = page.navigateToInsertPos(referenceDeweyID, currentDeweyID,
-					tempDeweyID);
+			navRes = page.navigateToInsertPos(referenceDeweyID, currentDeweyID);
 			break;
 		case NEXT_SIBLING:
 			navRes = page.navigateNextSiblingCF(referenceDeweyID,
-					currentDeweyID, tempDeweyID);
+					currentDeweyID);
 			break;
 		case FIRST_CHILD:
-			navRes = page.navigateFirstChildCF(referenceDeweyID,
-					currentDeweyID, tempDeweyID);
+			navRes = page
+					.navigateFirstChildCF(referenceDeweyID, currentDeweyID);
 			break;
 		case LAST_CHILD:
-			navRes = page.navigateLastChildCF(referenceDeweyID, currentDeweyID,
-					tempDeweyID);
+			navRes = page.navigateLastChildCF(referenceDeweyID, currentDeweyID);
 			break;
 		case PARENT:
-			navRes = page.navigateParentCF(referenceDeweyID, currentDeweyID,
-					tempDeweyID);
+			navRes = page.navigateParentCF(referenceDeweyID, currentDeweyID);
 			break;
 		case PREVIOUS_SIBLING:
 			navRes = page.navigatePreviousSiblingCF(referenceDeweyID,
-					currentDeweyID, tempDeweyID);
+					currentDeweyID);
 			break;
 		case NEXT_ATTRIBUTE:
 			navRes = page.navigateNextAttributeCF(referenceDeweyID,
-					currentDeweyID, tempDeweyID);
+					currentDeweyID);
 			break;
 		default:
 			throw new RuntimeException("Navigation Mode not supported!");
@@ -500,6 +489,8 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 			// adjust current offset
 			bufferedKeyType = navRes.keyType;
 			currentOffset = navRes.keyOffset;
+		} else {
+			moveBeforeFirst();
 		}
 
 		return navRes.status;
@@ -523,9 +514,9 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	}
 
 	@Override
-	public boolean split(Leaf rightLeaf, XTCdeweyID key,
-			boolean forUpdate, boolean compact, boolean splitAfterCurrent,
-			boolean logged, long undoNextLSN) throws IndexOperationException {
+	public boolean split(Leaf rightLeaf, XTCdeweyID key, boolean forUpdate,
+			boolean compact, boolean splitAfterCurrent, boolean logged,
+			long undoNextLSN) throws IndexOperationException {
 
 		try {
 			LeafBPContext rightPage = (LeafBPContext) rightLeaf;
@@ -538,26 +529,17 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 
 			// prepare split
 			DeletePreparation delPrep = splitAfterCurrent ? page
-					.splitAfterCurrentPrepare(currentOffset, currentDeweyID,
-							tempDeweyID) : page.splitPrepare(
-					compact ? OCCUPANCY_RATE_COMPACT : OCCUPANCY_RATE_DEFAULT,
-					tempDeweyID);
+					.splitAfterCurrentPrepare(currentOffset, currentDeweyID)
+					: page.splitPrepare(compact ? OCCUPANCY_RATE_COMPACT
+							: OCCUPANCY_RATE_DEFAULT, currentDeweyID);
 
 			boolean returnLeftPage = (currentOffset < delPrep.startDeleteOffset);
-			// buffer current DeweyID
-			XTCdeweyID originalDeweyID = null;
-			if (returnLeftPage && !splitAfterCurrent
-					&& currentOffset != BracketPage.BEFORE_LOW_KEY_OFFSET) {
-				originalDeweyID = currentDeweyID.getDeweyID();
-			}
 
 			// get nodes that have to be transferred to the right page
 			BracketNodeSequence nodes = page.getBracketNodeSequence(delPrep);
 
 			// delete nodes from left page
-			int oldOffset = currentOffset;
-			currentOffset = page.delete(currentDeweyID, tempDeweyID, delPrep,
-					externalValueLoader);
+			page.delete(delPrep, externalValueLoader);
 
 			// set highKey/separator
 			XTCdeweyID highKey = this.getHighKey();
@@ -566,22 +548,15 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 
 			// insert nodes into right page
 			rightPage.page.insertAfter(nodes, rightPage.currentOffset,
-					rightPage.currentDeweyID, rightPage.tempDeweyID);
+					rightPage.currentDeweyID);
 
 			// set correct context(s)
 			if (returnLeftPage) {
-				// left page
-				if (oldOffset < delPrep.previousOffset) {
-					currentOffset = oldOffset;
-
-					if (originalDeweyID != null) {
-						currentDeweyID.setTo(originalDeweyID);
-					}
-				}
-
 				// right page
 				rightPage.moveBeforeFirst();
 			} else {
+				// left page
+				this.moveBeforeFirst();
 
 				// right page
 				if (forUpdate) {
@@ -605,16 +580,18 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	}
 
 	@Override
-	public void copyContentAndContextTo(Leaf otherLeaf, boolean logged, long undoNextLSN)
-	{
+	public void copyContentAndContextTo(Leaf otherLeaf, boolean logged,
+			long undoNextLSN) {
 		LeafBPContext other = (LeafBPContext) otherLeaf;
-		
+
 		other.initBuffers();
-		
+
 		// copy content
-		BracketNodeSequence content = page.getBracketNodeSequence(getLowKey(), BracketPage.LOW_KEY_OFFSET, BracketPage.KEY_AREA_END_OFFSET);
-		other.page.insertAfter(content, BracketPage.BEFORE_LOW_KEY_OFFSET, other.currentDeweyID, other.tempDeweyID);
-		
+		BracketNodeSequence content = page.getBracketNodeSequence(getLowKey(),
+				BracketPage.LOW_KEY_OFFSET, BracketPage.KEY_AREA_END_OFFSET);
+		other.page.insertAfter(content, BracketPage.BEFORE_LOW_KEY_OFFSET,
+				other.currentDeweyID);
+
 		// copy context
 		otherLeaf.setContext(this.getContext());
 	}
@@ -627,18 +604,6 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	@Override
 	public boolean isFirst() {
 		return (currentOffset == BracketPage.LOW_KEY_OFFSET);
-	}
-
-	@Override
-	public LeafBuffers getDeweyIDBuffers() {
-		return deweyIDBuffers;
-	}
-
-	@Override
-	public void setDeweyIDBuffers(LeafBuffers deweyIDBuffers) {
-		this.deweyIDBuffers = deweyIDBuffers;
-		currentDeweyID = deweyIDBuffers.currentDeweyID;
-		tempDeweyID = deweyIDBuffers.tempDeweyID;
 	}
 
 	@Override
@@ -751,7 +716,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 				DeletePrepareListener delPrepListener = new DeletePrepareListenerImpl(
 						tempExternalPageIDs, delayedListener);
 				delPrep = page.deletePrepare(currentOffset, currentDeweyID,
-						tempDeweyID, delPrepListener);
+						delPrepListener);
 
 				if (delPrep.endDeleteOffset == BracketPage.KEY_AREA_END_OFFSET) {
 					// leaf needs to be unchained
@@ -768,7 +733,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 				DeletePrepareListener delPrepListener = new DeletePrepareListenerImpl(
 						externalPageIDs, deleteListener);
 				delPrep = page.deletePrepare(currentOffset, currentDeweyID,
-						tempDeweyID, delPrepListener);
+						delPrepListener);
 			}
 
 			// delete external values
@@ -777,8 +742,10 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 			}
 
 			// delete
-			currentOffset = page.delete(currentDeweyID, tempDeweyID, delPrep,
-					externalValueLoader);
+			page.delete(delPrep, externalValueLoader);
+
+			// reset context information
+			moveBeforeFirst();
 
 			return (delPrep.endDeleteOffset != BracketPage.KEY_AREA_END_OFFSET);
 
@@ -796,6 +763,8 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 
 			initBuffers();
 
+			moveBeforeFirst();
+
 			// prepare deletion
 			boolean deleteExternalValues = (externalPageIDs == null);
 			if (deleteExternalValues) {
@@ -805,7 +774,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 			DeletePrepareListener delPrepListener = new DeletePrepareListenerImpl(
 					externalPageIDs, deleteListener);
 			DeletePreparation delPrep = page.deleteRemainingSubtreePrepare(
-					subtreeRoot, tempDeweyID, delPrepListener);
+					subtreeRoot, currentDeweyID, delPrepListener);
 
 			if (delPrep == null) {
 				// nothing to delete
@@ -823,8 +792,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 				return false;
 			} else {
 				// delete
-				currentOffset = page.delete(currentDeweyID, tempDeweyID,
-						delPrep, null);
+				page.delete(delPrep, null);
 				return true;
 			}
 
@@ -832,16 +800,52 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 			throw new IndexOperationException(e);
 		}
 	}
-	
-	public static void appendPageContextInfo(byte[] buffer, BracketPage page, StringBuilder out) {
-		
+
+	public static void appendPageContextInfo(byte[] buffer, BracketPage page,
+			StringBuilder out) {
+
 		out.append("\tPrevious Page: ");
-		out.append(PageID.fromBytes(buffer, BasePage.BASE_PAGE_START_OFFSET	+ PREV_PAGE_FIELD_NO));
+		out.append(PageID.fromBytes(buffer, BasePage.BASE_PAGE_START_OFFSET
+				+ PREV_PAGE_FIELD_NO));
 		out.append("\n\tNext Page: ");
-		out.append(PageID.fromBytes(buffer, BasePage.BASE_PAGE_START_OFFSET	+ NEXT_PAGE_FIELD_NO));
+		out.append(PageID.fromBytes(buffer, BasePage.BASE_PAGE_START_OFFSET
+				+ NEXT_PAGE_FIELD_NO));
 		out.append("\n\tHighKey: ");
 		out.append(page.getContextDataAsDeweyID());
-		
+
+	}
+
+	@Override
+	public void assignDeweyIDBuffer(DeweyIDBuffer deweyIDBuffer) {
+		if (currentDeweyID != null) {
+			throw new RuntimeException("DeweyID buffer can only be set, if it is not initialized yet.");
+		}
+		deweyIDBuffer.assignToPage(this.getPageID());
+		this.currentDeweyID = deweyIDBuffer;
+	}
+
+	@Override
+	public DeweyIDBuffer getDeweyIDBuffer() {
+		return currentDeweyID;
+	}
+
+	@Override
+	public void cleanup() {
+		super.cleanup();
+		if (currentDeweyID != null) {
+			currentDeweyID.deassignFromPage(this.getPageID());
+		}
+	}
+
+	@Override
+	public DeweyIDBuffer deassignDeweyIDBuffer() {
+		moveBeforeFirst();
+		if (currentDeweyID != null) {
+			currentDeweyID.deassignFromPage(this.getPageID());
+		}
+		DeweyIDBuffer returnBuffer = currentDeweyID;
+		currentDeweyID = null;
+		return returnBuffer;
 	}
 
 }

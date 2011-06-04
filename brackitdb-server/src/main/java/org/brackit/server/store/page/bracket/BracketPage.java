@@ -304,7 +304,7 @@ public class BracketPage extends BasePage {
 		// if key offset belongs to lowID
 		if (keyOffset == LOW_KEY_OFFSET) {
 			keyOffset = getKeyAreaStartOffset();
-			if (getLowKeyType().getDataReferenceLength() > 0) {
+			if (getLowKeyType().hasDataReference()) {
 				return keyOffset;
 			}
 		}
@@ -542,8 +542,6 @@ public class BracketPage extends BasePage {
 	 * 
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the reference node
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @param keyPos
 	 *            the offset where the bracket key of the reference node starts
 	 * @param prop
@@ -554,12 +552,8 @@ public class BracketPage extends BasePage {
 	 * @return the navigation result
 	 */
 	private NavigationResult navigateGeneric(
-			final DeweyIDBuffer currentDeweyID,
-			final DeweyIDBuffer tempDeweyID, int keyPos,
+			final DeweyIDBuffer currentDeweyID, int keyPos,
 			final NavigationProperties prop, final boolean considerOverflowNodes) {
-
-		// initialize DeweyIDBuffer
-		tempDeweyID.setTo(currentDeweyID);
 
 		// initialize levelDiff
 		int levelDiff = 0;
@@ -577,39 +571,43 @@ public class BracketPage extends BasePage {
 		if (keyPos == BEFORE_LOW_KEY_OFFSET) {
 			keyPos = LOW_KEY_OFFSET;
 
+			// backup reference DeweyID
+			currentDeweyID.backup();
+
 			currentKeyType = getLowKeyType();
-			tempDeweyID.setTo(getLowKey());
+			currentDeweyID.setTo(getLowKey());
 			if (prop.ignoreAttributes) {
 				// set DeweyID to related element DeweyID
-				tempDeweyID.setAttributeToRelatedElement();
+				currentDeweyID.setAttributeToRelatedElement();
 			}
-			tempDeweyID.useCompareDeweyIDFrom(currentDeweyID);
-			levelDiff += currentDeweyID.getLevelDifferenceTo(tempDeweyID);
+			levelDiff -= currentDeweyID.getLevelDifferenceTo(currentDeweyID
+					.getBackupAsSimpleDeweyID());
+			currentDeweyID.resetBackup();
 
 			// if lowKey is not an attribute
 			if (!prop.ignoreAttributes
 					|| currentKeyType != BracketKey.Type.ATTRIBUTE) {
 
 				// check break- and successCondition
-				if (prop.breakCondition.checkCondition(levelDiff, tempDeweyID,
-						currentKeyType, keyPos)) {
-					if (result.status == NavigationStatus.AFTER_LAST) {
-						result.status = NavigationStatus.NOT_EXISTENT;
-					}
+				if (prop.breakCondition.checkCondition(levelDiff,
+						currentDeweyID, currentKeyType, keyPos)) {
+					result.status = NavigationStatus.NOT_EXISTENT;
 					result.breakConditionFulfilled = true;
 					return result;
 				} else if (prop.successCondition.checkCondition(levelDiff,
-						tempDeweyID, currentKeyType, keyPos)) {
+						currentDeweyID, currentKeyType, keyPos)) {
 					// current node has qualified
 					result.status = NavigationStatus.FOUND;
 					result.keyOffset = keyPos;
 					result.keyType = currentKeyType;
 					result.levelDiff = levelDiff;
-					currentDeweyID.setTo(tempDeweyID);
 
 					if (prop.target == NavigationTarget.FIRST) {
 						// first node that fulfills the success condition found
 						return result;
+					} else {
+						// backup DeweyID and continue searching
+						currentDeweyID.backup();
 					}
 				}
 			}
@@ -631,13 +629,13 @@ public class BracketPage extends BasePage {
 
 			// load next key from keyStorage
 			currentKey.load(page, keyPos);
-			currentKeyType = currentKey.getType();
+			currentKeyType = currentKey.type;
 
 			if (currentKeyType != BracketKey.Type.ATTRIBUTE
 					|| !prop.ignoreAttributes) {
 
 				// refresh DeweyID
-				tempDeweyID.update(currentKey, prop.ignoreAttributes);
+				currentDeweyID.update(currentKey, prop.ignoreAttributes);
 
 				// decrease level difference
 				levelDiff -= currentKey.getRoundBrackets();
@@ -654,8 +652,8 @@ public class BracketPage extends BasePage {
 
 					// check break condition
 					if (prop.breakCondition.checkCondition(levelDiff,
-							tempDeweyID, currentKeyType, keyPos)) {
-						if (result.status == NavigationStatus.AFTER_LAST) {
+							currentDeweyID, currentKeyType, keyPos)) {
+						if (result.status != NavigationStatus.FOUND) {
 							result.status = NavigationStatus.NOT_EXISTENT;
 						}
 						result.breakConditionFulfilled = true;
@@ -664,18 +662,20 @@ public class BracketPage extends BasePage {
 
 					// check success condition
 					if (prop.successCondition.checkCondition(levelDiff,
-							tempDeweyID, currentKeyType, keyPos)) {
+							currentDeweyID, currentKeyType, keyPos)) {
 						// current node has qualified
 						result.status = NavigationStatus.FOUND;
 						result.keyOffset = keyPos;
 						result.keyType = currentKeyType;
 						result.levelDiff = levelDiff;
-						currentDeweyID.setTo(tempDeweyID);
 
 						if (prop.target == NavigationTarget.FIRST) {
 							// first node that fulfills the success condition
 							// found
 							break;
+						} else {
+							// backup DeweyID and continue searching
+							currentDeweyID.backup();
 						}
 					}
 				}
@@ -685,7 +685,14 @@ public class BracketPage extends BasePage {
 			keyPos += BracketKey.PHYSICAL_LENGTH
 					+ currentKeyType.getDataReferenceLength();
 		}
-
+		
+		if (prop.target == NavigationTarget.LAST && result.status == NavigationStatus.FOUND) {
+			// restore last found node
+			currentDeweyID.restore(false);
+		} else {
+			currentDeweyID.resetBackup();
+		}
+		
 		return result;
 	}
 
@@ -706,14 +713,12 @@ public class BracketPage extends BasePage {
 	 *            offset of the current node
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the current node
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return offset of the newly inserted node or an errorcode (if new node is
 	 *         a duplicate or there is not enough space)
 	 */
 	public int insertAfter(XTCdeweyID key, byte[] value, int ancestorsToInsert,
 			boolean externalized, int currentOffset,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
+			DeweyIDBuffer currentDeweyID) {
 
 		byte[] valueLengthField = getValueLengthField(value, externalized);
 
@@ -725,7 +730,7 @@ public class BracketPage extends BasePage {
 					ancestorsToInsert);
 		} else {
 			newKeyOffset = insertNormalRecord(key, valueLengthField, value,
-					currentOffset, currentDeweyID, tempDeweyID);
+					currentOffset, currentDeweyID);
 		}
 
 		// set current DeweyID to inserted key
@@ -823,7 +828,7 @@ public class BracketPage extends BasePage {
 		}
 
 		// store value and write value reference
-		if (keyType.getDataReferenceLength() > 0) {
+		if (keyType.hasDataReference()) {
 			writeValueReference(currentOffset,
 					storeValue(valueLengthField, value));
 			currentOffset += BracketKey.DATA_REF_LENGTH;
@@ -865,8 +870,7 @@ public class BracketPage extends BasePage {
 	}
 
 	private int insertNormalRecord(XTCdeweyID key, byte[] valueLengthField,
-			byte[] value, int currentOffset, DeweyIDBuffer currentDeweyID,
-			DeweyIDBuffer tempDeweyID) {
+			byte[] value, int currentOffset, DeweyIDBuffer currentDeweyID) {
 
 		// determine required space
 		int requiredSpace = BracketKey.DATA_REF_LENGTH
@@ -922,10 +926,12 @@ public class BracketPage extends BasePage {
 		BracketKey afterKey = null;
 		if (nextKeyOffset < getKeyAreaEndOffset()) {
 			// determine next node's DeweyID
-			tempDeweyID.setTo(currentDeweyID);
-			tempDeweyID.update(BracketKey.loadNew(page, nextKeyOffset), false);
+			currentDeweyID.backup();
+			currentDeweyID.update(BracketKey.loadNew(page, nextKeyOffset),
+					false);
 
-			afterKey = BracketKey.generateBracketKey(key, tempDeweyID);
+			afterKey = BracketKey.generateBracketKey(key, currentDeweyID);
+			currentDeweyID.restore(false);
 		}
 
 		// allocate required space
@@ -1259,19 +1265,16 @@ public class BracketPage extends BasePage {
 	 *            indicates whether the value is an external PageID
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the current node
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return offset of the newly inserted node or an errorcode (if new node is
 	 *         a duplicate or there is not enough space)
 	 */
 	public int insert(XTCdeweyID key, byte[] value, int ancestorsToInsert,
-			boolean externalized, DeweyIDBuffer currentDeweyID,
-			DeweyIDBuffer tempDeweyID) {
+			boolean externalized, DeweyIDBuffer currentDeweyID) {
 
 		int result = 0;
 
 		NavigationResult insertPos = this.navigateToInsertPos(key,
-				currentDeweyID, tempDeweyID);
+				currentDeweyID);
 
 		if (insertPos.status == NavigationStatus.NOT_EXISTENT) {
 			// duplicate detected
@@ -1279,7 +1282,7 @@ public class BracketPage extends BasePage {
 		} else if (insertPos.status == NavigationStatus.FOUND) {
 			// actual insertion
 			result = insertAfter(key, value, ancestorsToInsert, externalized,
-					insertPos.keyOffset, currentDeweyID, tempDeweyID);
+					insertPos.keyOffset, currentDeweyID);
 		} else {
 			throw new RuntimeException("Not possible!");
 		}
@@ -1479,15 +1482,14 @@ public class BracketPage extends BasePage {
 		result[0] = new KeyValueTuple(lowID, getValue(LOW_KEY_OFFSET).value);
 
 		// prepare DeweyID buffers
-		DeweyIDBuffer currentDeweyID = new DeweyIDBuffer(lowID);
-		DeweyIDBuffer tempDeweyID = new DeweyIDBuffer();
+		DeweyIDBuffer currentDeweyID = new DeweyIDBuffer(null, lowID);
 
 		// navigate over all records
 		NavigationResult navRes = new NavigationResult();
 		navRes.keyOffset = LOW_KEY_OFFSET;
 		for (int i = 1; i < recordCount; i++) {
-			navRes = navigateGeneric(currentDeweyID, tempDeweyID,
-					navRes.keyOffset, NavigationProfiles.nextNode, false);
+			navRes = navigateGeneric(currentDeweyID, navRes.keyOffset,
+					NavigationProfiles.nextNode, false);
 			result[i] = new KeyValueTuple(currentDeweyID.getDeweyID(),
 					getValue(navRes.keyOffset).value);
 		}
@@ -1502,12 +1504,10 @@ public class BracketPage extends BasePage {
 	 *            the DeweyID to navigate to
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the reference node
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
 	public NavigationResult navigateToKey(XTCdeweyID key,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
+			DeweyIDBuffer currentDeweyID) {
 
 		if (getRecordCount() == 0) {
 			return new NavigationResult();
@@ -1530,8 +1530,8 @@ public class BracketPage extends BasePage {
 			navRes.status = NavigationStatus.BEFORE_FIRST;
 		} else {
 			// navigate to key
-			navRes = navigateGeneric(currentDeweyID, tempDeweyID,
-					LOW_KEY_OFFSET, NavigationProfiles.byDeweyID, false);
+			navRes = navigateGeneric(currentDeweyID, LOW_KEY_OFFSET,
+					NavigationProfiles.byDeweyID, false);
 		}
 
 		currentDeweyID.disableCompareMode();
@@ -1545,19 +1545,16 @@ public class BracketPage extends BasePage {
 	 *            the offset of the reference node
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the reference node
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @param currentKeyType
 	 *            bracket key type of the reference node; this is just an
 	 *            optimization and may be null, if not known.
 	 * @return the navigation result
 	 */
 	public NavigationResult navigateNext(int currentOffset,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID,
-			BracketKey.Type currentKeyType) {
+			DeweyIDBuffer currentDeweyID, BracketKey.Type currentKeyType) {
 
 		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
-			return navigateFirstCF(currentDeweyID, tempDeweyID);
+			return navigateFirstCF(currentDeweyID);
 		} else {
 
 			int keyAreaEndOffset = getKeyAreaEndOffset();
@@ -1573,7 +1570,7 @@ public class BracketPage extends BasePage {
 			} else {
 				if (currentKeyType == null) {
 					currentKey.load(page, currentOffset);
-					currentKeyType = currentKey.getType();
+					currentKeyType = currentKey.type;
 				}
 				currentOffset += BracketKey.PHYSICAL_LENGTH
 						+ currentKeyType.getDataReferenceLength();
@@ -1584,7 +1581,7 @@ public class BracketPage extends BasePage {
 			while (currentOffset < keyAreaEndOffset) {
 
 				currentKey.load(page, currentOffset);
-				currentKeyType = currentKey.getType();
+				currentKeyType = currentKey.type;
 
 				currentDeweyID.update(currentKey, false);
 
@@ -1617,12 +1614,9 @@ public class BracketPage extends BasePage {
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer that will contain the DeweyID of the requested
 	 *            node, if found
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
-	public NavigationResult navigateFirstCF(DeweyIDBuffer currentDeweyID,
-			DeweyIDBuffer tempDeweyID) {
+	public NavigationResult navigateFirstCF(DeweyIDBuffer currentDeweyID) {
 
 		if (getRecordCount() == 0) {
 			return new NavigationResult();
@@ -1645,12 +1639,10 @@ public class BracketPage extends BasePage {
 	 *            the offset of the reference node
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the reference node
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
 	public NavigationResult navigatePrevious(int currentOffset,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
+			DeweyIDBuffer currentDeweyID) {
 
 		if (currentOffset == BEFORE_LOW_KEY_OFFSET
 				|| currentDeweyID.getNumberOfDivisions() == 1) {
@@ -1672,7 +1664,7 @@ public class BracketPage extends BasePage {
 		NavigationProperties prop = NavigationProfiles
 				.getPreviousByKeyOffset(currentOffset);
 
-		NavigationResult navRes = navigateGeneric(currentDeweyID, tempDeweyID,
+		NavigationResult navRes = navigateGeneric(currentDeweyID,
 				LOW_KEY_OFFSET, prop, false);
 
 		if (navRes.status != NavigationStatus.FOUND) {
@@ -1692,12 +1684,10 @@ public class BracketPage extends BasePage {
 	 *            the offset of the reference node
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the reference node
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
 	public NavigationResult navigateNextSibling(int currentOffset,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
+			DeweyIDBuffer currentDeweyID) {
 
 		// initialize result object
 		NavigationResult result = new NavigationResult();
@@ -1728,7 +1718,7 @@ public class BracketPage extends BasePage {
 
 			// load next key from keyStorage
 			currentKey.loadWithoutGaps(page, currentOffset);
-			currentKeyType = currentKey.getType();
+			currentKeyType = currentKey.type;
 
 			if (currentKeyType != BracketKey.Type.ATTRIBUTE) {
 
@@ -1785,30 +1775,26 @@ public class BracketPage extends BasePage {
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer that will contain the DeweyID of the requested
 	 *            node, if found
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
 	public NavigationResult navigateNextSiblingCF(XTCdeweyID referenceDeweyID,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
+			DeweyIDBuffer currentDeweyID) {
 
 		// look for reference node in this page
 		NavigationResult refNode = this.navigateToKey(referenceDeweyID,
-				currentDeweyID, tempDeweyID);
+				currentDeweyID);
 		NavigationResult navRes = null;
 
 		if (refNode.status == NavigationStatus.FOUND) {
 			// invoke navigation method
-			navRes = navigateNextSibling(refNode.keyOffset, currentDeweyID,
-					tempDeweyID);
+			navRes = navigateNextSibling(refNode.keyOffset, currentDeweyID);
 		} else if (refNode.status == NavigationStatus.BEFORE_FIRST) {
 			// continue navigation
 
 			// determine level difference to low key
 			currentDeweyID.setTo(referenceDeweyID);
-			navRes = navigateGeneric(currentDeweyID, tempDeweyID,
-					BEFORE_LOW_KEY_OFFSET, NavigationProfiles.nextSibling,
-					false);
+			navRes = navigateGeneric(currentDeweyID, BEFORE_LOW_KEY_OFFSET,
+					NavigationProfiles.nextSibling, false);
 
 		} else {
 			// reference key does not exist or is located after the high key
@@ -1825,15 +1811,13 @@ public class BracketPage extends BasePage {
 	 *            the offset of the reference node
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the reference node
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
 	public NavigationResult navigatePreviousSibling(int currentOffset,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
+			DeweyIDBuffer currentDeweyID) {
 
 		NavigationResult parentOrSibling = navigateGeneric(currentDeweyID,
-				tempDeweyID, BEFORE_LOW_KEY_OFFSET,
+				BEFORE_LOW_KEY_OFFSET,
 				NavigationProfiles.getParentOrSibling(currentOffset), false);
 
 		if (parentOrSibling.status == NavigationStatus.FOUND) {
@@ -1859,18 +1843,15 @@ public class BracketPage extends BasePage {
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer that will contain the DeweyID of the requested
 	 *            node, if found
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
 	public NavigationResult navigatePreviousSiblingCF(
-			XTCdeweyID referenceDeweyID, DeweyIDBuffer currentDeweyID,
-			DeweyIDBuffer tempDeweyID) {
+			XTCdeweyID referenceDeweyID, DeweyIDBuffer currentDeweyID) {
 
 		currentDeweyID.setTo(referenceDeweyID);
 		currentDeweyID.enableCompareMode(referenceDeweyID);
 		NavigationResult parentOrSibling = navigateGeneric(currentDeweyID,
-				tempDeweyID, BEFORE_LOW_KEY_OFFSET,
+				BEFORE_LOW_KEY_OFFSET,
 				NavigationProfiles.parentOrSiblingByDeweyID, false);
 
 		if (parentOrSibling.status == NavigationStatus.FOUND) {
@@ -1897,13 +1878,11 @@ public class BracketPage extends BasePage {
 	 *            the offset of the reference node
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the reference node
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
 	public NavigationResult navigateFirstChild(int currentOffset,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
-		return navigateGeneric(currentDeweyID, tempDeweyID, currentOffset,
+			DeweyIDBuffer currentDeweyID) {
+		return navigateGeneric(currentDeweyID, currentOffset,
 				NavigationProfiles.firstChild, false);
 	}
 
@@ -1915,29 +1894,26 @@ public class BracketPage extends BasePage {
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer that will contain the DeweyID of the requested
 	 *            node, if found
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
 	public NavigationResult navigateFirstChildCF(XTCdeweyID referenceDeweyID,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
+			DeweyIDBuffer currentDeweyID) {
 
 		// look for reference node in this page
 		NavigationResult refNode = this.navigateToKey(referenceDeweyID,
-				currentDeweyID, tempDeweyID);
+				currentDeweyID);
 		NavigationResult navRes = null;
 
 		if (refNode.status == NavigationStatus.FOUND) {
 			// invoke navigation method
-			navRes = navigateFirstChild(refNode.keyOffset, currentDeweyID,
-					tempDeweyID);
+			navRes = navigateFirstChild(refNode.keyOffset, currentDeweyID);
 		} else if (refNode.status == NavigationStatus.BEFORE_FIRST) {
 			// continue navigation
 
 			// look for the first child
 			currentDeweyID.setTo(referenceDeweyID);
-			navRes = navigateGeneric(currentDeweyID, tempDeweyID,
-					BEFORE_LOW_KEY_OFFSET, NavigationProfiles.firstChild, false);
+			navRes = navigateGeneric(currentDeweyID, BEFORE_LOW_KEY_OFFSET,
+					NavigationProfiles.firstChild, false);
 
 		} else {
 			// reference key does not exist or is located after the high key
@@ -1954,15 +1930,13 @@ public class BracketPage extends BasePage {
 	 *            the offset of the reference node
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the reference node
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
 	public NavigationResult navigateLastChild(int currentOffset,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
+			DeweyIDBuffer currentDeweyID) {
 
 		NavigationResult lastChild = navigateGeneric(currentDeweyID,
-				tempDeweyID, currentOffset, NavigationProfiles.lastChild, false);
+				currentOffset, NavigationProfiles.lastChild, false);
 
 		if (lastChild.status == NavigationStatus.FOUND
 				&& !lastChild.breakConditionFulfilled) {
@@ -1980,29 +1954,26 @@ public class BracketPage extends BasePage {
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer that will contain the DeweyID of the requested
 	 *            node, if found
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
 	public NavigationResult navigateLastChildCF(XTCdeweyID referenceDeweyID,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
+			DeweyIDBuffer currentDeweyID) {
 
 		// look for reference node in this page
 		NavigationResult refNode = this.navigateToKey(referenceDeweyID,
-				currentDeweyID, tempDeweyID);
+				currentDeweyID);
 		NavigationResult navRes = null;
 
 		if (refNode.status == NavigationStatus.FOUND) {
 			// invoke navigation method
-			navRes = navigateLastChild(refNode.keyOffset, currentDeweyID,
-					tempDeweyID);
+			navRes = navigateLastChild(refNode.keyOffset, currentDeweyID);
 		} else if (refNode.status == NavigationStatus.BEFORE_FIRST) {
 			// continue navigation
 
 			// determine level difference to low key
 			currentDeweyID.setTo(referenceDeweyID);
-			navRes = navigateGeneric(currentDeweyID, tempDeweyID,
-					BEFORE_LOW_KEY_OFFSET, NavigationProfiles.lastChild, false);
+			navRes = navigateGeneric(currentDeweyID, BEFORE_LOW_KEY_OFFSET,
+					NavigationProfiles.lastChild, false);
 
 			if (navRes.status == NavigationStatus.FOUND
 					&& !navRes.breakConditionFulfilled) {
@@ -2028,27 +1999,22 @@ public class BracketPage extends BasePage {
 	 *            the offset of the reference node
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the reference node
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
-	public NavigationResult navigateParent(DeweyIDBuffer currentDeweyID,
-			DeweyIDBuffer tempDeweyID) {
+	public NavigationResult navigateParent(DeweyIDBuffer currentDeweyID) {
 
 		// create result object
 		NavigationResult navRes = null;
 
-		tempDeweyID.setTo(currentDeweyID);
-
 		// determine parent DeweyID
-		if (!tempDeweyID.setToParent()) {
+		if (!currentDeweyID.setToParent()) {
 			// if parent does not exist
 			return new NavigationResult();
 		}
 
 		// compare parent ID with lowID
-		tempDeweyID.enableCompareMode(getLowKey());
-		int compareValue = tempDeweyID.compare();
+		currentDeweyID.enableCompareMode(getLowKey());
+		int compareValue = currentDeweyID.compare();
 		if (compareValue < 0) {
 			navRes = new NavigationResult();
 			navRes.status = NavigationStatus.BEFORE_FIRST;
@@ -2059,16 +2025,18 @@ public class BracketPage extends BasePage {
 			navRes.keyOffset = LOW_KEY_OFFSET;
 			navRes.keyType = getLowKeyType();
 			navRes.levelDiff = -1;
-			currentDeweyID.setTo(getLowKey());
 		} else {
 			// parent lies between lowKey and given offset
+			currentDeweyID.backup();
 			currentDeweyID.setTo(getLowKey());
-			currentDeweyID.enableCompareMode(tempDeweyID);
-			navRes = navigateGeneric(currentDeweyID, tempDeweyID,
-					LOW_KEY_OFFSET, NavigationProfiles.byDeweyID, false);
+			currentDeweyID.enableCompareMode(currentDeweyID
+					.getBackupAsSimpleDeweyID());
+			currentDeweyID.resetBackup();
+			navRes = navigateGeneric(currentDeweyID, LOW_KEY_OFFSET,
+					NavigationProfiles.byDeweyID, false);
 			currentDeweyID.disableCompareMode();
 		}
-		tempDeweyID.disableCompareMode();
+		currentDeweyID.disableCompareMode();
 
 		return navRes;
 	}
@@ -2081,14 +2049,12 @@ public class BracketPage extends BasePage {
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer that will contain the DeweyID of the requested
 	 *            node, if found
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
 	public NavigationResult navigateParentCF(XTCdeweyID referenceDeweyID,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
+			DeweyIDBuffer currentDeweyID) {
 		currentDeweyID.setTo(referenceDeweyID);
-		return navigateParent(currentDeweyID, tempDeweyID);
+		return navigateParent(currentDeweyID);
 	}
 
 	/**
@@ -2097,12 +2063,9 @@ public class BracketPage extends BasePage {
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer that will contain the DeweyID of the requested
 	 *            node, if found
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
-	public NavigationResult navigateLastCF(DeweyIDBuffer currentDeweyID,
-			DeweyIDBuffer tempDeweyID) {
+	public NavigationResult navigateLastCF(DeweyIDBuffer currentDeweyID) {
 
 		NavigationResult navRes = new NavigationResult();
 
@@ -2115,8 +2078,8 @@ public class BracketPage extends BasePage {
 
 			// navigate to last node in this page
 			currentDeweyID.setTo(getLowKey());
-			navRes = navigateGeneric(currentDeweyID, tempDeweyID,
-					LOW_KEY_OFFSET, NavigationProfiles.lastNode, false);
+			navRes = navigateGeneric(currentDeweyID, LOW_KEY_OFFSET,
+					NavigationProfiles.lastNode, false);
 
 		}
 
@@ -2132,12 +2095,10 @@ public class BracketPage extends BasePage {
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer that will contain the DeweyID of the requested
 	 *            node, if found
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
 	public NavigationResult navigateToInsertPos(XTCdeweyID key,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
+			DeweyIDBuffer currentDeweyID) {
 
 		NavigationResult navRes = null;
 
@@ -2159,8 +2120,8 @@ public class BracketPage extends BasePage {
 			} else {
 
 				// look for correct insertion position
-				navRes = navigateGeneric(currentDeweyID, tempDeweyID,
-						LOW_KEY_OFFSET, NavigationProfiles.insertPos, true);
+				navRes = navigateGeneric(currentDeweyID, LOW_KEY_OFFSET,
+						NavigationProfiles.insertPos, true);
 
 				if (navRes.status != NavigationStatus.FOUND) {
 					// new record has to be inserted after the lowKey
@@ -2209,7 +2170,7 @@ public class BracketPage extends BasePage {
 		BracketKey.Type currentKeyType = null;
 		if (currentOffset != BEFORE_LOW_KEY_OFFSET) {
 			currentKeyType = (currentOffset == LOW_KEY_OFFSET ? getLowKeyType()
-					: BracketKey.loadNew(page, currentOffset).getType());
+					: BracketKey.loadNew(page, currentOffset).type);
 		}
 
 		// check validity of key type
@@ -2295,13 +2256,11 @@ public class BracketPage extends BasePage {
 	 *            the offset of the reference node
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the reference node
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
 	public NavigationResult navigateNextAttribute(int currentOffset,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
-		return navigateGeneric(currentDeweyID, tempDeweyID, currentOffset,
+			DeweyIDBuffer currentDeweyID) {
+		return navigateGeneric(currentDeweyID, currentOffset,
 				NavigationProfiles.nextAttribute, false);
 	}
 
@@ -2313,23 +2272,19 @@ public class BracketPage extends BasePage {
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer that will contain the DeweyID of the requested
 	 *            node, if found
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return the navigation result
 	 */
 	public NavigationResult navigateNextAttributeCF(
-			XTCdeweyID referenceDeweyID, DeweyIDBuffer currentDeweyID,
-			DeweyIDBuffer tempDeweyID) {
+			XTCdeweyID referenceDeweyID, DeweyIDBuffer currentDeweyID) {
 
 		// look for reference node in this page
 		NavigationResult refNode = navigateToKey(referenceDeweyID,
-				currentDeweyID, tempDeweyID);
+				currentDeweyID);
 		NavigationResult navRes = null;
 
 		if (refNode.status == NavigationStatus.FOUND) {
 			// invoke navigation method
-			navRes = navigateNextAttribute(refNode.keyOffset, currentDeweyID,
-					tempDeweyID);
+			navRes = navigateNextAttribute(refNode.keyOffset, currentDeweyID);
 		} else if (refNode.status == NavigationStatus.BEFORE_FIRST) {
 			// continue navigation
 
@@ -2467,7 +2422,7 @@ public class BracketPage extends BasePage {
 		} else {
 
 			/* LowID Data */
-			if (lowIDType.getDataReferenceLength() > 0) {
+			if (lowIDType.hasDataReference()) {
 				resultLength += getValueLength(getValueOffset(currentOffset),
 						true);
 				currentOffset += lowIDType.getDataReferenceLength();
@@ -2516,7 +2471,7 @@ public class BracketPage extends BasePage {
 		result[resultOffset] = (byte) lowIDType.getPhysicalValue();
 		resultOffset++;
 		// LowID Data
-		if (lowIDType.getDataReferenceLength() > 0) {
+		if (lowIDType.hasDataReference()) {
 			numberDataRecords++;
 			int valueOffset = getValueOffset(currentOffset);
 			int valueLength = getValueLength(valueOffset, true);
@@ -2561,7 +2516,8 @@ public class BracketPage extends BasePage {
 	 * @param subtreeRoot
 	 *            DeweyID of the subtree root
 	 * @param tempDeweyID
-	 *            DeweyIDBuffer for temporary DeweyIDs
+	 *            DeweyIDBuffer for temporary DeweyIDs (original Buffer value
+	 *            will NOT be preserved!)
 	 * @param delPrepLis
 	 *            a delete prepare listener that is notified about all the nodes
 	 *            that are supposed to be deleted
@@ -2603,7 +2559,7 @@ public class BracketPage extends BasePage {
 
 		int currentOffset = getKeyAreaStartOffset();
 		BracketKey.Type currentType = getLowKeyType();
-		if (currentType.getDataReferenceLength() > 0) {
+		if (currentType.hasDataReference()) {
 			numberOfDataRecords++;
 			loadInternalValue(currentValue, getValueOffset(currentOffset));
 			dataRecordSize += currentValue.totalValueLength;
@@ -2625,7 +2581,7 @@ public class BracketPage extends BasePage {
 		while (currentOffset < keyAreaEndOffset) {
 			// load next key from keyStorage
 			currentKey.load(page, currentOffset);
-			currentType = currentKey.getType();
+			currentType = currentKey.type;
 			// refresh DeweyID
 			tempDeweyID.update(currentKey, false);
 			// decrease level difference
@@ -2692,8 +2648,6 @@ public class BracketPage extends BasePage {
 	 *            the key offset of the subtree root
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the subtree root
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer for temporary DeweyIDs
 	 * @param delPrepLis
 	 *            a delete prepare listener that is notified about all the nodes
 	 *            that are supposed to be deleted
@@ -2701,8 +2655,8 @@ public class BracketPage extends BasePage {
 	 * @throws IndexOperationException
 	 */
 	public DeletePreparation deletePrepare(int currentOffset,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID,
-			DeletePrepareListener delPrepLis) throws BracketPageException {
+			DeweyIDBuffer currentDeweyID, DeletePrepareListener delPrepLis)
+			throws BracketPageException {
 		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
 			throw new IllegalArgumentException();
 		}
@@ -2733,7 +2687,7 @@ public class BracketPage extends BasePage {
 		if (!currentIsLowKey) {
 			// navigate to previous node
 			NavigationResult previous = navigatePrevious(currentOffset,
-					currentDeweyID, tempDeweyID);
+					currentDeweyID);
 			previousOffset = previous.keyOffset;
 			previousDeweyID = currentDeweyID.getDeweyID();
 			currentDeweyID.setTo(startDeleteDeweyID);
@@ -2757,10 +2711,11 @@ public class BracketPage extends BasePage {
 
 			if (endDeleteOffset < getKeyAreaEndOffset()) {
 				// determine DeweyID
-				tempDeweyID.setTo(currentDeweyID);
-				tempDeweyID.update(BracketKey.loadNew(page, endDeleteOffset),
-						false);
-				endDeleteDeweyID = tempDeweyID.getDeweyID();
+				currentDeweyID.backup();
+				currentDeweyID.update(
+						BracketKey.loadNew(page, endDeleteOffset), false);
+				endDeleteDeweyID = currentDeweyID.getDeweyID();
+				currentDeweyID.restore(false);
 			} else {
 				endDeleteOffset = KEY_AREA_END_OFFSET;
 			}
@@ -2770,7 +2725,7 @@ public class BracketPage extends BasePage {
 			int levelDiff = 0;
 			currentOffset = currentIsLowKey ? getKeyAreaStartOffset()
 					: (startDeleteOffset + BracketKey.PHYSICAL_LENGTH);
-			if (currentType.getDataReferenceLength() > 0) {
+			if (currentType.hasDataReference()) {
 				numberOfDataRecords++;
 				loadInternalValue(currentValue, getValueOffset(currentOffset));
 				dataRecordSize += currentValue.totalValueLength;
@@ -2786,16 +2741,16 @@ public class BracketPage extends BasePage {
 				delPrepLis.node(startDeleteDeweyID, null, levelDiff);
 			}
 
-			tempDeweyID.setTo(currentDeweyID);
+			currentDeweyID.backup();
 			BracketKey currentKey = new BracketKey();
 			int keyAreaEndOffset = getKeyAreaEndOffset();
 			// navigate to the first node that is not supposed to be deleted
 			while (currentOffset < keyAreaEndOffset) {
 				// load next key from keyStorage
 				currentKey.load(page, currentOffset);
-				currentType = currentKey.getType();
+				currentType = currentKey.type;
 				// refresh DeweyID
-				tempDeweyID.update(currentKey, false);
+				currentDeweyID.update(currentKey, false);
 				// decrease level difference
 				levelDiff -= currentKey.getRoundBrackets();
 				// increment level difference
@@ -2810,7 +2765,7 @@ public class BracketPage extends BasePage {
 					if (currentType != BracketKey.Type.ATTRIBUTE
 							&& levelDiff <= 0) {
 						endDeleteOffset = currentOffset;
-						endDeleteDeweyID = tempDeweyID.getDeweyID();
+						endDeleteDeweyID = currentDeweyID.getDeweyID();
 						delPrepLis.subtreeEnd();
 						break;
 					}
@@ -2824,16 +2779,17 @@ public class BracketPage extends BasePage {
 								getValueOffset(currentOffset));
 						dataRecordSize += currentValue.totalValueLength;
 						if (currentValue.externalized) {
-							delPrepLis.externalNode(tempDeweyID.getDeweyID(),
+							delPrepLis.externalNode(
+									currentDeweyID.getDeweyID(),
 									PageID.fromBytes(currentValue.value),
 									levelDiff);
 						} else {
-							delPrepLis.node(tempDeweyID.getDeweyID(),
+							delPrepLis.node(currentDeweyID.getDeweyID(),
 									currentValue.value, levelDiff);
 						}
 						currentOffset += BracketKey.DATA_REF_LENGTH;
 					} else {
-						delPrepLis.node(tempDeweyID.getDeweyID(), null,
+						delPrepLis.node(currentDeweyID.getDeweyID(), null,
 								levelDiff);
 					}
 
@@ -2842,6 +2798,7 @@ public class BracketPage extends BasePage {
 					finalOverflowKeys++;
 				}
 			}
+			currentDeweyID.restore(false);
 
 			// check whether endDeleteNode was found
 			if (endDeleteDeweyID == null) {
@@ -2862,13 +2819,11 @@ public class BracketPage extends BasePage {
 	 *            key offset of current node
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the current node
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer for temporary DeweyIDs
 	 * @return the delete preparation object for the nodes that are shifted to
 	 *         the right page
 	 */
 	public DeletePreparation splitAfterCurrentPrepare(int currentOffset,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
+			DeweyIDBuffer currentDeweyID) {
 		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
 			throw new IllegalArgumentException();
 		}
@@ -2887,15 +2842,15 @@ public class BracketPage extends BasePage {
 
 		// navigate to next regular node
 
-		tempDeweyID.setTo(currentDeweyID);
+		currentDeweyID.backup();
 		int startDeleteOffset = (currentIsLowKey ? getKeyAreaStartOffset()
 				: (currentOffset + BracketKey.PHYSICAL_LENGTH))
 				+ currentType.getDataReferenceLength();
 		while (startDeleteOffset < keyAreaEndOffset) {
 			currentKey.load(page, startDeleteOffset);
-			currentType = currentKey.getType();
-			tempDeweyID.update(currentKey, false);
-			if (currentKey.getType() != BracketKey.Type.OVERFLOW) {
+			currentType = currentKey.type;
+			currentDeweyID.update(currentKey, false);
+			if (currentType != BracketKey.Type.OVERFLOW) {
 				break;
 			}
 			startDeleteOffset += BracketKey.PHYSICAL_LENGTH;
@@ -2903,10 +2858,12 @@ public class BracketPage extends BasePage {
 
 		if (startDeleteOffset == keyAreaEndOffset) {
 			// no nodes are to be deleted
+			currentDeweyID.restore(false);
 			return null;
 		}
 
-		XTCdeweyID startDeleteDeweyID = tempDeweyID.getDeweyID();
+		XTCdeweyID startDeleteDeweyID = currentDeweyID.getDeweyID();
+		currentDeweyID.restore(false);
 
 		int endDeleteOffset = KEY_AREA_END_OFFSET;
 		XTCdeweyID endDeleteDeweyID = null;
@@ -2917,7 +2874,7 @@ public class BracketPage extends BasePage {
 		int numberOfNodes = 1;
 
 		currentOffset = startDeleteOffset + BracketKey.PHYSICAL_LENGTH;
-		if (currentType.getDataReferenceLength() > 0) {
+		if (currentType.hasDataReference()) {
 			numberOfDataRecords++;
 			dataRecordSize += getValueLength(getValueOffset(currentOffset),
 					true);
@@ -2928,14 +2885,14 @@ public class BracketPage extends BasePage {
 		while (currentOffset < keyAreaEndOffset) {
 			// load next key from keyStorage
 			currentKey.load(page, currentOffset);
-			currentType = currentKey.getType();
+			currentType = currentKey.type;
 
 			if (currentType != BracketKey.Type.OVERFLOW) {
 				numberOfNodes++;
 			}
 
 			currentOffset += BracketKey.PHYSICAL_LENGTH;
-			if (currentType.getDataReferenceLength() > 0) {
+			if (currentType.hasDataReference()) {
 				numberOfDataRecords++;
 				dataRecordSize += getValueLength(getValueOffset(currentOffset),
 						true);
@@ -2952,24 +2909,17 @@ public class BracketPage extends BasePage {
 	/**
 	 * Deletes the nodes specified in the DeletePreparation object.
 	 * 
-	 * @param currentDeweyID
-	 *            DeweyID of current node
-	 * @param tempDeweyID
-	 *            temporary DeweyID buffer
 	 * @param delPrep
 	 *            the result of the delete preparation step
 	 * @param externalValueLoader
 	 *            if a placeholder is needed that can not be generated due to an
 	 *            externalized value, this interface is used to load the
-	 *            external value.
-	 * @return the offset of the previous node
+	 *            external value
 	 * @throws BracketPageException
 	 */
-	public int delete(DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID,
-			DeletePreparation delPrep, ExternalValueLoader externalValueLoader)
+	public void delete(DeletePreparation delPrep,
+			ExternalValueLoader externalValueLoader)
 			throws BracketPageException {
-
-		int returnOffset = 0;
 
 		if (delPrep.startDeleteOffset == LOW_KEY_OFFSET) {
 			// LowKey has to be changed
@@ -2977,7 +2927,7 @@ public class BracketPage extends BasePage {
 			if (delPrep.endDeleteOffset == KEY_AREA_END_OFFSET) {
 				// produces empty page
 				clear();
-				return BEFORE_LOW_KEY_OFFSET;
+				return;
 			}
 
 			byte[] newLowID = delPrep.endDeleteDeweyID.toBytes();
@@ -3012,8 +2962,6 @@ public class BracketPage extends BasePage {
 					keyBuffer.length);
 
 			setKeyAreaEndOffset(getKeyAreaStartOffset() + keyBuffer.length);
-
-			returnOffset = BEFORE_LOW_KEY_OFFSET;
 
 		} else {
 
@@ -3121,15 +3069,10 @@ public class BracketPage extends BasePage {
 
 			setKeyAreaEndOffset(newEndOffset);
 
-			// set currentDeweyID to previous node
-			returnOffset = delPrep.previousOffset;
-			currentDeweyID.setTo(delPrep.previousDeweyID);
-
 		}
 
 		setEntryCount((short) (getRecordCount() - delPrep.numberOfNodes));
 
-		return returnOffset;
 	}
 
 	/**
@@ -3139,7 +3082,8 @@ public class BracketPage extends BasePage {
 	 * @param occupancyRate
 	 *            the desired occupancy rate
 	 * @param tempDeweyID
-	 *            DeweyIDBuffer for temporary DeweyIDs
+	 *            DeweyIDBuffer for temporary DeweyIDs (the original content of
+	 *            tempDeweyID will be preserved!)
 	 * @return the delete preparation object for the nodes that are shifted to
 	 *         the right page
 	 */
@@ -3164,7 +3108,7 @@ public class BracketPage extends BasePage {
 		int splitOffset = 0;
 
 		// LowID data
-		if (getLowKeyType().getDataReferenceLength() > 0) {
+		if (getLowKeyType().hasDataReference()) {
 			currentDataVolume += BracketKey.DATA_REF_LENGTH
 					+ getValueLength(getValueOffset(currentOffset), true);
 			currentOffset += BracketKey.DATA_REF_LENGTH;
@@ -3176,6 +3120,7 @@ public class BracketPage extends BasePage {
 			}
 		}
 
+		tempDeweyID.backup();
 		tempDeweyID.setTo(getLowKey());
 		BracketKey currentKey = new BracketKey();
 
@@ -3187,7 +3132,7 @@ public class BracketPage extends BasePage {
 
 			if (previousDeweyID != null) {
 				// previous node already found; navigate to the actual split key
-				if (currentKey.getType() != BracketKey.Type.OVERFLOW) {
+				if (currentKey.type != BracketKey.Type.OVERFLOW) {
 					splitDeweyID = tempDeweyID.getDeweyID();
 					splitOffset = currentOffset;
 					break;
@@ -3199,7 +3144,7 @@ public class BracketPage extends BasePage {
 				currentDataVolume += BracketKey.PHYSICAL_LENGTH;
 				currentOffset += BracketKey.PHYSICAL_LENGTH;
 
-				if (currentKey.getType().getDataReferenceLength() > 0) {
+				if (currentKey.type.hasDataReference()) {
 					currentDataVolume += BracketKey.DATA_REF_LENGTH
 							+ getValueLength(getValueOffset(currentOffset),
 									true);
@@ -3219,14 +3164,25 @@ public class BracketPage extends BasePage {
 		if (splitDeweyID == null) {
 			// previous node is the last node of this page -> move at least ONE
 			// node to the new page
-			DeweyIDBuffer newBuffer = new DeweyIDBuffer();
+
+			// buffer backup DeweyID, since the following navigation will
+			// destroy the backup
+			XTCdeweyID backupDeweyID = tempDeweyID.getBackupDeweyID();
+			tempDeweyID.resetBackup();
+
 			NavigationResult previous = navigatePrevious(previousOffset,
-					tempDeweyID, newBuffer);
+					tempDeweyID);
 
 			splitDeweyID = previousDeweyID;
 			splitOffset = previousOffset;
 			previousDeweyID = tempDeweyID.getDeweyID();
 			previousOffset = previous.keyOffset;
+
+			// restore original DeweyID
+			tempDeweyID.setTo(backupDeweyID);
+		} else {
+			// restore original DeweyID
+			tempDeweyID.restore(false);
 		}
 
 		// split position determined; create DeletePreparation
@@ -3274,7 +3230,7 @@ public class BracketPage extends BasePage {
 			}
 		}
 
-		DeweyIDBuffer buffer = new DeweyIDBuffer(getLowKey());
+		DeweyIDBuffer buffer = new DeweyIDBuffer(null, getLowKey());
 
 		BracketKey.Type currentType = getLowKeyType();
 		BracketKey currentKey = new BracketKey();
@@ -3294,7 +3250,7 @@ public class BracketPage extends BasePage {
 			numberOfNodes++;
 		}
 
-		if (currentType.getDataReferenceLength() > 0) {
+		if (currentType.hasDataReference()) {
 			dataSize += BracketKey.DATA_REF_LENGTH
 					+ getValueLength(getValueOffset(currentOffset), true);
 			currentOffset += BracketKey.DATA_REF_LENGTH;
@@ -3303,7 +3259,7 @@ public class BracketPage extends BasePage {
 		int keyAreaEndOffset = getKeyAreaEndOffset();
 		while (currentOffset < keyAreaEndOffset) {
 			currentKey.load(page, currentOffset);
-			currentType = currentKey.getType();
+			currentType = currentKey.type;
 			buffer.update(currentKey, false);
 			dataSize += BracketKey.PHYSICAL_LENGTH;
 			currentOffset += BracketKey.PHYSICAL_LENGTH;
@@ -3346,13 +3302,11 @@ public class BracketPage extends BasePage {
 	 *            offset of the current node
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the current node
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer needed for temporary DeweyIDs
 	 * @return offset of the LAST inserted node or an errorcode (if new node is
 	 *         a duplicate or there is not enough space)
 	 */
 	public int insertAfter(BracketNodeSequence nodes, int currentOffset,
-			DeweyIDBuffer currentDeweyID, DeweyIDBuffer tempDeweyID) {
+			DeweyIDBuffer currentDeweyID) {
 
 		final byte[] data = nodes.getData();
 
@@ -3363,9 +3317,10 @@ public class BracketPage extends BasePage {
 		final XTCdeweyID dataLowID = nodes.getLowKey();
 		final BracketKey.Type dataLowIDType = nodes.getLowKeyType();
 
-		// set tempDeweyID to last DeweyID
-		final int lastNodeOffset = nodes.setToLastNode(tempDeweyID);
-		final XTCdeweyID lastNodeDeweyID = tempDeweyID.getDeweyID();
+		currentDeweyID.backup();
+		final int lastNodeOffset = nodes.setToLastNode(currentDeweyID);
+		final XTCdeweyID lastNodeDeweyID = currentDeweyID.getDeweyID();
+		currentDeweyID.restore(false);
 		boolean removeLastDataRecord = false;
 		boolean removeCurrentDataRecord = false;
 
@@ -3454,12 +3409,13 @@ public class BracketPage extends BasePage {
 			// calculate afterKey(s)
 			if (nextKeyOffset < getKeyAreaEndOffset()) {
 				// determine next node's DeweyID
-				tempDeweyID.setTo(currentDeweyID);
-				tempDeweyID.update(BracketKey.loadNew(page, nextKeyOffset),
+				currentDeweyID.backup();
+				currentDeweyID.update(BracketKey.loadNew(page, nextKeyOffset),
 						false);
 
 				afterKeys = BracketKey.generateBracketKeys(lastNodeDeweyID,
-						tempDeweyID);
+						currentDeweyID);
+				currentDeweyID.restore(false);
 			}
 
 		}
@@ -3539,7 +3495,7 @@ public class BracketPage extends BasePage {
 
 		// beforeKeys written; copy BracketNodeSequence
 		int dataOffset = nodes.getStartOffset();
-		if (dataLowIDType.getDataReferenceLength() > 0) {
+		if (dataLowIDType.hasDataReference()) {
 			// copy first data record
 			if (removeLastDataRecord
 					&& lastNodeOffset == BracketNodeSequence.LOW_KEY_OFFSET) {
