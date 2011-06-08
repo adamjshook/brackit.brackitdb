@@ -47,6 +47,7 @@ import org.brackit.server.session.Session;
 import org.brackit.server.session.SessionID;
 import org.brackit.server.session.SessionMgr;
 import org.brackit.server.tx.Tx;
+import org.brackit.server.xquery.DBXQuery;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.XQuery;
 
@@ -59,15 +60,15 @@ public class TCPConnector implements Runnable {
 
 	private static final Logger log = Logger.getLogger(TCPConnector.class);
 
-	final SessionMgr cm;
+	final SessionMgr sm;
 
-	final MetaDataMgr store;
+	final MetaDataMgr mdm;
 
 	private ServerSocket server;
 
-	public TCPConnector(SessionMgr cm, MetaDataMgr mdm, int port) {
-		this.cm = cm;
-		this.store = mdm;
+	public TCPConnector(SessionMgr sm, MetaDataMgr mdm, int port) {
+		this.sm = sm;
+		this.mdm = mdm;
 	}
 
 	public void shutdown() {
@@ -141,8 +142,8 @@ public class TCPConnector implements Runnable {
 						new BufferedOutputStream(socket.getOutputStream()));
 
 				// TODO authentication
-				SessionID cid = cm.login();
-				session = cm.getSession(cid);
+				SessionID cid = sm.login();
+				session = sm.getSession(cid);
 
 				int r;
 				while ((r = from.read()) > 0) {
@@ -190,7 +191,7 @@ public class TCPConnector implements Runnable {
 						to.deferedFlush();
 					}
 				}
-				cm.logout(session.getSessionID());
+				sm.logout(session.getSessionID());
 
 				if (log.isTraceEnabled()) {
 					log.trace("Close TCP connection");
@@ -198,7 +199,7 @@ public class TCPConnector implements Runnable {
 			} catch (Exception e) {
 				e.printStackTrace();
 			} finally {
-				cm.logout(session.getSessionID());
+				sm.logout(session.getSessionID());
 				try {
 					socket.close();
 				} catch (Exception e) {
@@ -217,10 +218,9 @@ public class TCPConnector implements Runnable {
 					log.trace("Query: " + query);
 				}
 
-				XQuery xq = new XQuery(query);
-				xq
-						.serialize(new TXQueryContext(tx, store),
-								new PrintStream(to));
+				XQuery xq = new DBXQuery(query, mdm);
+				TXQueryContext ctx = new TXQueryContext(tx, mdm);
+				xq.serialize(ctx, new PrintStream(to));
 
 				if (tx == null) {
 					session.commit();
