@@ -84,9 +84,10 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 			+ "<Abstract>Native<b>XML</b>-Databases</Abstract>" + "</Project>"
 			+ "</Organization>";
 
-	private static final File mediumDocument = new File("D:/Eclipse Projekte/xtc/BracketBenchmark/docs/xmark50.xml");
-	private static final File bigDocument = new File("D:/Eclipse Projekte/xtc/BracketBenchmark/docs/xmark100.xml");
+	private static final File mediumDocument = new File("xmark50.xml");
+	private static final File bigDocument = new File("xmark100.xml");
 
+	@Ignore
 	@Test
 	public void storeBigDocument() throws ServerException, IOException,
 			DocumentException {
@@ -112,10 +113,10 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		BracketNode root = coll.getDocument().getNode(
 				XTCdeweyID.newRootID(locator.docID));
 
-		// FileOutputStream outputFile = new FileOutputStream("leafs.txt");
-		// PrintStream out = new PrintStream(outputFile, false, "UTF-8");
-		// coll.store.index.dump(tx, locator.rootPageID, out);
-		// outputFile.close();
+//		FileOutputStream outputFile = new FileOutputStream("leafs.txt");
+//		PrintStream out = new PrintStream(outputFile, false, "UTF-8");
+//		coll.store.index.dump(tx, locator.rootPageID, out);
+//		outputFile.close();
 	}
 
 	public static void main(String[] args) throws Exception {
@@ -124,6 +125,7 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		test.traverse(true, 1);
 	}
 
+	@Ignore
 	@Test
 	public void traverseBigDocumentInPreorder() throws Exception {
 
@@ -162,6 +164,7 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		}
 	}
 
+	@Ignore
 	@Test
 	public void traverseBigDocumentViaChildStream() throws Exception {
 
@@ -200,6 +203,7 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		}
 	}
 
+	@Ignore
 	@Test
 	public void traverseBigDocumentInPostorder() throws Exception {
 
