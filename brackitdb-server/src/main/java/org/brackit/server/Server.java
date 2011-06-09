@@ -128,7 +128,9 @@ public final class Server {
 							try {
 								System.out.println(String
 										.format("Shutting down server."));
-								con.shutdown();
+								if (con != null) {
+									con.shutdown();
+								}
 								db.shutdown();
 							} catch (ServerException e) {
 								System.out.println(String.format(

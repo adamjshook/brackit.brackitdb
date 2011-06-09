@@ -5,16 +5,20 @@
   <parent>
     <artifactId>brackitdb</artifactId>
     <groupId>org.brackit</groupId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.2</version>
   </parent>
   <groupId>org.brackit</groupId>
   <artifactId>brackitdb-driver</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
-  <name>brackitdb-driver</name>
-  <url>http://maven.apache.org</url>
+  <version>0.0.2</version>
+  <name>Brackit Database Driver</name>
+  <url>http://brackit.org</url>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
+  <organization>
+  	<name>Brackit Project Team</name>
+  	<url>http://brackit.org</url>
+  </organization>
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
