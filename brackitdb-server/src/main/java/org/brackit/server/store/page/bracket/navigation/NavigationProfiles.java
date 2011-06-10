@@ -56,7 +56,7 @@ public class NavigationProfiles {
 		}
 	};
 
-	public static final NavigationProperties firstChild = new NavigationProperties(
+	public static final NavigationProperties FIRST_CHILD = new NavigationProperties(
 			NavigationTarget.FIRST, true, new NavigationCondition() {
 				@Override
 				public boolean checkCondition(int levelDiff,
@@ -71,7 +71,7 @@ public class NavigationProfiles {
 				}
 			});
 
-	public static final NavigationProperties lastChild = new NavigationProperties(
+	public static final NavigationProperties LAST_CHILD = new NavigationProperties(
 			NavigationTarget.LAST, true, new NavigationCondition() {
 				@Override
 				public boolean checkCondition(int levelDiff,
@@ -86,7 +86,7 @@ public class NavigationProfiles {
 				}
 			});
 
-	public static final NavigationProperties nextSibling = new NavigationProperties(
+	public static final NavigationProperties NEXT_SIBLING = new NavigationProperties(
 			NavigationTarget.FIRST, true, new NavigationCondition() {
 				@Override
 				public boolean checkCondition(int levelDiff,
@@ -101,7 +101,7 @@ public class NavigationProfiles {
 				}
 			});
 
-	public static final NavigationProperties byDeweyID = new NavigationProperties(
+	public static final NavigationProperties BY_DEWEYID = new NavigationProperties(
 			NavigationTarget.FIRST, false, new NavigationCondition() {
 				@Override
 				public boolean checkCondition(int levelDiff,
@@ -115,8 +115,17 @@ public class NavigationProfiles {
 					return deweyID.compare() > 0;
 				}
 			});
+	
+	public static final NavigationProperties GREATER_OR_EQUAL = new NavigationProperties(
+			NavigationTarget.FIRST, false, new NavigationCondition() {
+				@Override
+				public boolean checkCondition(int levelDiff,
+						DeweyIDBuffer deweyID, Type type, int keyOffset) {
+					return deweyID.compare() >= 0;
+				}
+			}, FALSE_CONDITION);
 
-	public static final NavigationProperties nextAttribute = new NavigationProperties(
+	public static final NavigationProperties NEXT_ATTRIBUTE = new NavigationProperties(
 			NavigationTarget.FIRST, false, TRUE_CONDITION,
 			new NavigationCondition() {
 				@Override
@@ -126,7 +135,7 @@ public class NavigationProfiles {
 				}
 			});
 
-	public static final NavigationProperties insertPos = new NavigationProperties(
+	public static final NavigationProperties TO_INSERT_POS = new NavigationProperties(
 			NavigationTarget.LAST, false, TRUE_CONDITION,
 			new NavigationCondition() {
 				@Override
@@ -136,13 +145,13 @@ public class NavigationProfiles {
 				}
 			});
 
-	public static final NavigationProperties nextNode = new NavigationProperties(
+	public static final NavigationProperties NEXT_NODE = new NavigationProperties(
 			NavigationTarget.FIRST, false, TRUE_CONDITION, FALSE_CONDITION);
 
-	public static final NavigationProperties lastNode = new NavigationProperties(
+	public static final NavigationProperties LAST_NODE = new NavigationProperties(
 			NavigationTarget.LAST, false, TRUE_CONDITION, FALSE_CONDITION);
 
-	public static final NavigationProperties parentOrSiblingByDeweyID = new NavigationProperties(
+	public static final NavigationProperties PARENT_OR_SIBLING = new NavigationProperties(
 			NavigationTarget.LAST, true, new NavigationCondition() {
 				@Override
 				public boolean checkCondition(int levelDiff,
