@@ -685,14 +685,15 @@ public class BracketPage extends BasePage {
 			keyPos += BracketKey.PHYSICAL_LENGTH
 					+ currentKeyType.getDataReferenceLength();
 		}
-		
-		if (prop.target == NavigationTarget.LAST && result.status == NavigationStatus.FOUND) {
+
+		if (prop.target == NavigationTarget.LAST
+				&& result.status == NavigationStatus.FOUND) {
 			// restore last found node
 			currentDeweyID.restore(false);
 		} else {
 			currentDeweyID.resetBackup();
 		}
-		
+
 		return result;
 	}
 
@@ -1489,7 +1490,7 @@ public class BracketPage extends BasePage {
 		navRes.keyOffset = LOW_KEY_OFFSET;
 		for (int i = 1; i < recordCount; i++) {
 			navRes = navigateGeneric(currentDeweyID, navRes.keyOffset,
-					NavigationProfiles.nextNode, false);
+					NavigationProfiles.NEXT_NODE, false);
 			result[i] = new KeyValueTuple(currentDeweyID.getDeweyID(),
 					getValue(navRes.keyOffset).value);
 		}
@@ -1531,8 +1532,37 @@ public class BracketPage extends BasePage {
 		} else {
 			// navigate to key
 			navRes = navigateGeneric(currentDeweyID, LOW_KEY_OFFSET,
-					NavigationProfiles.byDeweyID, false);
+					NavigationProfiles.BY_DEWEYID, false);
 		}
+
+		currentDeweyID.disableCompareMode();
+		return navRes;
+	}
+
+	/**
+	 * Navigates to first DeweyID that is grater or equal to the specified
+	 * DeweyID.
+	 * 
+	 * @param key
+	 *            the DeweyID to navigate to
+	 * @param currentDeweyID
+	 *            DeweyIDBuffer containing the DeweyID of the reference node
+	 * @return the navigation result
+	 */
+	public NavigationResult navigateGreaterOrEqual(XTCdeweyID key,
+			DeweyIDBuffer currentDeweyID) {
+
+		if (getRecordCount() == 0) {
+			return new NavigationResult();
+		}
+
+		// initialize buffer
+		currentDeweyID.setTo(getLowKey());
+		currentDeweyID.enableCompareMode(key);
+
+		NavigationResult navRes = navigateGeneric(currentDeweyID,
+				BEFORE_LOW_KEY_OFFSET, NavigationProfiles.GREATER_OR_EQUAL,
+				false);
 
 		currentDeweyID.disableCompareMode();
 		return navRes;
@@ -1794,7 +1824,7 @@ public class BracketPage extends BasePage {
 			// determine level difference to low key
 			currentDeweyID.setTo(referenceDeweyID);
 			navRes = navigateGeneric(currentDeweyID, BEFORE_LOW_KEY_OFFSET,
-					NavigationProfiles.nextSibling, false);
+					NavigationProfiles.NEXT_SIBLING, false);
 
 		} else {
 			// reference key does not exist or is located after the high key
@@ -1851,8 +1881,8 @@ public class BracketPage extends BasePage {
 		currentDeweyID.setTo(referenceDeweyID);
 		currentDeweyID.enableCompareMode(referenceDeweyID);
 		NavigationResult parentOrSibling = navigateGeneric(currentDeweyID,
-				BEFORE_LOW_KEY_OFFSET,
-				NavigationProfiles.parentOrSiblingByDeweyID, false);
+				BEFORE_LOW_KEY_OFFSET, NavigationProfiles.PARENT_OR_SIBLING,
+				false);
 
 		if (parentOrSibling.status == NavigationStatus.FOUND) {
 
@@ -1883,7 +1913,7 @@ public class BracketPage extends BasePage {
 	public NavigationResult navigateFirstChild(int currentOffset,
 			DeweyIDBuffer currentDeweyID) {
 		return navigateGeneric(currentDeweyID, currentOffset,
-				NavigationProfiles.firstChild, false);
+				NavigationProfiles.FIRST_CHILD, false);
 	}
 
 	/**
@@ -1913,7 +1943,7 @@ public class BracketPage extends BasePage {
 			// look for the first child
 			currentDeweyID.setTo(referenceDeweyID);
 			navRes = navigateGeneric(currentDeweyID, BEFORE_LOW_KEY_OFFSET,
-					NavigationProfiles.firstChild, false);
+					NavigationProfiles.FIRST_CHILD, false);
 
 		} else {
 			// reference key does not exist or is located after the high key
@@ -1936,7 +1966,7 @@ public class BracketPage extends BasePage {
 			DeweyIDBuffer currentDeweyID) {
 
 		NavigationResult lastChild = navigateGeneric(currentDeweyID,
-				currentOffset, NavigationProfiles.lastChild, false);
+				currentOffset, NavigationProfiles.LAST_CHILD, false);
 
 		if (lastChild.status == NavigationStatus.FOUND
 				&& !lastChild.breakConditionFulfilled) {
@@ -1973,7 +2003,7 @@ public class BracketPage extends BasePage {
 			// determine level difference to low key
 			currentDeweyID.setTo(referenceDeweyID);
 			navRes = navigateGeneric(currentDeweyID, BEFORE_LOW_KEY_OFFSET,
-					NavigationProfiles.lastChild, false);
+					NavigationProfiles.LAST_CHILD, false);
 
 			if (navRes.status == NavigationStatus.FOUND
 					&& !navRes.breakConditionFulfilled) {
@@ -2033,7 +2063,7 @@ public class BracketPage extends BasePage {
 					.getBackupAsSimpleDeweyID());
 			currentDeweyID.resetBackup();
 			navRes = navigateGeneric(currentDeweyID, LOW_KEY_OFFSET,
-					NavigationProfiles.byDeweyID, false);
+					NavigationProfiles.BY_DEWEYID, false);
 			currentDeweyID.disableCompareMode();
 		}
 		currentDeweyID.disableCompareMode();
@@ -2079,7 +2109,7 @@ public class BracketPage extends BasePage {
 			// navigate to last node in this page
 			currentDeweyID.setTo(getLowKey());
 			navRes = navigateGeneric(currentDeweyID, LOW_KEY_OFFSET,
-					NavigationProfiles.lastNode, false);
+					NavigationProfiles.LAST_NODE, false);
 
 		}
 
@@ -2121,7 +2151,7 @@ public class BracketPage extends BasePage {
 
 				// look for correct insertion position
 				navRes = navigateGeneric(currentDeweyID, LOW_KEY_OFFSET,
-						NavigationProfiles.insertPos, true);
+						NavigationProfiles.TO_INSERT_POS, true);
 
 				if (navRes.status != NavigationStatus.FOUND) {
 					// new record has to be inserted after the lowKey
@@ -2261,7 +2291,7 @@ public class BracketPage extends BasePage {
 	public NavigationResult navigateNextAttribute(int currentOffset,
 			DeweyIDBuffer currentDeweyID) {
 		return navigateGeneric(currentDeweyID, currentOffset,
-				NavigationProfiles.nextAttribute, false);
+				NavigationProfiles.NEXT_ATTRIBUTE, false);
 	}
 
 	/**
@@ -2507,6 +2537,195 @@ public class BracketPage extends BasePage {
 		}
 
 		return new BracketNodeSequence(result, numberDataRecords);
+	}
+
+	/**
+	 * Prepares the deletion of a node sequence (given by the first and the last
+	 * DeweyID that are supposed to be deleted)
+	 * 
+	 * @param leftBorderDeweyID
+	 *            leftmost DeweyID to be deleted
+	 * @param rightBorderDeweyID
+	 *            rightmost DeweyID to be deleted
+	 * @param tempDeweyID
+	 *            DeweyIDBuffer for temporary DeweyIDs (original Buffer value
+	 *            will NOT be preserved!)
+	 * @return the delete preparation result or NULL, if no nodes need to be
+	 *         deleted
+	 * @throws BracketPageException
+	 *             if an error occurs
+	 */
+	public DeletePreparation deleteSequencePrepare(
+			XTCdeweyID leftBorderDeweyID, XTCdeweyID rightBorderDeweyID,
+			DeweyIDBuffer tempDeweyID) throws BracketPageException {
+
+		if (getRecordCount() == 0) {
+			// this is an empty page
+			return null;
+		}
+
+		XTCdeweyID lowKey = getLowKey();
+		tempDeweyID.setTo(lowKey);
+
+		int previousOffset = BEFORE_LOW_KEY_OFFSET;
+		XTCdeweyID previousDeweyID = null;
+		int startDeleteOffset = BEFORE_LOW_KEY_OFFSET;
+		XTCdeweyID startDeleteDeweyID = null;
+		int endDeleteOffset = BEFORE_LOW_KEY_OFFSET;
+		XTCdeweyID endDeleteDeweyID = null;
+		// determine size/number of data records to be deleted
+		int dataRecordSize = 0;
+		int numberOfDataRecords = 0;
+		// count number of nodes to be deleted
+		int numberOfNodes = 0;
+		// count number of overflow keys between the last data record and the
+		// endDeleteOffset
+		int finalOverflowKeys = 0;
+
+		// check whether left border is (possibly) included in this page
+		int compareLeftToLowKey = leftBorderDeweyID.compareDivisions(lowKey);
+		boolean leftIncluded = (compareLeftToLowKey >= 0);
+		int compareRightToLowKey = rightBorderDeweyID.compareDivisions(lowKey);
+		boolean rightIncluded = (compareRightToLowKey >= 0);
+
+		// if the nodes sequence does not intersect with this page
+		if (!leftIncluded && !rightIncluded) {
+			return new DeletePreparation(previousDeweyID, previousOffset,
+					startDeleteDeweyID, startDeleteOffset, endDeleteDeweyID,
+					endDeleteOffset, numberOfNodes, numberOfDataRecords,
+					dataRecordSize, finalOverflowKeys);
+		}
+
+		if (compareLeftToLowKey <= 0) {
+			// start with the lowKey to delete
+			startDeleteOffset = LOW_KEY_OFFSET;
+			startDeleteDeweyID = lowKey;
+		} else {
+			// look for the left border within this page
+			tempDeweyID.enableCompareMode(leftBorderDeweyID);
+
+			previousOffset = LOW_KEY_OFFSET;
+			tempDeweyID.backup();
+
+			int currentOffset = getKeyAreaStartOffset()
+					+ getLowKeyType().getDataReferenceLength();
+			int keyAreaEndOffset = getKeyAreaEndOffset();
+			BracketKey currentKey = new BracketKey();
+			boolean found = false;
+			while (currentOffset < keyAreaEndOffset) {
+				currentKey.load(page, currentOffset);
+				tempDeweyID.update(currentKey, false);
+				if (tempDeweyID.compare() >= 0) {
+					found = true;
+					break;
+				}
+				// buffer current node's information
+				previousOffset = currentOffset;
+				tempDeweyID.backup();
+				currentOffset += BracketKey.PHYSICAL_LENGTH
+						+ currentKey.getDataReferenceLength();
+			}
+
+			previousDeweyID = tempDeweyID.getBackupDeweyID();
+			int compareValue = tempDeweyID.compare();
+			tempDeweyID.resetBackup();
+			tempDeweyID.disableCompareMode();
+
+			if (!found) {
+				// left border not included in page
+				previousDeweyID = null;
+				previousOffset = KEY_AREA_END_OFFSET;
+				startDeleteOffset = KEY_AREA_END_OFFSET;
+				endDeleteOffset = KEY_AREA_END_OFFSET;
+				return new DeletePreparation(previousDeweyID, previousOffset,
+						startDeleteDeweyID, startDeleteOffset,
+						endDeleteDeweyID, endDeleteOffset, numberOfNodes,
+						numberOfDataRecords, dataRecordSize, finalOverflowKeys);
+			} else if (compareValue > 0) {
+				// left border DeweyID does not exist!
+				throw new BracketPageException(String.format(
+						"LeftBorderDeweyID %s does not exist!",
+						leftBorderDeweyID));
+			}
+
+			startDeleteDeweyID = tempDeweyID.getDeweyID();
+			startDeleteOffset = currentOffset;
+		}
+
+		// start position of deletion found -> process page from this position
+		// on
+		tempDeweyID.enableCompareMode(rightBorderDeweyID);
+		int currentOffset = startDeleteOffset;
+		BracketKey.Type currentType = null;
+		
+		boolean rightBorderFound = false;
+
+		if (currentOffset == LOW_KEY_OFFSET) {
+			// separate handling for the lowkey
+			currentType = getLowKeyType();
+			currentOffset = getKeyAreaStartOffset();
+			numberOfNodes++;
+
+			if (currentType.hasDataReference()) {
+				numberOfDataRecords++;
+				dataRecordSize += getValueLength(getValueOffset(currentOffset), true);
+				currentOffset += BracketKey.DATA_REF_LENGTH;
+			}
+			
+			if (compareRightToLowKey == 0) {
+				// only the lowkey should be deleted
+				rightBorderFound = true;
+			}
+		}
+
+		BracketKey currentKey = new BracketKey();
+		int keyAreaEndOffset = getKeyAreaEndOffset();
+		// navigate to the first node that is not supposed to be deleted
+		while (currentOffset < keyAreaEndOffset) {
+			// load next key from keyStorage
+			currentKey.load(page, currentOffset);
+			currentType = currentKey.type;
+			// refresh DeweyID
+			tempDeweyID.update(currentKey, false);
+
+			if (currentType != BracketKey.Type.OVERFLOW) {
+				// check break condition -> DeweyID larger than right border
+				if (tempDeweyID.compare() == 0) {
+					rightBorderFound = true;
+				} else if (tempDeweyID.compare() > 0) {
+					endDeleteOffset = currentOffset;
+					endDeleteDeweyID = tempDeweyID.getDeweyID();
+					break;
+				}
+				currentOffset += BracketKey.PHYSICAL_LENGTH;
+				numberOfNodes++;
+				finalOverflowKeys = 0;
+
+				if (currentType != BracketKey.Type.NODATA) {
+					numberOfDataRecords++;
+					dataRecordSize += getValueLength(getValueOffset(currentOffset), true);
+					currentOffset += BracketKey.DATA_REF_LENGTH;
+				}
+			} else {
+				currentOffset += BracketKey.PHYSICAL_LENGTH;
+				finalOverflowKeys++;
+			}
+		}
+
+		// check whether endDeleteNode was found
+		if (endDeleteDeweyID == null) {
+			endDeleteOffset = KEY_AREA_END_OFFSET;
+		} else if (!rightBorderFound) {
+			// right border DeweyID does not exist!
+			throw new BracketPageException(String.format(
+					"RightBorderDeweyID %s does not exist!",
+					rightBorderDeweyID));
+		}
+
+		return new DeletePreparation(null, BracketPage.BEFORE_LOW_KEY_OFFSET,
+				startDeleteDeweyID, startDeleteOffset, endDeleteDeweyID,
+				endDeleteOffset, numberOfNodes, numberOfDataRecords,
+				dataRecordSize, finalOverflowKeys);
 	}
 
 	/**
