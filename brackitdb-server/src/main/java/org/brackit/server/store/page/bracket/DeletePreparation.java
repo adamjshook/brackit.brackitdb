@@ -40,7 +40,7 @@ import org.brackit.server.node.XTCdeweyID;
  * 
  */
 public class DeletePreparation {
-	
+
 	public final XTCdeweyID previousDeweyID;
 	public final int previousOffset;
 	public final XTCdeweyID startDeleteDeweyID;
@@ -51,9 +51,12 @@ public class DeletePreparation {
 	public final int numberOfDataRecords;
 	public final int dataRecordSize;
 	public final int finalOverflowKeys;
-	
-	public DeletePreparation(XTCdeweyID previousDeweyID, int previousOffset, XTCdeweyID startDeleteDeweyID, int startDeleteOffset, XTCdeweyID endDeleteDeweyID, int endDeleteOffset, int numberOfNodes, int numberOfDataRecords, int dataRecordSize, int finalOverflowKeys)
-	{
+
+	public DeletePreparation(XTCdeweyID previousDeweyID, int previousOffset,
+			XTCdeweyID startDeleteDeweyID, int startDeleteOffset,
+			XTCdeweyID endDeleteDeweyID, int endDeleteOffset,
+			int numberOfNodes, int numberOfDataRecords, int dataRecordSize,
+			int finalOverflowKeys) {
 		this.previousDeweyID = previousDeweyID;
 		this.previousOffset = previousOffset;
 		this.startDeleteDeweyID = startDeleteDeweyID;
@@ -70,16 +73,29 @@ public class DeletePreparation {
 	 * @see java.lang.Object#toString()
 	 */
 	@Override
-	public String toString()
-	{
+	public String toString() {
 		StringBuilder out = new StringBuilder();
-		out.append(String.format("Previous Node: %s, Offset %s\n", previousDeweyID, (previousOffset == BracketPage.LOW_KEY_OFFSET ? "LOW_ID_KEYOFFSET" : previousOffset)));
-		out.append(String.format("Start Delete Node: %s, Offset %s\n", startDeleteDeweyID, (startDeleteOffset == BracketPage.LOW_KEY_OFFSET ? "LOW_ID_KEYOFFSET" : startDeleteOffset)));
-		out.append(String.format("End Delete Node: %s, Offset %s\n\n", endDeleteDeweyID, (endDeleteOffset == BracketPage.KEY_AREA_END_OFFSET ? "PAGE_END_KEYOFFSET" : endDeleteOffset)));
-		out.append(String.format("Number of Nodes (Data records): %s (%s)\n", numberOfNodes, numberOfDataRecords));
+		out.append(String
+				.format("Previous Node: %s, Offset %s\n",
+						previousDeweyID,
+						(previousOffset == BracketPage.LOW_KEY_OFFSET ? "LOW_ID_KEYOFFSET"
+								: previousOffset)));
+		out.append(String
+				.format("Start Delete Node: %s, Offset %s\n",
+						startDeleteDeweyID,
+						(startDeleteOffset == BracketPage.LOW_KEY_OFFSET ? "LOW_ID_KEYOFFSET"
+								: startDeleteOffset)));
+		out.append(String
+				.format("End Delete Node: %s, Offset %s\n\n",
+						endDeleteDeweyID,
+						(endDeleteOffset == BracketPage.KEY_AREA_END_OFFSET ? "PAGE_END_KEYOFFSET"
+								: endDeleteOffset)));
+		out.append(String.format("Number of Nodes (Data records): %s (%s)\n",
+				numberOfNodes, numberOfDataRecords));
 		out.append(String.format("Data record size: %s\n", dataRecordSize));
-		out.append(String.format("Number of final Overflow Keys: %s\n", finalOverflowKeys));
-		
+		out.append(String.format("Number of final Overflow Keys: %s\n",
+				finalOverflowKeys));
+
 		return out.toString();
 	}
 }

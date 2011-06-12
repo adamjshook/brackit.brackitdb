@@ -34,6 +34,7 @@ import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.SubtreeDeleteListener;
+import org.brackit.server.store.page.bracket.DeleteSequenceInfo;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 
@@ -135,7 +136,7 @@ public interface Leaf extends BPContext {
 	 *             if the deletion would cause this leaf to become empty (->
 	 *             deletion not yet executed)
 	 */
-	public boolean delete(SubtreeDeleteListener deleteListener,
+	public boolean deleteSubtreeStart(SubtreeDeleteListener deleteListener,
 			List<PageID> externalPageIDs, boolean isStructureModification,
 			boolean logged, long undoNextLSN) throws IndexOperationException,
 			EmptyLeafException;
@@ -157,7 +158,7 @@ public interface Leaf extends BPContext {
 	 * @return
 	 * @throws IndexOperationException
 	 */
-	public boolean deleteRemainingSubtree(XTCdeweyID subtreeRoot,
+	public boolean deleteSubtreeEnd(XTCdeweyID subtreeRoot,
 			SubtreeDeleteListener deleteListener, List<PageID> externalPageIDs,
 			boolean isStructureModification, boolean logged, long undoNextLSN)
 			throws IndexOperationException;
@@ -189,5 +190,22 @@ public interface Leaf extends BPContext {
 	public DeweyIDBuffer deassignDeweyIDBuffer();
 
 	public DeweyIDBuffer getDeweyIDBuffer();
+
+	/**
+	 * Deletes a node sequence beginning with "leftBorderDeweyID" until (and
+	 * inclusive) "rightBorderDeweyID". If the deletion results in an empty
+	 * page, nothing will be deleted. Instead, the tree needs to unchain this
+	 * page.
+	 * 
+	 * @param leftBorderDeweyID
+	 * @param rightBorderDeweyID
+	 * @param logged
+	 * @param undoNextLSN
+	 * @return
+	 * @throws IndexOperationException
+	 */
+	public DeleteSequenceInfo deleteSequence(XTCdeweyID leftBorderDeweyID,
+			XTCdeweyID rightBorderDeweyID, boolean logged, long undoNextLSN)
+			throws IndexOperationException;
 
 }

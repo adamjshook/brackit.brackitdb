@@ -2836,7 +2836,7 @@ public class BracketTree extends PageContextFactory {
 							// time)
 				try {
 					// try to delete subtree locally
-					if (left.delete(deleteListener, externalPageIDs, false,
+					if (left.deleteSubtreeStart(deleteListener, externalPageIDs, false,
 							logged, undoNextLSN)) {
 						// deletion successful within current leaf
 						deleteExternalized(tx, externalPageIDs);
@@ -2864,7 +2864,7 @@ public class BracketTree extends PageContextFactory {
 
 					if (left.getNextPageID() == null) {
 						// left is last page und becomes empty
-						left.deleteRemainingSubtree(subtreeRoot,
+						left.deleteSubtreeEnd(subtreeRoot,
 								deleteListener, null, false, logged,
 								undoNextLSN);
 						return;
@@ -2916,7 +2916,7 @@ public class BracketTree extends PageContextFactory {
 			List<PageID> innerPageIDs = new ArrayList<PageID>();
 			XTCdeweyID newHighKey = null;
 			// inspect leaf pages until subtree end is found
-			while (!right.deleteRemainingSubtree(subtreeRoot, deleteListener,
+			while (!right.deleteSubtreeEnd(subtreeRoot, deleteListener,
 					externalPageIDs, false, logged, undoNextLSN)) {
 
 				PageID nextPageID = right.getNextPageID();

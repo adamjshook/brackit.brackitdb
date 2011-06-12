@@ -2550,18 +2550,18 @@ public class BracketPage extends BasePage {
 	 * @param tempDeweyID
 	 *            DeweyIDBuffer for temporary DeweyIDs (original Buffer value
 	 *            will NOT be preserved!)
-	 * @return the delete preparation result or NULL, if no nodes need to be
-	 *         deleted
+	 * @return the delete sequence preparation result
 	 * @throws BracketPageException
 	 *             if an error occurs
 	 */
-	public DeletePreparation deleteSequencePrepare(
+	public DeleteSequencePreparation deleteSequencePrepare(
 			XTCdeweyID leftBorderDeweyID, XTCdeweyID rightBorderDeweyID,
 			DeweyIDBuffer tempDeweyID) throws BracketPageException {
 
 		if (getRecordCount() == 0) {
 			// this is an empty page
-			return null;
+			return new DeleteSequencePreparation(new DeleteSequenceInfo(false,
+					false, true), null);
 		}
 
 		XTCdeweyID lowKey = getLowKey();
@@ -2582,24 +2582,30 @@ public class BracketPage extends BasePage {
 		// endDeleteOffset
 		int finalOverflowKeys = 0;
 
+		boolean checkLeftNeighbor = false;
+		boolean checkRightNeighbor = false;
+
 		// check whether left border is (possibly) included in this page
 		int compareLeftToLowKey = leftBorderDeweyID.compareDivisions(lowKey);
 		boolean leftIncluded = (compareLeftToLowKey >= 0);
 		int compareRightToLowKey = rightBorderDeweyID.compareDivisions(lowKey);
 		boolean rightIncluded = (compareRightToLowKey >= 0);
 
-		// if the nodes sequence does not intersect with this page
+		// both the left and the right border are located in one of the previous
+		// pages
 		if (!leftIncluded && !rightIncluded) {
-			return new DeletePreparation(previousDeweyID, previousOffset,
-					startDeleteDeweyID, startDeleteOffset, endDeleteDeweyID,
-					endDeleteOffset, numberOfNodes, numberOfDataRecords,
-					dataRecordSize, finalOverflowKeys);
+			return new DeleteSequencePreparation(new DeleteSequenceInfo(true,
+					false, false), null);
 		}
 
 		if (compareLeftToLowKey <= 0) {
 			// start with the lowKey to delete
 			startDeleteOffset = LOW_KEY_OFFSET;
 			startDeleteDeweyID = lowKey;
+			if (compareLeftToLowKey < 0) {
+				// sequence might start in the previous page
+				checkLeftNeighbor = true;
+			}
 		} else {
 			// look for the left border within this page
 			tempDeweyID.enableCompareMode(leftBorderDeweyID);
@@ -2633,14 +2639,8 @@ public class BracketPage extends BasePage {
 
 			if (!found) {
 				// left border not included in page
-				previousDeweyID = null;
-				previousOffset = KEY_AREA_END_OFFSET;
-				startDeleteOffset = KEY_AREA_END_OFFSET;
-				endDeleteOffset = KEY_AREA_END_OFFSET;
-				return new DeletePreparation(previousDeweyID, previousOffset,
-						startDeleteDeweyID, startDeleteOffset,
-						endDeleteDeweyID, endDeleteOffset, numberOfNodes,
-						numberOfDataRecords, dataRecordSize, finalOverflowKeys);
+				return new DeleteSequencePreparation(new DeleteSequenceInfo(
+						false, true, false), null);
 			} else if (compareValue > 0) {
 				// left border DeweyID does not exist!
 				throw new BracketPageException(String.format(
@@ -2657,7 +2657,7 @@ public class BracketPage extends BasePage {
 		tempDeweyID.enableCompareMode(rightBorderDeweyID);
 		int currentOffset = startDeleteOffset;
 		BracketKey.Type currentType = null;
-		
+
 		boolean rightBorderFound = false;
 
 		if (currentOffset == LOW_KEY_OFFSET) {
@@ -2668,10 +2668,11 @@ public class BracketPage extends BasePage {
 
 			if (currentType.hasDataReference()) {
 				numberOfDataRecords++;
-				dataRecordSize += getValueLength(getValueOffset(currentOffset), true);
+				dataRecordSize += getValueLength(getValueOffset(currentOffset),
+						true);
 				currentOffset += BracketKey.DATA_REF_LENGTH;
 			}
-			
+
 			if (compareRightToLowKey == 0) {
 				// only the lowkey should be deleted
 				rightBorderFound = true;
@@ -2703,7 +2704,8 @@ public class BracketPage extends BasePage {
 
 				if (currentType != BracketKey.Type.NODATA) {
 					numberOfDataRecords++;
-					dataRecordSize += getValueLength(getValueOffset(currentOffset), true);
+					dataRecordSize += getValueLength(
+							getValueOffset(currentOffset), true);
 					currentOffset += BracketKey.DATA_REF_LENGTH;
 				}
 			} else {
@@ -2715,17 +2717,23 @@ public class BracketPage extends BasePage {
 		// check whether endDeleteNode was found
 		if (endDeleteDeweyID == null) {
 			endDeleteOffset = KEY_AREA_END_OFFSET;
+			if (!rightBorderFound) {
+				checkRightNeighbor = true;
+			}
 		} else if (!rightBorderFound) {
 			// right border DeweyID does not exist!
-			throw new BracketPageException(String.format(
-					"RightBorderDeweyID %s does not exist!",
-					rightBorderDeweyID));
+			throw new BracketPageException(
+					String.format("RightBorderDeweyID %s does not exist!",
+							rightBorderDeweyID));
 		}
 
-		return new DeletePreparation(null, BracketPage.BEFORE_LOW_KEY_OFFSET,
-				startDeleteDeweyID, startDeleteOffset, endDeleteDeweyID,
-				endDeleteOffset, numberOfNodes, numberOfDataRecords,
-				dataRecordSize, finalOverflowKeys);
+		boolean producesEmptyLeaf = (startDeleteOffset == LOW_KEY_OFFSET && endDeleteOffset == KEY_AREA_END_OFFSET);
+		return new DeleteSequencePreparation(new DeleteSequenceInfo(
+				checkLeftNeighbor, checkRightNeighbor, producesEmptyLeaf),
+				new DeletePreparation(previousDeweyID, previousOffset,
+						startDeleteDeweyID, startDeleteOffset,
+						endDeleteDeweyID, endDeleteOffset, numberOfNodes,
+						numberOfDataRecords, dataRecordSize, finalOverflowKeys));
 	}
 
 	/**
@@ -2743,7 +2751,7 @@ public class BracketPage extends BasePage {
 	 * @return the delete preparation result
 	 * @throws IndexOperationException
 	 */
-	public DeletePreparation deleteRemainingSubtreePrepare(
+	public DeletePreparation deleteSubtreeEndPrepare(
 			XTCdeweyID subtreeRoot, DeweyIDBuffer tempDeweyID,
 			DeletePrepareListener delPrepLis) throws BracketPageException {
 
@@ -2873,7 +2881,7 @@ public class BracketPage extends BasePage {
 	 * @return the delete preparation result
 	 * @throws IndexOperationException
 	 */
-	public DeletePreparation deletePrepare(int currentOffset,
+	public DeletePreparation deleteSubtreeStartPrepare(int currentOffset,
 			DeweyIDBuffer currentDeweyID, DeletePrepareListener delPrepLis)
 			throws BracketPageException {
 		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
