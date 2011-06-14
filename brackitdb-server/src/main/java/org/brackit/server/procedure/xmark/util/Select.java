@@ -27,82 +27,50 @@
  */
 package org.brackit.server.procedure.xmark.util;
 
-import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
 import org.brackit.xquery.operator.Cursor;
-import org.brackit.xquery.operator.TupleImpl;
 import org.brackit.xquery.xdm.Expr;
-import org.brackit.xquery.xdm.Item;
-import org.brackit.xquery.xdm.Iter;
-import org.brackit.xquery.xdm.Sequence;
 
 /**
- * 
  * @author Sebastian Baechle
  * 
  */
-public class ExprOp implements Cursor {
+public class Select implements Cursor {
 	private final Cursor in;
 
-	private final Expr expr;
+	private final Expr predicate;
 
 	private final int[] projections;
 
-	private Tuple tuple;
-
-	private Iter it;
-
-	public ExprOp(Cursor in, Expr expr) {
-		this(in, expr, null);
+	public Select(Cursor in, Expr predicate) {
+		this(in, predicate, null);
 	}
 
-	public ExprOp(Cursor in, Expr expr, int... projections) {
+	public Select(Cursor in, Expr predicate, int... projections) {
 		this.in = in;
-		this.expr = expr;
+		this.predicate = predicate;
 		this.projections = projections;
 	}
 
 	@Override
-	public void open(QueryContext ctx) throws QueryException {
-		in.open(ctx);
-	}
-
-	@Override
 	public void close(QueryContext ctx) {
-		if (it != null) {
-			it.close();
-		}
 		in.close(ctx);
 	}
 
 	@Override
 	public Tuple next(QueryContext ctx) throws QueryException {
-		try {
-			while (true) {
-				if (it != null) {
-					Item item = it.next();
-					if (item != null) {
-						Tuple tmp = tuple.concat(it.next());
-						return (projections != null) ? tmp.project(projections)
-								: tmp;
-					}
+		Tuple a;
+		while (((a = in.next(ctx)) != null)
+				&& (!predicate.evaluate(ctx, a).booleanValue(ctx)))
+			;
+		return (a != null) ? (projections != null) ? a.project(projections)
+				: a : null;
+	}
 
-					it.close();
-					it = null;
-				}
-
-				tuple = in.next(ctx);
-
-				if (tuple == null) {
-					return null;
-				}
-
-				it = expr.evaluate(ctx, tuple).iterate();
-			}
-		} catch (ClassCastException e) {
-			throw new QueryException(e, ErrorCode.ERR_TYPE_NOT_A_NODE);
-		}
+	@Override
+	public void open(QueryContext ctx) throws QueryException {
+		in.open(ctx);
 	}
 }
