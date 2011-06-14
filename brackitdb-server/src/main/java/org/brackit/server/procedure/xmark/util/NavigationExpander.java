@@ -37,7 +37,6 @@ import org.brackit.xquery.node.stream.EmptyStream;
 import org.brackit.xquery.node.stream.filter.Filter;
 import org.brackit.xquery.node.stream.filter.FilteredStream;
 import org.brackit.xquery.operator.Cursor;
-import org.brackit.xquery.operator.TupleImpl;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Expr;
 import org.brackit.xquery.xdm.Kind;
@@ -217,19 +216,18 @@ public class NavigationExpander implements Cursor {
 					Node<?> next;
 					if ((next = stream.next()) != null) {
 						foundRelative = true;
-						return (projections != null) ? new TupleImpl(a, next,
-								projections)
-								: new TupleImpl(a, (Sequence) next);
+						Tuple tmp = a.concat(next);
+						return (projections != null) ? tmp.project(projections)
+								: tmp;
 					}
 
 					stream.close();
 					stream = null;
 
 					if ((!eliminate) && (!foundRelative)) {
-						Tuple joined = new TupleImpl(a, (Sequence) null);
-						return (projections != null) ? new TupleImpl(a, null,
-								projections)
-								: new TupleImpl(a, (Sequence) null);
+						Tuple joined = a.concat((Sequence) null);
+						return (projections != null) ? a.project(projections)
+								: joined;
 					}
 				}
 
