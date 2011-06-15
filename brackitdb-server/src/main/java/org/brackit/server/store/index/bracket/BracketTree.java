@@ -1228,8 +1228,8 @@ public class BracketTree extends PageContextFactory {
 			 * computation of required space. If this fails we will have to
 			 * perform a split
 			 */
-			while (!leaf.insertAfter(insertKey, insertValue, ancestorsToInsert,
-					false, logged, undoNextLSN)) {
+			while (!leaf.insertRecordAfter(insertKey, insertValue,
+					ancestorsToInsert, logged, undoNextLSN)) {
 				if (log.isTraceEnabled()) {
 					log.trace(String
 							.format("Splitting leaf page %s for insert of (%s, %s) at %s",
@@ -1300,8 +1300,8 @@ public class BracketTree extends PageContextFactory {
 			 * computation of required space. If this fails we will have to
 			 * perform a split
 			 */
-			while (!page.insertAfter(insertKey, insertValue, ancestorsToInsert,
-					isStructureModification, logged, undoNextLSN)) {
+			while (!page.insertRecordAfter(insertKey, insertValue,
+					ancestorsToInsert, logged, undoNextLSN)) {
 				if (log.isTraceEnabled()) {
 					log.trace(String.format(
 							"Splitting page %s for insert of (%s, %s) at %s",
