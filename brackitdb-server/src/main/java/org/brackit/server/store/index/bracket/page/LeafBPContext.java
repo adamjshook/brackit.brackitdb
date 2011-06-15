@@ -370,13 +370,15 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		int returnVal = page.insertAfter(deweyID, pageRecord,
 				ancestorsToInsert, externalize, currentOffset, currentDeweyID);
-
-		if (returnVal != BracketPage.INSERTION_NO_SPACE) {
+		
+		if (returnVal == BracketPage.INSERTION_DUPLICATE) {
+			throw new IndexOperationException("Insertion key %s already exists in the index!", deweyID);
+		} else if (returnVal == BracketPage.INSERTION_NO_SPACE) {
+			return false;
+		} else {
 			setCurrentOffset(returnVal);
 			bufferedValue = record;
 			return true;
-		} else {
-			return false;
 		}
 	}
 
@@ -432,6 +434,17 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 			NavigationMode navMode) {
 		declareContextFree();
 		initBuffer();
+		
+		if (getEntryCount() == 0) {
+			if (getNextPageID() != null) {
+				throw new RuntimeException("Only the last leaf page may be empty!");
+			}
+			if (navMode != NavigationMode.TO_INSERT_POS) {
+				return NavigationStatus.BEFORE_FIRST;
+			} else {
+				return NavigationStatus.FOUND;
+			}
+		}
 
 		NavigationResult navRes = null;
 
@@ -528,7 +541,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 			rightPage.setHighKey(highKey);
 
 			// insert nodes into right page
-			rightPage.page.insertAfter(nodes, rightPage.currentOffset,
+			rightPage.page.insertSequenceAfter(nodes, rightPage.currentOffset,
 					rightPage.currentDeweyID);
 
 			// set correct context(s)
@@ -570,7 +583,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 		// copy content
 		BracketNodeSequence content = page.getBracketNodeSequence(getLowKey(),
 				BracketPage.LOW_KEY_OFFSET, BracketPage.KEY_AREA_END_OFFSET);
-		other.page.insertAfter(content, BracketPage.BEFORE_LOW_KEY_OFFSET,
+		other.page.insertSequenceAfter(content, BracketPage.BEFORE_LOW_KEY_OFFSET,
 				other.currentDeweyID);
 
 		// copy context
@@ -876,6 +889,42 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	
 		} catch (BracketPageException e) {
 			throw new IndexOperationException(e);
+		}
+	}
+
+	@Override
+	public boolean insertSequenceAfter(BracketNodeSequence nodes,
+			boolean logged, long undoNextLSN) throws IndexOperationException {
+
+		initBuffer();
+		
+		int returnVal = page.insertSequenceAfter(nodes, currentOffset, currentDeweyID);
+		
+		if (returnVal == BracketPage.INSERTION_DUPLICATE) {
+			throw new IndexOperationException("Insertion key %s already exists in the index!", nodes.getLowKey());
+		} else if (returnVal == BracketPage.INSERTION_NO_SPACE) {
+			return false;
+		} else {
+			setCurrentOffset(returnVal);
+			return true;
+		}	
+	}
+
+	@Override
+	public boolean insertSequence(BracketNodeSequence nodes, boolean logged,
+			long undoNextLSN) throws IndexOperationException {
+		declareContextFree();
+		initBuffer();
+		
+		int returnVal = page.insertSequence(nodes, currentDeweyID);
+		
+		if (returnVal == BracketPage.INSERTION_DUPLICATE) {
+			throw new IndexOperationException("Insertion key %s already exists in the index!", nodes.getLowKey());
+		} else if (returnVal == BracketPage.INSERTION_NO_SPACE) {
+			return false;
+		} else {
+			setCurrentOffset(returnVal);
+			return true;
 		}
 	}
 }

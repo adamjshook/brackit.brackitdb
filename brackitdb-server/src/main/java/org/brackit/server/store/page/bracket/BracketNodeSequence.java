@@ -131,7 +131,7 @@ public class BracketNodeSequence {
 	 * 
 	 * @return the low key
 	 */
-	protected XTCdeweyID getLowKey() {
+	public XTCdeweyID getLowKey() {
 		return lowKey;
 	}
 

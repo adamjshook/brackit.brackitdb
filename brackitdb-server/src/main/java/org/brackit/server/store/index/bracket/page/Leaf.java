@@ -34,6 +34,7 @@ import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.SubtreeDeleteListener;
+import org.brackit.server.store.page.bracket.BracketNodeSequence;
 import org.brackit.server.store.page.bracket.DeleteSequenceInfo;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
@@ -78,6 +79,12 @@ public interface Leaf extends BPContext {
 
 	public boolean insertAfter(XTCdeweyID deweyID, byte[] record,
 			int ancestorsToInsert, boolean isStructureModification,
+			boolean logged, long undoNextLSN) throws IndexOperationException;
+
+	public boolean insertSequenceAfter(BracketNodeSequence nodes,
+			boolean logged, long undoNextLSN) throws IndexOperationException;
+	
+	public boolean insertSequence(BracketNodeSequence nodes,
 			boolean logged, long undoNextLSN) throws IndexOperationException;
 
 	public XTCdeweyID getKey();
