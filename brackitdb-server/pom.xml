@@ -21,6 +21,49 @@
   </organization>
   <build>
   	<plugins>
+		<plugin>
+  			<groupId>org.apache.maven.plugins</groupId>
+  			<artifactId>maven-assembly-plugin</artifactId>
+  			<version>2.2.1</version>
+  			<executions>
+  				<execution>
+  					<!-- 
+  						Include additional files that are not
+  						captured by the appassembler plugin 
+  					-->
+  					<id>dist-additional</id>
+  					<phase>package</phase>
+  					<goals>
+  						<goal>single</goal>
+  					</goals>
+					<configuration>
+						<descriptors>							
+							<descriptor>src/assemble/dist-additional.xml</descriptor>
+						</descriptors>
+						<!-- becomes name of output directory in target directory -->
+						<finalName>brackitdb</finalName>
+						<!-- do not append -dist suffix to target directory -->
+						<appendAssemblyId>false</appendAssemblyId>
+					</configuration>					
+  				</execution>
+  			</executions>
+  		</plugin>
+  		<plugin>
+  			<groupId>org.apache.maven.plugins</groupId>
+  			<artifactId>maven-jar-plugin</artifactId>
+  			<version>2.3.1</version>
+  			<configuration>
+				<archive>
+					<!--
+					<manifest>
+						<mainClass>org.brackit.server.Server</mainClass>
+						<addClasspath>true</addClasspath>
+						<classpathPrefix>lib</classpathPrefix>
+					</manifest>
+					-->
+				</archive>
+  			</configuration>
+  		</plugin>  	
   		<plugin>
   			<groupId>org.apache.maven.plugins</groupId>
   			<artifactId>maven-compiler-plugin</artifactId>
@@ -31,6 +74,42 @@
                 <encoding>UTF-8</encoding> 
             </configuration>
   		</plugin>
+  		<plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>appassembler-maven-plugin</artifactId>
+		<version>1.1.1</version>
+		<executions>
+			<execution>
+				<!--
+					Build distribution with start scripts 
+				 -->
+				<id>dist</id>
+				<phase>package</phase>
+				<goals>
+					<goal>assemble</goal>
+				</goals>
+				<configuration>
+					<assembleDirectory>${project.build.directory}/brackitdb</assembleDirectory>
+					<!-- Extra JVM arguments that will be included in the bin scripts -->
+					<extraJvmArguments>-Xms512m</extraJvmArguments>
+					<!--collect all jars into the lib directory-->
+					<repositoryLayout>flat</repositoryLayout>
+					<repositoryName>lib</repositoryName>
+					<!-- Generate bin scripts for windows and unix per default -->
+					<platforms>
+						<platform>windows</platform>
+						<platform>unix</platform>
+					</platforms>
+					<programs>
+						<program>
+							<mainClass>org.brackit.server.Server</mainClass>
+							<name>server</name>
+						</program>
+					</programs>
+				</configuration>
+			</execution>
+		</executions>
+      </plugin>
   	</plugins>
   </build>
   <dependencies>
