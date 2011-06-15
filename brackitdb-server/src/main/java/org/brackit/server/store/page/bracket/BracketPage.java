@@ -2751,9 +2751,9 @@ public class BracketPage extends BasePage {
 	 * @return the delete preparation result
 	 * @throws IndexOperationException
 	 */
-	public DeletePreparation deleteSubtreeEndPrepare(
-			XTCdeweyID subtreeRoot, DeweyIDBuffer tempDeweyID,
-			DeletePrepareListener delPrepLis) throws BracketPageException {
+	public DeletePreparation deleteSubtreeEndPrepare(XTCdeweyID subtreeRoot,
+			DeweyIDBuffer tempDeweyID, DeletePrepareListener delPrepLis)
+			throws BracketPageException {
 
 		if (getRecordCount() == 0) {
 			return null;
@@ -3520,8 +3520,47 @@ public class BracketPage extends BasePage {
 	}
 
 	/**
+	 * Inserts a sequence of bracket nodes. If successful, the tempDeweyID
+	 * buffer will contain the DeweyID of the last inserted node.
+	 * 
+	 * @param nodes
+	 *            the nodes to insert
+	 * @param tempDeweyID
+	 *            DeweyIDBuffer for temporary DeweyIDs (original Buffer value
+	 *            will NOT be preserved!)
+	 * @return offset of the LAST inserted node or an errorcode (if new node is
+	 *         a duplicate or there is not enough space)
+	 */
+	public int insertSequence(BracketNodeSequence nodes,
+			DeweyIDBuffer tempDeweyID) {
+
+		final byte[] data = nodes.getData();
+		int currentOffset = BEFORE_LOW_KEY_OFFSET;
+		
+		if (data == null || data.length == 0) {
+			return currentOffset;
+		}
+		
+		XTCdeweyID dataLowKey = nodes.getLowKey();
+		
+		// look for insertion position of the node sequence
+		NavigationResult navRes = navigateToInsertPos(dataLowKey, tempDeweyID);
+		
+		if (navRes.status != NavigationStatus.FOUND) {
+			// duplicate detected
+			return INSERTION_DUPLICATE;
+		}
+		
+		// insert sequence after the found position
+		currentOffset = navRes.keyOffset;
+		
+		return insertSequenceAfter(nodes, currentOffset, tempDeweyID);		
+	}
+
+	/**
 	 * Inserts a sequence of bracket nodes after the current one. If successful,
-	 * the currentDeweyID buffer will contain the new node's DeweyID.
+	 * the currentDeweyID buffer will contain the DeweyID of the last inserted
+	 * node.
 	 * 
 	 * @param nodes
 	 *            the nodes to insert
@@ -3532,8 +3571,8 @@ public class BracketPage extends BasePage {
 	 * @return offset of the LAST inserted node or an errorcode (if new node is
 	 *         a duplicate or there is not enough space)
 	 */
-	public int insertAfter(BracketNodeSequence nodes, int currentOffset,
-			DeweyIDBuffer currentDeweyID) {
+	public int insertSequenceAfter(BracketNodeSequence nodes,
+			int currentOffset, DeweyIDBuffer currentDeweyID) {
 
 		final byte[] data = nodes.getData();
 
