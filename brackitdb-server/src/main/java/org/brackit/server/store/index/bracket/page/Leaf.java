@@ -77,15 +77,19 @@ public interface Leaf extends BPContext {
 
 	public void moveBeforeFirst();
 
-	public boolean insertAfter(XTCdeweyID deweyID, byte[] record,
-			int ancestorsToInsert, boolean isStructureModification,
-			boolean logged, long undoNextLSN) throws IndexOperationException;
+	public boolean insertRecordAfter(XTCdeweyID deweyID, byte[] record,
+			int ancestorsToInsert, boolean logged, long undoNextLSN)
+			throws IndexOperationException;
+
+	public boolean insertRecord(XTCdeweyID deweyID, byte[] record,
+			int ancestorsToInsert, boolean logged, long undoNextLSN)
+			throws IndexOperationException;
 
 	public boolean insertSequenceAfter(BracketNodeSequence nodes,
 			boolean logged, long undoNextLSN) throws IndexOperationException;
-	
-	public boolean insertSequence(BracketNodeSequence nodes,
-			boolean logged, long undoNextLSN) throws IndexOperationException;
+
+	public boolean insertSequence(BracketNodeSequence nodes, boolean logged,
+			long undoNextLSN) throws IndexOperationException;
 
 	public XTCdeweyID getKey();
 

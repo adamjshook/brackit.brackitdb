@@ -53,46 +53,60 @@ public class BracketNodeSequence {
 	 *            the node's DeweyID
 	 * @param value
 	 *            the node's value
-	 * @param valueLengthFieldIncluded
-	 *            indicate whether the length field ist already included in the
-	 *            given value byte arary
+	 * @param externalized
+	 *            is the given value an external PageID?
 	 * @return the BracketNodeSequence
 	 */
-	public static BracketNodeSequence fromSinlgeNode(XTCdeweyID deweyID,
-			byte[] value, boolean valueLengthFieldIncluded) {
+	public static BracketNodeSequence fromNode(XTCdeweyID deweyID,
+			byte[] value, int numberOfAncestors, boolean externalized) {
 
-		byte[] physicalLowID = deweyID.toBytes();
+		byte[] physicalLowID = null;
+		BracketKey.Type lowIDType = null;
+		byte[] bracketKeys = null;
+
+		if (numberOfAncestors == 0) {
+			physicalLowID = deweyID.toBytes();
+			lowIDType = (deweyID.isAttribute() ? BracketKey.Type.ATTRIBUTE
+					: BracketKey.Type.DATA);
+			bracketKeys = new byte[0];
+		} else {
+			XTCdeweyID ancestorKey = BracketPage.getAncestorKey(deweyID,
+					numberOfAncestors);
+			physicalLowID = ancestorKey.toBytes();
+			lowIDType = BracketKey.Type.NODATA;
+			bracketKeys = BracketKey.generateBracketKeys(ancestorKey, deweyID);
+		}
+
 		int lowIDLength = physicalLowID.length;
-		BracketKey.Type lowIDType = (deweyID.isAttribute() ? BracketKey.Type.ATTRIBUTE
-				: BracketKey.Type.DATA);
-
 		if (lowIDLength > 255) {
 			throw new RuntimeException("StartDeweyID is too long!");
 		}
 
-		byte[] valueLength = null;
-		if (!valueLengthFieldIncluded) {
-			valueLength = BracketPage.getValueLengthField(value, false);
-		} else {
-			valueLength = new byte[0];
-		}
+		byte[] valueLength = BracketPage.getValueLengthField(value, externalized);;
 
-		int dataLength = 1 + lowIDLength + 1 + valueLength.length
-				+ value.length;
+		int dataLength = 1 + lowIDLength + 1 + bracketKeys.length
+				+ valueLength.length + value.length;
 
 		byte[] data = new byte[dataLength];
 		int currentOffset = 0;
+		// LowID length
 		data[currentOffset++] = (byte) lowIDLength;
+		// LowID
 		System.arraycopy(physicalLowID, 0, data, currentOffset, lowIDLength);
 		currentOffset += lowIDLength;
+		// LowID Type
 		data[currentOffset++] = (byte) lowIDType.getPhysicalValue();
+		// Bracket keys
+		System.arraycopy(bracketKeys, 0, data, currentOffset,
+				bracketKeys.length);
+		currentOffset += bracketKeys.length;
+		// Data
 		System.arraycopy(valueLength, 0, data, currentOffset,
 				valueLength.length);
 		currentOffset += valueLength.length;
 		System.arraycopy(value, 0, data, currentOffset, value.length);
 
 		return new BracketNodeSequence(data, 1);
-
 	}
 
 	/**
