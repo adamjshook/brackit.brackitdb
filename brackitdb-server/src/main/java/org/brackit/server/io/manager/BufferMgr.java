@@ -52,7 +52,7 @@ public interface BufferMgr {
 	 * Adds and starts a new buffer of the given file for an existing container.
 	 */
 	public void startBuffer(int bufferSize, int containerID,
-			String containerFile) throws BufferException;
+			String containerDir) throws BufferException;
 
 	/**
 	 * Stops the buffer of the given container.
@@ -65,7 +65,7 @@ public interface BufferMgr {
 	 * container file.
 	 */
 	public void createBuffer(int bufferSize, int pageSize, int containerID,
-			String containerFile, int iniSize, int extSize)
+			String containerName, int iniSize, int extSize)
 			throws BufferException;
 
 	/**
