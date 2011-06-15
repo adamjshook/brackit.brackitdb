@@ -69,7 +69,7 @@ public class BufferMgrMockup implements BufferMgr {
 
 	@Override
 	public void createBuffer(int bufferSize, int pageSize, int containerID,
-			String containerFile, int initialContainerSize,
+			String containerName, int initialContainerSize,
 			int extendContainerSize) throws BufferException {
 		synchronized (this) {
 			if (bufferMapping.containsKey(containerID)) {
@@ -83,7 +83,7 @@ public class BufferMgrMockup implements BufferMgr {
 
 		Buffer buffer = null;
 
-		BlockSpace blockSpace = new BlockSpaceMockup(containerFile, containerID);
+		BlockSpace blockSpace = new BlockSpaceMockup(containerName, containerID);
 		double extRatio = (double) extendContainerSize
 				/ (double) initialContainerSize;
 		try {
@@ -103,7 +103,7 @@ public class BufferMgrMockup implements BufferMgr {
 
 		log.info(String.format(
 				"Buffer for container '%s' successfully initialized",
-				containerFile));
+				containerName));
 	}
 
 	@Override
@@ -181,7 +181,7 @@ public class BufferMgrMockup implements BufferMgr {
 
 	@Override
 	public void startBuffer(int bufferSize, int containerID,
-			String containerFile) throws BufferException {
+			String containerDir) throws BufferException {
 		throw new BufferException("Not implemented.");
 	}
 
