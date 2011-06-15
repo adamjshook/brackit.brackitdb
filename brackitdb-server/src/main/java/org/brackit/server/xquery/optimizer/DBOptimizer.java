@@ -42,9 +42,9 @@ public class DBOptimizer extends DefaultOptimizer {
 	public DBOptimizer(MetaDataMgr mdm) {
 		super();
 		// perform path rewriting after simplification
-		getStages().add(2, new PathRewriting());
+		getStages().add(1, new PathRewriting());
 		// perform index resolution after path recognition
-		getStages().add(2, new IndexResolution(mdm));
+		getStages().add(1, new IndexResolution(mdm));
 	}
 
 	private static class PathRewriting implements Stage {
