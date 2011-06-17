@@ -43,7 +43,7 @@ import org.brackit.server.store.page.bracket.BracketKey.Type;
  * @author Martin Hiller
  * 
  */
-public class DeweyIDBuffer implements SimpleDeweyID {
+public final class DeweyIDBuffer implements SimpleDeweyID {
 
 	private static final int minBufferSize = 16;
 	private DocID docID;
