@@ -34,6 +34,7 @@ import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.store.blob.BlobStoreAccessException;
+import org.brackit.server.store.index.bracket.HintPageInformation;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.SubtreeDeleteListener;
@@ -434,7 +435,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 		// call corresponding bracket page method
 		switch (navMode) {
 		case NEXT_SIBLING:
-			navRes = page.navigateNextSibling(currentOffset, currentDeweyID);
+			navRes = page.navigateNextSibling(currentOffset, currentDeweyID, bufferedKeyType);
 			break;
 		case FIRST_CHILD:
 			navRes = page.navigateFirstChild(currentOffset, currentDeweyID);
@@ -976,6 +977,15 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 		} else {
 			setCurrentOffset(returnVal);
 			return true;
+		}
+	}
+	
+	@Override
+	public HintPageInformation getHintPageInformation() {
+		if (currentOffset == BracketPage.BEFORE_LOW_KEY_OFFSET) {
+			return null;
+		} else {
+			return new HintPageInformation(page.getPageID(), page.getLSN(), currentOffset);
 		}
 	}
 }

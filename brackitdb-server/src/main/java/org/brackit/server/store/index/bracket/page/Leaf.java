@@ -31,6 +31,7 @@ import java.util.List;
 
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.store.index.bracket.HintPageInformation;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.SubtreeDeleteListener;
@@ -218,5 +219,7 @@ public interface Leaf extends BPContext {
 	public DeleteSequenceInfo deleteSequence(XTCdeweyID leftBorderDeweyID,
 			XTCdeweyID rightBorderDeweyID, boolean logged, long undoNextLSN)
 			throws IndexOperationException;
+	
+	public HintPageInformation getHintPageInformation();
 
 }

@@ -1490,6 +1490,10 @@ public class BracketTree extends PageContextFactory {
 				}
 			}
 		}
+		
+		if (!openMode.doLog()) {
+			tx.addFlushHook(rootPageID.getContainerNo());
+		}
 
 		if (navMode == NavigationMode.TO_KEY && hintLeaf != null) {
 			// target node already found
@@ -1532,10 +1536,6 @@ public class BracketTree extends PageContextFactory {
 					deweyIDBuffer, openMode.forUpdate());
 		} catch (KeyNotExistentException e) {
 			leaf = null;
-		}
-
-		if (!openMode.doLog()) {
-			tx.addFlushHook(rootPageID.getContainerNo());
 		}
 
 		return leaf;
@@ -2976,6 +2976,8 @@ public class BracketTree extends PageContextFactory {
 
 			right.cleanup();
 			right = null;
+			left.cleanup();
+			left = null;
 
 		} catch (IndexOperationException e) {
 			try {
