@@ -77,6 +77,8 @@ public interface Leaf extends BPContext {
 			NavigationMode navMode);
 
 	public void moveBeforeFirst();
+	
+	public boolean moveNextToLastRecord() throws IndexOperationException;
 
 	public boolean insertRecordAfter(XTCdeweyID deweyID, byte[] record,
 			int ancestorsToInsert, boolean logged, long undoNextLSN)
@@ -112,8 +114,19 @@ public interface Leaf extends BPContext {
 	public int getOffset();
 
 	public boolean split(Leaf emptyRightPage, XTCdeweyID key,
-			boolean forUpdate, boolean compact, boolean splitAfterCurrent,
-			boolean logged, long undoNextLSN) throws IndexOperationException;
+			boolean forUpdate, boolean splitAfterCurrent, boolean logged,
+			long undoNextLSN) throws IndexOperationException;
+
+	/**
+	 * Deletes and returns all nodes following the current position.
+	 * 
+	 * @param logged
+	 * @param undoNextLSN
+	 * @return
+	 * @throws IndexOperationException
+	 */
+	public BracketNodeSequence deleteSequenceAfter(boolean logged,
+			long undoNextLSN) throws IndexOperationException;
 
 	public void copyContentAndContextTo(Leaf other, boolean logged,
 			long undoNextLSN);
@@ -122,7 +135,9 @@ public interface Leaf extends BPContext {
 
 	public byte[] getLowKeyBytes();
 
-	public void setHighKey(XTCdeweyID highKey);
+	public boolean setHighKey(XTCdeweyID highKey);
+
+	public boolean setHighKeyBytes(byte[] highKeyBytes);
 
 	public XTCdeweyID getHighKey();
 
@@ -219,7 +234,7 @@ public interface Leaf extends BPContext {
 	public DeleteSequenceInfo deleteSequence(XTCdeweyID leftBorderDeweyID,
 			XTCdeweyID rightBorderDeweyID, boolean logged, long undoNextLSN)
 			throws IndexOperationException;
-	
+
 	public HintPageInformation getHintPageInformation();
 
 }

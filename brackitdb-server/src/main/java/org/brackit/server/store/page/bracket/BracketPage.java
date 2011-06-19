@@ -1734,7 +1734,7 @@ public class BracketPage extends BasePage {
 		// currently processed bracket key
 		BracketKey currentKey = new BracketKey();
 
-		// determine the key offset for the next bracket key		
+		// determine the key offset for the next bracket key
 		if (currentOffset == LOW_KEY_OFFSET) {
 			currentOffset = getKeyAreaStartOffset()
 					+ getLowKeyType().getDataReferenceLength();
@@ -1822,7 +1822,8 @@ public class BracketPage extends BasePage {
 
 		if (refNode.status == NavigationStatus.FOUND) {
 			// invoke navigation method
-			navRes = navigateNextSibling(refNode.keyOffset, currentDeweyID, null);
+			navRes = navigateNextSibling(refNode.keyOffset, currentDeweyID,
+					null);
 		} else if (refNode.status == NavigationStatus.BEFORE_FIRST) {
 			// continue navigation
 
@@ -2119,6 +2120,69 @@ public class BracketPage extends BasePage {
 		}
 
 		return navRes;
+	}
+
+	/**
+	 * Navigates to the RECORD next to the last of this page.
+	 * 
+	 * @param currentDeweyID
+	 *            DeweyIDBuffer that will contain the DeweyID of the requested
+	 *            node, if found
+	 * @return the navigation result
+	 */
+	public NavigationResult navigateNextToLastCF(DeweyIDBuffer currentDeweyID) {
+
+		if (getRecordCount() == 0) {
+			return new NavigationResult();
+		}
+
+		NavigationResult navRes = null;
+
+		currentDeweyID.setTo(getLowKey());
+		int currentOffset = getKeyAreaStartOffset();
+		if (getLowKeyType().hasDataReference()) {
+			// lowkey is a candidate
+			navRes = new NavigationResult();
+			navRes.keyOffset = LOW_KEY_OFFSET;
+			navRes.keyType = getLowKeyType();
+			navRes.status = NavigationStatus.FOUND;
+			currentDeweyID.backup();
+			currentOffset += BracketKey.DATA_REF_LENGTH;
+		}
+
+		BracketKey currentKey = new BracketKey();
+		int keyAreaEndOffset = getKeyAreaEndOffset();
+		while (currentOffset < keyAreaEndOffset) {
+
+			currentKey.load(page, currentOffset);
+			currentDeweyID.update(currentKey, false);
+			if (currentKey.hasDataReference()) {
+
+				// check whether this record is the last one in this page
+				if (currentOffset + BracketKey.PHYSICAL_LENGTH + BracketKey.DATA_REF_LENGTH >= keyAreaEndOffset) {
+					break;
+				}
+
+				// record found
+				if (navRes == null) {
+					navRes = new NavigationResult();
+					navRes.status = NavigationStatus.FOUND;
+				}
+				navRes.keyOffset = currentOffset;
+				navRes.keyType = currentKey.type;
+				currentDeweyID.backup();
+				currentOffset += BracketKey.DATA_REF_LENGTH;
+			}
+			currentOffset += BracketKey.PHYSICAL_LENGTH;
+		}
+
+		if (navRes == null) {
+			// no previous data record found
+			return new NavigationResult();
+		} else {
+			currentDeweyID.restore(false);
+			return navRes;
+		}
 	}
 
 	/**
@@ -3300,7 +3364,6 @@ public class BracketPage extends BasePage {
 			}
 
 			setKeyAreaEndOffset(newEndOffset);
-
 		}
 
 		setEntryCount((short) (getRecordCount() - delPrep.numberOfNodes));
@@ -3541,25 +3604,25 @@ public class BracketPage extends BasePage {
 
 		final byte[] data = nodes.getData();
 		int currentOffset = BEFORE_LOW_KEY_OFFSET;
-		
+
 		if (data == null || data.length == 0) {
 			return currentOffset;
 		}
-		
+
 		XTCdeweyID dataLowKey = nodes.getLowKey();
-		
+
 		// look for insertion position of the node sequence
 		NavigationResult navRes = navigateToInsertPos(dataLowKey, tempDeweyID);
-		
+
 		if (navRes.status != NavigationStatus.FOUND) {
 			// duplicate detected
 			return INSERTION_DUPLICATE;
 		}
-		
+
 		// insert sequence after the found position
 		currentOffset = navRes.keyOffset;
-		
-		return insertSequenceAfter(nodes, currentOffset, tempDeweyID);		
+
+		return insertSequenceAfter(nodes, currentOffset, tempDeweyID);
 	}
 
 	/**

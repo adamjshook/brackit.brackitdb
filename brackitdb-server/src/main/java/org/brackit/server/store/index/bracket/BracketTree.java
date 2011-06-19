@@ -57,6 +57,7 @@ import org.brackit.server.store.index.bracket.stats.DefaultScanStats;
 import org.brackit.server.store.index.bracket.stats.LastChildScanStats;
 import org.brackit.server.store.index.bracket.stats.ScanStats;
 import org.brackit.server.store.index.bracket.stats.PreviousSiblingScanStats;
+import org.brackit.server.store.page.bracket.BracketNodeSequence;
 import org.brackit.server.store.page.bracket.BracketPage;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
@@ -1490,7 +1491,7 @@ public class BracketTree extends PageContextFactory {
 				}
 			}
 		}
-		
+
 		if (!openMode.doLog()) {
 			tx.addFlushHook(rootPageID.getContainerNo());
 		}
@@ -1575,7 +1576,7 @@ public class BracketTree extends PageContextFactory {
 			} else {
 
 				// actual split
-				insertLeft = left.split(right, key, forUpdate, compact, false,
+				insertLeft = left.split(right, key, forUpdate, false,
 						logged, -1);
 				separatorKey = right.getLowKeyBytes();
 
@@ -1654,6 +1655,227 @@ public class BracketTree extends PageContextFactory {
 		}
 	}
 
+	/**
+	 * Splits the given leaf page and inserts a sequence of nodes afterwards.
+	 * 
+	 * @param tx
+	 * @param rootPageID
+	 * @param left
+	 *            the page to split (must point to the correct insertion
+	 *            position of the node sequence)
+	 * @param nodesToInsert
+	 *            the node sequence to insert
+	 * @param logged
+	 * @return
+	 * @throws IndexAccessException
+	 */
+	protected Leaf splitInsert(Tx tx, PageID rootPageID, Leaf left,
+			BracketNodeSequence nodesToInsert, boolean logged)
+			throws IndexAccessException {
+
+		PageID leftPageID = left.getPageID();
+		PageID rightPageID = null;
+		Leaf right = null;
+		Leaf middle = null;
+		Leaf target = null;
+		PageID middlePageID = null;
+		XTCdeweyID firstNode = nodesToInsert.getLowKey();
+		byte[] oldLeftHighKey = left.getHighKeyBytes();
+
+		try {
+
+			// allocate and format new right page
+			right = allocateLeaf(tx, -1, left.getUnitID(), rootPageID, logged);
+			rightPageID = right.getPageID();
+			tx.getStatistics().increment(TxStats.BTREE_LEAF_ALLOCATIONS);
+
+			boolean insertLeft = false;
+			byte[] separatorKey = null;
+
+			if (left.isLast()) {
+
+				// no split necessary
+				insertLeft = false;
+				separatorKey = firstNode.toBytes();
+
+			} else {
+
+				insertLeft = true;
+				// actual split
+				moveNodes(left, right, logged);
+				right.moveBeforeFirst();
+				separatorKey = right.getLowKeyBytes();
+			}
+
+			// set left highkey
+			if (!left.setHighKeyBytes(separatorKey)) {
+				// not enough space for highkey!
+				// move at least one record to the right page
+				XTCdeweyID beforeInsertKey = null;
+				boolean firstRun = true;
+				do {
+					if (!firstRun) {
+						beforeInsertKey = right.getKey();
+					}
+					left.moveNextToLastRecord();
+					moveNodes(left, right, logged);
+					separatorKey = right.getLowKeyBytes();
+					firstRun = false;
+					// try to set highkey again
+				} while (!left.setHighKeyBytes(separatorKey));
+				
+				// find correct insertion position in right page
+				if (beforeInsertKey != null) {
+					right.moveBeforeFirst();
+					right.navigateContextFree(beforeInsertKey, NavigationMode.TO_KEY);
+				}
+				insertLeft = false;
+			}
+
+			// set right highkey
+			if (!right.setHighKeyBytes(oldLeftHighKey)) {
+				// can not happen, since right page contains at most the data
+				// from left page
+			}
+
+			if (insertLeft) {
+				// insert nodes in left page
+				if (!left.insertSequenceAfter(nodesToInsert, logged, -1)) {
+					// nodes still do not fit into left page -> try right page
+					insertLeft = false;
+					separatorKey = firstNode.toBytes();
+					if (!left.setHighKeyBytes(separatorKey)) {
+						// not enough space for highkey!
+						// move at least one record to the right page
+						XTCdeweyID beforeInsertKey = null;
+						boolean firstRun = true;
+						do {
+							if (!firstRun) {
+								beforeInsertKey = right.getKey();
+							}
+							left.moveNextToLastRecord();
+							moveNodes(left, right, logged);
+							separatorKey = right.getLowKeyBytes();
+							firstRun = false;
+							// try to set highkey again
+						} while (!left.setHighKeyBytes(separatorKey));
+						
+						// find correct insertion position in right page
+						if (beforeInsertKey != null) {
+							right.moveBeforeFirst();
+							right.navigateContextFree(beforeInsertKey, NavigationMode.TO_KEY);
+						}
+					}
+				}
+			}
+
+			if (!insertLeft) {
+				// insert nodes in right page
+				if (!right.insertSequenceAfter(nodesToInsert, logged, -1)) {
+					if (right.getEntryCount() == 0) {
+						throw new IndexOperationException(
+								"Node sequence does not fit into an empty page!");
+					}
+					// nodes do not fit into right page -> allocate a new one
+					middle = allocateLeaf(tx, -1, left.getUnitID(), rootPageID,
+							logged);
+					middlePageID = middle.getPageID();
+					middle.setHighKeyBytes(right.getLowKeyBytes());
+					tx.getStatistics()
+							.increment(TxStats.BTREE_LEAF_ALLOCATIONS);
+					if (!middle.insertSequenceAfter(nodesToInsert, logged, -1)) {
+						throw new IndexOperationException(
+								"Node sequence does not fit into an empty page!");
+					}
+				}
+			}
+
+			PageID nextPageID = left.getNextPageID();
+
+			// chain left page with right (or middle) page
+			if (middle == null) {
+				left.setNextPageID(rightPageID, logged, -1);
+				right.setPrevPageID(leftPageID, logged, -1);
+			} else {
+				left.setNextPageID(middlePageID, logged, -1);
+				middle.setPrevPageID(leftPageID, logged, -1);
+				middle.setNextPageID(rightPageID, logged, -1);
+				right.setPrevPageID(middlePageID, logged, -1);
+			}
+
+			// set next page pointer
+			if (nextPageID != null) {
+				Leaf next = (Leaf) getPage(tx, nextPageID, true, false);
+
+				try {
+					right.setNextPageID(next.getPageID(), logged, -1);
+					next.setPrevPageID(right.getPageID(), logged, -1);
+				} finally {
+					try {
+						next.cleanup();
+					} catch (Exception ex) {
+					}
+				}
+			}
+
+			if (middle == null) {
+				// insert separator
+				insertSeparator(tx, rootPageID, separatorKey, leftPageID,
+						rightPageID, 0, false, logged);
+			} else {
+				// insert two separators
+				insertSeparator(tx, rootPageID, separatorKey, leftPageID,
+						middlePageID, 0, false, logged);
+				insertSeparator(tx, rootPageID, middle.getHighKeyBytes(),
+						middlePageID, rightPageID, 0, false, logged);
+			}
+
+			// Free unneeded split pages
+			if (middle != null) {
+				left.cleanup();
+				left = null;
+				right.cleanup();
+				right = null;
+				target = middle;
+				middle = null;
+			} else if (insertLeft) {
+				right.cleanup();
+				right = null;
+				target = left;
+				left = null;
+			} else {
+				left.cleanup();
+				left = null;
+				target = right;
+				right = null;
+			}
+
+			return target;
+
+		} catch (IndexOperationException e) {
+			throw new IndexAccessException(e);
+		} finally {
+			if (left != null) {
+				try {
+					left.cleanup();
+				} catch (Exception ex) {
+				}
+			}
+			if (right != null) {
+				try {
+					right.cleanup();
+				} catch (Exception ex) {
+				}
+			}
+			if (middle != null) {
+				try {
+					middle.cleanup();
+				} catch (Exception ex) {
+				}
+			}
+		}
+	}
+
 	protected Leaf splitNonRootLeafBulk(Tx tx, PageID rootPageID, Leaf left,
 			XTCdeweyID key, BulkInsertContext bulkContext, boolean logged)
 			throws IndexAccessException {
@@ -1690,7 +1912,7 @@ public class BracketTree extends PageContextFactory {
 					insertLeft = false;
 				} else {
 					// actual split
-					left.split(right, key, false, true, true, logged, -1);
+					left.split(right, key, false, true, logged, -1);
 					separatorKey = right.getLowKeyBytes();
 					insertLeft = true;
 				}
@@ -1860,7 +2082,7 @@ public class BracketTree extends PageContextFactory {
 			} else {
 
 				// actual split
-				insertLeft = root.split(right, key, forUpdate, compact, false,
+				insertLeft = root.split(right, key, forUpdate, false,
 						logged, -1);
 				separatorKey = right.getLowKeyBytes();
 
@@ -3013,6 +3235,54 @@ public class BracketTree extends PageContextFactory {
 		if (!externalPageIDs.isEmpty()) {
 			tx.addPostCommitHook(new DeleteExternalizedHook(blobStore,
 					externalPageIDs));
+		}
+	}
+
+	/**
+	 * Moves all nodes from the left page (which are located after the context)
+	 * to the beginning of the right page. The left leaf's cursor will not
+	 * change, but in the end the right cursor will point to the last moved
+	 * node.
+	 * 
+	 * @param left
+	 * @param right
+	 * @param logged
+	 * @throws IndexAccessException
+	 */
+	private void moveNodes(Leaf left, Leaf right, boolean logged)
+			throws IndexAccessException {
+
+		try {
+
+			// delete nodes from left page
+			BracketNodeSequence nodesToMove = left.deleteSequenceAfter(logged,
+					-1);
+
+			// move right leaf's cursor to the beginning
+			right.moveBeforeFirst();
+
+			// insert nodes into right page
+			if (!right.insertSequenceAfter(nodesToMove, logged, -1)) {
+				// not enough space in right page
+				throw new IndexOperationException(
+						"Right leaf does not have enough space for moving the nodes.");
+			}
+
+		} catch (IndexOperationException e) {
+			try {
+				if (left != null) {
+					left.cleanup();
+				}
+			} catch (Exception ex) {
+			}
+			try {
+				if (right != null) {
+					right.cleanup();
+				}
+			} catch (Exception ex) {
+			}
+			throw new IndexAccessException(e,
+					"Error moving nodes between leaf pages.");
 		}
 	}
 
