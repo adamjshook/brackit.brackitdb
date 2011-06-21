@@ -30,10 +30,13 @@ package org.brackit.server.store.index.bracket.page;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.print.attribute.SetOfIntegerSyntax;
+
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.store.blob.BlobStoreAccessException;
+import org.brackit.server.store.index.bracket.HintPageInformation;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.SubtreeDeleteListener;
@@ -45,6 +48,8 @@ import org.brackit.server.store.page.bracket.BracketPageException;
 import org.brackit.server.store.page.bracket.BracketValue;
 import org.brackit.server.store.page.bracket.DeletePreparation;
 import org.brackit.server.store.page.bracket.DeletePrepareListener;
+import org.brackit.server.store.page.bracket.DeleteSequenceInfo;
+import org.brackit.server.store.page.bracket.DeleteSequencePreparation;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
 import org.brackit.server.store.page.bracket.ExternalValueLoader;
 import org.brackit.server.store.page.bracket.navigation.NavigationResult;
@@ -58,7 +63,6 @@ import org.brackit.server.tx.Tx;
 public class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	private final float OCCUPANCY_RATE_DEFAULT = 0.5f;
-	private final float OCCUPANCY_RATE_COMPACT = 0.5f; // change if needed
 
 	public static final int NEXT_PAGE_FIELD_NO = AbstractBPContext.RESERVED_SIZE;
 	public static final int RESERVED_SIZE = NEXT_PAGE_FIELD_NO
@@ -147,7 +151,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 		this.page = page;
 	}
 
-	private void initBuffers() {
+	private void initBuffer() {
 		if (currentDeweyID == null) {
 			currentDeweyID = new DeweyIDBuffer(this.getPageID());
 		}
@@ -161,9 +165,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 		}
 
 		currentDeweyID.setTo(deweyID);
-
-		bufferedValue = null;
-		currentOffset = offset;
+		setCurrentOffset(offset);
 	}
 
 	@Override
@@ -181,7 +183,8 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	@Override
 	public void assignDeweyIDBuffer(Leaf otherLeaf) {
 		if (currentDeweyID != null) {
-			throw new RuntimeException("DeweyID buffer can only be set, if it is not initialized yet.");
+			throw new RuntimeException(
+					"DeweyID buffer can only be set, if it is not initialized yet.");
 		}
 		LeafBPContext other = (LeafBPContext) otherLeaf;
 		DeweyIDBuffer deweyIDBuffer = other.currentDeweyID;
@@ -279,15 +282,13 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	@Override
 	public boolean moveFirst() {
-		initBuffers();
+		initBuffer();
 
 		NavigationResult navRes = page.navigateFirstCF(currentDeweyID);
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
-			bufferedValue = null;
-			bufferedKeyType = navRes.keyType;
-			currentOffset = navRes.keyOffset;
+			setCurrentOffset(navRes.keyOffset, navRes.keyType);
 			return true;
 		} else {
 			return false;
@@ -296,15 +297,13 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	@Override
 	public boolean moveLast() {
-		initBuffers();
+		initBuffer();
 
 		NavigationResult navRes = page.navigateLastCF(currentDeweyID);
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
-			bufferedValue = null;
-			bufferedKeyType = navRes.keyType;
-			currentOffset = navRes.keyOffset;
+			setCurrentOffset(navRes.keyOffset, navRes.keyType);
 			return true;
 		} else {
 			return false;
@@ -313,18 +312,14 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	@Override
 	public boolean moveNext() {
-		initBuffers();
+		initBuffer();
 
 		NavigationResult navRes = page.navigateNext(currentOffset,
 				currentDeweyID, bufferedKeyType);
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
-			if (navRes.keyOffset != currentOffset + 3) {
-				bufferedValue = null;
-			}
-			bufferedKeyType = navRes.keyType;
-			currentOffset = navRes.keyOffset;
+			setCurrentOffset(navRes.keyOffset, navRes.keyType);
 			return true;
 		} else {
 			return false;
@@ -363,27 +358,72 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	}
 
 	@Override
-	public boolean insertAfter(XTCdeweyID deweyID, byte[] record,
-			int ancestorsToInsert, boolean isStructureModification,
-			boolean logged, long undoNextLSN) throws IndexOperationException {
-		initBuffers();
+	public boolean insertRecordAfter(XTCdeweyID deweyID, byte[] record,
+			int ancestorsToInsert, boolean logged, long undoNextLSN)
+			throws IndexOperationException {
+		initBuffer();
 
 		boolean externalize = externalizeValue(record);
 
+		byte[] pageRecord = record;
 		if (externalize) {
-			record = externalize(record);
+			pageRecord = externalize(record);
 		}
 
-		int returnVal = page.insertAfter(deweyID, record, ancestorsToInsert,
-				externalize, currentOffset, currentDeweyID);
+		// create bracket node sequence
+		BracketNodeSequence sequence = BracketNodeSequence.fromNode(deweyID,
+				pageRecord, ancestorsToInsert, externalize);
 
-		if (returnVal != BracketPage.INSERTION_NO_SPACE) {
-			currentOffset = returnVal;
-			bufferedKeyType = null;
-			bufferedValue = null;
-			return true;
-		} else {
+		int returnVal = page.insertSequenceAfter(sequence, currentOffset,
+				currentDeweyID);
+
+		if (returnVal == BracketPage.INSERTION_DUPLICATE) {
+			throw new IndexOperationException(
+					"Insertion key %s already exists in the index!", deweyID);
+		} else if (returnVal == BracketPage.INSERTION_NO_SPACE) {
+			if (externalize) {
+				deleteExternalizedInstantly(pageRecord);
+			}
 			return false;
+		} else {
+			setCurrentOffset(returnVal);
+			bufferedValue = record;
+			return true;
+		}
+	}
+
+	@Override
+	public boolean insertRecord(XTCdeweyID deweyID, byte[] record,
+			int ancestorsToInsert, boolean logged, long undoNextLSN)
+			throws IndexOperationException {
+		declareContextFree();
+		initBuffer();
+
+		boolean externalize = externalizeValue(record);
+
+		byte[] pageRecord = record;
+		if (externalize) {
+			pageRecord = externalize(record);
+		}
+
+		// create bracket node sequence
+		BracketNodeSequence sequence = BracketNodeSequence.fromNode(deweyID,
+				pageRecord, ancestorsToInsert, externalize);
+
+		int returnVal = page.insertSequence(sequence, currentDeweyID);
+
+		if (returnVal == BracketPage.INSERTION_DUPLICATE) {
+			throw new IndexOperationException(
+					"Insertion key %s already exists in the index!", deweyID);
+		} else if (returnVal == BracketPage.INSERTION_NO_SPACE) {
+			if (externalize) {
+				deleteExternalizedInstantly(pageRecord);
+			}
+			return false;
+		} else {
+			setCurrentOffset(returnVal);
+			bufferedValue = record;
+			return true;
 		}
 	}
 
@@ -391,13 +431,13 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	public NavigationStatus navigate(NavigationMode navMode) {
 		// assert(currentOffset != BracketPage.BEFORE_LOW_ID_KEYOFFSET);
 
-		bufferedValue = null;
 		NavigationResult navRes = null;
 
 		// call corresponding bracket page method
 		switch (navMode) {
 		case NEXT_SIBLING:
-			navRes = page.navigateNextSibling(currentOffset, currentDeweyID);
+			navRes = page.navigateNextSibling(currentOffset, currentDeweyID,
+					bufferedKeyType);
 			break;
 		case FIRST_CHILD:
 			navRes = page.navigateFirstChild(currentOffset, currentDeweyID);
@@ -427,8 +467,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 		if (navRes.status == NavigationStatus.FOUND
 				|| navRes.status == NavigationStatus.POSSIBLY_FOUND) {
 			// adjust current offset
-			bufferedKeyType = navRes.keyType;
-			currentOffset = navRes.keyOffset;
+			setCurrentOffset(navRes.keyOffset, navRes.keyType);
 		} else {
 			moveBeforeFirst();
 		}
@@ -439,14 +478,20 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	@Override
 	public NavigationStatus navigateContextFree(XTCdeweyID referenceDeweyID,
 			NavigationMode navMode) {
-		// // check whether the invocation of this navigation is allowed
-		// if (currentOffset != BracketPage.BEFORE_LOW_ID_KEYOFFSET) {
-		// throw new
-		// RuntimeException("This is a context free operation! In order to remove the current context, move the pointer before the first key.");
-		// }
+		declareContextFree();
+		initBuffer();
 
-		bufferedValue = null;
-		initBuffers();
+		if (getEntryCount() == 0) {
+			if (getNextPageID() != null) {
+				throw new RuntimeException(
+						"Only the last leaf page may be empty!");
+			}
+			if (navMode != NavigationMode.TO_INSERT_POS) {
+				return NavigationStatus.BEFORE_FIRST;
+			} else {
+				return NavigationStatus.FOUND;
+			}
+		}
 
 		NavigationResult navRes = null;
 
@@ -487,8 +532,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 		if (navRes.status == NavigationStatus.FOUND
 				|| navRes.status == NavigationStatus.POSSIBLY_FOUND) {
 			// adjust current offset
-			bufferedKeyType = navRes.keyType;
-			currentOffset = navRes.keyOffset;
+			setCurrentOffset(navRes.keyOffset, navRes.keyType);
 		} else {
 			moveBeforeFirst();
 		}
@@ -515,23 +559,19 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	@Override
 	public boolean split(Leaf rightLeaf, XTCdeweyID key, boolean forUpdate,
-			boolean compact, boolean splitAfterCurrent, boolean logged,
-			long undoNextLSN) throws IndexOperationException {
+			boolean splitAfterCurrent, boolean logged, long undoNextLSN)
+			throws IndexOperationException {
 
 		try {
 			LeafBPContext rightPage = (LeafBPContext) rightLeaf;
 
-			this.initBuffers();
-			rightPage.initBuffers();
-
-			bufferedValue = null;
-			bufferedKeyType = null;
+			this.initBuffer();
+			rightPage.initBuffer();
 
 			// prepare split
 			DeletePreparation delPrep = splitAfterCurrent ? page
 					.splitAfterCurrentPrepare(currentOffset, currentDeweyID)
-					: page.splitPrepare(compact ? OCCUPANCY_RATE_COMPACT
-							: OCCUPANCY_RATE_DEFAULT, currentDeweyID);
+					: page.splitPrepare(OCCUPANCY_RATE_DEFAULT, currentDeweyID);
 
 			boolean returnLeftPage = (currentOffset < delPrep.startDeleteOffset);
 
@@ -547,7 +587,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 			rightPage.setHighKey(highKey);
 
 			// insert nodes into right page
-			rightPage.page.insertAfter(nodes, rightPage.currentOffset,
+			rightPage.page.insertSequenceAfter(nodes, rightPage.currentOffset,
 					rightPage.currentDeweyID);
 
 			// set correct context(s)
@@ -584,13 +624,13 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 			long undoNextLSN) {
 		LeafBPContext other = (LeafBPContext) otherLeaf;
 
-		other.initBuffers();
+		other.initBuffer();
 
 		// copy content
 		BracketNodeSequence content = page.getBracketNodeSequence(getLowKey(),
 				BracketPage.LOW_KEY_OFFSET, BracketPage.KEY_AREA_END_OFFSET);
-		other.page.insertAfter(content, BracketPage.BEFORE_LOW_KEY_OFFSET,
-				other.currentDeweyID);
+		other.page.insertSequenceAfter(content,
+				BracketPage.BEFORE_LOW_KEY_OFFSET, other.currentDeweyID);
 
 		// copy context
 		otherLeaf.setContext(this.getContext());
@@ -627,15 +667,21 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	}
 
 	@Override
-	public void setHighKey(XTCdeweyID highKey) {
+	public boolean setHighKey(XTCdeweyID highKey) {
 
 		// store highkey as context data
-		if (!page.setContextData(highKey.toBytes())) {
-			throw new RuntimeException(
-					String.format(
-							"Not enough space availabe to store the HighKey %s in leaf page %s!",
-							highKey, page.getPageID()));
-		}
+		return page.setContextData(highKey.toBytes());
+
+		// if (!page.setContextData(highKey.toBytes())) {
+		// throw new RuntimeException(
+		// String.format(
+		// "Not enough space availabe to store the HighKey %s in leaf page %s!",
+		// highKey, page.getPageID()));
+		// }
+	}
+
+	public boolean setHighKeyBytes(byte[] highKeyBytes) {
+		return page.setContextData(highKeyBytes);
 	}
 
 	@Override
@@ -688,7 +734,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	}
 
 	@Override
-	public boolean delete(SubtreeDeleteListener deleteListener,
+	public boolean deleteSubtreeStart(SubtreeDeleteListener deleteListener,
 			List<PageID> externalPageIDs, boolean isStructureModification,
 			boolean logged, long undoNextLSN) throws IndexOperationException,
 			EmptyLeafException {
@@ -715,8 +761,8 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 						: new ArrayList<PageID>();
 				DeletePrepareListener delPrepListener = new DeletePrepareListenerImpl(
 						tempExternalPageIDs, delayedListener);
-				delPrep = page.deletePrepare(currentOffset, currentDeweyID,
-						delPrepListener);
+				delPrep = page.deleteSubtreeStartPrepare(currentOffset,
+						currentDeweyID, delPrepListener);
 
 				if (delPrep.endDeleteOffset == BracketPage.KEY_AREA_END_OFFSET) {
 					// leaf needs to be unchained
@@ -732,8 +778,8 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 			} else {
 				DeletePrepareListener delPrepListener = new DeletePrepareListenerImpl(
 						externalPageIDs, deleteListener);
-				delPrep = page.deletePrepare(currentOffset, currentDeweyID,
-						delPrepListener);
+				delPrep = page.deleteSubtreeStartPrepare(currentOffset,
+						currentDeweyID, delPrepListener);
 			}
 
 			// delete external values
@@ -755,15 +801,13 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	}
 
 	@Override
-	public boolean deleteRemainingSubtree(XTCdeweyID subtreeRoot,
+	public boolean deleteSubtreeEnd(XTCdeweyID subtreeRoot,
 			SubtreeDeleteListener deleteListener, List<PageID> externalPageIDs,
 			boolean isStructureModification, boolean logged, long undoNextLSN)
 			throws IndexOperationException {
 		try {
-
-			initBuffers();
-
-			moveBeforeFirst();
+			declareContextFree();
+			initBuffer();
 
 			// prepare deletion
 			boolean deleteExternalValues = (externalPageIDs == null);
@@ -773,7 +817,7 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 
 			DeletePrepareListener delPrepListener = new DeletePrepareListenerImpl(
 					externalPageIDs, deleteListener);
-			DeletePreparation delPrep = page.deleteRemainingSubtreePrepare(
+			DeletePreparation delPrep = page.deleteSubtreeEndPrepare(
 					subtreeRoot, currentDeweyID, delPrepListener);
 
 			if (delPrep == null) {
@@ -818,7 +862,8 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 	@Override
 	public void assignDeweyIDBuffer(DeweyIDBuffer deweyIDBuffer) {
 		if (currentDeweyID != null) {
-			throw new RuntimeException("DeweyID buffer can only be set, if it is not initialized yet.");
+			throw new RuntimeException(
+					"DeweyID buffer can only be set, if it is not initialized yet.");
 		}
 		deweyIDBuffer.assignToPage(this.getPageID());
 		this.currentDeweyID = deweyIDBuffer;
@@ -848,4 +893,146 @@ public class LeafBPContext extends AbstractBPContext implements Leaf {
 		return returnBuffer;
 	}
 
+	private void setCurrentOffset(int offset) {
+		bufferedKeyType = null;
+		if (offset <= BracketPage.LOW_KEY_OFFSET
+				|| offset != currentOffset + BracketKey.PHYSICAL_LENGTH) {
+			bufferedValue = null;
+		}
+		currentOffset = offset;
+	}
+
+	private void setCurrentOffset(int offset, BracketKey.Type keyType) {
+		bufferedKeyType = keyType;
+		if (offset <= BracketPage.LOW_KEY_OFFSET
+				|| offset != currentOffset + BracketKey.PHYSICAL_LENGTH) {
+			bufferedValue = null;
+		}
+		currentOffset = offset;
+	}
+
+	private void declareContextFree() {
+		if (currentOffset != BracketPage.BEFORE_LOW_KEY_OFFSET) {
+			throw new RuntimeException(
+					"Context free operation! The current leaf position will not be preserved!");
+		}
+	}
+
+	@Override
+	public DeleteSequenceInfo deleteSequence(XTCdeweyID leftBorderDeweyID,
+			XTCdeweyID rightBorderDeweyID, boolean logged, long undoNextLSN)
+			throws IndexOperationException {
+
+		try {
+			declareContextFree();
+			initBuffer();
+
+			// prepare deletion
+			DeleteSequencePreparation delPrep = page.deleteSequencePrepare(
+					leftBorderDeweyID, rightBorderDeweyID, currentDeweyID);
+
+			if (delPrep.deletePreparation == null
+					|| delPrep.deleteSequenceInfo.producesEmptyLeaf) {
+				// nothing to delete OR page needs to be unchained
+			} else {
+				// delete
+				page.delete(delPrep.deletePreparation, externalValueLoader);
+			}
+
+			return delPrep.deleteSequenceInfo;
+
+		} catch (BracketPageException e) {
+			throw new IndexOperationException(e);
+		}
+	}
+
+	@Override
+	public boolean insertSequenceAfter(BracketNodeSequence nodes,
+			boolean logged, long undoNextLSN) throws IndexOperationException {
+
+		initBuffer();
+
+		int returnVal = page.insertSequenceAfter(nodes, currentOffset,
+				currentDeweyID);
+
+		if (returnVal == BracketPage.INSERTION_DUPLICATE) {
+			throw new IndexOperationException(
+					"Insertion key %s already exists in the index!",
+					nodes.getLowKey());
+		} else if (returnVal == BracketPage.INSERTION_NO_SPACE) {
+			return false;
+		} else {
+			setCurrentOffset(returnVal);
+			return true;
+		}
+	}
+
+	@Override
+	public boolean insertSequence(BracketNodeSequence nodes, boolean logged,
+			long undoNextLSN) throws IndexOperationException {
+		declareContextFree();
+		initBuffer();
+
+		int returnVal = page.insertSequence(nodes, currentDeweyID);
+
+		if (returnVal == BracketPage.INSERTION_DUPLICATE) {
+			throw new IndexOperationException(
+					"Insertion key %s already exists in the index!",
+					nodes.getLowKey());
+		} else if (returnVal == BracketPage.INSERTION_NO_SPACE) {
+			return false;
+		} else {
+			setCurrentOffset(returnVal);
+			return true;
+		}
+	}
+
+	@Override
+	public HintPageInformation getHintPageInformation() {
+		if (currentOffset == BracketPage.BEFORE_LOW_KEY_OFFSET) {
+			return null;
+		} else {
+			return new HintPageInformation(page.getPageID(), page.getLSN(),
+					currentOffset);
+		}
+	}
+
+	@Override
+	public BracketNodeSequence deleteSequenceAfter(boolean logged,
+			long undoNextLSN) throws IndexOperationException {
+		// assert(currentOffset != BracketPage.BEFORE_LOW_ID_KEYOFFSET)
+		
+		try {
+
+			// prepare deletion
+			DeletePreparation delPrep = page.splitAfterCurrentPrepare(
+					currentOffset, currentDeweyID);
+	
+			// get nodes that are supposed to be deleted
+			BracketNodeSequence nodes = page.getBracketNodeSequence(delPrep);
+			
+			// delete nodes from page
+			page.delete(delPrep, externalValueLoader);
+			
+			return nodes;
+		
+		} catch (BracketPageException e) {
+			throw new IndexOperationException(e);
+		}
+	}
+
+	@Override
+	public boolean moveNextToLastRecord() throws IndexOperationException {
+		initBuffer();
+
+		NavigationResult navRes = page.navigateNextToLastCF(currentDeweyID);
+
+		if (navRes.status == NavigationStatus.FOUND) {
+			// adjust current offset
+			setCurrentOffset(navRes.keyOffset, navRes.keyType);
+			return true;
+		} else {
+			return false;
+		}
+	}
 }

@@ -50,23 +50,25 @@ import org.brackit.server.tx.log.SizeConstants;
 /**
  * @author Sebastian Baechle
  * @author Martin Hiller
- *
+ * 
  */
-public abstract class AbstractBPContext extends SimpleBlobStore implements BPContext {
+public abstract class AbstractBPContext extends SimpleBlobStore implements
+		BPContext {
 
 	private static final Logger log = Logger.getLogger(AbstractBPContext.class);
 
 	public static final int LEAF_FLAG_FIELD_NO = 0;
 	public static final int UNIT_ID_FIELD_NO = LEAF_FLAG_FIELD_NO + 1;
-	public static final int PREV_PAGE_FIELD_NO	= UNIT_ID_FIELD_NO + SizeConstants.INT_SIZE;
-	public static final int RESERVED_SIZE = PREV_PAGE_FIELD_NO + PageID.getSize();
+	public static final int PREV_PAGE_FIELD_NO = UNIT_ID_FIELD_NO
+			+ SizeConstants.INT_SIZE;
+	public static final int RESERVED_SIZE = PREV_PAGE_FIELD_NO
+			+ PageID.getSize();
 
 	protected final BasePage page;
 
 	protected final Tx tx;
 
-	public AbstractBPContext(BufferMgr bufferMgr, Tx tx, BasePage page)
-	{
+	public AbstractBPContext(BufferMgr bufferMgr, Tx tx, BasePage page) {
 		super(bufferMgr);
 		this.tx = tx;
 		this.page = page;
@@ -80,16 +82,17 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements BPCon
 	public abstract int getEntryCount();
 
 	@Override
-	public int getUnitID()
-	{
+	public int getUnitID() {
 		byte[] buffer = page.getHandle().page;
 		int offset = BasePage.BASE_PAGE_START_OFFSET + UNIT_ID_FIELD_NO;
-		int id = ((buffer[offset] & 255) << 24) | ((buffer[offset + 1] & 255) << 16) | ((buffer[offset + 2] & 255) << 8) | (buffer[offset + 3] & 255);
+		int id = ((buffer[offset] & 255) << 24)
+				| ((buffer[offset + 1] & 255) << 16)
+				| ((buffer[offset + 2] & 255) << 8)
+				| (buffer[offset + 3] & 255);
 		return id;
 	}
-	
-	private void setUnitID(int id)
-	{
+
+	private void setUnitID(int id) {
 		byte[] buffer = page.getHandle().page;
 		int offset = BasePage.BASE_PAGE_START_OFFSET + UNIT_ID_FIELD_NO;
 		buffer[offset] = (byte) ((id >> 24) & 255);
@@ -97,163 +100,191 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements BPCon
 		buffer[offset + 2] = (byte) ((id >> 8) & 255);
 		buffer[offset + 3] = (byte) (id & 255);
 	}
-	
+
 	private void setLeafFlag(boolean leaf) {
 		byte[] buffer = page.getHandle().page;
 		int offset = BasePage.BASE_PAGE_START_OFFSET + LEAF_FLAG_FIELD_NO;
 		buffer[offset] = leaf ? (byte) 1 : (byte) 0;
 	}
-	
+
 	@Override
 	public abstract int getHeight();
-	
+
 	protected abstract void setHeight(int height);
-	
+
 	@Override
 	public abstract boolean isLastInLevel();
-	
+
 	@Override
-	public PageID getPrevPageID()
-	{
+	public PageID getPrevPageID() {
 		byte[] value = page.getHandle().page;
-		return PageID.fromBytes(value, BasePage.BASE_PAGE_START_OFFSET + PREV_PAGE_FIELD_NO);
+		return PageID.fromBytes(value, BasePage.BASE_PAGE_START_OFFSET
+				+ PREV_PAGE_FIELD_NO);
 	}
 
 	@Override
-	public void setPrevPageID(PageID prevPageID, boolean logged, long undoNextLSN) throws IndexOperationException
-	{
-//		LogOperation operation = null;
-//
-//		if (logged)
-//		{
-//			operation = BlinkIndexLogOperationHelper.createrPointerLogOperation(BlinkIndexLogOperation.PREV_PAGE, getPageID(), getRootPageID(), getLowPageID(), prevPageID);
-//		}
+	public void setPrevPageID(PageID prevPageID, boolean logged,
+			long undoNextLSN) throws IndexOperationException {
+		// LogOperation operation = null;
+		//
+		// if (logged)
+		// {
+		// operation =
+		// BlinkIndexLogOperationHelper.createrPointerLogOperation(BlinkIndexLogOperation.PREV_PAGE,
+		// getPageID(), getRootPageID(), getLowPageID(), prevPageID);
+		// }
 
 		byte[] value = page.getHandle().page;
-		if (prevPageID != null)
-		{
-			prevPageID.toBytes(value, BasePage.BASE_PAGE_START_OFFSET + PREV_PAGE_FIELD_NO);
+		if (prevPageID != null) {
+			prevPageID.toBytes(value, BasePage.BASE_PAGE_START_OFFSET
+					+ PREV_PAGE_FIELD_NO);
+		} else {
+			PageID.noPageToBytes(value, BasePage.BASE_PAGE_START_OFFSET
+					+ PREV_PAGE_FIELD_NO);
 		}
-		else
-		{
-			PageID.noPageToBytes(value, BasePage.BASE_PAGE_START_OFFSET + PREV_PAGE_FIELD_NO);
-		}
-		
+
 		page.getHandle().setModified(true); // not covered by pageID to bytes
 
-//		if (logged)
-//		{
-//			log(tx, operation, undoNextLSN);
-//		}
-//		else
-//		{
-//			page.getHandle().setAssignedTo(tx);
-//		}
+		// if (logged)
+		// {
+		// log(tx, operation, undoNextLSN);
+		// }
+		// else
+		// {
+		// page.getHandle().setAssignedTo(tx);
+		// }
 	}
 
-	protected boolean externalizeValue(byte[] value)
-	{
+	protected boolean externalizeValue(byte[] value) {
 		return (value.length > page.getUsableSpace() / 6);
 	}
 
-	protected byte[] externalize(byte[] value) throws IndexOperationException
-	{
-		try
-		{
+	protected byte[] externalize(byte[] value) throws IndexOperationException {
+		try {
 			PageID blobPageID = create(tx, page.getPageID().getContainerNo());
 			write(tx, blobPageID, value, false);
 			value = blobPageID.getBytes();
-		}
-		catch (BlobStoreAccessException e)
-		{
-			throw new IndexOperationException(e, "Error writing large value to overflow blob");
+		} catch (BlobStoreAccessException e) {
+			throw new IndexOperationException(e,
+					"Error writing large value to overflow blob");
 		}
 		return value;
 	}
 
 	@Override
-	public abstract boolean setValue(byte[] value, boolean isStructureModification, boolean logged, long undoNextLSN) throws IndexOperationException;
+	public abstract boolean setValue(byte[] value,
+			boolean isStructureModification, boolean logged, long undoNextLSN)
+			throws IndexOperationException;
 
-	protected void deleteExternalized(byte[] oldValue) throws IndexOperationException
-	{
+	protected void deleteExternalized(byte[] oldValue)
+			throws IndexOperationException {
 		List<PageID> blobPageID = new ArrayList<PageID>(1);
 		blobPageID.add(PageID.fromBytes(oldValue));
 		deleteExternalized(blobPageID);
 	}
-	
-	protected void deleteExternalized(List<PageID> externalPageIDs) throws IndexOperationException {
+
+	protected void deleteExternalized(List<PageID> externalPageIDs)
+			throws IndexOperationException {
 		if (!externalPageIDs.isEmpty()) {
-			tx.addPostCommitHook(new DeleteExternalizedHook(this, externalPageIDs));
+			tx.addPostCommitHook(new DeleteExternalizedHook(this,
+					externalPageIDs));
+		}
+	}
+	
+	protected void deleteExternalizedInstantly(byte[] oldValue)
+	throws IndexOperationException {
+		try {
+			PageID blobPageID = PageID.fromBytes(oldValue);
+			drop(tx, blobPageID);
+		} catch (BlobStoreAccessException e) {
+			throw new IndexOperationException(e,
+					"Error deleting overflow value.");
 		}
 	}
 
 	@Override
-	public BPContext format(boolean leaf, int unitID, PageID rootPageID, int height, boolean compressed, boolean logged, long undoNextLSN) throws IndexOperationException
-	{
-//		LogOperation operation = null;
-//
-//		if (logged)
-//		{
-//			operation = BlinkIndexLogOperationHelper.createFormatLogOperation(getPageID(), getUnitID(), unitID, rootPageID, getPageType(), pageType, getKeyType(), keyType, getValueType(), valueType, getHeight(), height, isUnique(), unique, isCompressed(), compressed);
-//		}
-		
+	public BPContext format(boolean leaf, int unitID, PageID rootPageID,
+			int height, boolean compressed, boolean logged, long undoNextLSN)
+			throws IndexOperationException {
+		// LogOperation operation = null;
+		//
+		// if (logged)
+		// {
+		// operation =
+		// BlinkIndexLogOperationHelper.createFormatLogOperation(getPageID(),
+		// getUnitID(), unitID, rootPageID, getPageType(), pageType,
+		// getKeyType(), keyType, getValueType(), valueType, getHeight(),
+		// height, isUnique(), unique, isCompressed(), compressed);
+		// }
+
 		/*
-		 * Change page type, init free space info management,
-		 * and reset entry counter.
+		 * Change page type, init free space info management, and reset entry
+		 * counter.
 		 */
 		page.clear();
 
 		// delete page pointers
-		PageID.noPageToBytes(page.getHandle().page, BasePage.BASE_PAGE_START_OFFSET + PREV_PAGE_FIELD_NO);
-		PageID.noPageToBytes(page.getHandle().page, BasePage.BASE_PAGE_START_OFFSET + RESERVED_SIZE);
-		
+		PageID.noPageToBytes(page.getHandle().page,
+				BasePage.BASE_PAGE_START_OFFSET + PREV_PAGE_FIELD_NO);
+		PageID.noPageToBytes(page.getHandle().page,
+				BasePage.BASE_PAGE_START_OFFSET + RESERVED_SIZE);
+
 		// create new page context
 		AbstractBPContext newContext = this;
 		if (leaf && !this.isLeaf()) {
-			newContext = new LeafBPContext(bufferMgr, tx, new BracketPage(page.getBuffer(), page.getHandle()));
+			newContext = new LeafBPContext(bufferMgr, tx, new BracketPage(
+					page.getBuffer(), page.getHandle()));
 			newContext.page.clear();
 		} else if (!leaf && this.isLeaf()) {
-			switch (PageContextFactory.BRANCH_TYPE)
-			{
-			case 1: newContext = new BranchBPContext(bufferMgr, tx, new SlottedKeyValuePage(page.getBuffer(), page.getHandle(), BranchBPContext.RESERVED_SIZE));
+			switch (PageContextFactory.BRANCH_TYPE) {
+			case 1:
+				newContext = new BranchBPContext(bufferMgr, tx,
+						new SlottedKeyValuePage(page.getBuffer(), page
+								.getHandle(), BranchBPContext.RESERVED_SIZE));
 				break;
-			case 2: newContext = new BranchBPContext(bufferMgr, tx, new CachingKeyValuePageImpl(page.getBuffer(), page.getHandle(), BranchBPContext.RESERVED_SIZE));
+			case 2:
+				newContext = new BranchBPContext(bufferMgr, tx,
+						new CachingKeyValuePageImpl(page.getBuffer(), page
+								.getHandle(), BranchBPContext.RESERVED_SIZE));
 				break;
-			default: throw new IndexOperationException("Unsupported page context type %s.", PageContextFactory.BRANCH_TYPE);
+			default:
+				throw new IndexOperationException(
+						"Unsupported page context type %s.",
+						PageContextFactory.BRANCH_TYPE);
 			}
 			newContext.page.clear();
 		}
-		
+
 		/*
 		 * Set index specific fields.
 		 */
-//		byte[] key = new byte[0];
-//		byte[] value = new byte[4 + ((pageType == PageType.INDEX_LEAF) ? 2 : 1)* PageID.getSize()];
-//		page.insert(0, key, value, compressed);
+		// byte[] key = new byte[0];
+		// byte[] value = new byte[4 + ((pageType == PageType.INDEX_LEAF) ? 2 :
+		// 1)* PageID.getSize()];
+		// page.insert(0, key, value, compressed);
 
 		newContext.setUnitID(unitID);
 		newContext.setLeafFlag(leaf);
 		newContext.setHeight(height);
 		newContext.page.setBasePageID(rootPageID);
-		newContext.setCompressed(compressed);	
+		newContext.setCompressed(compressed);
 
-//		if (logged)
-//		{
-//			log(tx, operation, undoNextLSN);
-//		}
-//		else
-//		{
-//			page.getHandle().setAssignedTo(tx);
-//		}
-		
+		// if (logged)
+		// {
+		// log(tx, operation, undoNextLSN);
+		// }
+		// else
+		// {
+		// page.getHandle().setAssignedTo(tx);
+		// }
+
 		return newContext;
 	}
-	
+
 	public abstract void setCompressed(boolean compressed);
 
 	@Override
-	public PageID getRootPageID()
-	{
+	public PageID getRootPageID() {
 		return page.getBasePageID();
 	}
 
@@ -278,16 +309,15 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements BPCon
 	@Override
 	public abstract String dump(String pageTitle);
 
-	protected void log(Tx tx, LogOperation operation, long undoNextLSN) throws IndexOperationException
-	{
-		try
-		{
-			long lsn = (undoNextLSN == -1) ? tx.logUpdate(operation) : tx.logCLR(operation, undoNextLSN);
+	protected void log(Tx tx, LogOperation operation, long undoNextLSN)
+			throws IndexOperationException {
+		try {
+			long lsn = (undoNextLSN == -1) ? tx.logUpdate(operation) : tx
+					.logCLR(operation, undoNextLSN);
 			page.setLSN(lsn);
-		}
-		catch (TxException e)
-		{
-			throw new IndexOperationException(e, "Could not write changes to log.");
+		} catch (TxException e) {
+			throw new IndexOperationException(e,
+					"Could not write changes to log.");
 		}
 	}
 
@@ -295,97 +325,85 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements BPCon
 	public abstract BPContext createClone() throws IndexOperationException;
 
 	@Override
-	public void cleanup()
-	{
+	public void cleanup() {
 		page.cleanup();
 	}
 
 	@Override
-	public void deletePage() throws IndexOperationException
-	{
-		try
-		{
+	public void deletePage() throws IndexOperationException {
+		try {
 			PageID pageID = page.getPageID();
 			page.cleanup();
 			page.getBuffer().deletePage(tx, pageID, true, -1);
-		}
-		catch (BufferException e)
-		{
+		} catch (BufferException e) {
 			throw new IndexOperationException(e, "Error deleting page");
 		}
 	}
 
 	@Override
-	public int getSize()
-	{
+	public int getSize() {
 		return page.getSize();
 	}
 
 	@Override
-	public int getFreeSpace()
-	{
+	public int getFreeSpace() {
 		return page.getFreeSpace();
 	}
 
 	@Override
-	public long getLSN()
-	{
+	public long getLSN() {
 		return page.getLSN();
 	}
 
 	@Override
-	public PageID getPageID()
-	{
+	public PageID getPageID() {
 		return page.getPageID();
 	}
 
 	@Override
-	public int getUsedSpace()
-	{
+	public int getUsedSpace() {
 		return page.getUsedSpace();
 	}
 
 	@Override
-	public int getMode()
-	{
+	public int getMode() {
 		return page.getMode();
 	}
 
 	@Override
-	public String info()
-	{
+	public String info() {
 		return page.info();
 	}
-	
+
 	@Override
-	public String toString()
-	{
+	public String toString() {
 		return page.getHandle().toString();
 	}
-	
+
 	@Override
 	public boolean isLeaf() {
 		return isLeaf(page.getHandle().page);
 	}
-	
+
 	@Override
 	public BasePage getPage() {
 		return page;
 	}
-	
+
 	public static boolean isLeaf(byte[] page) {
-		
+
 		int offset = BasePage.BASE_PAGE_START_OFFSET + LEAF_FLAG_FIELD_NO;
 		int value = page[offset] & 255;
-		
+
 		if (value == 0) {
 			return false;
 		} else if (value == 1) {
 			return true;
 		} else {
-			throw new RuntimeException(String.format("Invalid content %s in the leaf flag field!", value));
+			throw new RuntimeException(String.format(
+					"Invalid content %s in the leaf flag field!", value));
 		}
-		
+
 	}
 
 	@Override
