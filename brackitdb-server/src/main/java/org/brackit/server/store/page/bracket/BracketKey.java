@@ -43,7 +43,7 @@ package org.brackit.server.store.page.bracket;
  * @author Martin Hiller
  * 
  */
-public class BracketKey {
+public final class BracketKey {
 
 	/**
 	 * Constant for the physical length (in bytes) of one bracket key.
@@ -70,10 +70,12 @@ public class BracketKey {
 				reverseMap[keyType.physicalValue] = keyType;
 			}
 		}
-		private byte physicalValue;
+		private final byte physicalValue;
+		private final int dataReferenceLength; 
 
 		private Type(byte b) {
 			this.physicalValue = b;
+			this.dataReferenceLength = (b / 2 == 0) ? BracketKey.DATA_REF_LENGTH : 0;
 		}
 
 		/**
@@ -92,7 +94,7 @@ public class BracketKey {
 		 * @return data reference length
 		 */
 		public int getDataReferenceLength() {
-			return (physicalValue / 2 == 0) ? BracketKey.DATA_REF_LENGTH : 0;
+			return dataReferenceLength;
 		}
 
 		/**

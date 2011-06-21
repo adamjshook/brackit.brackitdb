@@ -31,9 +31,12 @@ import java.util.List;
 
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.store.index.bracket.HintPageInformation;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.SubtreeDeleteListener;
+import org.brackit.server.store.page.bracket.BracketNodeSequence;
+import org.brackit.server.store.page.bracket.DeleteSequenceInfo;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 
@@ -74,10 +77,22 @@ public interface Leaf extends BPContext {
 			NavigationMode navMode);
 
 	public void moveBeforeFirst();
+	
+	public boolean moveNextToLastRecord() throws IndexOperationException;
 
-	public boolean insertAfter(XTCdeweyID deweyID, byte[] record,
-			int ancestorsToInsert, boolean isStructureModification,
+	public boolean insertRecordAfter(XTCdeweyID deweyID, byte[] record,
+			int ancestorsToInsert, boolean logged, long undoNextLSN)
+			throws IndexOperationException;
+
+	public boolean insertRecord(XTCdeweyID deweyID, byte[] record,
+			int ancestorsToInsert, boolean logged, long undoNextLSN)
+			throws IndexOperationException;
+
+	public boolean insertSequenceAfter(BracketNodeSequence nodes,
 			boolean logged, long undoNextLSN) throws IndexOperationException;
+
+	public boolean insertSequence(BracketNodeSequence nodes, boolean logged,
+			long undoNextLSN) throws IndexOperationException;
 
 	public XTCdeweyID getKey();
 
@@ -99,8 +114,19 @@ public interface Leaf extends BPContext {
 	public int getOffset();
 
 	public boolean split(Leaf emptyRightPage, XTCdeweyID key,
-			boolean forUpdate, boolean compact, boolean splitAfterCurrent,
-			boolean logged, long undoNextLSN) throws IndexOperationException;
+			boolean forUpdate, boolean splitAfterCurrent, boolean logged,
+			long undoNextLSN) throws IndexOperationException;
+
+	/**
+	 * Deletes and returns all nodes following the current position.
+	 * 
+	 * @param logged
+	 * @param undoNextLSN
+	 * @return
+	 * @throws IndexOperationException
+	 */
+	public BracketNodeSequence deleteSequenceAfter(boolean logged,
+			long undoNextLSN) throws IndexOperationException;
 
 	public void copyContentAndContextTo(Leaf other, boolean logged,
 			long undoNextLSN);
@@ -109,7 +135,9 @@ public interface Leaf extends BPContext {
 
 	public byte[] getLowKeyBytes();
 
-	public void setHighKey(XTCdeweyID highKey);
+	public boolean setHighKey(XTCdeweyID highKey);
+
+	public boolean setHighKeyBytes(byte[] highKeyBytes);
 
 	public XTCdeweyID getHighKey();
 
@@ -135,7 +163,7 @@ public interface Leaf extends BPContext {
 	 *             if the deletion would cause this leaf to become empty (->
 	 *             deletion not yet executed)
 	 */
-	public boolean delete(SubtreeDeleteListener deleteListener,
+	public boolean deleteSubtreeStart(SubtreeDeleteListener deleteListener,
 			List<PageID> externalPageIDs, boolean isStructureModification,
 			boolean logged, long undoNextLSN) throws IndexOperationException,
 			EmptyLeafException;
@@ -157,7 +185,7 @@ public interface Leaf extends BPContext {
 	 * @return
 	 * @throws IndexOperationException
 	 */
-	public boolean deleteRemainingSubtree(XTCdeweyID subtreeRoot,
+	public boolean deleteSubtreeEnd(XTCdeweyID subtreeRoot,
 			SubtreeDeleteListener deleteListener, List<PageID> externalPageIDs,
 			boolean isStructureModification, boolean logged, long undoNextLSN)
 			throws IndexOperationException;
@@ -189,5 +217,24 @@ public interface Leaf extends BPContext {
 	public DeweyIDBuffer deassignDeweyIDBuffer();
 
 	public DeweyIDBuffer getDeweyIDBuffer();
+
+	/**
+	 * Deletes a node sequence beginning with "leftBorderDeweyID" until (and
+	 * inclusive) "rightBorderDeweyID". If the deletion results in an empty
+	 * page, nothing will be deleted. Instead, the tree needs to unchain this
+	 * page.
+	 * 
+	 * @param leftBorderDeweyID
+	 * @param rightBorderDeweyID
+	 * @param logged
+	 * @param undoNextLSN
+	 * @return
+	 * @throws IndexOperationException
+	 */
+	public DeleteSequenceInfo deleteSequence(XTCdeweyID leftBorderDeweyID,
+			XTCdeweyID rightBorderDeweyID, boolean logged, long undoNextLSN)
+			throws IndexOperationException;
+
+	public HintPageInformation getHintPageInformation();
 
 }
