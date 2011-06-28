@@ -71,21 +71,17 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	 * @param deweyID
 	 *            the DeweyID this instance is representing
 	 */
-	public DeweyIDBuffer(PageID assignedPage, XTCdeweyID deweyID) {
-		this(assignedPage);
+	public DeweyIDBuffer(XTCdeweyID deweyID) {
+		this();
 		setTo(deweyID);
 	}
 
 	/**
 	 * Constructor for DeweyIDBuffer.
-	 * 
-	 * @param assignedPage
-	 *            assigns this DeweyIDBuffer to a certain page
 	 */
-	public DeweyIDBuffer(PageID assignedPage) {
+	public DeweyIDBuffer() {
 		this.backupMode = false;
 		this.compareMode = false;
-		this.assignedPage = assignedPage;
 	}
 
 	/**

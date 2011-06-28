@@ -54,6 +54,8 @@ public final class BracketKey {
 	 * bracket key (depending on type).
 	 */
 	public static final int DATA_REF_LENGTH = 2;
+	
+	public static final int TOTAL_LENGTH = PHYSICAL_LENGTH + DATA_REF_LENGTH;
 
 	/**
 	 * Enumerates the different bracket key types.
@@ -465,8 +467,8 @@ public final class BracketKey {
 
 		// byte 1
 		int currentByte = storage[position] & 0xFF;
-		angleBrackets = currentByte / 4;
-		type = Type.reverseMap[currentByte % 4];
+		angleBrackets = currentByte >>> 2;
+		type = Type.reverseMap[currentByte & 3];
 		position++;
 
 		// byte 2
@@ -491,8 +493,8 @@ public final class BracketKey {
 
 		// byte 1
 		int currentByte = storage[position] & 0xFF;
-		angleBrackets = currentByte / 4;
-		type = Type.reverseMap[currentByte % 4];
+		angleBrackets = currentByte >>> 2;
+		type = Type.reverseMap[currentByte & 3];
 	}
 
 	/**
