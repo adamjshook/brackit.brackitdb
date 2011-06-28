@@ -266,7 +266,7 @@ public class BracketNodeSequence {
 
 		// print nodes
 
-		DeweyIDBuffer currentDeweyID = new DeweyIDBuffer(null, lowID);
+		DeweyIDBuffer currentDeweyID = new DeweyIDBuffer(lowID);
 		BracketKey currentKey = new BracketKey();
 		BracketKey.Type currentKeyType = lowIDType;
 		boolean firstRun = true;

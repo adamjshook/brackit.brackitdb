@@ -31,11 +31,14 @@ import java.io.PrintStream;
 
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.node.bracket.BracketLocator;
+import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.OpenMode;
 import org.brackit.server.store.SearchMode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.IndexIterator;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.xdm.Stream;
 
 /**
  * @author Martin Hiller
@@ -152,5 +155,7 @@ public interface BracketIndex {
 
 	public String printLeafScannerStats(NavigationMode navMode)
 			throws IndexAccessException;
+	
+	public Stream<BracketNode> openChildStream(BracketLocator locator, XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo);
 
 }

@@ -35,6 +35,7 @@ import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.bulkinsert.BulkInsertContext;
 import org.brackit.server.store.index.bracket.page.Leaf;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
+import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 import org.brackit.server.tx.Tx;
 
 /**
@@ -169,8 +170,27 @@ public final class BracketIterImpl implements BracketIter {
 
 		try {
 
-			page = tree.navigate(tx, rootPageID, navMode, key, openMode, page,
-					deweyIDBuffer);
+			if (page != null) {
+				// scan current page
+				NavigationStatus navStatus = page.navigate(navMode);
+				if (navStatus == NavigationStatus.FOUND) {
+					key = page.getKey();
+					value = page.getValue();
+					hintPageInfo = page.getHintPageInformation();
+					return true;
+				} else if ((navStatus == NavigationStatus.NOT_EXISTENT)) {
+					page.cleanup();
+					page = null;
+					return false;
+				}
+				// use BracketTree to continue the scan
+				page = tree.navigateAfterHintPageFail(tx, rootPageID,
+						navMode, key, openMode, page,
+						deweyIDBuffer, navStatus);
+			} else {
+				// no current page given -> use index
+				page = tree.navigateViaIndexAccess(tx, rootPageID, navMode, key, openMode, deweyIDBuffer);
+			}
 
 			if (page == null) {
 				return false;
