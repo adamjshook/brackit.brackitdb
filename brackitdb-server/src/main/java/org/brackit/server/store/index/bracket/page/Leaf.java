@@ -60,6 +60,10 @@ public interface Leaf extends BPContext {
 	 * @throws IndexAccessException
 	 */
 	public NavigationStatus navigate(NavigationMode navMode);
+	
+	public NavigationStatus navigateFirstChild();
+	
+	public NavigationStatus navigateNextSibling();
 
 	/**
 	 * Navigates along the navigation axis specified in the NavigationMode
