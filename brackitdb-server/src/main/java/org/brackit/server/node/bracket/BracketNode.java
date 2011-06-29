@@ -71,7 +71,7 @@ public class BracketNode extends TXNode<BracketNode> {
 
 	protected PSNode psNode;
 
-	protected HintPageInformation hintPageInfo;
+	public HintPageInformation hintPageInfo;
 
 	public BracketNode(BracketLocator locator) {
 		super(new XTCdeweyID(locator.docID), Kind.DOCUMENT.ID);
@@ -679,7 +679,7 @@ public class BracketNode extends TXNode<BracketNode> {
 					tx.getIsolationLevel().lockClass(false), false);
 		}
 
-		return new BracketChildStream(deweyID, locator, hintPageInfo);
+		return locator.collection.store.index.openChildStream(locator, deweyID, hintPageInfo);
 	}
 
 }
