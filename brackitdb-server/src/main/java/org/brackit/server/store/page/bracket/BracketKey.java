@@ -554,17 +554,4 @@ public final class BracketKey {
 
 		return keyPosition + 2;
 	}
-
-	/**
-	 * Sets the number of round and angle brackets.
-	 * 
-	 * @param roundBrackets
-	 *            the number of round brackets
-	 * @param angleBrackets
-	 *            the number of angle brackets
-	 */
-	public void setBrackets(int roundBrackets, int angleBrackets) {
-		this.roundBrackets = roundBrackets;
-		this.angleBrackets = angleBrackets;
-	}
 }

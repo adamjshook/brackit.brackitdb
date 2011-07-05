@@ -1734,7 +1734,7 @@ public final class BracketPage extends BasePage {
 					+ getLowKeyType().dataReferenceLength;
 		} else {
 			if (currentKeyType == null) {
-				currentKeyType = BracketKey.loadType(page, currentOffset);
+				currentKeyType = Type.reverseMap[page[currentOffset + 1] & 3];
 			}
 			currentOffset += BracketKey.PHYSICAL_LENGTH
 					+ currentKeyType.dataReferenceLength;
@@ -1771,7 +1771,8 @@ public final class BracketPage extends BasePage {
 					// update of current DeweyID necessary
 					currentKey.idGaps = page[currentOffset] & 0xFF;
 					if (!firstUpdate) {
-						currentKey.setBrackets(1, -overflowDiff);
+						currentKey.roundBrackets = 1;
+						currentKey.angleBrackets = -overflowDiff;
 						firstUpdate = true;
 					}
 					currentKey.type = currentKeyType;
@@ -1933,7 +1934,7 @@ public final class BracketPage extends BasePage {
 					+ getLowKeyType().dataReferenceLength;
 		} else {
 			if (currentKeyType == null) {
-				currentKeyType = BracketKey.loadType(page, currentOffset);
+				currentKeyType = Type.reverseMap[page[currentOffset + 1] & 3];
 			}
 			currentOffset += BracketKey.PHYSICAL_LENGTH
 					+ currentKeyType.dataReferenceLength;
