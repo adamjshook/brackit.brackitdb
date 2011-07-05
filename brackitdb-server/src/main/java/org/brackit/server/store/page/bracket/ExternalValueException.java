@@ -27,31 +27,27 @@
  */
 package org.brackit.server.store.page.bracket;
 
+import org.brackit.server.io.buffer.PageID;
+
 /**
- * Represents a value (data record) of a bracket page. In addition to the actual
- * byte array data it includes the information whether this value has to be
- * interpreted as external PageID.
+ * This exception is thrown while loading a value, and indicates that the
+ * current value is an external PageID.
  * 
  * @author Martin Hiller
  * 
  */
-public class BracketValue {
-	/**
-	 * indicates whether the value is an external PageID
-	 */
-	public final boolean externalized;
-	/**
-	 * contains the actual data
-	 */
-	public final byte[] value;
+public class ExternalValueException extends Exception {
 	
+	public final PageID externalPageID;
+
 	/**
-	 * Constructs a bracket value object.
-	 * @param externalized if the value is an external PageID
-	 * @param value the node data record
+	 * Constructs an ExternalValueException with the given PageID as external
+	 * Blob page.
+	 * 
+	 * @param pageID the external PageID
 	 */
-	public BracketValue(boolean externalized, byte[] value) {
-		this.externalized = externalized;
-		this.value = value;
+	public ExternalValueException(PageID pageID) {
+		this.externalPageID = pageID;
 	}
+
 }

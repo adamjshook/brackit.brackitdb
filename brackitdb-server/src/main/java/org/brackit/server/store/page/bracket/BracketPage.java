@@ -37,6 +37,7 @@ import org.brackit.server.node.el.index.ElPlaceHolderHelper;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.page.LeafBPContext;
 import org.brackit.server.store.page.BasePage;
+import org.brackit.server.store.page.bracket.BracketKey.Type;
 import org.brackit.server.store.page.bracket.navigation.NavigationProfiles;
 import org.brackit.server.store.page.bracket.navigation.NavigationProperties;
 import org.brackit.server.store.page.bracket.navigation.NavigationProperties.NavigationTarget;
@@ -296,28 +297,24 @@ public final class BracketPage extends BasePage {
 	 * 
 	 * @param keyOffset
 	 *            the key offset to start the search
-	 * @return offset of next value reference or 0, if the given key offset is
-	 *         not pointing to the key area
+	 * @return offset of next value reference
 	 */
 	private int getNextValueRefOffset(int keyOffset) {
 
 		// if key offset belongs to lowID
 		if (keyOffset == LOW_KEY_OFFSET) {
 			keyOffset = getKeyAreaStartOffset();
-			if (getLowKeyType().hasDataReference()) {
+			if (getLowKeyType().hasDataReference) {
 				return keyOffset;
 			}
 		}
-
-		// if key offset is pointing to the end of the key area
-		if (keyOffset >= getKeyAreaEndOffset()) {
-			return 0;
-		}
-
-		while (!BracketKey.hasDataReference(page, keyOffset)) {
+		
+		// while current key has no data reference
+		keyOffset++;
+		while ((page[keyOffset] & 2) > 0) {
 			keyOffset += BracketKey.PHYSICAL_LENGTH;
 		}
-		keyOffset += BracketKey.PHYSICAL_LENGTH;
+		keyOffset += (BracketKey.PHYSICAL_LENGTH_DECREMENTED);
 
 		return keyOffset;
 	}
@@ -386,69 +383,48 @@ public final class BracketPage extends BasePage {
 	 * 
 	 * @param keyOffset
 	 *            the offset where the key starts
-	 * @return value
+	 * @return value the value as byte array
+	 * @throws ExternalValueException
+	 *             if the the current value is externalized and needs to be
+	 *             loaded from a Blob page
 	 */
-	public BracketValue getValue(int keyOffset) {
-
-		if (keyOffset == BEFORE_LOW_KEY_OFFSET) {
-			return new BracketValue(false, null);
-		}
-
-		// look for next value reference
-		int valueRefOffset = getNextValueRefOffset(keyOffset);
-
-		// load value part
-		byte[][] valuePart = getValueParts(getValueOffset(valueRefOffset));
-
-		// check if externalized
-		boolean externalized = (valuePart[0].length == 3
-				&& valuePart[0][1] == (byte) 255 && valuePart[0][2] == (byte) 255);
-
-		BracketValue result = new BracketValue(externalized, valuePart[1]);
-
-		return result;
+	public byte[] getValue(int keyOffset) throws ExternalValueException {
+		return getValueInternal(getValueOffset(getNextValueRefOffset(keyOffset)));
 	}
 
 	/**
-	 * Returns the value parts (valueLength field and value field) for the value
-	 * at 'valueOffset'.
+	 * Loads the value beginning at 'valueOffset'.
 	 * 
 	 * @param valueOffset
-	 *            the offset where the value starts
-	 * @return value part (first element: valueLength field, second element:
-	 *         value field)
+	 *            the value offset
+	 * @return loaded value as byte array
+	 * @throws ExternalValueException
+	 *             if the the current value is externalized and needs to be
+	 *             loaded from a Blob page
 	 */
-	private byte[][] getValueParts(int valueOffset) {
-
-		byte[][] result = new byte[2][];
-
-		int currentOffset = valueOffset;
+	private byte[] getValueInternal(int valueOffset)
+			throws ExternalValueException {
 
 		// determine value length
-		int valueLength = page[currentOffset++] & 255;
-		int valueLengthLength = 1;
+		int valueLength = page[valueOffset++] & 255;
 
 		if (valueLength == 255) {
 
-			int byte1 = page[currentOffset++] & 255;
-			int byte2 = page[currentOffset++] & 255;
+			int byte1 = page[valueOffset++] & 255;
+			int byte2 = page[valueOffset++] & 255;
 
 			if (byte1 == 255 && byte2 == 255) {
-				valueLength = PageID.getSize();
+				// external value!
+				throw new ExternalValueException(PageID.fromBytes(page,
+						valueOffset));
 			} else {
 				valueLength = (byte1 << 8) | byte2;
 			}
-
-			valueLengthLength += 2;
 		}
 
-		// copy value length field
-		result[0] = new byte[valueLengthLength];
-		System.arraycopy(page, valueOffset, result[0], 0, valueLengthLength);
-
 		// copy value field
-		result[1] = new byte[valueLength];
-		System.arraycopy(page, currentOffset, result[1], 0, valueLength);
+		byte[] result = new byte[valueLength];
+		System.arraycopy(page, valueOffset, result, 0, valueLength);
 
 		return result;
 	}
@@ -616,11 +592,11 @@ public final class BracketPage extends BasePage {
 		// determine the key offset for the next bracket key
 		if (keyPos == LOW_KEY_OFFSET) {
 			keyPos = getKeyAreaStartOffset()
-					+ getLowKeyType().getDataReferenceLength();
+					+ getLowKeyType().dataReferenceLength;
 		} else {
 			currentKey.load(page, keyPos);
 			keyPos += BracketKey.PHYSICAL_LENGTH
-					+ currentKey.getDataReferenceLength();
+					+ currentKey.type.dataReferenceLength;
 		}
 
 		// navigation over key storage
@@ -641,7 +617,7 @@ public final class BracketPage extends BasePage {
 				levelDiff -= currentKey.roundBrackets;
 
 				// increment level difference
-				if (currentKeyType.opensNewSubtree()) {
+				if (currentKeyType.opensNewSubtree) {
 					// increment level difference (-> opening bracket at the end
 					// of the bracket key)
 					levelDiff++;
@@ -683,7 +659,7 @@ public final class BracketPage extends BasePage {
 
 			// set keyPos to the offset of the next key
 			keyPos += BracketKey.PHYSICAL_LENGTH
-					+ currentKeyType.getDataReferenceLength();
+					+ currentKeyType.dataReferenceLength;
 		}
 
 		if (prop.target == NavigationTarget.LAST
@@ -829,7 +805,7 @@ public final class BracketPage extends BasePage {
 		}
 
 		// store value and write value reference
-		if (keyType.hasDataReference()) {
+		if (keyType.hasDataReference) {
 			writeValueReference(currentOffset,
 					storeValue(valueLengthField, value));
 			currentOffset += BracketKey.DATA_REF_LENGTH;
@@ -921,7 +897,7 @@ public final class BracketPage extends BasePage {
 		// determine offset for the next key
 		int nextKeyOffset = (currentNodeIsLowKey ? getKeyAreaStartOffset()
 				: currentOffset + BracketKey.PHYSICAL_LENGTH)
-				+ currentKeyType.getDataReferenceLength();
+				+ currentKeyType.dataReferenceLength;
 
 		// calculate key between new node and next node
 		BracketKey afterKey = null;
@@ -1080,7 +1056,8 @@ public final class BracketPage extends BasePage {
 		int currentOffset = LOW_KEY_OFFSET;
 
 		// iterate over all value references
-		while ((currentOffset = getNextValueRefOffset(currentOffset)) != 0) {
+		int keyAreaEndOffset = getKeyAreaEndOffset();
+		while ((currentOffset = getNextValueRefOffset(currentOffset)) < keyAreaEndOffset) {
 
 			if (!skipOneRecord || skipValueRefOffset != currentOffset) {
 
@@ -1156,7 +1133,7 @@ public final class BracketPage extends BasePage {
 	}
 
 	private void setLowKeyType(BracketKey.Type type) {
-		page[LOW_KEY_TYPE_FIELD_NO] = (byte) (type.getPhysicalValue());
+		page[LOW_KEY_TYPE_FIELD_NO] = type.physicalValue;
 	}
 
 	/**
@@ -1392,8 +1369,12 @@ public final class BracketPage extends BasePage {
 			return null;
 		}
 
-		byte[][] valueParts = getValueParts(contextDataOffset);
-		return valueParts[1];
+		try {
+			return getValueInternal(contextDataOffset);
+		} catch (ExternalValueException e) {
+			// can not happen
+			throw new RuntimeException("Context data corrupted!");
+		}
 	}
 
 	/**
@@ -1409,12 +1390,19 @@ public final class BracketPage extends BasePage {
 			return null;
 		}
 
-		byte[][] valueParts = getValueParts(contextDataOffset);
+		try {
 
-		// load DocID
-		DocID docID = DocID.fromBytes(page, BASE_PAGE_NO_OFFSET);
+			byte[] value = getValueInternal(contextDataOffset);
 
-		return new XTCdeweyID(docID, valueParts[1]);
+			// load DocID
+			DocID docID = DocID.fromBytes(page, BASE_PAGE_NO_OFFSET);
+
+			return new XTCdeweyID(docID, value);
+
+		} catch (ExternalValueException e) {
+			// can not happen
+			throw new RuntimeException("Context data corrupted!");
+		}
 	}
 
 	@Override
@@ -1480,7 +1468,13 @@ public final class BracketPage extends BasePage {
 
 		// load lowID record
 		XTCdeweyID lowID = getLowKey();
-		result[0] = new KeyValueTuple(lowID, getValue(LOW_KEY_OFFSET).value);
+		byte[] value = null;
+		try {
+			value = getValue(LOW_KEY_OFFSET);
+		} catch (ExternalValueException e) {
+			value = e.externalPageID.getBytes();
+		}
+		result[0] = new KeyValueTuple(lowID, value);
 
 		// prepare DeweyID buffers
 		DeweyIDBuffer currentDeweyID = new DeweyIDBuffer(lowID);
@@ -1491,8 +1485,12 @@ public final class BracketPage extends BasePage {
 		for (int i = 1; i < recordCount; i++) {
 			navRes = navigateGeneric(currentDeweyID, navRes.keyOffset,
 					NavigationProfiles.NEXT_NODE, false);
-			result[i] = new KeyValueTuple(currentDeweyID.getDeweyID(),
-					getValue(navRes.keyOffset).value);
+			try {
+				value = getValue(navRes.keyOffset);
+			} catch (ExternalValueException e) {
+				value = e.externalPageID.getBytes();
+			}
+			result[i] = new KeyValueTuple(currentDeweyID.getDeweyID(), value);
 		}
 
 		return result;
@@ -1596,14 +1594,14 @@ public final class BracketPage extends BasePage {
 
 			if (currentOffset == LOW_KEY_OFFSET) {
 				currentOffset = getKeyAreaStartOffset()
-						+ getLowKeyType().getDataReferenceLength();
+						+ getLowKeyType().dataReferenceLength;
 			} else {
 				if (currentKeyType == null) {
 					currentKey.load(page, currentOffset);
 					currentKeyType = currentKey.type;
 				}
 				currentOffset += BracketKey.PHYSICAL_LENGTH
-						+ currentKeyType.getDataReferenceLength();
+						+ currentKeyType.dataReferenceLength;
 			}
 
 			NavigationResult navRes = new NavigationResult();
@@ -1632,7 +1630,7 @@ public final class BracketPage extends BasePage {
 
 				// set keyPos to the offset of the next key
 				currentOffset += BracketKey.PHYSICAL_LENGTH
-						+ currentKeyType.getDataReferenceLength();
+						+ currentKeyType.dataReferenceLength;
 			}
 			return navRes;
 		}
@@ -1733,13 +1731,13 @@ public final class BracketPage extends BasePage {
 		// determine the key offset for the next bracket key
 		if (currentOffset == LOW_KEY_OFFSET) {
 			currentOffset = getKeyAreaStartOffset()
-					+ getLowKeyType().getDataReferenceLength();
+					+ getLowKeyType().dataReferenceLength;
 		} else {
 			if (currentKeyType == null) {
 				currentKeyType = BracketKey.loadType(page, currentOffset);
 			}
 			currentOffset += BracketKey.PHYSICAL_LENGTH
-					+ currentKeyType.getDataReferenceLength();
+					+ currentKeyType.dataReferenceLength;
 		}
 
 		// currently processed bracket key
@@ -1747,11 +1745,17 @@ public final class BracketPage extends BasePage {
 
 		// navigation over key storage
 		int keyAreaEndOffset = getKeyAreaEndOffset();
+		
+		int temp = 0;
 		while (currentOffset < keyAreaEndOffset) {
 
 			// load next key from keyStorage
-			currentKey.loadWithoutGaps(page, currentOffset);
-			currentKeyType = currentKey.type;
+			// load round brackets
+			currentKey.roundBrackets = page[currentOffset++] & 0xFF;
+			// load angle brackets and type
+			temp = page[currentOffset++] & 0xFF;
+			currentKey.angleBrackets = temp >>> 2;
+			currentKeyType = Type.reverseMap[temp & 3];
 
 			if (currentKeyType != BracketKey.Type.ATTRIBUTE) {
 
@@ -1765,11 +1769,12 @@ public final class BracketPage extends BasePage {
 					break;
 				} else if (levelDiff == -1) {
 					// update of current DeweyID necessary
-					currentKey.loadGaps(page, currentOffset);
+					currentKey.idGaps = page[currentOffset] & 0xFF;
 					if (!firstUpdate) {
 						currentKey.setBrackets(1, -overflowDiff);
 						firstUpdate = true;
 					}
+					currentKey.type = currentKeyType;
 					currentDeweyID.update(currentKey, true);
 				}
 
@@ -1784,7 +1789,7 @@ public final class BracketPage extends BasePage {
 					if (firstUpdate) {
 						// current node has qualified
 						result.status = NavigationStatus.FOUND;
-						result.keyOffset = currentOffset;
+						result.keyOffset = currentOffset - 2;
 						result.keyType = currentKeyType;
 						result.levelDiff = levelDiff;
 						break;
@@ -1793,8 +1798,7 @@ public final class BracketPage extends BasePage {
 			}
 
 			// set keyPos to the offset of the next key
-			currentOffset += BracketKey.PHYSICAL_LENGTH
-					+ currentKeyType.getDataReferenceLength();
+			currentOffset += 1 + currentKeyType.dataReferenceLength;
 		}
 		return result;
 	}
@@ -1918,8 +1922,6 @@ public final class BracketPage extends BasePage {
 	 */
 	public NavigationResult navigateFirstChild(int currentOffset,
 			DeweyIDBuffer currentDeweyID, BracketKey.Type currentKeyType) {
-		// return navigateGeneric(currentDeweyID, currentOffset,
-		// NavigationProfiles.FIRST_CHILD, false);
 
 		// initialize result object
 		NavigationResult result = new NavigationResult();
@@ -1928,39 +1930,51 @@ public final class BracketPage extends BasePage {
 		// determine the key offset for the next bracket key
 		if (currentOffset == LOW_KEY_OFFSET) {
 			currentOffset = getKeyAreaStartOffset()
-					+ getLowKeyType().getDataReferenceLength();
+					+ getLowKeyType().dataReferenceLength;
 		} else {
 			if (currentKeyType == null) {
 				currentKeyType = BracketKey.loadType(page, currentOffset);
 			}
 			currentOffset += BracketKey.PHYSICAL_LENGTH
-					+ currentKeyType.getDataReferenceLength();
+					+ currentKeyType.dataReferenceLength;
 		}
 
 		// currently processed bracket key
 		BracketKey currentKey = new BracketKey();
+		
+		int temp = 0;
 
 		// navigation over key storage
 		int keyAreaEndOffset = getKeyAreaEndOffset();
 		while (currentOffset < keyAreaEndOffset) {
-
-			// load next key type from keyStorage
-			currentKey.load(page, currentOffset);
-			currentKeyType = currentKey.type;
+			
+			// load type from keyStorage
+			temp = page[++currentOffset] & 0xFF;
+			currentKeyType = Type.reverseMap[temp & 3];
 
 			if (currentKeyType == BracketKey.Type.ATTRIBUTE) {
-				currentOffset += BracketKey.TOTAL_LENGTH;
-			} else if (currentKeyType == BracketKey.Type.DATA
-					|| currentKeyType == BracketKey.Type.NODATA) {
+				
+				currentOffset += BracketKey.TOTAL_LENGTH_DECREMENTED;
+				
+			} else if (currentKeyType.opensNewSubtree) {
 
+				// load brackets
+				currentKey.roundBrackets = page[--currentOffset] & 0xFF;
+				
 				// check closing brackets
 				if (currentKey.roundBrackets == 0) {
 					// first child found
+					
+					// load remaining key
+					currentKey.angleBrackets = 0; // has to be zero
+					currentKey.idGaps = page[currentOffset + 2] & 0xFF;
+					currentKey.type = currentKeyType;
+					
 					currentDeweyID.update(currentKey, true);
 					result.status = NavigationStatus.FOUND;
 					result.keyOffset = currentOffset;
 					result.keyType = currentKeyType;
-					result.levelDiff = 1;		
+					result.levelDiff = 1;
 				} else {
 					// no child exists
 					result.status = NavigationStatus.NOT_EXISTENT;
@@ -1969,8 +1983,20 @@ public final class BracketPage extends BasePage {
 
 			} else {
 				// overflow key
+				currentKey.roundBrackets = page[currentOffset - 1] & 0xFF;
+				
+				if (currentKey.roundBrackets > 0) {
+					// no child exists
+					result.status = NavigationStatus.NOT_EXISTENT;
+					break;
+				}
+				
+				currentKey.angleBrackets = 0; // has to be zero
+				currentKey.idGaps = page[++currentOffset] & 0xFF;
+				currentKey.type = currentKeyType;
+				
 				currentDeweyID.update(currentKey, true);
-				currentOffset += BracketKey.PHYSICAL_LENGTH;
+				currentOffset++;
 			}
 		}
 		return result;
@@ -2195,7 +2221,7 @@ public final class BracketPage extends BasePage {
 
 		currentDeweyID.setTo(getLowKey());
 		int currentOffset = getKeyAreaStartOffset();
-		if (getLowKeyType().hasDataReference()) {
+		if (getLowKeyType().hasDataReference) {
 			// lowkey is a candidate
 			navRes = new NavigationResult();
 			navRes.keyOffset = LOW_KEY_OFFSET;
@@ -2211,7 +2237,7 @@ public final class BracketPage extends BasePage {
 
 			currentKey.load(page, currentOffset);
 			currentDeweyID.update(currentKey, false);
-			if (currentKey.hasDataReference()) {
+			if (currentKey.type.hasDataReference) {
 
 				// check whether this record is the last one in this page
 				if (currentOffset + BracketKey.PHYSICAL_LENGTH
@@ -2577,10 +2603,10 @@ public final class BracketPage extends BasePage {
 		} else {
 
 			/* LowID Data */
-			if (lowIDType.hasDataReference()) {
+			if (lowIDType.hasDataReference) {
 				resultLength += getValueLength(getValueOffset(currentOffset),
 						true);
-				currentOffset += lowIDType.getDataReferenceLength();
+				currentOffset += lowIDType.dataReferenceLength;
 			}
 
 			// count the number of overflow keys at the end of the specified key
@@ -2623,10 +2649,10 @@ public final class BracketPage extends BasePage {
 		System.arraycopy(lowIDBytes, 0, result, resultOffset, lowIDLength);
 		resultOffset += lowIDLength;
 		// LowID Type Field
-		result[resultOffset] = (byte) lowIDType.getPhysicalValue();
+		result[resultOffset] = lowIDType.physicalValue;
 		resultOffset++;
 		// LowID Data
-		if (lowIDType.hasDataReference()) {
+		if (lowIDType.hasDataReference) {
 			numberDataRecords++;
 			int valueOffset = getValueOffset(currentOffset);
 			int valueLength = getValueLength(valueOffset, true);
@@ -2634,7 +2660,7 @@ public final class BracketPage extends BasePage {
 			System.arraycopy(page, valueOffset, result, resultOffset,
 					valueLength);
 
-			currentOffset += lowIDType.getDataReferenceLength();
+			currentOffset += lowIDType.dataReferenceLength;
 			resultOffset += valueLength;
 		}
 		// remaining bracket keys + data
@@ -2739,7 +2765,7 @@ public final class BracketPage extends BasePage {
 			tempDeweyID.backup();
 
 			int currentOffset = getKeyAreaStartOffset()
-					+ getLowKeyType().getDataReferenceLength();
+					+ getLowKeyType().dataReferenceLength;
 			int keyAreaEndOffset = getKeyAreaEndOffset();
 			BracketKey currentKey = new BracketKey();
 			boolean found = false;
@@ -2754,7 +2780,7 @@ public final class BracketPage extends BasePage {
 				previousOffset = currentOffset;
 				tempDeweyID.backup();
 				currentOffset += BracketKey.PHYSICAL_LENGTH
-						+ currentKey.getDataReferenceLength();
+						+ currentKey.type.dataReferenceLength;
 			}
 
 			previousDeweyID = tempDeweyID.getBackupDeweyID();
@@ -2791,7 +2817,7 @@ public final class BracketPage extends BasePage {
 			currentOffset = getKeyAreaStartOffset();
 			numberOfNodes++;
 
-			if (currentType.hasDataReference()) {
+			if (currentType.hasDataReference) {
 				numberOfDataRecords++;
 				dataRecordSize += getValueLength(getValueOffset(currentOffset),
 						true);
@@ -2911,7 +2937,7 @@ public final class BracketPage extends BasePage {
 
 		int currentOffset = getKeyAreaStartOffset();
 		BracketKey.Type currentType = getLowKeyType();
-		if (currentType.hasDataReference()) {
+		if (currentType.hasDataReference) {
 			numberOfDataRecords++;
 			loadInternalValue(currentValue, getValueOffset(currentOffset));
 			dataRecordSize += currentValue.totalValueLength;
@@ -2939,7 +2965,7 @@ public final class BracketPage extends BasePage {
 			// decrease level difference
 			levelDiff -= currentKey.roundBrackets;
 			// increment level difference
-			if (currentType.opensNewSubtree()) {
+			if (currentType.opensNewSubtree) {
 				// increment level difference (-> opening bracket at the end of
 				// the bracket key)
 				levelDiff++;
@@ -3077,7 +3103,7 @@ public final class BracketPage extends BasePage {
 			int levelDiff = 0;
 			currentOffset = currentIsLowKey ? getKeyAreaStartOffset()
 					: (startDeleteOffset + BracketKey.PHYSICAL_LENGTH);
-			if (currentType.hasDataReference()) {
+			if (currentType.hasDataReference) {
 				numberOfDataRecords++;
 				loadInternalValue(currentValue, getValueOffset(currentOffset));
 				dataRecordSize += currentValue.totalValueLength;
@@ -3106,7 +3132,7 @@ public final class BracketPage extends BasePage {
 				// decrease level difference
 				levelDiff -= currentKey.roundBrackets;
 				// increment level difference
-				if (currentType.opensNewSubtree()) {
+				if (currentType.opensNewSubtree) {
 					// increment level difference (-> opening bracket at the end
 					// of the bracket key)
 					levelDiff++;
@@ -3197,7 +3223,7 @@ public final class BracketPage extends BasePage {
 		currentDeweyID.backup();
 		int startDeleteOffset = (currentIsLowKey ? getKeyAreaStartOffset()
 				: (currentOffset + BracketKey.PHYSICAL_LENGTH))
-				+ currentType.getDataReferenceLength();
+				+ currentType.dataReferenceLength;
 		while (startDeleteOffset < keyAreaEndOffset) {
 			currentKey.load(page, startDeleteOffset);
 			currentType = currentKey.type;
@@ -3226,7 +3252,7 @@ public final class BracketPage extends BasePage {
 		int numberOfNodes = 1;
 
 		currentOffset = startDeleteOffset + BracketKey.PHYSICAL_LENGTH;
-		if (currentType.hasDataReference()) {
+		if (currentType.hasDataReference) {
 			numberOfDataRecords++;
 			dataRecordSize += getValueLength(getValueOffset(currentOffset),
 					true);
@@ -3244,7 +3270,7 @@ public final class BracketPage extends BasePage {
 			}
 
 			currentOffset += BracketKey.PHYSICAL_LENGTH;
-			if (currentType.hasDataReference()) {
+			if (currentType.hasDataReference) {
 				numberOfDataRecords++;
 				dataRecordSize += getValueLength(getValueOffset(currentOffset),
 						true);
@@ -3322,7 +3348,7 @@ public final class BracketPage extends BasePage {
 			int startDeleteOffset = ((delPrep.previousOffset == LOW_KEY_OFFSET) ? getKeyAreaStartOffset()
 					: delPrep.previousOffset)
 					+ BracketKey.PHYSICAL_LENGTH
-					+ previousType.getDataReferenceLength();
+					+ previousType.dataReferenceLength;
 			int endDeleteOffset = (delPrep.endDeleteOffset == KEY_AREA_END_OFFSET) ? getKeyAreaEndOffset()
 					: delPrep.endDeleteOffset;
 
@@ -3358,11 +3384,14 @@ public final class BracketPage extends BasePage {
 			byte[] placeholderLength = null;
 			if (placeholderNeeded) {
 				// fetch next value
-				BracketValue nextValue = getValue(delPrep.startDeleteOffset);
+				byte[] value = null;
+				try {
+					value = getValue(delPrep.startDeleteOffset);
+				} catch (ExternalValueException e) {
+					value = externalValueLoader
+							.loadExternalValue(e.externalPageID);
+				}
 
-				byte[] value = !nextValue.externalized ? nextValue.value
-						: externalValueLoader.loadExternalValue(PageID
-								.fromBytes(nextValue.value));
 				placeholder = placeHolderHelper.createPlaceHolderValue(value);
 				placeholderLength = getValueLengthField(placeholder, false);
 
@@ -3459,7 +3488,7 @@ public final class BracketPage extends BasePage {
 		int splitOffset = 0;
 
 		// LowID data
-		if (getLowKeyType().hasDataReference()) {
+		if (getLowKeyType().hasDataReference) {
 			currentDataVolume += BracketKey.DATA_REF_LENGTH
 					+ getValueLength(getValueOffset(currentOffset), true);
 			currentOffset += BracketKey.DATA_REF_LENGTH;
@@ -3495,7 +3524,7 @@ public final class BracketPage extends BasePage {
 				currentDataVolume += BracketKey.PHYSICAL_LENGTH;
 				currentOffset += BracketKey.PHYSICAL_LENGTH;
 
-				if (currentKey.type.hasDataReference()) {
+				if (currentKey.type.hasDataReference) {
 					currentDataVolume += BracketKey.DATA_REF_LENGTH
 							+ getValueLength(getValueOffset(currentOffset),
 									true);
@@ -3601,7 +3630,7 @@ public final class BracketPage extends BasePage {
 			numberOfNodes++;
 		}
 
-		if (currentType.hasDataReference()) {
+		if (currentType.hasDataReference) {
 			dataSize += BracketKey.DATA_REF_LENGTH
 					+ getValueLength(getValueOffset(currentOffset), true);
 			currentOffset += BracketKey.DATA_REF_LENGTH;
@@ -3794,7 +3823,7 @@ public final class BracketPage extends BasePage {
 			// determine offset for the next key
 			nextKeyOffset = (currentNodeIsLowKey ? getKeyAreaStartOffset()
 					: currentOffset + BracketKey.PHYSICAL_LENGTH)
-					+ currentKeyType.getDataReferenceLength();
+					+ currentKeyType.dataReferenceLength;
 
 			// calculate afterKey(s)
 			if (nextKeyOffset < getKeyAreaEndOffset()) {
@@ -3885,7 +3914,7 @@ public final class BracketPage extends BasePage {
 
 		// beforeKeys written; copy BracketNodeSequence
 		int dataOffset = nodes.getStartOffset();
-		if (dataLowIDType.hasDataReference()) {
+		if (dataLowIDType.hasDataReference) {
 			// copy first data record
 			if (removeLastDataRecord
 					&& lastNodeOffset == BracketNodeSequence.LOW_KEY_OFFSET) {

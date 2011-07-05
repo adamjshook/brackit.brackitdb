@@ -82,8 +82,6 @@ public interface BPContext extends Latch {
 
 	public BPContext createClone() throws IndexOperationException;
 
-	public void init();
-
 	public int getUnitID();
 
 	public int getHeight();

@@ -43,12 +43,12 @@ import org.brackit.server.store.page.bracket.BracketKey;
 import org.brackit.server.store.page.bracket.BracketNodeSequence;
 import org.brackit.server.store.page.bracket.BracketPage;
 import org.brackit.server.store.page.bracket.BracketPageException;
-import org.brackit.server.store.page.bracket.BracketValue;
 import org.brackit.server.store.page.bracket.DeletePreparation;
 import org.brackit.server.store.page.bracket.DeletePrepareListener;
 import org.brackit.server.store.page.bracket.DeleteSequenceInfo;
 import org.brackit.server.store.page.bracket.DeleteSequencePreparation;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
+import org.brackit.server.store.page.bracket.ExternalValueException;
 import org.brackit.server.store.page.bracket.ExternalValueLoader;
 import org.brackit.server.store.page.bracket.navigation.NavigationResult;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
@@ -61,7 +61,8 @@ import org.brackit.server.tx.Tx;
 public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	private static final boolean CHECK_BUFFER_INTEGRITY = false;
-	
+	private static final boolean CHECK_OFFSET_INTEGRITY = false;
+
 	private final float OCCUPANCY_RATE_DEFAULT = 0.5f;
 
 	public static final int NEXT_PAGE_FIELD_NO = AbstractBPContext.RESERVED_SIZE;
@@ -136,8 +137,6 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		}
 	}
 
-	private final ExternalValueLoader externalValueLoader = new ExternalValueLoaderImpl();
-
 	private final BracketPage page;
 
 	private int currentOffset;
@@ -149,6 +148,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	public LeafBPContext(BufferMgr bufferMgr, Tx tx, BracketPage page) {
 		super(bufferMgr, tx, page);
 		this.page = page;
+		currentOffset = BracketPage.BEFORE_LOW_KEY_OFFSET;
 	}
 
 	private void initBuffer() {
@@ -250,37 +250,40 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	@Override
 	public XTCdeweyID getKey() {
-		if (currentOffset == BracketPage.BEFORE_LOW_KEY_OFFSET) {
-			return null;
-		} else {
-			return currentDeweyID.getDeweyID();
+
+		if (CHECK_OFFSET_INTEGRITY) {
+			declareContextSensitive();
 		}
+
+		return currentDeweyID.getDeweyID();
 	}
 
 	@Override
 	public byte[] getValue() throws IndexOperationException {
-		return getValue(currentOffset);
-	}
-
-	private byte[] getValue(int keyOffset) throws IndexOperationException {
+		
+		if (CHECK_OFFSET_INTEGRITY) {
+			declareContextSensitive();
+		}
 
 		if (bufferedValue != null) {
 			return bufferedValue;
 		}
 
-		BracketValue returnValue = page.getValue(keyOffset);
-		byte[] value = returnValue.value;
+		byte[] value = null;
+		try {
 
-		if (returnValue.externalized) {
-			PageID blobPageID = PageID.fromBytes(value);
+			value = page.getValue(currentOffset);
 
+		} catch (ExternalValueException e) {
+
+			// value needs to be loaded from a Blob page
 			try {
-				value = read(tx, blobPageID);
-			} catch (BlobStoreAccessException e) {
+				value = read(tx, e.externalPageID);
+			} catch (BlobStoreAccessException ex) {
 				throw new IndexOperationException(
-						e,
+						ex,
 						"Error reading externalized value at offset %s from blob %s",
-						currentOffset, blobPageID);
+						currentOffset, e.externalPageID);
 			}
 		}
 
@@ -337,7 +340,18 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	@Override
 	public boolean setValue(byte[] value, boolean isStructureModification,
 			boolean logged, long undoNextLSN) throws IndexOperationException {
-		BracketValue oldValue = page.getValue(currentOffset);
+
+		if (CHECK_OFFSET_INTEGRITY) {
+			declareContextSensitive();
+		}
+		
+		PageID oldExternalPageID = null;
+		byte[] oldValue = null;
+		try {
+			oldValue = page.getValue(currentOffset);
+		} catch (ExternalValueException e) {
+			oldExternalPageID = e.externalPageID;
+		}
 
 		boolean externalize = externalizeValue(value);
 
@@ -349,8 +363,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			return false;
 		}
 
-		if (oldValue.externalized) {
-			deleteExternalized(oldValue.value);
+		if (oldExternalPageID != null) {
+			deleteExternalized(oldExternalPageID);
 		}
 
 		return true;
@@ -404,7 +418,9 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	public boolean insertRecord(XTCdeweyID deweyID, byte[] record,
 			int ancestorsToInsert, boolean logged, long undoNextLSN)
 			throws IndexOperationException {
-		declareContextFree();
+		if (CHECK_OFFSET_INTEGRITY) {
+			declareContextFree();
+		}
 		initBuffer();
 
 		boolean externalize = externalizeValue(record);
@@ -437,7 +453,10 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	@Override
 	public NavigationStatus navigate(NavigationMode navMode) {
-		// assert(currentOffset != BracketPage.BEFORE_LOW_ID_KEYOFFSET);
+
+		if (CHECK_OFFSET_INTEGRITY) {
+			declareContextSensitive();
+		}
 
 		NavigationResult navRes = null;
 
@@ -487,7 +506,9 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	@Override
 	public NavigationStatus navigateContextFree(XTCdeweyID referenceDeweyID,
 			NavigationMode navMode) {
-		declareContextFree();
+		if (CHECK_OFFSET_INTEGRITY) {
+			declareContextFree();
+		}
 		initBuffer();
 
 		if (getEntryCount() == 0) {
@@ -588,7 +609,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			BracketNodeSequence nodes = page.getBracketNodeSequence(delPrep);
 
 			// delete nodes from left page
-			page.delete(delPrep, externalValueLoader);
+			page.delete(delPrep, new ExternalValueLoaderImpl());
 
 			// set highKey/separator
 			XTCdeweyID highKey = this.getHighKey();
@@ -720,11 +741,6 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	}
 
 	@Override
-	public void init() {
-		moveBeforeFirst();
-	}
-
-	@Override
 	public boolean isLastInLevel() {
 		return (getNextPageID() == null);
 	}
@@ -747,7 +763,10 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			List<PageID> externalPageIDs, boolean isStructureModification,
 			boolean logged, long undoNextLSN) throws IndexOperationException,
 			EmptyLeafException {
-		// assert(currentOffset != BracketPage.BEFORE_LOW_ID_KEYOFFSET);
+
+		if (CHECK_OFFSET_INTEGRITY) {
+			declareContextSensitive();
+		}
 
 		try {
 
@@ -797,7 +816,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			}
 
 			// delete
-			page.delete(delPrep, externalValueLoader);
+			page.delete(delPrep, new ExternalValueLoaderImpl());
 
 			// reset context information
 			moveBeforeFirst();
@@ -815,7 +834,9 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			boolean isStructureModification, boolean logged, long undoNextLSN)
 			throws IndexOperationException {
 		try {
-			declareContextFree();
+			if (CHECK_OFFSET_INTEGRITY) {
+				declareContextFree();
+			}
 			initBuffer();
 
 			// prepare deletion
@@ -929,13 +950,22 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		}
 	}
 
+	private void declareContextSensitive() {
+		if (currentOffset == BracketPage.BEFORE_LOW_KEY_OFFSET) {
+			throw new RuntimeException(
+					"Context sensitive operation! The cursor needs a valid position!");
+		}
+	}
+
 	@Override
 	public DeleteSequenceInfo deleteSequence(XTCdeweyID leftBorderDeweyID,
 			XTCdeweyID rightBorderDeweyID, boolean logged, long undoNextLSN)
 			throws IndexOperationException {
 
 		try {
-			declareContextFree();
+			if (CHECK_OFFSET_INTEGRITY) {
+				declareContextFree();
+			}
 			initBuffer();
 
 			// prepare deletion
@@ -947,7 +977,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 				// nothing to delete OR page needs to be unchained
 			} else {
 				// delete
-				page.delete(delPrep.deletePreparation, externalValueLoader);
+				page.delete(delPrep.deletePreparation,
+						new ExternalValueLoaderImpl());
 			}
 
 			return delPrep.deleteSequenceInfo;
@@ -981,7 +1012,9 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	@Override
 	public boolean insertSequence(BracketNodeSequence nodes, boolean logged,
 			long undoNextLSN) throws IndexOperationException {
-		declareContextFree();
+		if (CHECK_OFFSET_INTEGRITY) {
+			declareContextFree();
+		}
 		initBuffer();
 
 		int returnVal = page.insertSequence(nodes, currentDeweyID);
@@ -1000,18 +1033,18 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	@Override
 	public HintPageInformation getHintPageInformation() {
-		if (currentOffset == BracketPage.BEFORE_LOW_KEY_OFFSET) {
-			return null;
-		} else {
-			return new HintPageInformation(page.getPageID(), page.getLSN(),
-					currentOffset);
-		}
+
+		return new HintPageInformation(page.getPageID(), page.getLSN(),
+				currentOffset);
 	}
 
 	@Override
 	public BracketNodeSequence deleteSequenceAfter(boolean logged,
 			long undoNextLSN) throws IndexOperationException {
-		// assert(currentOffset != BracketPage.BEFORE_LOW_ID_KEYOFFSET)
+
+		if (CHECK_OFFSET_INTEGRITY) {
+			declareContextSensitive();
+		}
 
 		try {
 
@@ -1023,7 +1056,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			BracketNodeSequence nodes = page.getBracketNodeSequence(delPrep);
 
 			// delete nodes from page
-			page.delete(delPrep, externalValueLoader);
+			page.delete(delPrep, new ExternalValueLoaderImpl());
 
 			return nodes;
 
@@ -1052,7 +1085,10 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	 */
 	@Override
 	public NavigationStatus navigateFirstChild() {
-		// assert(currentOffset != BracketPage.BEFORE_LOW_ID_KEYOFFSET);
+
+		if (CHECK_OFFSET_INTEGRITY) {
+			declareContextSensitive();
+		}
 
 		NavigationResult navRes = page.navigateFirstChild(currentOffset,
 				currentDeweyID, bufferedKeyType);
@@ -1072,7 +1108,10 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	 */
 	@Override
 	public NavigationStatus navigateNextSibling() {
-		// assert(currentOffset != BracketPage.BEFORE_LOW_ID_KEYOFFSET);
+
+		if (CHECK_OFFSET_INTEGRITY) {
+			declareContextSensitive();
+		}
 
 		NavigationResult navRes = page.navigateNextSibling(currentOffset,
 				currentDeweyID, bufferedKeyType);

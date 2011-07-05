@@ -49,13 +49,15 @@ public final class BracketKey {
 	 * Constant for the physical length (in bytes) of one bracket key.
 	 */
 	public static final int PHYSICAL_LENGTH = 3;
+	public static final int PHYSICAL_LENGTH_DECREMENTED = PHYSICAL_LENGTH - 1;
 	/**
 	 * Constant for the length of a data reference which potentially follows a
 	 * bracket key (depending on type).
 	 */
 	public static final int DATA_REF_LENGTH = 2;
-	
+
 	public static final int TOTAL_LENGTH = PHYSICAL_LENGTH + DATA_REF_LENGTH;
+	public static final int TOTAL_LENGTH_DECREMENTED = TOTAL_LENGTH - 1;
 
 	/**
 	 * Enumerates the different bracket key types.
@@ -64,7 +66,7 @@ public final class BracketKey {
 		DATA((byte) 0), ATTRIBUTE((byte) 1), NODATA((byte) 2), OVERFLOW(
 				(byte) 3);
 
-		private static final Type[] reverseMap;
+		static final Type[] reverseMap;
 		static {
 			Type[] values = Type.values();
 			reverseMap = new Type[values.length];
@@ -72,38 +74,17 @@ public final class BracketKey {
 				reverseMap[keyType.physicalValue] = keyType;
 			}
 		}
-		private final byte physicalValue;
-		private final int dataReferenceLength; 
+		final byte physicalValue;
+		final int dataReferenceLength;
+		final boolean hasDataReference;
+		final boolean opensNewSubtree;
 
 		private Type(byte b) {
 			this.physicalValue = b;
-			this.dataReferenceLength = (b / 2 == 0) ? BracketKey.DATA_REF_LENGTH : 0;
-		}
-
-		/**
-		 * Returns the value (0-3) that is used to store the type physically.
-		 * 
-		 * @return the physical value
-		 */
-		public int getPhysicalValue() {
-			return physicalValue;
-		}
-
-		/**
-		 * Returns the length of the following data reference, depending on this
-		 * type.
-		 * 
-		 * @return data reference length
-		 */
-		public int getDataReferenceLength() {
-			return dataReferenceLength;
-		}
-
-		/**
-		 * @return true if a data reference has to follow this bracket key
-		 */
-		public boolean hasDataReference() {
-			return (physicalValue / 2 == 0);
+			this.dataReferenceLength = (b / 2 == 0) ? BracketKey.DATA_REF_LENGTH
+					: 0;
+			this.hasDataReference = (b / 2 == 0);
+			this.opensNewSubtree = (b % 2 == 0);
 		}
 
 		/**
@@ -115,16 +96,6 @@ public final class BracketKey {
 		 */
 		public static Type getByPhysicalValue(int physicalValue) {
 			return reverseMap[physicalValue];
-		}
-
-		/**
-		 * Checks whether this bracket key opens a new subtree (type is DATA or
-		 * NODATA).
-		 * 
-		 * @return true if a new logical subtree is created
-		 */
-		public boolean opensNewSubtree() {
-			return (physicalValue % 2 == 0);
 		}
 	}
 
@@ -187,7 +158,7 @@ public final class BracketKey {
 	 * @return
 	 */
 	public static boolean hasDataReference(byte[] storage, int keyOffset) {
-		return (storage[keyOffset + 1] & 3) / 2 == 0;
+		return (storage[keyOffset + 1] & 2) == 0;
 	}
 
 	/**
@@ -438,8 +409,7 @@ public final class BracketKey {
 		if (ignoreKeyType) {
 			storage[position] = (byte) ((angleBrackets << 2) | (storage[position] & 3));
 		} else {
-			storage[position] = (byte) ((angleBrackets << 2) | type
-					.getPhysicalValue());
+			storage[position] = (byte) ((angleBrackets << 2) | type.physicalValue);
 		}
 		position++;
 
@@ -474,41 +444,6 @@ public final class BracketKey {
 		// byte 2
 		idGaps = storage[position] & 0xFF;
 
-	}
-
-	/**
-	 * Loads a bracket key from the given byte array beginning at the specified
-	 * position, but leaves the idGap-field untouched.
-	 * 
-	 * @param storage
-	 *            the byte array to load the bracket key from
-	 * @param position
-	 *            starting point in the byte array
-	 */
-	public void loadWithoutGaps(byte[] storage, int position) {
-
-		// byte 0
-		roundBrackets = storage[position] & 0xFF;
-		position++;
-
-		// byte 1
-		int currentByte = storage[position] & 0xFF;
-		angleBrackets = currentByte >>> 2;
-		type = Type.reverseMap[currentByte & 3];
-	}
-
-	/**
-	 * Loads only the number of DeweyID-Gaps from the bracket key in the
-	 * storage-array starting at the given position.
-	 * 
-	 * @param storage
-	 *            the byte array to load the DeweyID-Gaps from
-	 * @param position
-	 *            starting point in the byte array
-	 */
-	public void loadGaps(byte[] storage, int position) {
-		// byte 2
-		idGaps = storage[position + 2] & 0xFF;
 	}
 
 	/**
@@ -597,59 +532,6 @@ public final class BracketKey {
 	}
 
 	/**
-	 * Returns the type of this bracket key.
-	 * 
-	 * @return the type
-	 */
-	public Type getType() {
-		return type;
-	}
-
-	/**
-	 * Returns the number of closing round brackets of this bracket key.
-	 * 
-	 * @return number of round brackets
-	 */
-	public int getRoundBrackets() {
-		return roundBrackets;
-	}
-
-	/**
-	 * Returns the number of closing angle brackets of this bracket key.
-	 * 
-	 * @return number of angle brackets
-	 */
-	public int getAngleBrackets() {
-		return angleBrackets;
-	}
-
-	/**
-	 * Returns the number of DeweyID gaps of this bracket key.
-	 * 
-	 * @return number of DeweyID gaps
-	 */
-	public int getIdGaps() {
-		return idGaps;
-	}
-
-	/**
-	 * Returns the length of the following data reference, depending on the type
-	 * of this bracket key.
-	 * 
-	 * @return data reference length
-	 */
-	public int getDataReferenceLength() {
-		return type.getDataReferenceLength();
-	}
-	
-	/**
-	 * @return true if a data reference has to follow this bracket key
-	 */
-	public boolean hasDataReference() {
-		return type.hasDataReference();
-	}
-
-	/**
 	 * Updates the key type of the bracket key at position 'keyPosition'.
 	 * 
 	 * @param newType
@@ -668,8 +550,7 @@ public final class BracketKey {
 		int typeByte = storage[keyPosition];
 
 		// change key type
-		storage[keyPosition] = (byte) ((typeByte & 252) | newType
-				.getPhysicalValue());
+		storage[keyPosition] = (byte) ((typeByte & 252) | newType.physicalValue);
 
 		return keyPosition + 2;
 	}

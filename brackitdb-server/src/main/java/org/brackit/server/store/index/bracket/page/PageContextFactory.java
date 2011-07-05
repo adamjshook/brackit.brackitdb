@@ -60,7 +60,7 @@ public class PageContextFactory {
 		this.bufferMgr = bufferMgr;
 	}
 
-	public Branch allocateBranch(Tx tx, int containerNo, int unitID,
+	public final Branch allocateBranch(Tx tx, int containerNo, int unitID,
 			PageID rootPageID, int height, boolean compression, boolean logged)
 			throws IndexOperationException {
 		Buffer buffer = null;
@@ -109,11 +109,11 @@ public class PageContextFactory {
 		return page;
 	}
 
-	protected Branch createKeyValuePageContext(Tx tx, KeyValuePage page) {
+	private Branch createKeyValuePageContext(Tx tx, KeyValuePage page) {
 		return new BranchBPContext(bufferMgr, tx, page);
 	}
 
-	public Branch createBranch(Tx tx, Buffer buffer, Handle handle)
+	private Branch createBranch(Tx tx, Buffer buffer, Handle handle)
 			throws IndexOperationException {
 		switch (BRANCH_TYPE) {
 		case 1:
@@ -128,12 +128,12 @@ public class PageContextFactory {
 		}
 	}
 
-	public Branch createBranch(Tx tx, Buffer buffer, Handle handle,
+	private Branch createBranch(Tx tx, Buffer buffer, Handle handle,
 			int latchMode) throws IndexOperationException {
 		return createBranch(tx, buffer, handle);
 	}
 
-	public Leaf allocateLeaf(Tx tx, int containerNo, int unitID,
+	public final Leaf allocateLeaf(Tx tx, int containerNo, int unitID,
 			PageID rootPageID, boolean logged) throws IndexOperationException {
 		Buffer buffer = null;
 		Handle handle = null;
@@ -182,13 +182,13 @@ public class PageContextFactory {
 		return page;
 	}
 
-	public Leaf createLeaf(Tx tx, Buffer buffer, Handle handle)
+	private Leaf createLeaf(Tx tx, Buffer buffer, Handle handle)
 			throws IndexOperationException {
 		return new LeafBPContext(bufferMgr, tx, new BracketPage(buffer,
 				handle));
 	}
 
-	public Leaf createLeaf(Tx tx, Buffer buffer, Handle handle,
+	private Leaf createLeaf(Tx tx, Buffer buffer, Handle handle,
 			int latchMode) throws IndexOperationException {
 		return createLeaf(tx, buffer, handle);
 	}
@@ -207,7 +207,7 @@ public class PageContextFactory {
 	 * @return a page context for the requested page
 	 * @throws IndexOperationException
 	 */
-	public BPContext getPage(Tx tx, PageID pageID, boolean forUpdate,
+	public final BPContext getPage(Tx tx, PageID pageID, boolean forUpdate,
 			boolean updateLatch) throws IndexOperationException {
 		Buffer buffer = null;
 		Handle handle = null;

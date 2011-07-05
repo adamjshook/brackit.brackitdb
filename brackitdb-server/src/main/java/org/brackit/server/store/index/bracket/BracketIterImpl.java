@@ -71,9 +71,11 @@ public final class BracketIterImpl implements BracketIter {
 			this.page = page;
 			this.deweyIDBuffer = page.getDeweyIDBuffer();
 			this.openMode = openMode;
-			this.key = page.getKey();
-			this.value = page.getValue();
-			this.hintPageInfo = page.getHintPageInformation();
+			if (!page.isBeforeFirst()) {
+				this.key = page.getKey();
+				this.value = page.getValue();
+				this.hintPageInfo = page.getHintPageInformation();
+			}
 			this.insertKey = insertKey;
 		} catch (IndexOperationException e) {
 			throw new IndexAccessException(e, "Error initializing iterator");

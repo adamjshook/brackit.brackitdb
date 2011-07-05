@@ -104,7 +104,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	 * current last division.
 	 */
 	private void setLastDivToNextOdd() {
-		currentBuffer[currentLength - 1] += (currentBuffer[currentLength - 1] % 2 + 1);
+		currentBuffer[currentLength - 1] += ((currentBuffer[currentLength - 1] & 1) + 1);
 
 		if (compareMode) {
 			lastDivisionChanged();

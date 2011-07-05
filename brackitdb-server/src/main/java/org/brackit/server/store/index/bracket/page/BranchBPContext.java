@@ -68,10 +68,6 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 	public BranchBPContext(BufferMgr bufferMgr, Tx tx, KeyValuePage page) {
 		super(bufferMgr, tx, (BasePage) page);
 		this.page = page;
-	}
-
-	@Override
-	public void init() {
 		currentPos = 0;
 		entryCount = super.page.getRecordCount();
 	}

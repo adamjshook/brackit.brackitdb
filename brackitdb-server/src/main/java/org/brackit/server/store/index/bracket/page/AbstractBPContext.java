@@ -72,11 +72,7 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 		super(bufferMgr);
 		this.tx = tx;
 		this.page = page;
-		init();
 	}
-
-	@Override
-	public abstract void init();
 
 	@Override
 	public abstract int getEntryCount();
@@ -183,6 +179,13 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 		deleteExternalized(blobPageID);
 	}
 
+	protected void deleteExternalized(PageID pageID)
+			throws IndexOperationException {
+		List<PageID> blobPageID = new ArrayList<PageID>(1);
+		blobPageID.add(pageID);
+		deleteExternalized(blobPageID);
+	}
+
 	protected void deleteExternalized(List<PageID> externalPageIDs)
 			throws IndexOperationException {
 		if (!externalPageIDs.isEmpty()) {
@@ -190,9 +193,9 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 					externalPageIDs));
 		}
 	}
-	
+
 	protected void deleteExternalizedInstantly(byte[] oldValue)
-	throws IndexOperationException {
+			throws IndexOperationException {
 		try {
 			PageID blobPageID = PageID.fromBytes(oldValue);
 			drop(tx, blobPageID);

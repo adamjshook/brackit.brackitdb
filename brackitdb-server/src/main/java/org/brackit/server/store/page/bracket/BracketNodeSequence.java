@@ -95,7 +95,7 @@ public class BracketNodeSequence {
 		System.arraycopy(physicalLowID, 0, data, currentOffset, lowIDLength);
 		currentOffset += lowIDLength;
 		// LowID Type
-		data[currentOffset++] = (byte) lowIDType.getPhysicalValue();
+		data[currentOffset++] = lowIDType.physicalValue;
 		// Bracket keys
 		System.arraycopy(bracketKeys, 0, data, currentOffset,
 				bracketKeys.length);
@@ -201,7 +201,7 @@ public class BracketNodeSequence {
 
 			currentOffset += BracketKey.PHYSICAL_LENGTH;
 
-			if (currentKey.hasDataReference()) {
+			if (currentKey.type.hasDataReference) {
 				int valueLength = BracketPage.getValueLength(currentOffset,
 						true, data);
 				currentOffset += valueLength;
@@ -222,13 +222,13 @@ public class BracketNodeSequence {
 		int valueOffset = 0;
 
 		if (currentOffset == LOW_KEY_OFFSET) {
-			if (getLowKeyType().hasDataReference()) {
+			if (getLowKeyType().hasDataReference) {
 				valueOffset = getStartOffset();
 			} else {
 				return 0;
 			}
 		} else {
-			if (BracketKey.loadType(data, currentOffset).hasDataReference()) {
+			if (BracketKey.loadType(data, currentOffset).hasDataReference) {
 				valueOffset = currentOffset + BracketKey.PHYSICAL_LENGTH;
 			} else {
 				return 0;
