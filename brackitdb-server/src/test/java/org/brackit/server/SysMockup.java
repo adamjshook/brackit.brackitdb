@@ -29,16 +29,17 @@ package org.brackit.server;
 
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.buffer.BufferException;
-import org.brackit.server.io.buffer.Handle;
 import org.brackit.server.io.manager.impl.BufferMgrMockup;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr03;
 import org.brackit.server.store.index.aries.BPlusIndex;
 import org.brackit.server.tx.Tx;
+import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.TxMgr;
 import org.brackit.server.tx.impl.TaMgrMockup;
 import org.brackit.server.tx.locking.services.MetaLockService;
 import org.brackit.server.tx.locking.services.UnifiedMetaLockService;
+import org.brackit.xquery.xdm.DocumentException;
 
 /**
  * 
@@ -74,6 +75,15 @@ public class SysMockup {
 	public MetaLockService<?> mls;
 
 	public SysMockup() throws Exception {
+		create(true);
+	}
+	
+	public SysMockup(boolean createDictionary) throws Exception {
+		create(createDictionary);
+	}
+
+	private void create(boolean createDictionary) throws BufferException, TxException,
+			DocumentException {
 		taMgr = new TaMgrMockup();
 		bufferManager = (BufferMgrMockup) taMgr.getBufferManager();
 		bufferManager.createBuffer(BUFFER_SIZE, BLOCK_SIZE, CONTAINER_NO,
@@ -81,11 +91,11 @@ public class SysMockup {
 		buffer = bufferManager.getBuffer(CONTAINER_NO);
 		dictionary = new DictionaryMgr03(bufferManager);
 		mls = new UnifiedMetaLockService();
-		Tx tx = taMgr.begin();
-		Handle allocatePage = buffer.allocatePage(tx);
-		allocatePage.unlatch();
-		buffer.unfixPage(allocatePage); // Hack to avoid pageNo 0
-		dictionary.create(tx);
+		if (createDictionary) {
+			Tx tx = taMgr.begin();
+			dictionary.create(tx);
+			tx.commit();
+		}
 	}
 
 	public Buffer recreateBuffer() throws BufferException {
