@@ -33,48 +33,58 @@ import org.brackit.server.store.index.bracket.IndexOperationException;
 
 /**
  * @author Martin Hiller
- *
+ * 
  */
 public interface Branch extends BPContext {
 
-public int getPosition();
-	
+	public int getPosition();
+
 	public boolean moveTo(int position) throws IndexOperationException;
-	
-	public boolean insert(byte[] key, byte[] value, boolean isStructureModification, boolean logged, long undoNextLSN) throws IndexOperationException;
-	
-	public void delete(boolean isStructureModification, boolean logged, long undoNextLSN) throws IndexOperationException;
-	
+
+	public boolean insert(byte[] key, byte[] value, boolean logged,
+			long undoNextLSN) throws IndexOperationException;
+
+	public void delete(boolean logged, long undoNextLSN)
+			throws IndexOperationException;
+
 	public PageID getLowPageID() throws IndexOperationException;
-	
-	public void setLowPageID(PageID lowPageID, boolean logged, long undoNextLSN) throws IndexOperationException;
-	
+
+	public void setLowPageID(PageID lowPageID, boolean logged, long undoNextLSN)
+			throws IndexOperationException;
+
 	public byte[] getKey() throws IndexOperationException;
-	
+
 	public PageID getValueAsPageID() throws IndexOperationException;
-	
-	public void setPageIDAsValue(PageID pageID, boolean logged, long undoNextLSN) throws IndexOperationException;	
-	
+
+	public void setPageIDAsValue(PageID pageID, boolean logged, long undoNextLSN)
+			throws IndexOperationException;
+
 	public void moveAfterLast() throws IndexOperationException;
-	
+
 	public boolean isAfterLast() throws IndexOperationException;
-	
+
 	public int calcMaxInlineValueSize(int maxKeySize);
-	
+
 	public int calcMaxKeySize();
-	
-	public PageID searchNextPageID(SearchMode searchMode, byte[] searchKey) throws IndexOperationException;	
-	
-	public int search(SearchMode searchMode, byte[] searchKey, byte[] searchValue) throws IndexOperationException;
-	
+
+	public PageID searchNextPageID(SearchMode searchMode, byte[] searchKey)
+			throws IndexOperationException;
+
+	public int search(SearchMode searchMode, byte[] searchKey,
+			byte[] searchValue) throws IndexOperationException;
+
 	public boolean isCompressed();
-	
+
 	void setLastInLevel(boolean last);
-	
+
 	public boolean isExternalized(int position);
-	
+
 	public int getUsedSpace(int position);
-	
-	public void format(int unitID, PageID rootPageID, int height, boolean compressed, boolean logged, long undoNextLSN) throws IndexOperationException;
-	
+
+	public void format(int unitID, PageID rootPageID, int height,
+			boolean compressed, boolean logged, long undoNextLSN)
+			throws IndexOperationException;
+
+	public boolean setValue(byte[] value, boolean logged, long undoNextLSN)
+			throws IndexOperationException;
 }

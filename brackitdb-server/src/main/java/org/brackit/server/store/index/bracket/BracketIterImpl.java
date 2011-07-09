@@ -119,14 +119,12 @@ public final class BracketIterImpl implements BracketIter {
 			bulkInsert(deweyID, value, ancestorsToInsert);
 			return;
 		}
-		
+
 		assureContextValidity();
 
 		try {
-			page = tree
-					.insertIntoLeaf(tx, rootPageID, page, deweyID, value,
-							ancestorsToInsert, openMode.compact(),
-							openMode.doLog(), -1);
+			page = tree.insertIntoLeaf(tx, rootPageID, page, deweyID, value,
+					ancestorsToInsert, openMode.doLog(), -1);
 			this.key = deweyID;
 			this.value = value;
 			this.insertKey = null;
@@ -186,12 +184,12 @@ public final class BracketIterImpl implements BracketIter {
 					return false;
 				}
 				// use BracketTree to continue the scan
-				page = tree.navigateAfterHintPageFail(tx, rootPageID,
-						navMode, key, openMode, page,
-						deweyIDBuffer, navStatus);
+				page = tree.navigateAfterHintPageFail(tx, rootPageID, navMode,
+						key, openMode, page, deweyIDBuffer, navStatus);
 			} else {
 				// no current page given -> use index
-				page = tree.navigateViaIndexAccess(tx, rootPageID, navMode, key, openMode, deweyIDBuffer);
+				page = tree.navigateViaIndexAccess(tx, rootPageID, navMode,
+						key, openMode, deweyIDBuffer);
 			}
 
 			if (page == null) {
@@ -228,7 +226,7 @@ public final class BracketIterImpl implements BracketIter {
 		} else if (bulkContext != null) {
 			endBulkInsert();
 		}
-		
+
 		assureContextValidity();
 
 		try {
@@ -273,7 +271,7 @@ public final class BracketIterImpl implements BracketIter {
 			throw new IndexAccessException("Index %s not opened for update.",
 					rootPageID);
 		}
-		
+
 		assureContextValidity();
 
 		try {
@@ -322,7 +320,7 @@ public final class BracketIterImpl implements BracketIter {
 			throw new IndexAccessException("Index %s not opened for update.",
 					rootPageID);
 		}
-		
+
 		assureContextValidity();
 
 		try {
@@ -339,10 +337,8 @@ public final class BracketIterImpl implements BracketIter {
 				}
 			}
 
-			page = tree
-					.insertIntoLeaf(tx, rootPageID, page, deweyID, value,
-							ancestorsToInsert, openMode.compact(),
-							openMode.doLog(), -1);
+			page = tree.insertIntoLeaf(tx, rootPageID, page, deweyID, value,
+					ancestorsToInsert, openMode.doLog(), -1);
 			this.key = deweyID;
 			this.value = value;
 			this.insertKey = null;
@@ -365,7 +361,7 @@ public final class BracketIterImpl implements BracketIter {
 	@Override
 	public void deleteSubtree(SubtreeDeleteListener deleteListener)
 			throws IndexAccessException {
-		
+
 		if (insertKey != null) {
 			close();
 			throw new IndexAccessException(
@@ -379,7 +375,7 @@ public final class BracketIterImpl implements BracketIter {
 			throw new IndexAccessException("Index %s not opened for update.",
 					rootPageID);
 		}
-		
+
 		assureContextValidity();
 
 		try {

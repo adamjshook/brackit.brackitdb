@@ -240,5 +240,7 @@ public interface Leaf extends BPContext {
 			throws IndexOperationException;
 
 	public HintPageInformation getHintPageInformation();
-
+	
+	public boolean setValue(byte[] value, boolean isStructureModification,
+			boolean logged, long undoNextLSN) throws IndexOperationException;
 }

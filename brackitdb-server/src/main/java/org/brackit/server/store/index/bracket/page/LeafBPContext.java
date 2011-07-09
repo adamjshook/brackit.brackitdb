@@ -38,6 +38,8 @@ import org.brackit.server.store.index.bracket.HintPageInformation;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.SubtreeDeleteListener;
+import org.brackit.server.store.index.bracket.log.BracketIndexLogOperation;
+import org.brackit.server.store.index.bracket.log.PointerLogOperation;
 import org.brackit.server.store.page.BasePage;
 import org.brackit.server.store.page.bracket.BracketKey;
 import org.brackit.server.store.page.bracket.BracketNodeSequence;
@@ -53,6 +55,7 @@ import org.brackit.server.store.page.bracket.ExternalValueLoader;
 import org.brackit.server.store.page.bracket.navigation.NavigationResult;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 import org.brackit.server.tx.Tx;
+import org.brackit.server.tx.log.LogOperation;
 
 /**
  * @author Martin Hiller
@@ -212,14 +215,13 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	@Override
 	public void setNextPageID(PageID nextPageID, boolean logged,
 			long undoNextLSN) throws IndexOperationException {
-		// LogOperation operation = null;
-		//
-		// if (logged)
-		// {
-		// operation =
-		// BlinkIndexLogOperationHelper.createrPointerLogOperation(BlinkIndexLogOperation.PREV_PAGE,
-		// getPageID(), getRootPageID(), getLowPageID(), prevPageID);
-		// }
+		LogOperation operation = null;
+
+		if (logged) {
+			operation = new PointerLogOperation(
+					BracketIndexLogOperation.NEXT_PAGE, getPageID(),
+					getRootPageID(), getNextPageID(), nextPageID);
+		}
 
 		byte[] value = page.getHandle().page;
 		if (nextPageID != null) {
@@ -232,14 +234,11 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		page.getHandle().setModified(true); // not covered by pageID to
 
-		// if (logged)
-		// {
-		// log(tx, operation, undoNextLSN);
-		// }
-		// else
-		// {
-		// page.getHandle().setAssignedTo(tx);
-		// }
+		if (logged) {
+			log(tx, operation, undoNextLSN);
+		} else {
+			page.getHandle().setAssignedTo(tx);
+		}
 	}
 
 	@Override
@@ -260,7 +259,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	@Override
 	public byte[] getValue() throws IndexOperationException {
-		
+
 		if (CHECK_OFFSET_INTEGRITY) {
 			declareContextSensitive();
 		}
@@ -344,7 +343,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		if (CHECK_OFFSET_INTEGRITY) {
 			declareContextSensitive();
 		}
-		
+
 		PageID oldExternalPageID = null;
 		byte[] oldValue = null;
 		try {
@@ -974,7 +973,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 			if (delPrep.deletePreparation == null
 					|| delPrep.deleteSequenceInfo.producesEmptyLeaf) {
-				// nothing to delete OR page needs to be unchained
+				// nothing to delete OR page needs to be unchained anyway
 			} else {
 				// delete
 				page.delete(delPrep.deletePreparation,

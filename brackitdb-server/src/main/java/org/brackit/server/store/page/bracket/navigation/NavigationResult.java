@@ -28,6 +28,7 @@
 package org.brackit.server.store.page.bracket.navigation;
 
 import org.brackit.server.store.page.bracket.BracketKey;
+import org.brackit.server.store.page.bracket.BracketPage;
 
 /**
  * Result of a navigation operation in the bracket page.
@@ -40,7 +41,7 @@ public class NavigationResult {
 	/**
 	 * Navigation status.
 	 */
-	public NavigationStatus status = NavigationStatus.NOT_EXISTENT;
+	public NavigationStatus status;
 
 	/**
 	 * If the node was found or probably found, this value describes the offset
@@ -63,5 +64,23 @@ public class NavigationResult {
 	/**
 	 * Indicates whether the break condition of the navigation was reached.
 	 */
-	public boolean breakConditionFulfilled = true;
+	public boolean breakConditionFulfilled;
+	
+	/**
+	 * Creates a NavigationResult.
+	 */
+	public NavigationResult() {
+		reset();
+	}
+	
+	/**
+	 * Resets this object to its default values.
+	 */
+	public void reset() {
+		this.status = NavigationStatus.NOT_EXISTENT;
+		this.keyOffset = BracketPage.BEFORE_LOW_KEY_OFFSET;
+		this.keyType = null;
+		this.levelDiff = 0;
+		this.breakConditionFulfilled = true;
+	}
 }

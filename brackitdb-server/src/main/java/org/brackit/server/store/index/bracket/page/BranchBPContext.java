@@ -34,11 +34,15 @@ import org.brackit.server.store.Field;
 import org.brackit.server.store.SearchMode;
 import org.brackit.server.store.blob.BlobStoreAccessException;
 import org.brackit.server.store.index.bracket.IndexOperationException;
+import org.brackit.server.store.index.bracket.log.BracketIndexLogOperation;
+import org.brackit.server.store.index.bracket.log.BranchUpdateLogOperation;
+import org.brackit.server.store.index.bracket.log.PointerLogOperation;
 import org.brackit.server.store.page.BasePage;
 import org.brackit.server.store.page.BufferedPage;
 import org.brackit.server.store.page.RecordFlag;
 import org.brackit.server.store.page.keyvalue.KeyValuePage;
 import org.brackit.server.tx.Tx;
+import org.brackit.server.tx.log.LogOperation;
 
 /**
  * @author Martin Hiller
@@ -49,7 +53,8 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 	private static final Logger log = Logger.getLogger(BranchBPContext.class);
 
 	private static final int LOW_PAGE_FIELD_NO = AbstractBPContext.RESERVED_SIZE;
-	private static final int FLAG_FIELD_NO = LOW_PAGE_FIELD_NO + PageID.getSize();
+	private static final int FLAG_FIELD_NO = LOW_PAGE_FIELD_NO
+			+ PageID.getSize();
 	private static final int HEIGHT_FIELD_NO = FLAG_FIELD_NO + 1;
 	public static final int RESERVED_SIZE = HEIGHT_FIELD_NO + 1;
 
@@ -131,14 +136,13 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 	@Override
 	public void setLowPageID(PageID beforePageID, boolean logged,
 			long undoNextLSN) throws IndexOperationException {
-//		LogOperation operation = null;
-//
-//		if (logged) {
-//			operation = BlinkIndexLogOperationHelper
-//					.createrPointerLogOperation(
-//							BlinkIndexLogOperation.BEFORE_PAGE, getPageID(),
-//							getRootPageID(), getLowPageID(), beforePageID);
-//		}
+		LogOperation operation = null;
+
+		if (logged) {
+			operation = new PointerLogOperation(
+					BracketIndexLogOperation.BEFORE_PAGE, getPageID(),
+					getRootPageID(), getLowPageID(), beforePageID);
+		}
 
 		byte[] value = page.getHandle().page;
 		if (beforePageID != null) {
@@ -148,15 +152,15 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 			PageID.noPageToBytes(value, BasePage.BASE_PAGE_START_OFFSET
 					+ LOW_PAGE_FIELD_NO);
 		}
-		
+
 		page.getHandle().setModified(true); // not covered by pageID to
 		// bytes
 
-//		if (logged) {
-//			log(tx, operation, undoNextLSN);
-//		} else {
-//			page.getHandle().setAssignedTo(tx);
-//		}
+		if (logged) {
+			log(tx, operation, undoNextLSN);
+		} else {
+			page.getHandle().setAssignedTo(tx);
+		}
 	}
 
 	@Override
@@ -170,12 +174,10 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 	}
 
 	@Override
-	public boolean insert(byte[] key, byte[] value,
-			boolean isStructureModification, boolean logged, long undoNextLSN)
-			throws IndexOperationException {
-//		LogOperation operation = null;
-//		byte type = (isStructureModification) ? BlinkIndexLogOperation.SMO_INSERT
-//				: BlinkIndexLogOperation.USER_INSERT;
+	public boolean insert(byte[] key, byte[] value, boolean logged,
+			long undoNextLSN) throws IndexOperationException {
+		LogOperation operation = null;
+
 		boolean externalize = externalizeValue(value);
 
 		// TODO if externalize check if insert of pointer will succeed
@@ -197,10 +199,11 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 		// throw new RuntimeException();
 		// }
 
-//		if (logged) {
-//			operation = BlinkIndexLogOperationHelper.createUpdateLogOperation(
-//					type, getPageID(), getRootPageID(), key, value, null);
-//		}
+		if (logged) {
+			operation = new BranchUpdateLogOperation(
+					BracketIndexLogOperation.BRANCH_INSERT, getPageID(),
+					getRootPageID(), key, null, value);
+		}
 
 		if (externalize) {
 			value = externalize(value);
@@ -214,28 +217,26 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 			page.setFlag(currentPos, RecordFlag.EXTERNALIZED, true);
 		}
 
-//		if (logged) {
-//			log(tx, operation, undoNextLSN);
-//		} else {
-//			page.getHandle().setAssignedTo(tx);
-//		}
+		if (logged) {
+			log(tx, operation, undoNextLSN);
+		} else {
+			page.getHandle().setAssignedTo(tx);
+		}
 		entryCount++;
 
 		return true;
 	}
 
 	@Override
-	public boolean setValue(byte[] value, boolean isStructureModification,
-			boolean logged, long undoNextLSN) throws IndexOperationException {
-//		LogOperation operation = null;
-//		byte type = (isStructureModification) ? BlinkIndexLogOperation.SMO_UPDATE
-//				: BlinkIndexLogOperation.USER_UPDATE;
-//
-//		if (logged) {
-//			operation = BlinkIndexLogOperationHelper.createUpdateLogOperation(
-//					type, getPageID(), getRootPageID(), getKey(), value,
-//					getValue());
-//		}
+	public boolean setValue(byte[] value, boolean logged, long undoNextLSN)
+			throws IndexOperationException {
+		LogOperation operation = null;
+
+		if (logged) {
+			operation = new BranchUpdateLogOperation(
+					BracketIndexLogOperation.BRANCH_UPDATE, getPageID(),
+					getRootPageID(), getKey(), getValue(), value);
+		}
 
 		byte[] oldValue = page.getValue(currentPos);
 
@@ -259,27 +260,25 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 			page.setFlag(currentPos, RecordFlag.EXTERNALIZED, true);
 		}
 
-//		if (logged) {
-//			log(tx, operation, undoNextLSN);
-//		} else {
-//			page.getHandle().setAssignedTo(tx);
-//		}
+		if (logged) {
+			log(tx, operation, undoNextLSN);
+		} else {
+			page.getHandle().setAssignedTo(tx);
+		}
 
 		return true;
 	}
 
 	@Override
-	public void delete(boolean isStructureModification, boolean logged,
-			long undoNextLSN) throws IndexOperationException {
-//		LogOperation operation = null;
-//		byte type = (isStructureModification) ? BlinkIndexLogOperation.SMO_DELETE
-//				: BlinkIndexLogOperation.USER_DELETE;
-//
-//		if (logged) {
-//			operation = BlinkIndexLogOperationHelper.createUpdateLogOperation(
-//					type, getPageID(), getRootPageID(), getKey(), getValue(),
-//					null);
-//		}
+	public void delete(boolean logged, long undoNextLSN)
+			throws IndexOperationException {
+		LogOperation operation = null;
+
+		if (logged) {
+			operation = new BranchUpdateLogOperation(
+					BracketIndexLogOperation.BRANCH_DELETE, getPageID(),
+					getRootPageID(), getKey(), null, getValue());
+		}
 
 		if (page.checkFlag(currentPos, RecordFlag.EXTERNALIZED)) {
 			byte[] oldValue = page.getValue(currentPos);
@@ -288,11 +287,11 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 
 		page.delete(currentPos);
 
-//		if (logged) {
-//			log(tx, operation, undoNextLSN);
-//		} else {
-//			page.getHandle().setAssignedTo(tx);
-//		}
+		if (logged) {
+			log(tx, operation, undoNextLSN);
+		} else {
+			page.getHandle().setAssignedTo(tx);
+		}
 		entryCount--;
 	}
 
@@ -338,23 +337,23 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 	@Override
 	public void setPageIDAsValue(PageID pageID, boolean logged, long undoNextLSN)
 			throws IndexOperationException {
-//		LogOperation operation = null;
-//
-//		if (logged) {
-//			operation = BlinkIndexLogOperationHelper.createUpdateLogOperation(
-//					BlinkIndexLogOperation.SMO_UPDATE, getPageID(),
-//					getRootPageID(), getKey(), pageID.getBytes(), getValue());
-//		}
+		LogOperation operation = null;
+
+		if (logged) {
+			operation = new BranchUpdateLogOperation(
+					BracketIndexLogOperation.BRANCH_UPDATE, getPageID(),
+					getRootPageID(), getKey(), getValue(), pageID.getBytes());
+		}
 
 		byte[] value = (pageID != null) ? pageID.getBytes() : PageID
 				.noPageBytes();
-		setValue(value, true, logged, undoNextLSN);
+		setValue(value, logged, undoNextLSN);
 
-//		if (logged) {
-//			log(tx, operation, undoNextLSN);
-//		} else {
-//			page.getHandle().setAssignedTo(tx);
-//		}
+		if (logged) {
+			log(tx, operation, undoNextLSN);
+		} else {
+			page.getHandle().setAssignedTo(tx);
+		}
 	}
 
 	@Override
@@ -440,13 +439,11 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 		int result = 0;
 
 		if (BufferedPage.DEVEL_MODE && log.isTraceEnabled()) {
-			log.trace(String.format(
-					"Searching for %s (%s, %s) in page %s.",
+			log.trace(String.format("Searching for %s (%s, %s) in page %s.",
 					searchMode,
-					(searchKey != null) ? KEY_TYPE.toString(searchKey)
-							: null,
-					(searchValue != null) ? VALUE_TYPE
-							.toString(searchValue) : null, getPageID()));
+					(searchKey != null) ? KEY_TYPE.toString(searchKey) : null,
+					(searchValue != null) ? VALUE_TYPE.toString(searchValue)
+							: null, getPageID()));
 		}
 
 		if (searchMode.isRandom()) {
@@ -496,10 +493,8 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 											.toString(searchKey) : null,
 									(searchValue != null) ? VALUE_TYPE
 											.toString(searchValue) : null,
-									getPageID(),
-									result,
-									slotNo,
-									KEY_TYPE.toString(page.getKey(slotNo)),
+									getPageID(), result, slotNo, KEY_TYPE
+											.toString(page.getKey(slotNo)),
 									VALUE_TYPE.toString(getValue(slotNo))));
 				}
 
@@ -522,9 +517,8 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 			log.trace(String
 					.format("Determining next child page searching for %s %s in page %s.",
 							searchMode,
-							(searchKey != null) ? keyType
-									.toString(searchKey) : null,
-							getPageID()));
+							(searchKey != null) ? keyType.toString(searchKey)
+									: null, getPageID()));
 		}
 
 		if (recordCount == 0) {
@@ -623,9 +617,8 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 							searchMode, type.toString(searchValue), type
 									.toString((fieldNo == 0) ? page
 											.getKey(lower) : getValue(lower)),
-							type.toString((fieldNo == 0) ? page
-									.getKey(upper) : getValue(upper)), lower,
-							upper));
+							type.toString((fieldNo == 0) ? page.getKey(upper)
+									: getValue(upper)), lower, upper));
 		}
 
 		while (lower < upper) {
@@ -636,9 +629,10 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 			if (BufferedPage.DEVEL_MODE && log.isTraceEnabled()) {
 				log.trace(String
 						.format("Do search %s %s in interval [%s, %s] with bounds lower=%s and upper=%s and pos=%s",
-								searchMode, type.toString(searchValue),
-								type.toString((fieldNo == 0) ? page
-										.getKey(lower) : getValue(lower)), type
+								searchMode, type.toString(searchValue), type
+										.toString((fieldNo == 0) ? page
+												.getKey(lower)
+												: getValue(lower)), type
 										.toString((fieldNo == 0) ? page
 												.getKey(upper)
 												: getValue(upper)), lower,
@@ -700,16 +694,16 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 				if ((i == recordCount - 1) && (!isLastInLevel())) {
 					out.append(i + 1);
 					out.append(": [");
-					out.append((page.getKey(i) != null) ? keyType
-							.toString(page.getKey(i)) : null);
+					out.append((page.getKey(i) != null) ? keyType.toString(page
+							.getKey(i)) : null);
 					out.append("=>");
 					out.append(PageID.fromBytes(page.getValue(i)));
 					out.append("]\n");
 				} else {
 					out.append(i + 1);
 					out.append(": [");
-					out.append((page.getKey(i) != null) ? keyType
-							.toString(page.getKey(i)) : null);
+					out.append((page.getKey(i) != null) ? keyType.toString(page
+							.getKey(i)) : null);
 					out.append("=>");
 					if (!page.checkFlag(i, RecordFlag.EXTERNALIZED)) {
 						out.append((page.getValue(i) != null) ? valueType
@@ -741,8 +735,7 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 
 	@Override
 	public BPContext createClone() throws IndexOperationException {
-		BranchBPContext clone = new BranchBPContext(bufferMgr, tx,
-				page);
+		BranchBPContext clone = new BranchBPContext(bufferMgr, tx, page);
 		return clone;
 	}
 

@@ -38,6 +38,8 @@ import org.brackit.server.store.blob.BlobStoreAccessException;
 import org.brackit.server.store.blob.impl.SimpleBlobStore;
 import org.brackit.server.store.index.bracket.DeleteExternalizedHook;
 import org.brackit.server.store.index.bracket.IndexOperationException;
+import org.brackit.server.store.index.bracket.log.BracketIndexLogOperation;
+import org.brackit.server.store.index.bracket.log.PointerLogOperation;
 import org.brackit.server.store.page.BasePage;
 import org.brackit.server.store.page.bracket.BracketPage;
 import org.brackit.server.store.page.keyvalue.CachingKeyValuePageImpl;
@@ -121,14 +123,13 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 	@Override
 	public void setPrevPageID(PageID prevPageID, boolean logged,
 			long undoNextLSN) throws IndexOperationException {
-		// LogOperation operation = null;
-		//
-		// if (logged)
-		// {
-		// operation =
-		// BlinkIndexLogOperationHelper.createrPointerLogOperation(BlinkIndexLogOperation.PREV_PAGE,
-		// getPageID(), getRootPageID(), getLowPageID(), prevPageID);
-		// }
+		LogOperation operation = null;
+
+		if (logged) {
+			operation = new PointerLogOperation(
+					BracketIndexLogOperation.PREV_PAGE, getPageID(),
+					getRootPageID(), getPrevPageID(), prevPageID);
+		}
 
 		byte[] value = page.getHandle().page;
 		if (prevPageID != null) {
@@ -141,14 +142,11 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 
 		page.getHandle().setModified(true); // not covered by pageID to bytes
 
-		// if (logged)
-		// {
-		// log(tx, operation, undoNextLSN);
-		// }
-		// else
-		// {
-		// page.getHandle().setAssignedTo(tx);
-		// }
+		if (logged) {
+			log(tx, operation, undoNextLSN);
+		} else {
+			page.getHandle().setAssignedTo(tx);
+		}
 	}
 
 	protected boolean externalizeValue(byte[] value) {
@@ -166,11 +164,6 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 		}
 		return value;
 	}
-
-	@Override
-	public abstract boolean setValue(byte[] value,
-			boolean isStructureModification, boolean logged, long undoNextLSN)
-			throws IndexOperationException;
 
 	protected void deleteExternalized(byte[] oldValue)
 			throws IndexOperationException {
@@ -235,9 +228,10 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 		// create new page context
 		AbstractBPContext newContext = this;
 		if (leaf && !this.isLeaf()) {
-			newContext = new LeafBPContext(bufferMgr, tx, new BracketPage(
-					page.getBuffer(), page.getHandle()));
-			newContext.page.clear();
+			BracketPage bracketPage = new BracketPage(page.getBuffer(),
+					page.getHandle());
+			bracketPage.clearData();
+			newContext = new LeafBPContext(bufferMgr, tx, bracketPage);
 		} else if (!leaf && this.isLeaf()) {
 			switch (PageContextFactory.BRANCH_TYPE) {
 			case 1:
@@ -255,7 +249,6 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 						"Unsupported page context type %s.",
 						PageContextFactory.BRANCH_TYPE);
 			}
-			newContext.page.clear();
 		}
 
 		/*

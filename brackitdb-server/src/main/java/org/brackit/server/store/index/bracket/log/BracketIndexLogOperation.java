@@ -25,72 +25,52 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.store.index.bracket.page;
+package org.brackit.server.store.index.bracket.log;
+
+import java.nio.ByteBuffer;
 
 import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.store.index.bracket.IndexOperationException;
-import org.brackit.server.store.page.BasePage;
-import org.brackit.server.tx.thread.Latch;
+import org.brackit.server.tx.log.LogOperation;
 
 /**
  * @author Martin Hiller
- * 
+ *
  */
-public interface BPContext extends Latch {
+public abstract class BracketIndexLogOperation extends LogOperation {
 
-	public PageID getPageID();
+	public static final byte NEXT_PAGE = 31;
 
-	public long getLSN();
+	public static final byte PREV_PAGE = 32;
 
-	public int getSize();
+	public static final byte BEFORE_PAGE = 33;
 
-	public int getFreeSpace();
+	public static final byte BRANCH_INSERT = 34;
 
-	public int getUsedSpace();
+	public static final byte BRANCH_DELETE = 35;
 
-	public PageID getRootPageID();
+	public static final byte BRANCH_UPDATE = 36;
+	
+	public static final byte LEAF_INSERT = 37;
 
-	public int getEntryCount();
+	public static final byte LEAF_DELETE = 38;
 
-	public PageID getPrevPageID() throws IndexOperationException;
+	public static final byte LEAF_UPDATE = 39;
 
-	public void setPrevPageID(PageID lowPageID, boolean logged, long undoNextLSN)
-			throws IndexOperationException;
+	protected static final int BASE_SIZE = 2 * PageID.getSize();
 
-	public boolean moveFirst() throws IndexOperationException;
+	protected PageID rootPageID;
 
-	public boolean hasNext() throws IndexOperationException;
+	protected PageID pageID;
 
-	public boolean moveNext() throws IndexOperationException;
+	protected BracketIndexLogOperation(byte type, PageID pageID, PageID rootPageID) {
+		super(type);
+		this.pageID = pageID;
+		this.rootPageID = rootPageID;
+	}
 
-	public boolean hasPrevious() throws IndexOperationException;
-
-	public boolean moveLast() throws IndexOperationException;
-
-	public String dump(String pageTitle) throws IndexOperationException;
-
-	public BPContext format(boolean leaf, int unitID, PageID rootPageID,
-			int height, boolean compressed, boolean logged, long undoNextLSN)
-			throws IndexOperationException;
-
-	public void deletePage() throws IndexOperationException;
-
-	public void cleanup();
-
-	public BPContext createClone() throws IndexOperationException;
-
-	public int getUnitID();
-
-	public int getHeight();
-
-	boolean isLastInLevel();
-
-	public boolean isLast();
-
-	public byte[] getValue() throws IndexOperationException;
-
-	public boolean isLeaf();
-
-	public BasePage getPage();
-
+	@Override
+	public void toBytes(ByteBuffer bb) {
+		bb.put(pageID.getBytes());
+		bb.put(rootPageID.getBytes());
+	}
 }
