@@ -43,6 +43,7 @@ public class BracketNodeSequence {
 	public static final int LOW_KEY_OFFSET = -1;
 
 	private final XTCdeweyID lowKey;
+	private XTCdeweyID highKey;
 
 	private final byte[] data;
 
@@ -186,6 +187,23 @@ public class BracketNodeSequence {
 	 */
 	public XTCdeweyID getLowKey() {
 		return lowKey;
+	}
+	
+	/**
+	 * Returns the highest DeweyID of this sequence.
+	 * 
+	 * @return the high key
+	 */
+	public XTCdeweyID getHighKey() {
+		if (highKey != null) {
+			return highKey;
+		}
+		
+		DeweyIDBuffer buffer = new DeweyIDBuffer();
+		setToLastNode(buffer);
+		highKey = buffer.getDeweyID();
+		
+		return highKey;
 	}
 
 	/**

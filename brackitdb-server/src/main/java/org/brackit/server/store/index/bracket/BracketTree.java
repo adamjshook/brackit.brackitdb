@@ -1650,7 +1650,7 @@ public final class BracketTree extends PageContextFactory {
 			if (!forUpdate && left.isLast()) {
 				// no split necessary
 				insertLeft = false;
-				left.setHighKey(key);
+				left.setHighKey(key, logged, -1);
 				separatorKey = key.toBytes();
 			} else {
 
@@ -1787,7 +1787,7 @@ public final class BracketTree extends PageContextFactory {
 			}
 
 			// set left highkey
-			if (!left.setHighKeyBytes(separatorKey)) {
+			if (!left.setHighKeyBytes(separatorKey, logged, -1)) {
 				// not enough space for highkey!
 				// move at least one record to the right page
 				XTCdeweyID beforeInsertKey = null;
@@ -1801,7 +1801,7 @@ public final class BracketTree extends PageContextFactory {
 					separatorKey = right.getLowKeyBytes();
 					firstRun = false;
 					// try to set highkey again
-				} while (!left.setHighKeyBytes(separatorKey));
+				} while (!left.setHighKeyBytes(separatorKey, logged, -1));
 
 				// find correct insertion position in right page
 				if (beforeInsertKey != null) {
@@ -1813,7 +1813,7 @@ public final class BracketTree extends PageContextFactory {
 			}
 
 			// set right highkey
-			if (!right.setHighKeyBytes(oldLeftHighKey)) {
+			if (!right.setHighKeyBytes(oldLeftHighKey, logged, -1)) {
 				// can not happen, since right page contains at most the data
 				// from left page
 			}
@@ -1824,7 +1824,7 @@ public final class BracketTree extends PageContextFactory {
 					// nodes still do not fit into left page -> try right page
 					insertLeft = false;
 					separatorKey = firstNode.toBytes();
-					if (!left.setHighKeyBytes(separatorKey)) {
+					if (!left.setHighKeyBytes(separatorKey, logged, -1)) {
 						// not enough space for highkey!
 						// move at least one record to the right page
 						XTCdeweyID beforeInsertKey = null;
@@ -1838,7 +1838,7 @@ public final class BracketTree extends PageContextFactory {
 							separatorKey = right.getLowKeyBytes();
 							firstRun = false;
 							// try to set highkey again
-						} while (!left.setHighKeyBytes(separatorKey));
+						} while (!left.setHighKeyBytes(separatorKey, logged, -1));
 
 						// find correct insertion position in right page
 						if (beforeInsertKey != null) {
@@ -1861,7 +1861,7 @@ public final class BracketTree extends PageContextFactory {
 					middle = allocateLeaf(tx, -1, left.getUnitID(), rootPageID,
 							logged);
 					middlePageID = middle.getPageID();
-					middle.setHighKeyBytes(right.getLowKeyBytes());
+					middle.setHighKeyBytes(right.getLowKeyBytes(), logged, -1);
 					tx.getStatistics()
 							.increment(TxStats.BTREE_LEAF_ALLOCATIONS);
 					if (!middle.insertSequenceAfter(nodesToInsert, logged, -1)) {
@@ -1988,7 +1988,7 @@ public final class BracketTree extends PageContextFactory {
 
 				if (left.isLast()) {
 					// no split necessary
-					left.setHighKey(key);
+					left.setHighKey(key, logged, -1);
 					separatorKey = key.toBytes();
 					insertLeft = false;
 				} else {
@@ -2036,7 +2036,7 @@ public final class BracketTree extends PageContextFactory {
 			} else {
 				// continue bulk insert in right page
 
-				left.setHighKey(key);
+				left.setHighKey(key, logged, -1);
 				right.moveBeforeFirst();
 				byte[] separatorKey = key.toBytes();
 
@@ -2158,7 +2158,7 @@ public final class BracketTree extends PageContextFactory {
 			if (!forUpdate && root.isLast()) {
 				// no split necessary
 				insertLeft = false;
-				root.setHighKey(key);
+				root.setHighKey(key, logged, -1);
 				separatorKey = key.toBytes();
 			} else {
 
@@ -2171,7 +2171,7 @@ public final class BracketTree extends PageContextFactory {
 
 			// copy remaining data from root to left page
 			root.copyContentAndContextTo(left, logged, -1);
-			left.setHighKey(root.getHighKey());
+			left.setHighKey(root.getHighKey(), logged, -1);
 
 			// chain left page with right page
 			left.setNextPageID(right.getPageID(), logged, -1);
@@ -3175,7 +3175,7 @@ public final class BracketTree extends PageContextFactory {
 					// current leaf needs to be unchained
 
 					if (left.getNextPageID() == null) {
-						// left is last page und becomes empty
+						// left is last page and becomes empty
 						left.deleteSubtreeEnd(subtreeRoot, deleteListener,
 								null, false, logged, undoNextLSN);
 						return;
@@ -3266,7 +3266,7 @@ public final class BracketTree extends PageContextFactory {
 			left.setNextPageID(rightPageID, logged, undoNextLSN);
 			right.setPrevPageID(leftPageID, logged, undoNextLSN);
 			byte[] oldHighKey = left.getHighKeyBytes();
-			left.setHighKey(newHighKey);
+			left.setHighKey(newHighKey, logged, undoNextLSN);
 
 			// postcommit hook for deleting the inner pages
 			tx.addPostCommitHook(new DeletePageHook(rootPageID, innerPageIDs));

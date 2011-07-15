@@ -48,8 +48,19 @@ public class PointerLogOperation extends BracketIndexLogOperation {
 	private static final Logger log = Logger
 			.getLogger(PointerLogOperation.class);
 
-	private enum PointerField {
-		PREVIOUS, LOW, NEXT
+	public enum PointerField {
+		PREVIOUS(BracketIndexLogOperation.PREV_PAGE),
+		LOW(BracketIndexLogOperation.BEFORE_PAGE),
+		NEXT(BracketIndexLogOperation.NEXT_PAGE);
+		
+		private byte type;
+		private PointerField(byte type) {
+			this.type = type;
+		}
+		
+		public byte getType() {
+			return type;
+		}
 	}
 
 	private static final int SIZE = BASE_SIZE + 2 * PageID.getSize();
@@ -58,6 +69,13 @@ public class PointerLogOperation extends BracketIndexLogOperation {
 
 	private PageID target;
 
+	public PointerLogOperation(PointerField field, PageID pageID, PageID rootPageID,
+			PageID oldTarget, PageID target) {
+		super(field.getType(), pageID, rootPageID);
+		this.oldTarget = oldTarget;
+		this.target = target;
+	}
+	
 	public PointerLogOperation(byte type, PageID pageID, PageID rootPageID,
 			PageID oldTarget, PageID target) {
 		super(type, pageID, rootPageID);
@@ -96,7 +114,7 @@ public class PointerLogOperation extends BracketIndexLogOperation {
 		try {
 			redoPointerFieldUpdate(tx, getField(), LSN);
 		} catch (IndexAccessException e) {
-			throw new LogException(e, "Redo of format page %s failed.", pageID);
+			throw new LogException(e, "Redo of pointer update in page %s failed.", pageID);
 		}
 	}
 
@@ -105,7 +123,7 @@ public class PointerLogOperation extends BracketIndexLogOperation {
 		try {
 			undoPointerFieldUpdate(tx, getField(), LSN, undoNextLSN);
 		} catch (IndexAccessException e) {
-			throw new LogException(e, "Redo of format page %s failed.", pageID);
+			throw new LogException(e, "Undo of pointer update in page %s failed.", pageID);
 		}
 	}
 

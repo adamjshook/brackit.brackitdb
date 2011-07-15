@@ -51,7 +51,18 @@ public class BranchUpdateLogOperation extends BracketIndexLogOperation {
 			.getLogger(BranchUpdateLogOperation.class);
 
 	public enum ActionType {
-		INSERT, DELETE, UPDATE
+		INSERT(BracketIndexLogOperation.BRANCH_INSERT),
+		DELETE(BracketIndexLogOperation.BRANCH_DELETE),
+		UPDATE(BracketIndexLogOperation.BRANCH_UPDATE);
+		
+		private byte type;
+		private ActionType(byte type) {
+			this.type = type;
+		}
+		
+		public byte getType() {
+			return type;
+		}
 	}
 
 	private static final int SIZE = BASE_SIZE + (2 * SizeConstants.INT_SIZE);
@@ -62,6 +73,14 @@ public class BranchUpdateLogOperation extends BracketIndexLogOperation {
 
 	protected byte[] oldValue;
 
+	public BranchUpdateLogOperation(ActionType actionType, PageID pageID, PageID rootPageID,
+			byte[] key, byte[] oldValue, byte[] value) {
+		super(actionType.getType(), pageID, rootPageID);
+		this.key = key;
+		this.oldValue = oldValue;
+		this.value = value;
+	}
+	
 	public BranchUpdateLogOperation(byte type, PageID pageID, PageID rootPageID,
 			byte[] key, byte[] oldValue, byte[] value) {
 		super(type, pageID, rootPageID);

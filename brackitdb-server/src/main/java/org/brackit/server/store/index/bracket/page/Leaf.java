@@ -60,9 +60,9 @@ public interface Leaf extends BPContext {
 	 * @throws IndexAccessException
 	 */
 	public NavigationStatus navigate(NavigationMode navMode);
-	
+
 	public NavigationStatus navigateFirstChild();
-	
+
 	public NavigationStatus navigateNextSibling();
 
 	/**
@@ -81,7 +81,7 @@ public interface Leaf extends BPContext {
 			NavigationMode navMode);
 
 	public void moveBeforeFirst();
-	
+
 	public boolean moveNextToLastRecord() throws IndexOperationException;
 
 	public boolean insertRecordAfter(XTCdeweyID deweyID, byte[] record,
@@ -139,9 +139,11 @@ public interface Leaf extends BPContext {
 
 	public byte[] getLowKeyBytes();
 
-	public boolean setHighKey(XTCdeweyID highKey);
+	public boolean setHighKey(XTCdeweyID highKey, boolean logged,
+			long undoNextLSN) throws IndexOperationException;
 
-	public boolean setHighKeyBytes(byte[] highKeyBytes);
+	public boolean setHighKeyBytes(byte[] highKeyBytes, boolean logged,
+			long undoNextLSN) throws IndexOperationException;
 
 	public XTCdeweyID getHighKey();
 
@@ -240,7 +242,7 @@ public interface Leaf extends BPContext {
 			throws IndexOperationException;
 
 	public HintPageInformation getHintPageInformation();
-	
+
 	public boolean setValue(byte[] value, boolean isStructureModification,
 			boolean logged, long undoNextLSN) throws IndexOperationException;
 }

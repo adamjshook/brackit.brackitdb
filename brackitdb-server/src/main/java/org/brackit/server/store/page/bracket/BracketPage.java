@@ -185,14 +185,14 @@ public final class BracketPage extends BasePage {
 	 */
 	public void format(PageID basePageID) {
 		setBasePageID(basePageID);
-		clearData();
+		clearData(false);
 	}
 
 	/**
 	 * Removes all nodes from this page. Higher layer information like the high
-	 * key is however preserved.
+	 * key is (optionally) preserved.
 	 */
-	public void clearData() {
+	public void clearData(boolean preserveContextData) {
 		// buffer context data
 		byte[] contextData = getContextData();
 
@@ -201,7 +201,7 @@ public final class BracketPage extends BasePage {
 		setFreeSpaceOffset(handle.getPageSize());
 		page[LOW_KEY_LENGTH_FIELD_NO] = (byte) 0;
 		setContextDataOffset(0);
-		setKeyAreaEndOffset(getKeyAreaStartOffset());
+		setKeyAreaEndOffset(LOW_KEY_START_FIELD_NO);
 
 		if (contextData != null) {
 			setContextData(contextData);
@@ -3297,7 +3297,7 @@ public final class BracketPage extends BasePage {
 
 			if (delPrep.endDeleteOffset == KEY_AREA_END_OFFSET) {
 				// produces empty page
-				clearData();
+				clearData(true);
 				return;
 			}
 

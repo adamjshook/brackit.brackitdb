@@ -28,6 +28,7 @@
 package org.brackit.server.store.index.bracket.page;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -39,7 +40,9 @@ import org.brackit.server.store.blob.impl.SimpleBlobStore;
 import org.brackit.server.store.index.bracket.DeleteExternalizedHook;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.log.BracketIndexLogOperation;
+import org.brackit.server.store.index.bracket.log.FormatLogOperation;
 import org.brackit.server.store.index.bracket.log.PointerLogOperation;
+import org.brackit.server.store.index.bracket.log.PointerLogOperation.PointerField;
 import org.brackit.server.store.page.BasePage;
 import org.brackit.server.store.page.bracket.BracketPage;
 import org.brackit.server.store.page.keyvalue.CachingKeyValuePageImpl;
@@ -126,9 +129,8 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 		LogOperation operation = null;
 
 		if (logged) {
-			operation = new PointerLogOperation(
-					BracketIndexLogOperation.PREV_PAGE, getPageID(),
-					getRootPageID(), getPrevPageID(), prevPageID);
+			operation = new PointerLogOperation(PointerField.PREVIOUS,
+					getPageID(), getRootPageID(), getPrevPageID(), prevPageID);
 		}
 
 		byte[] value = page.getHandle().page;
@@ -202,16 +204,13 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 	public BPContext format(boolean leaf, int unitID, PageID rootPageID,
 			int height, boolean compressed, boolean logged, long undoNextLSN)
 			throws IndexOperationException {
-		// LogOperation operation = null;
-		//
-		// if (logged)
-		// {
-		// operation =
-		// BlinkIndexLogOperationHelper.createFormatLogOperation(getPageID(),
-		// getUnitID(), unitID, rootPageID, getPageType(), pageType,
-		// getKeyType(), keyType, getValueType(), valueType, getHeight(),
-		// height, isUnique(), unique, isCompressed(), compressed);
-		// }
+		LogOperation operation = null;
+
+		if (logged) {
+			operation = new FormatLogOperation(getPageID(), rootPageID,
+					isLeaf(), leaf, getUnitID(), unitID, getHeight(), height,
+					isCompressed(), compressed);
+		}
 
 		/*
 		 * Change page type, init free space info management, and reset entry
@@ -219,19 +218,28 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 		 */
 		page.clear();
 
-		// delete page pointers
-		PageID.noPageToBytes(page.getHandle().page,
-				BasePage.BASE_PAGE_START_OFFSET + PREV_PAGE_FIELD_NO);
-		PageID.noPageToBytes(page.getHandle().page,
-				BasePage.BASE_PAGE_START_OFFSET + RESERVED_SIZE);
+		// delete Branch/Leaf specific header information
+		byte[] pageBytes = page.getHandle().page;
+		Arrays.fill(
+				pageBytes,
+				BasePage.BASE_PAGE_START_OFFSET,
+				BasePage.BASE_PAGE_START_OFFSET
+						+ Math.max(BranchBPContext.RESERVED_SIZE,
+								LeafBPContext.RESERVED_SIZE), (byte) 0);
 
 		// create new page context
 		AbstractBPContext newContext = this;
-		if (leaf && !this.isLeaf()) {
-			BracketPage bracketPage = new BracketPage(page.getBuffer(),
-					page.getHandle());
-			bracketPage.clearData();
-			newContext = new LeafBPContext(bufferMgr, tx, bracketPage);
+		if (leaf) {
+			
+			if (this.isLeaf()) {
+				((LeafBPContext) this).page.clearData(false);
+			} else {
+				BracketPage bracketPage = new BracketPage(page.getBuffer(),
+						page.getHandle());
+				bracketPage.clearData(false);
+				newContext = new LeafBPContext(bufferMgr, tx, bracketPage);
+			}
+			
 		} else if (!leaf && this.isLeaf()) {
 			switch (PageContextFactory.BRANCH_TYPE) {
 			case 1:
@@ -249,6 +257,7 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 						"Unsupported page context type %s.",
 						PageContextFactory.BRANCH_TYPE);
 			}
+			page.clear();
 		}
 
 		/*
@@ -265,14 +274,11 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 		newContext.page.setBasePageID(rootPageID);
 		newContext.setCompressed(compressed);
 
-		// if (logged)
-		// {
-		// log(tx, operation, undoNextLSN);
-		// }
-		// else
-		// {
-		// page.getHandle().setAssignedTo(tx);
-		// }
+		if (logged) {
+			log(tx, operation, undoNextLSN);
+		} else {
+			page.getHandle().setAssignedTo(tx);
+		}
 
 		return newContext;
 	}
