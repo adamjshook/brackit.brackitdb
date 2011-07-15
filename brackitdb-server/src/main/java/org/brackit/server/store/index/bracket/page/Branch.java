@@ -73,8 +73,6 @@ public interface Branch extends BPContext {
 	public int search(SearchMode searchMode, byte[] searchKey,
 			byte[] searchValue) throws IndexOperationException;
 
-	public boolean isCompressed();
-
 	void setLastInLevel(boolean last);
 
 	public boolean isExternalized(int position);

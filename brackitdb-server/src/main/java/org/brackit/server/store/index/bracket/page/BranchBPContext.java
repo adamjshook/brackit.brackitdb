@@ -36,7 +36,9 @@ import org.brackit.server.store.blob.BlobStoreAccessException;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.log.BracketIndexLogOperation;
 import org.brackit.server.store.index.bracket.log.BranchUpdateLogOperation;
+import org.brackit.server.store.index.bracket.log.BranchUpdateLogOperation.ActionType;
 import org.brackit.server.store.index.bracket.log.PointerLogOperation;
+import org.brackit.server.store.index.bracket.log.PointerLogOperation.PointerField;
 import org.brackit.server.store.page.BasePage;
 import org.brackit.server.store.page.BufferedPage;
 import org.brackit.server.store.page.RecordFlag;
@@ -139,8 +141,7 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 		LogOperation operation = null;
 
 		if (logged) {
-			operation = new PointerLogOperation(
-					BracketIndexLogOperation.BEFORE_PAGE, getPageID(),
+			operation = new PointerLogOperation(PointerField.LOW, getPageID(),
 					getRootPageID(), getLowPageID(), beforePageID);
 		}
 
@@ -200,9 +201,8 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 		// }
 
 		if (logged) {
-			operation = new BranchUpdateLogOperation(
-					BracketIndexLogOperation.BRANCH_INSERT, getPageID(),
-					getRootPageID(), key, null, value);
+			operation = new BranchUpdateLogOperation(ActionType.INSERT,
+					getPageID(), getRootPageID(), key, null, value);
 		}
 
 		if (externalize) {
@@ -233,9 +233,8 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 		LogOperation operation = null;
 
 		if (logged) {
-			operation = new BranchUpdateLogOperation(
-					BracketIndexLogOperation.BRANCH_UPDATE, getPageID(),
-					getRootPageID(), getKey(), getValue(), value);
+			operation = new BranchUpdateLogOperation(ActionType.UPDATE,
+					getPageID(), getRootPageID(), getKey(), getValue(), value);
 		}
 
 		byte[] oldValue = page.getValue(currentPos);
@@ -275,9 +274,8 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 		LogOperation operation = null;
 
 		if (logged) {
-			operation = new BranchUpdateLogOperation(
-					BracketIndexLogOperation.BRANCH_DELETE, getPageID(),
-					getRootPageID(), getKey(), null, getValue());
+			operation = new BranchUpdateLogOperation(ActionType.DELETE,
+					getPageID(), getRootPageID(), getKey(), null, getValue());
 		}
 
 		if (page.checkFlag(currentPos, RecordFlag.EXTERNALIZED)) {
@@ -340,9 +338,9 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 		LogOperation operation = null;
 
 		if (logged) {
-			operation = new BranchUpdateLogOperation(
-					BracketIndexLogOperation.BRANCH_UPDATE, getPageID(),
-					getRootPageID(), getKey(), getValue(), pageID.getBytes());
+			operation = new BranchUpdateLogOperation(ActionType.UPDATE,
+					getPageID(), getRootPageID(), getKey(), getValue(),
+					pageID.getBytes());
 		}
 
 		byte[] value = (pageID != null) ? pageID.getBytes() : PageID

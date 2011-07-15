@@ -82,6 +82,8 @@ public interface BPContext extends Latch {
 	public int getUnitID();
 
 	public int getHeight();
+	
+	public boolean isCompressed();
 
 	boolean isLastInLevel();
 
