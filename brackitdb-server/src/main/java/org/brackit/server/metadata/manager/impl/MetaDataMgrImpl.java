@@ -293,14 +293,14 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 				throw new MetaDataException("%s already exists.", path);
 			}
 
-			// object from the cache has been concurrently deleted. Unlock and
-			// retry.
+			// object from the cache has been concurrently deleted. 
+			// Unlock and retry.
 			mls.unlockNode(tx, item.getMasterDocNode().getDeweyID());
 		}
 
 		// Check if persisted object exists
 		String name = path.tail();
-		IndexController<ElNode> indexController = mdCollection
+		IndexController<ElNode> indexController = mdCollection.copyFor(tx)
 				.getIndexController();
 		Stream<? extends Node<?>> stream = indexController.openCASIndex(
 				mdNameCasIndexNo, null, new Str(path.toString()), null, true,
@@ -423,7 +423,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 	private Item<Directory> getItemByID(Tx tx, int id, boolean forUpdate)
 			throws ItemNotFoundException, MetaDataException, DocumentException {
-		IndexController<ElNode> indexController = mdCollection
+		IndexController<ElNode> indexController = mdCollection.copyFor(tx)
 				.getIndexController();
 		Stream<? extends Node<?>> stream = indexController.openCASIndex(
 				mdIDCasIndexNo, null, new Str(Integer.toString(id)), null,
@@ -457,7 +457,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		;
 		String name = path.toString();
 
-		IndexController<ElNode> indexController = mdCollection
+		IndexController<ElNode> indexController = mdCollection.copyFor(tx)
 				.getIndexController();
 		Stream<? extends TXNode<?>> stream = indexController.openCASIndex(
 				mdNameCasIndexNo, null, new Str(name), null, true, true,
@@ -626,7 +626,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 
 		// object cast is a hack for a sun compiler bug
-		if (cachedCollection == mdCollection)
+		if (cachedCollection.getID()
+				.equals(new DocID(MASTERDOC_PAGEID.value())))
 			throw new DocumentException(
 					"Deletion of master document forbidden.");
 
