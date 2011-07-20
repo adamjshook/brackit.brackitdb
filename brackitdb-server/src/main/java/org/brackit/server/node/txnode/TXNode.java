@@ -147,105 +147,106 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	protected abstract E insertSubtree(XTCdeweyID deweyID, SubtreeParser parser)
 			throws OperationNotSupportedException, DocumentException;
 
+	protected Stream<E> getChildrenInternal() throws DocumentException {
+		return (getKind() != Kind.ATTRIBUTE) ? new ChildrenStream<E>(
+				getFirstChild()) : new EmptyStream<E>();
+	}
+
 	@Override
 	public boolean isSelfOf(Node<?> node) {
-		XTCdeweyID otherDeweyID = (node instanceof TXNode) ? ((TXNode) node)
+		XTCdeweyID oDeweyID = (node instanceof TXNode<?>) ? ((TXNode<?>) node)
 				.getDeweyID() : null;
-		return (otherDeweyID != null) && (deweyID.isSelfOf(otherDeweyID));
+		return (oDeweyID != null) && (deweyID.isSelfOf(oDeweyID));
 	}
 
 	@Override
 	public final boolean isAncestorOf(Node<?> node) {
-		XTCdeweyID otherDeweyID = (node instanceof TXNode) ? ((TXNode) node)
+		XTCdeweyID oDeweyID = (node instanceof TXNode<?>) ? ((TXNode<?>) node)
 				.getDeweyID() : null;
-		return (otherDeweyID != null) && (deweyID.isAncestorOf(otherDeweyID));
+		return (oDeweyID != null) && (deweyID.isAncestorOf(oDeweyID));
 	}
 
 	@Override
 	public final boolean isAncestorOrSelfOf(Node<?> node) {
-		XTCdeweyID otherDeweyID = (node instanceof TXNode) ? ((TXNode) node)
+		XTCdeweyID oDeweyID = (node instanceof TXNode<?>) ? ((TXNode<?>) node)
 				.getDeweyID() : null;
-		return (otherDeweyID != null)
-				&& (deweyID.isAncestorOrSelfOf(otherDeweyID));
+		return (oDeweyID != null) && (deweyID.isAncestorOrSelfOf(oDeweyID));
 	}
 
 	@Override
 	public final boolean isAttributeOf(Node<?> node) {
-		XTCdeweyID otherDeweyID = (node instanceof TXNode) ? ((TXNode) node)
+		XTCdeweyID oDeweyID = (node instanceof TXNode<?>) ? ((TXNode<?>) node)
 				.getDeweyID() : null;
-		return (otherDeweyID != null) && (deweyID.isAttributeOf(otherDeweyID));
+		return (oDeweyID != null) && (deweyID.isAttributeOf(oDeweyID));
 	}
 
 	@Override
 	public final boolean isChildOf(Node<?> node) {
-		XTCdeweyID otherDeweyID = (node instanceof TXNode) ? ((TXNode) node)
+		XTCdeweyID oDeweyID = (node instanceof TXNode<?>) ? ((TXNode<?>) node)
 				.getDeweyID() : null;
-		return (otherDeweyID != null) && (deweyID.isChildOf(otherDeweyID))
+		return (oDeweyID != null) && (deweyID.isChildOf(oDeweyID))
 				&& (getKind() != Kind.ATTRIBUTE);
 	}
 
 	@Override
 	public final boolean isDescendantOf(Node<?> node) {
-		XTCdeweyID otherDeweyID = (node instanceof TXNode) ? ((TXNode) node)
+		XTCdeweyID oDeweyID = (node instanceof TXNode<?>) ? ((TXNode<?>) node)
 				.getDeweyID() : null;
-		return (otherDeweyID != null) && (deweyID.isDescendantOf(otherDeweyID))
+		return (oDeweyID != null) && (deweyID.isDescendantOf(oDeweyID))
 				&& (getKind() != Kind.ATTRIBUTE);
 	}
 
 	@Override
 	public final boolean isDescendantOrSelfOf(Node<?> node) {
-		XTCdeweyID otherDeweyID = (node instanceof TXNode) ? ((TXNode) node)
+		XTCdeweyID oDeweyID = (node instanceof TXNode<?>) ? ((TXNode<?>) node)
 				.getDeweyID() : null;
-		return (otherDeweyID != null)
-				&& (deweyID.isDescendantOrSelfOf(otherDeweyID))
+		return (oDeweyID != null) && (deweyID.isDescendantOrSelfOf(oDeweyID))
 				&& ((getKind() != Kind.ATTRIBUTE) || (isSelfOf(node)));
 	}
 
 	@Override
 	public final boolean isDocumentOf(Node<?> node) {
-		XTCdeweyID otherDeweyID = (node instanceof TXNode) ? ((TXNode) node)
+		XTCdeweyID oDeweyID = (node instanceof TXNode<?>) ? ((TXNode<?>) node)
 				.getDeweyID() : null;
-		return (otherDeweyID != null) && (deweyID.isDocumentOf(otherDeweyID));
+		return (oDeweyID != null) && (deweyID.isDocumentOf(oDeweyID));
 	}
 
 	@Override
 	public final boolean isFollowingOf(Node<?> node) {
-		XTCdeweyID otherDeweyID = (node instanceof TXNode) ? ((TXNode) node)
+		XTCdeweyID oDeweyID = (node instanceof TXNode<?>) ? ((TXNode<?>) node)
 				.getDeweyID() : null;
-		return (otherDeweyID != null) && (deweyID.isFollowingOf(otherDeweyID))
+		return (oDeweyID != null) && (deweyID.isFollowingOf(oDeweyID))
 				&& (getKind() != Kind.ATTRIBUTE);
 	}
 
 	@Override
 	public final boolean isFollowingSiblingOf(Node<?> node) {
-		XTCdeweyID otherDeweyID = (node instanceof TXNode) ? ((TXNode) node)
+		XTCdeweyID oDeweyID = (node instanceof TXNode<?>) ? ((TXNode<?>) node)
 				.getDeweyID() : null;
-		return (otherDeweyID != null)
-				&& (deweyID.isFollowingSiblingOf(otherDeweyID))
+		return (oDeweyID != null) && (deweyID.isFollowingSiblingOf(oDeweyID))
 				&& (getKind() != Kind.ATTRIBUTE);
 	}
 
 	@Override
 	public final boolean isParentOf(Node<?> node) {
-		XTCdeweyID otherDeweyID = (node instanceof TXNode) ? ((TXNode) node)
+		XTCdeweyID oDeweyID = (node instanceof TXNode<?>) ? ((TXNode<?>) node)
 				.getDeweyID() : null;
-		return (otherDeweyID != null) && (deweyID.isParentOf(otherDeweyID));
+		return (oDeweyID != null) && (deweyID.isParentOf(oDeweyID));
 	}
 
 	@Override
 	public final boolean isPrecedingOf(Node<?> node) {
-		XTCdeweyID otherDeweyID = (node instanceof TXNode) ? ((TXNode) node)
+		XTCdeweyID oDeweyID = (node instanceof TXNode<?>) ? ((TXNode<?>) node)
 				.getDeweyID() : null;
-		return (otherDeweyID != null) && (deweyID.isPrecedingOf(otherDeweyID))
+		return (oDeweyID != null) && (deweyID.isPrecedingOf(oDeweyID))
 				&& (getKind() != Kind.ATTRIBUTE);
 	}
 
 	@Override
 	public final boolean isPrecedingSiblingOf(Node<?> node) {
-		XTCdeweyID otherDeweyID = (node instanceof TXNode) ? ((TXNode) node)
+		XTCdeweyID oDeweyID = (node instanceof TXNode<?>) ? ((TXNode<?>) node)
 				.getDeweyID() : null;
-		return (otherDeweyID != null)
-				&& (deweyID.isPrecedingSiblingOf(otherDeweyID))
+		return (oDeweyID != null) && (deweyID.isPrecedingSiblingOf(oDeweyID))
 				&& (getKind() != Kind.ATTRIBUTE);
 	}
 
@@ -256,10 +257,9 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 
 	@Override
 	public final boolean isSiblingOf(Node<?> node) {
-		XTCdeweyID otherDeweyID = (node instanceof TXNode) ? ((TXNode) node)
+		XTCdeweyID oDeweyID = (node instanceof TXNode<?>) ? ((TXNode<?>) node)
 				.getDeweyID() : null;
-		return (deweyID.isSiblingOf(otherDeweyID))
-				&& (getKind() != Kind.ATTRIBUTE);
+		return (deweyID.isSiblingOf(oDeweyID)) && (getKind() != Kind.ATTRIBUTE);
 	}
 
 	@Override
@@ -274,8 +274,33 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 
 	@Override
 	public final Stream<E> getChildren() throws DocumentException {
-		return (getKind() != Kind.ATTRIBUTE) ? new ChildrenStream<E>(
-				getFirstChild()) : new EmptyStream<E>();
+		Tx tx = getTX();
+		if (tx.getLockDepth() <= 0) {
+			if (getKind() != Kind.ATTRIBUTE) {
+				return getChildrenInternal();
+			} else {
+				return new EmptyStream<E>();
+			}
+		}
+
+		MetaLockService<?> nls = getNls();
+		if (tx.getIsolationLevel().useReadLocks()) {
+			nls.lockLevelShared(tx, deweyID, tx.getIsolationLevel().lockClass(
+					false), false);
+		}
+
+		Stream<E> children;
+		if (getKind() != Kind.ATTRIBUTE) {
+			children = getChildrenInternal();
+		} else {
+			children = new EmptyStream<E>();
+		}
+
+		if (tx.getIsolationLevel().shortReadLocks()) {
+			// TODO unlock level when stream is closed
+		}
+
+		return children;
 	}
 
 	public final E setAttribute(Node<?> attribute)
@@ -321,8 +346,11 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		if (type != Kind.ELEMENT.ID) {
 			return null;
 		}
-
 		Tx tx = getTX();
+		if (tx.getLockDepth() <= 0) {
+			return getAttributeInternal(name);
+		}
+
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().shortReadLocks()) {
 			nls.lockNodeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
@@ -345,7 +373,6 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 			nls.unlockEdge(tx, deweyID, name);
 			nls.unlockNode(tx, deweyID);
 		}
-
 		return attribute;
 	}
 
@@ -355,8 +382,11 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		if (type != Kind.ELEMENT.ID) {
 			return new EmptyStream<E>();
 		}
-
 		Tx tx = getTX();
+		if (tx.getLockDepth() <= 0) {
+			return getAttributesInternal();
+		}
+
 		MetaLockService<?> nls = getNls();
 		XTCdeweyID attributeRootDeweyID = deweyID.getAttributeRootID();
 
@@ -390,8 +420,11 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		if ((type != Kind.ELEMENT.ID) && (type != Kind.DOCUMENT.ID)) {
 			return null;
 		}
-
 		Tx tx = getTX();
+		if (tx.getLockDepth() <= 0) {
+			return getFirstChildInternal();
+		}
+
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().shortReadLocks()) {
 			nls.lockNodeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
@@ -423,8 +456,11 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		if ((type != Kind.ELEMENT.ID) && (type != Kind.DOCUMENT.ID)) {
 			return null;
 		}
-
 		Tx tx = getTX();
+		if (tx.getLockDepth() <= 0) {
+			return getLastChildInternal();
+		}
+
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().shortReadLocks()) {
 			nls.lockNodeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
@@ -456,21 +492,21 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		if ((type != Kind.ELEMENT.ID) && (type != Kind.ATTRIBUTE.ID)) {
 			return null;
 		}
-
-		Tx tx = getTX();
-		boolean shortReadLocks = tx.getIsolationLevel().shortReadLocks();
-		if (shortReadLocks) {
-			getNls().lockNodeShared(tx, deweyID,
-					tx.getIsolationLevel().lockClass(false), false);
-		}
-
-		String name = getNameInternal();
-
-		if (shortReadLocks) {
-			getNls().unlockNode(tx, deweyID);
-		}
-
-		return name;
+		return getNameInternal();
+		// TODO extremely fine-grained and expensive!
+		// should we keep this alive?
+		/*
+		 * Tx tx = getTX(); boolean shortReadLocks =
+		 * tx.getIsolationLevel().shortReadLocks(); if (shortReadLocks) {
+		 * getNls().lockNodeShared(tx, deweyID,
+		 * tx.getIsolationLevel().lockClass(false), false); }
+		 * 
+		 * String name = getNameInternal();
+		 * 
+		 * if (shortReadLocks) { getNls().unlockNode(tx, deweyID); }
+		 * 
+		 * return name;
+		 */
 	}
 
 	@Override
@@ -478,8 +514,11 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		if ((type == Kind.DOCUMENT.ID) || (type == Kind.ATTRIBUTE.ID)) {
 			return null;
 		}
-
 		Tx tx = getTX();
+		if (tx.getLockDepth() <= 0) {
+			return getNextSiblingInternal();
+		}
+
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().shortReadLocks()) {
 			nls.lockNodeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
@@ -509,6 +548,10 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	public final E getNode(XTCdeweyID deweyID) throws NodeNotFoundException,
 			DocumentException {
 		Tx tx = getTX();
+		if ((tx.getLockDepth() <= 0) && (!deweyID.isDocument())) {
+			return getNodeInternal(deweyID);
+		}
+
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().useReadLocks()) {
 			nls.lockNodeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
@@ -526,15 +569,17 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 
 	@Override
 	public final E getParent() throws DocumentException {
-		Tx tx = getTX();
-		MetaLockService<?> nls = getNls();
-		XTCdeweyID parentDeweyID = deweyID.getParent();
-
-		if (parentDeweyID == null) {
+		if (deweyID.isDocument()) {
 			return null;
 		}
+		Tx tx = getTX();
+		if (tx.getLockDepth() <= 0) {
+			return getParentInternal();
+		}
 
+		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().longReadLocks()) {
+			XTCdeweyID parentDeweyID = deweyID.getParent();
 			nls.lockNodeShared(tx, parentDeweyID, tx.getIsolationLevel()
 					.lockClass(false), false);
 		}
@@ -549,8 +594,11 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		if ((type == Kind.DOCUMENT.ID) || (type == Kind.ATTRIBUTE.ID)) {
 			return null;
 		}
-
 		Tx tx = getTX();
+		if (tx.getLockDepth() <= 0) {
+			return getPreviousSiblingInternal();
+		}
+
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().shortReadLocks()) {
 			nls.lockNodeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
@@ -580,14 +628,26 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	@Override
 	public final Stream<? extends E> getSubtree() throws DocumentException {
 		Tx tx = getTX();
+		if (tx.getLockDepth() <= 0) {
+			if (getKind() != Kind.ATTRIBUTE) {
+				return getSubtreeInternal();
+			} else {
+				return new AtomStream(this);
+			}
+		}
+
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().useReadLocks()) {
 			nls.lockTreeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
 					false), false);
 		}
 
-		Stream<? extends E> subtree = (getKind() != Kind.ATTRIBUTE) ? getSubtreeInternal()
-				: new AtomStream(this);
+		Stream<? extends E> subtree;
+		if (getKind() != Kind.ATTRIBUTE) {
+			subtree = getSubtreeInternal();
+		} else {
+			subtree = new AtomStream(this);
+		}
 
 		if (tx.getIsolationLevel().shortReadLocks()) {
 			// TODO unlock tree when stream is closed
@@ -599,19 +659,23 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	@Override
 	public final String getValue() throws DocumentException {
 		Tx tx = getTX();
-		boolean shortReadLocks = tx.getIsolationLevel().shortReadLocks();
-		if (shortReadLocks) {
+		if (tx.getLockDepth() <= 0) {
+			return getValueInternal();
+		}
+
+		MetaLockService<?> nls = getNls();
+		if (tx.getIsolationLevel().shortReadLocks()) {
 			if (tx.getLockDepth() < deweyID.getLevel())
-				getNls().lockTreeUpdate(tx, deweyID,
-						tx.getIsolationLevel().lockClass(false), false);
+				nls.lockTreeUpdate(tx, deweyID, tx.getIsolationLevel()
+						.lockClass(false), false);
 			else
-				getNls().lockTreeShared(tx, deweyID,
-						tx.getIsolationLevel().lockClass(false), false);
+				nls.lockTreeShared(tx, deweyID, tx.getIsolationLevel()
+						.lockClass(false), false);
 		}
 
 		String value = getValueInternal();
 
-		if (shortReadLocks) {
+		if (tx.getIsolationLevel().shortReadLocks()) {
 			getNls().unlockNode(tx, deweyID);
 		}
 
