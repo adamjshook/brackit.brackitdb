@@ -179,6 +179,9 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 	@Override
 	public void rollback() throws TxException {
+		if (getState() != TxState.RUNNING) {
+			throw new TxException("Rollback failed: Tx %s is in state %s", txID, getState());
+		}
 		boolean processRollback = voteRollback();
 
 		if (processRollback) {
@@ -193,6 +196,9 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	}
 
 	private void doCommit() throws TxException {
+		if (getState() != TxState.RUNNING) {
+			throw new TxException("Commit failed: Tx %s is in state %s", txID, getState());
+		}
 		try {
 			if (log.isDebugEnabled()) {
 				log.debug(String.format("Commit of %s started.", toString()));
