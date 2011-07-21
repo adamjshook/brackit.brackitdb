@@ -190,10 +190,7 @@ public final class BracketTree extends PageContextFactory {
 
 			} catch (IndexOperationException e) {
 				if (leaf != null) {
-					try {
-						leaf.cleanup();
-					} catch (Exception ex) {
-					}
+					leaf.cleanup();
 				}
 				throw new IndexAccessException(e,
 						"Error during hint page scan.");
@@ -444,10 +441,7 @@ public final class BracketTree extends PageContextFactory {
 			for (int i = 0; i < leafs.length; i++) {
 				if (leafs[i] != null) {
 					if (i != skipIndex) {
-						try {
-							leafs[i].cleanup();
-						} catch (Exception e) {
-						}
+						leafs[i].cleanup();
 					}
 				} else {
 					return;
@@ -647,10 +641,7 @@ public final class BracketTree extends PageContextFactory {
 			} catch (IndexOperationException e) {
 				cleanupPages(lastPages, -1);
 				if (leaf != null) {
-					try {
-						leaf.cleanup();
-					} catch (Exception ex) {
-					}
+					leaf.cleanup();
 				}
 				throw new IndexAccessException(e,
 						"Error during hint page scan.");
@@ -763,16 +754,10 @@ public final class BracketTree extends PageContextFactory {
 
 			} catch (IndexOperationException e) {
 				if (lastPage != null) {
-					try {
-						lastPage.cleanup();
-					} catch (Exception ex) {
-					}
+					lastPage.cleanup();
 				}
 				if (leaf != null) {
-					try {
-						leaf.cleanup();
-					} catch (Exception ex) {
-					}
+					leaf.cleanup();
 				}
 				throw new IndexAccessException(e,
 						"Error during leaf page scan over index.");
@@ -1230,7 +1215,7 @@ public final class BracketTree extends PageContextFactory {
 			 * perform a split
 			 */
 			while (!leaf.insertRecordAfter(insertKey, insertValue,
-					ancestorsToInsert, logged, undoNextLSN)) {
+					ancestorsToInsert, logged, undoNextLSN, false)) {
 				if (log.isTraceEnabled()) {
 					log.trace(String
 							.format("Splitting leaf page %s for insert of (%s, %s) at %s",
@@ -1301,7 +1286,7 @@ public final class BracketTree extends PageContextFactory {
 			 * perform a split
 			 */
 			while (!page.insertRecordAfter(insertKey, insertValue,
-					ancestorsToInsert, logged, undoNextLSN)) {
+					ancestorsToInsert, logged, undoNextLSN, false)) {
 				if (log.isTraceEnabled()) {
 					log.trace(String.format(
 							"Splitting page %s for insert of (%s, %s) at %s",
@@ -1937,22 +1922,13 @@ public final class BracketTree extends PageContextFactory {
 			throw new IndexAccessException(e);
 		} finally {
 			if (left != null) {
-				try {
-					left.cleanup();
-				} catch (Exception ex) {
-				}
+				left.cleanup();
 			}
 			if (right != null) {
-				try {
-					right.cleanup();
-				} catch (Exception ex) {
-				}
+				right.cleanup();
 			}
 			if (middle != null) {
-				try {
-					middle.cleanup();
-				} catch (Exception ex) {
-				}
+				middle.cleanup();
 			}
 		}
 	}
@@ -3051,10 +3027,7 @@ public final class BracketTree extends PageContextFactory {
 		} catch (IndexOperationException e) {
 			parent.cleanup();
 			if (next != null) {
-				try {
-					next.cleanup();
-				} catch (Exception ex) {
-				}
+				next.cleanup();
 			}
 			throw new IndexAccessException(e);
 		}
@@ -3282,29 +3255,17 @@ public final class BracketTree extends PageContextFactory {
 			left = null;
 
 		} catch (IndexOperationException e) {
-			try {
-				if (left != null) {
-					left.cleanup();
-				}
-			} catch (Exception ex) {
+			if (left != null) {
+				left.cleanup();
 			}
-			try {
-				if (right != null) {
-					right.cleanup();
-				}
-			} catch (Exception ex) {
+			if (right != null) {
+				right.cleanup();
 			}
-			try {
-				if (temp != null) {
-					temp.cleanup();
-				}
-			} catch (Exception ex) {
+			if (temp != null) {
+				temp.cleanup();
 			}
-			try {
-				if (parent != null) {
-					parent.cleanup();
-				}
-			} catch (Exception ex) {
+			if (parent != null) {
+				parent.cleanup();
 			}
 			throw new IndexAccessException(e, "Error deleting from index %s.",
 					rootPageID);
@@ -3349,17 +3310,11 @@ public final class BracketTree extends PageContextFactory {
 			}
 
 		} catch (IndexOperationException e) {
-			try {
-				if (left != null) {
-					left.cleanup();
-				}
-			} catch (Exception ex) {
+			if (left != null) {
+				left.cleanup();
 			}
-			try {
-				if (right != null) {
-					right.cleanup();
-				}
-			} catch (Exception ex) {
+			if (right != null) {
+				right.cleanup();
 			}
 			throw new IndexAccessException(e,
 					"Error moving nodes between leaf pages.");

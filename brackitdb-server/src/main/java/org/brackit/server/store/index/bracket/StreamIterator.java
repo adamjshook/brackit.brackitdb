@@ -66,10 +66,7 @@ public abstract class StreamIterator implements Stream<BracketNode> {
 	@Override
 	public void close() {
 		if (page != null) {
-			try {
-				page.cleanup();
-			} catch (Exception ex) {
-			}
+			page.cleanup();
 			page = null;
 		}
 	}
@@ -105,10 +102,7 @@ public abstract class StreamIterator implements Stream<BracketNode> {
 			return node;
 		
 		} catch (IndexOperationException e) {
-			try {
-				page.cleanup();
-			} catch (Exception ex) {
-			}
+			page.cleanup();
 			page = null;
 			throw new DocumentException("Error navigating to next node.", e);
 		} catch (IndexAccessException e) {

@@ -222,9 +222,8 @@ public class PointerLogOperation extends BracketIndexLogOperation {
 			page = new BracketTree(tx.getBufferManager()).getPage(tx, pageID,
 					true, false);
 
-			if ((page.getLSN() != LSN)
-					|| ((page.getRootPageID() != null)
-					&& (!page.getRootPageID().equals(rootPageID)))) {
+			if (page.getRootPageID() == null
+					|| !page.getRootPageID().equals(rootPageID)) {
 				page.cleanup();
 				throw new IndexAccessException(
 						"Undo pointer update of page %s failed"

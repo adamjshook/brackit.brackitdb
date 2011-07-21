@@ -206,11 +206,8 @@ public final class BracketIterImpl implements BracketIter {
 			close();
 			throw e;
 		} catch (IndexOperationException e) {
-			try {
-				page.cleanup();
-				page = null;
-			} catch (Exception ex) {
-			}
+			page.cleanup();
+			page = null;
 			close();
 			throw new IndexAccessException(e,
 					"Error navigating to specified record.");
@@ -246,11 +243,8 @@ public final class BracketIterImpl implements BracketIter {
 			close();
 			throw e;
 		} catch (IndexOperationException e) {
-			try {
-				page.cleanup();
-				page = null;
-			} catch (Exception ex) {
-			}
+			page.cleanup();
+			page = null;
 			close();
 			throw new IndexAccessException(e, "Error moving to next record.");
 		}
@@ -348,11 +342,8 @@ public final class BracketIterImpl implements BracketIter {
 			close();
 			throw e;
 		} catch (IndexOperationException e) {
-			try {
-				page.cleanup();
-				page = null;
-			} catch (Exception ex) {
-			}
+			page.cleanup();
+			page = null;
 			close();
 			throw new IndexAccessException(e, "Error fetching next page.");
 		}

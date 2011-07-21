@@ -84,9 +84,29 @@ public interface Leaf extends BPContext {
 
 	public boolean moveNextToLastRecord() throws IndexOperationException;
 
+	/**
+	 * 
+	 * @param deweyID
+	 * @param record
+	 * @param ancestorsToInsert
+	 * @param logged
+	 * @param undoNextLSN
+	 * @param bulkLog
+	 *            if logged and delayedLog are set to true, delayed logging will
+	 *            be performed (i.e. no log record is written within this
+	 *            method, but at a later point in time)
+	 * @return
+	 * @throws IndexOperationException
+	 */
 	public boolean insertRecordAfter(XTCdeweyID deweyID, byte[] record,
-			int ancestorsToInsert, boolean logged, long undoNextLSN)
-			throws IndexOperationException;
+			int ancestorsToInsert, boolean logged, long undoNextLSN,
+			boolean bulkLog) throws IndexOperationException;
+
+	/**
+	 * Writes an INSERT log for the collected nodes in the 'insertRecordAfter'
+	 * method. May only be used in combination with the above-mentioned method.
+	 */
+	public void bulkLog() throws IndexOperationException;
 
 	public boolean insertRecord(XTCdeweyID deweyID, byte[] record,
 			int ancestorsToInsert, boolean logged, long undoNextLSN)
@@ -239,6 +259,17 @@ public interface Leaf extends BPContext {
 	 */
 	public DeleteSequenceInfo deleteSequence(XTCdeweyID leftBorderDeweyID,
 			XTCdeweyID rightBorderDeweyID, boolean logged, long undoNextLSN)
+			throws IndexOperationException;
+
+	/**
+	 * Deletes all nodes from this page. Highkey and other header data will be
+	 * preserved.
+	 * 
+	 * @param logged
+	 * @param undoNextLSN
+	 * @throws IndexOperationException
+	 */
+	public void clearData(boolean logged, long undoNextLSN)
 			throws IndexOperationException;
 
 	public HintPageInformation getHintPageInformation();

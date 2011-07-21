@@ -75,7 +75,7 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 		super(actionType.getType(), pageID, rootPageID);
 		this.nodes = nodes;
 	}
-	
+
 	public NodeSequenceLogOperation(byte type, PageID pageID,
 			PageID rootPageID, BracketNodeSequence nodes) {
 		super(type, pageID, rootPageID);
@@ -187,17 +187,25 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 				case INSERT:
 					if (!leaf.insertSequence(nodes, false, -1)) {
 						leaf.cleanup();
-						throw new IndexAccessException("Not enough space to redo the insert in page %s.", pageID);
+						throw new IndexAccessException(
+								"Not enough space to redo the insert in page %s.",
+								pageID);
 					}
 					break;
 				case DELETE:
-					DeleteSequenceInfo delInfo = leaf.deleteSequence(nodes.getLowKey(), nodes.getHighKey(), false, -1);
+					DeleteSequenceInfo delInfo = leaf.deleteSequence(
+							nodes.getLowKey(), nodes.getHighKey(), false, -1);
 					if (delInfo.checkLeftNeighbor || delInfo.checkRightNeighbor) {
 						leaf.cleanup();
-						throw new IndexAccessException("Deletion redo in page %s spans across several leaf pages.", pageID);
-					} else if (delInfo.producesEmptyLeaf && leaf.getNextPageID() != null) {
+						throw new IndexAccessException(
+								"Deletion redo in page %s spans across several leaf pages.",
+								pageID);
+					} else if (delInfo.producesEmptyLeaf
+							&& leaf.getNextPageID() != null) {
 						leaf.cleanup();
-						throw new IndexAccessException("Deletion redo in page %s would result in an empty page.", pageID);
+						throw new IndexAccessException(
+								"Deletion redo in page %s would result in an empty page.",
+								pageID);
 					}
 					break;
 				}
@@ -234,9 +242,8 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 		try {
 			page = tree.getPage(tx, pageID, true, false);
 
-			if ((page.getLSN() != LSN)
-					|| ((page.getRootPageID() != null) && (!page
-							.getRootPageID().equals(rootPageID)))) {
+			if (page.getRootPageID() == null
+					|| !page.getRootPageID().equals(rootPageID)) {
 				page.cleanup();
 				throw new IndexAccessException(
 						"Undo content update of page %s failed"
@@ -254,19 +261,28 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 
 			switch (actionType) {
 			case INSERT:
-				DeleteSequenceInfo delInfo = leaf.deleteSequence(nodes.getLowKey(), nodes.getHighKey(), true, undoNextLSN);
+				DeleteSequenceInfo delInfo = leaf.deleteSequence(
+						nodes.getLowKey(), nodes.getHighKey(), true,
+						undoNextLSN);
 				if (delInfo.checkLeftNeighbor || delInfo.checkRightNeighbor) {
 					leaf.cleanup();
-					throw new IndexAccessException("Insertion undo in page %s spans across several leaf pages.", pageID);
-				} else if (delInfo.producesEmptyLeaf && leaf.getNextPageID() != null) {
+					throw new IndexAccessException(
+							"Insertion undo in page %s spans across several leaf pages.",
+							pageID);
+				} else if (delInfo.producesEmptyLeaf
+						&& leaf.getNextPageID() != null) {
 					leaf.cleanup();
-					throw new IndexAccessException("Insertion undo in page %s would result in an empty page.", pageID);
+					throw new IndexAccessException(
+							"Insertion undo in page %s would result in an empty page.",
+							pageID);
 				}
 				break;
 			case DELETE:
 				if (!leaf.insertSequence(nodes, true, undoNextLSN)) {
 					leaf.cleanup();
-					throw new IndexAccessException("Not enough space to undo the deletion in page %s.", pageID);
+					throw new IndexAccessException(
+							"Not enough space to undo the deletion in page %s.",
+							pageID);
 				}
 				break;
 			}
@@ -301,8 +317,8 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 		}
 
 		return String.format("%s(%s %s of index %s): %s", getClass()
-				.getSimpleName(), typeString, pageID, rootPageID,
-				nodes.getLowKey());
+				.getSimpleName(), typeString, pageID, rootPageID, nodes
+				.getLowKey());
 	}
 
 }

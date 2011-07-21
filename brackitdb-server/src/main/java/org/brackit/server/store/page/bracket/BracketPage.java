@@ -2548,7 +2548,8 @@ public final class BracketPage extends BasePage {
 		}
 
 		if (startOffset == endOffset) {
-			return new BracketNodeSequence(null, 0);
+			// empty sequence
+			return new BracketNodeSequence();
 		}
 
 		byte[] lowIDBytes = startDeweyID.toBytes();
@@ -2770,8 +2771,10 @@ public final class BracketPage extends BasePage {
 					break;
 				}
 				// buffer current node's information
-				previousOffset = currentOffset;
-				tempDeweyID.backup();
+				if (currentKey.type != BracketKey.Type.OVERFLOW) {
+					previousOffset = currentOffset;
+					tempDeweyID.backup();
+				}
 				currentOffset += BracketKey.PHYSICAL_LENGTH
 						+ currentKey.type.dataReferenceLength;
 			}
@@ -2803,6 +2806,7 @@ public final class BracketPage extends BasePage {
 		BracketKey.Type currentType = null;
 
 		boolean rightBorderFound = false;
+		boolean firstRun = true;
 
 		if (currentOffset == LOW_KEY_OFFSET) {
 			// separate handling for the lowkey
@@ -2821,6 +2825,7 @@ public final class BracketPage extends BasePage {
 				// only the lowkey should be deleted
 				rightBorderFound = true;
 			}
+			firstRun = false;
 		}
 
 		BracketKey currentKey = new BracketKey();
@@ -2831,7 +2836,9 @@ public final class BracketPage extends BasePage {
 			currentKey.load(page, currentOffset);
 			currentType = currentKey.type;
 			// refresh DeweyID
-			tempDeweyID.update(currentKey, false);
+			if (!firstRun) {
+				tempDeweyID.update(currentKey, false);
+			}
 
 			if (currentType != BracketKey.Type.OVERFLOW) {
 				// check break condition -> DeweyID larger than right border
@@ -2856,6 +2863,7 @@ public final class BracketPage extends BasePage {
 				currentOffset += BracketKey.PHYSICAL_LENGTH;
 				finalOverflowKeys++;
 			}
+			firstRun = false;
 		}
 
 		// check whether endDeleteNode was found
@@ -3680,10 +3688,9 @@ public final class BracketPage extends BasePage {
 	public int insertSequence(BracketNodeSequence nodes,
 			DeweyIDBuffer tempDeweyID) {
 
-		final byte[] data = nodes.getData();
 		int currentOffset = BEFORE_LOW_KEY_OFFSET;
 
-		if (data == null || data.length == 0) {
+		if (nodes.isEmpty()) {
 			return currentOffset;
 		}
 
@@ -3722,7 +3729,7 @@ public final class BracketPage extends BasePage {
 
 		final byte[] data = nodes.getData();
 
-		if (data == null || data.length == 0) {
+		if (nodes.isEmpty()) {
 			return currentOffset;
 		}
 

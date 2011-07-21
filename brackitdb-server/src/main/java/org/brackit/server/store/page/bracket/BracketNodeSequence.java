@@ -38,16 +38,16 @@ import org.brackit.server.node.XTCdeweyID;
  * @author Martin Hiller
  * 
  */
-public class BracketNodeSequence {
+public final class BracketNodeSequence {
 
 	public static final int LOW_KEY_OFFSET = -1;
 
-	private final XTCdeweyID lowKey;
+	private XTCdeweyID lowKey;
 	private XTCdeweyID highKey;
 
-	private final byte[] data;
+	private byte[] data;
 
-	private final int numberOfDataRecords;
+	private int numberOfDataRecords;
 
 	/**
 	 * Constructs a BracketNodeSequence from a single node.
@@ -85,7 +85,9 @@ public class BracketNodeSequence {
 			throw new RuntimeException("StartDeweyID is too long!");
 		}
 
-		byte[] valueLength = BracketPage.getValueLengthField(value, externalized);;
+		byte[] valueLength = BracketPage.getValueLengthField(value,
+				externalized);
+		;
 
 		int dataLength = 1 + lowIDLength + 1 + bracketKeys.length
 				+ valueLength.length + value.length;
@@ -128,7 +130,7 @@ public class BracketNodeSequence {
 		this.numberOfDataRecords = numberOfDataRecords;
 		this.lowKey = readLowKey();
 	}
-	
+
 	/**
 	 * Creates a BracketNodeSequence from the given internal byte representation
 	 * 
@@ -139,7 +141,7 @@ public class BracketNodeSequence {
 	protected BracketNodeSequence(byte[] internalRepresentation) {
 		this.data = internalRepresentation;
 		this.lowKey = readLowKey();
-		
+
 		// determine number of data records
 		int numberOfRecords = 0;
 		int currentOffset = getStartOffset();
@@ -157,13 +159,27 @@ public class BracketNodeSequence {
 
 			if (currentKeyType.hasDataReference) {
 				numberOfRecords++;
-				valueLength = BracketPage.getValueLength(currentOffset,
-						true, data);
+				valueLength = BracketPage.getValueLength(currentOffset, true,
+						data);
 				currentOffset += valueLength;
 			}
 		}
-		
-		this.numberOfDataRecords = numberOfRecords;	
+
+		this.numberOfDataRecords = numberOfRecords;
+	}
+	
+	/**
+	 * Creates an empty sequence.
+	 */
+	public BracketNodeSequence() {
+		this.data = null;
+		this.lowKey = null;
+		this.highKey = null;
+		this.numberOfDataRecords = 0;
+	}
+	
+	public boolean isEmpty() {
+		return (data == null);
 	}
 
 	/**
@@ -188,21 +204,26 @@ public class BracketNodeSequence {
 	public XTCdeweyID getLowKey() {
 		return lowKey;
 	}
-	
+
 	/**
 	 * Returns the highest DeweyID of this sequence.
 	 * 
 	 * @return the high key
 	 */
 	public XTCdeweyID getHighKey() {
+		
+		if (this.isEmpty()) {
+			return null;
+		}
+		
 		if (highKey != null) {
 			return highKey;
 		}
-		
+
 		DeweyIDBuffer buffer = new DeweyIDBuffer();
 		setToLastNode(buffer);
 		highKey = buffer.getDeweyID();
-		
+
 		return highKey;
 	}
 
@@ -210,6 +231,9 @@ public class BracketNodeSequence {
 	 * @return bracket key type of the low key
 	 */
 	protected BracketKey.Type getLowKeyType() {
+		if (this.isEmpty()) {
+			return null;
+		}
 		int lowIDTypeField = 1 + (data[0] & 255);
 		return BracketKey.Type.getByPhysicalValue(data[lowIDTypeField] & 255);
 	}
@@ -218,6 +242,9 @@ public class BracketNodeSequence {
 	 * @return the start offset
 	 */
 	protected int getStartOffset() {
+		if (this.isEmpty()) {
+			return 0;
+		}
 		return 2 + (data[0] & 255);
 	}
 
@@ -264,6 +291,9 @@ public class BracketNodeSequence {
 				currentOffset += valueLength;
 			}
 		}
+		if (highKey == null) {
+			highKey = deweyIDbuffer.getDeweyID();
+		}
 		return lastNodeOffset;
 	}
 
@@ -275,6 +305,10 @@ public class BracketNodeSequence {
 	 * @return the value length of the current node
 	 */
 	protected int getValueLength(int currentOffset) {
+		
+		if (this.isEmpty()) {
+			return 0;
+		}
 
 		int valueOffset = 0;
 
@@ -300,8 +334,8 @@ public class BracketNodeSequence {
 	 */
 	@Override
 	public String toString() {
-		if (data == null || data.length == 0) {
-			return "Empty Chain";
+		if (this.isEmpty()) {
+			return "Empty Sequence";
 		}
 
 		final String outLine = "%s (%s B)\n";
@@ -354,11 +388,14 @@ public class BracketNodeSequence {
 
 		return out.toString();
 	}
-	
+
 	/**
 	 * Reads a BracketNodeSequence from the given ByteBuffer.
-	 * @param length the length to read from the buffer
-	 * @param buffer the byte buffer
+	 * 
+	 * @param length
+	 *            the length to read from the buffer
+	 * @param buffer
+	 *            the byte buffer
 	 * @return the constructed BracketNodeSequence
 	 */
 	public static BracketNodeSequence read(int length, ByteBuffer buffer) {
@@ -366,19 +403,92 @@ public class BracketNodeSequence {
 		buffer.get(internalData);
 		return new BracketNodeSequence(internalData);
 	}
-	
+
 	/**
 	 * @return the internal length (in Byte) of the BracketNodeSequence
 	 */
 	public int getLength() {
-		return data.length;
+		return data == null ? 0: data.length;
 	}
-	
+
 	/**
 	 * Writes the internal representation to the ByteBuffer.
-	 * @param buffer the byte buffer
+	 * 
+	 * @param buffer
+	 *            the byte buffer
 	 */
 	public void write(ByteBuffer buffer) {
+		if (this.isEmpty()) {
+			return;
+		}
 		buffer.put(data);
+	}
+
+	/**
+	 * Appends the given Sequence to this one.
+	 * 
+	 * @param other
+	 * @param a
+	 *            DeweyIDBuffer needed for processing; the original value in the
+	 *            buffer will not change, but the stored Backup will be lost
+	 *            after this method.
+	 */
+	public void append(BracketNodeSequence other, DeweyIDBuffer buffer) {
+
+		// if the other is empty
+		if (other.isEmpty()) {
+			return;
+		}
+		
+		// if this is empty
+		if (this.isEmpty()) {
+			this.data = other.data;
+			this.lowKey = other.lowKey;
+			this.highKey = other.highKey;
+			this.numberOfDataRecords = other.numberOfDataRecords;
+			return;
+		}
+		
+		// backup original value
+		buffer.backup();
+		
+		// determine highkey
+		SimpleDeweyID highKey = null;
+		if (this.highKey != null) {
+			highKey = this.highKey;
+		} else {
+			setToLastNode(buffer);
+			highKey = buffer;
+		}
+		
+		// compute keys between this highkey and the other's lowkey
+		byte[] keys = BracketKey.generateBracketKeys(highKey, other.lowKey);
+		BracketKey.updateType(other.getLowKeyType(), keys, keys.length - BracketKey.PHYSICAL_LENGTH);
+		
+		// calculate new length
+		int otherStartOffset = other.getStartOffset();
+		int otherLength = other.data.length - otherStartOffset;
+		int length = data.length + keys.length + otherLength;
+		
+		// create new internal representation
+		byte[] newData = new byte[length];
+		int currentOffset = 0;
+		System.arraycopy(data, 0, newData, currentOffset, data.length);
+		currentOffset += data.length;
+		System.arraycopy(keys, 0, newData, currentOffset, keys.length);
+		currentOffset += keys.length;
+		System.arraycopy(other.data, otherStartOffset, newData, currentOffset, otherLength);
+		
+		// update fields
+		this.data = newData;
+		if (other.highKey != null) {
+			this.highKey = other.highKey;
+		} else {
+			other.setToLastNode(buffer);
+			this.highKey = buffer.getDeweyID();
+		}
+		this.numberOfDataRecords += other.numberOfDataRecords;
+
+		buffer.restore(false);
 	}
 }

@@ -38,7 +38,6 @@ import org.brackit.server.store.index.bracket.HintPageInformation;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.SubtreeDeleteListener;
-import org.brackit.server.store.index.bracket.log.BracketIndexLogOperation;
 import org.brackit.server.store.index.bracket.log.HighkeyLogOperation;
 import org.brackit.server.store.index.bracket.log.NodeSequenceLogOperation;
 import org.brackit.server.store.index.bracket.log.NodeSequenceLogOperation.ActionType;
@@ -152,6 +151,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	private byte[] bufferedValue;
 	private BracketKey.Type bufferedKeyType;
 
+	private BracketNodeSequence insertSequence;
+	
 	public LeafBPContext(BufferMgr bufferMgr, Tx tx, BracketPage page) {
 		super(bufferMgr, tx, page);
 		this.page = page;
@@ -383,8 +384,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	@Override
 	public boolean insertRecordAfter(XTCdeweyID deweyID, byte[] record,
-			int ancestorsToInsert, boolean logged, long undoNextLSN)
-			throws IndexOperationException {
+			int ancestorsToInsert, boolean logged, long undoNextLSN,
+			boolean bulkLog) throws IndexOperationException {
 		initBuffer();
 
 		boolean externalize = externalizeValue(record);
@@ -414,10 +415,19 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 			// log insert
 			if (logged) {
-				LogOperation operation = new NodeSequenceLogOperation(
-						ActionType.INSERT, getPageID(), getRootPageID(),
-						sequence);
-				log(tx, operation, undoNextLSN);
+				if (bulkLog) {
+					// delayed logging
+					if (insertSequence == null) {
+						insertSequence = sequence;
+					} else {
+						insertSequence.append(sequence, currentDeweyID);
+					}
+				} else {
+					LogOperation operation = new NodeSequenceLogOperation(
+							ActionType.INSERT, getPageID(), getRootPageID(),
+							sequence);
+					log(tx, operation, undoNextLSN);
+				}
 			} else {
 				page.getHandle().setAssignedTo(tx);
 			}
@@ -1144,6 +1154,11 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			DeletePreparation delPrep = page.splitAfterCurrentPrepare(
 					currentOffset, currentDeweyID);
 
+			if (delPrep == null) {
+				// nothing to delete
+				return null;
+			}
+
 			// get nodes that are supposed to be deleted
 			BracketNodeSequence nodes = page.getBracketNodeSequence(delPrep);
 
@@ -1230,5 +1245,46 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	@Override
 	public boolean isCompressed() {
 		return true;
+	}
+
+	@Override
+	public void clearData(boolean logged, long undoNextLSN)
+			throws IndexOperationException {
+
+		if (CHECK_OFFSET_INTEGRITY) {
+			declareContextFree();
+		}
+		initBuffer();
+
+		// retrieve all nodes
+		BracketNodeSequence nodes = page.getBracketNodeSequence(getLowKey(),
+				BracketPage.LOW_KEY_OFFSET, BracketPage.KEY_AREA_END_OFFSET);
+
+		if (nodes.isEmpty()) {
+			return;
+		}
+
+		// clear data
+		page.clearData(true);
+
+		// log delete
+		if (logged) {
+			LogOperation operation = new NodeSequenceLogOperation(
+					ActionType.DELETE, getPageID(), getRootPageID(), nodes);
+			log(tx, operation, undoNextLSN);
+		} else {
+			page.getHandle().setAssignedTo(tx);
+		}
+	}
+
+	@Override
+	public void bulkLog() throws IndexOperationException {
+		if (insertSequence != null) {
+			LogOperation operation = new NodeSequenceLogOperation(
+					ActionType.INSERT, getPageID(), getRootPageID(),
+					insertSequence);
+			log(tx, operation, -1);
+			insertSequence = null;
+		}
 	}
 }
