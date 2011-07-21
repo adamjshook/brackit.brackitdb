@@ -35,16 +35,16 @@ import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.cache.CachedObjectHook;
-import org.brackit.server.session.SessionID;
+import org.brackit.server.session.Session;
 import org.brackit.server.tx.IsolationLevel;
 import org.brackit.server.tx.PostCommitHook;
 import org.brackit.server.tx.PreCommitHook;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.TxID;
+import org.brackit.server.tx.TxMgr;
 import org.brackit.server.tx.TxState;
 import org.brackit.server.tx.TxStats;
-import org.brackit.server.tx.TxMgr;
 import org.brackit.server.tx.locking.LockControlBlock;
 import org.brackit.server.tx.locking.services.LockServiceClient;
 import org.brackit.server.tx.log.Log;
@@ -66,7 +66,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 	// != null if transaction is
 	// started from a connection
-	protected final SessionID sID;
+	protected final Session session;
 
 	protected final IsolationLevel isolationLevel;
 
@@ -118,12 +118,12 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	}
 
 	TX(TaMgrImpl taMgr, TxID txID, IsolationLevel isolationLevel,
-			boolean readOnly, SessionID sID, long timeout) {
+			boolean readOnly, Session session, long timeout) {
 		this.taMgr = taMgr;
 		this.txID = txID;
 		this.isolationLevel = isolationLevel;
 		this.readOnly = readOnly;
-		this.sID = sID;
+		this.session = session;
 		this.startTime = System.currentTimeMillis();
 		this.lcb = new LockControlBlock(this, timeout);
 		this.preHooks = new ArrayList<PreCommitHook>(4);
@@ -299,6 +299,10 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 	public IsolationLevel getIsolationLevel() {
 		return this.isolationLevel;
+	}
+	
+	public Session getSession() {
+		return this.session;
 	}
 
 	public int getLockDepth() {
@@ -521,7 +525,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	@Override
 	public String toString() {
 		return String.format("TX[ID=%s, CID=%s, IL=%s, LD=%s, RO=%s]", txID,
-				sID, isolationLevel, lockDepth, readOnly);
+				session, isolationLevel, lockDepth, readOnly);
 	}
 
 	@Override

@@ -25,54 +25,56 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.tx;
+package org.brackit.server.xquery.function.bdb;
 
-import java.util.Collection;
-
-import org.brackit.server.io.manager.BufferMgr;
+import org.brackit.server.metadata.TXQueryContext;
 import org.brackit.server.session.Session;
-import org.brackit.server.tx.impl.TX;
-import org.brackit.server.tx.log.Log;
+import org.brackit.server.tx.IsolationLevel;
+import org.brackit.server.xquery.compiler.DBCompiler;
+import org.brackit.xquery.QueryContext;
+import org.brackit.xquery.QueryException;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Str;
+import org.brackit.xquery.function.AbstractFunction;
+import org.brackit.xquery.function.Signature;
+import org.brackit.xquery.sequence.type.AtomicType;
+import org.brackit.xquery.sequence.type.Cardinality;
+import org.brackit.xquery.sequence.type.SequenceType;
+import org.brackit.xquery.xdm.DocumentException;
+import org.brackit.xquery.xdm.Sequence;
 
-public interface TxMgr {
+/**
+ * 
+ * @author Sebastian Baechle
+ * 
+ */
+public class SetIsolation extends AbstractFunction {
 
-	public final static String PATH_LOCK_VERSION = "org.brackit.server.tx.txMgr.pathLockVersion";
-	public final static String MAX_TX = "org.brackit.server.tx.txMgr.maxTx";
-	public static final String MAX_LOCKS = "org.brackit.server.tx.txMgr.maxLocks";
-	public static final String MAX_TX_RUNTIME = "org.brackit.server.tx.txMgr.maxTxRuntime";
-	public static final String DEADLOCK_DETECTION_INTERVAL = "org.brackit.server.tx.txMgr.deadlockDetectionInterval";
-	public static final String LOG_DEADLOCKS = "org.brackit.server.tx.txMgr.logDeadlocks";
-	public static final String LOCK_WAIT_TIMEOUT = "org.brackit.server.tx.txMgr.lockWaitTimeout";
-	public static final String DEADLOCK_LOG_DIR = "org.brackit.server.tx.txMgr.deadlockLogDir";
+	public static final QNm SET_ISOLATION = new QNm(DBCompiler.BDB_NSURI,
+			DBCompiler.BDB_PREFIX, "set-isolation");
 
-	public static final int DEFAULT_MAX_TX = 50;
-	public static final int DEFAULT_MAX_LOCKS = 200000;
-	public static final int DEFAULT_LOCK_WAIT_TIMEOUT = 20000;
+	public SetIsolation() {
+		super(SET_ISOLATION, new Signature(new SequenceType(AtomicType.STR,
+				Cardinality.One), new SequenceType(AtomicType.STR,
+				Cardinality.One)), true);
+	}
 
-	public Log getLog();
+	@Override
+	public Sequence execute(QueryContext ctx, Sequence[] args)
+			throws QueryException {
+		try {
+			Atomic atomic = (Atomic) args[0];
+			String s = atomic.stringValue();
+			IsolationLevel level = IsolationLevel.valueOf(s.toUpperCase());
+			Session session = ((TXQueryContext) ctx).getTX().getSession();
+			if (session != null) {
+				session.setIsolationLevel(level);
+			}
+			return new Str(level.toString());
 
-	public void shutdown() throws TxException;
-
-	public void recover() throws TxException;
-
-	public Tx begin() throws TxException;
-
-	public Tx begin(IsolationLevel isolationLevel, Session session,
-			boolean readOnly) throws TxException;
-
-	public Collection<TX> getTransactions();
-
-	/**
-	 * Write a checkpoint to speed up crash recovery and to safe log space.
-	 * 
-	 * @throws TxException
-	 */
-	public void checkpoint() throws TxException;
-
-	/**
-	 * Returns the system buffer manager.
-	 * 
-	 * @return
-	 */
-	public BufferMgr getBufferManager();
+		} catch (Exception e) {
+			throw new DocumentException(e);
+		}
+	}
 }
