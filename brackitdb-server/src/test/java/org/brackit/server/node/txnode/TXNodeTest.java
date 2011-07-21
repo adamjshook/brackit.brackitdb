@@ -125,8 +125,8 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 
 		sm = new SysMockup();
 		index = new BPlusIndex(sm.bufferManager);
+		tx = sm.taMgr.begin();
 		ctx = new TXQueryContext(tx, null);
-
 	}
 
 	@Override

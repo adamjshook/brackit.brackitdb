@@ -64,32 +64,24 @@ public final class ElLocator {
 		this.pathSynopsis = locator.pathSynopsis;
 	}
 
-	public ElNode fromBytes(XTCdeweyID deweyID, byte[] physicalRecord)
+	public ElNode fromBytes(XTCdeweyID deweyID, byte[] record)
 			throws DocumentException {
-		String value = null;
-		PSNode psNode = null;
+		int pcr = ElRecordAccess.getPCR(record);
+		PSNode psn = pathSynopsis.get(collection.getTX(), pcr);
+		int dist = deweyID.getLevel() - psn.getLevel();
 
-		int pcr = ElRecordAccess.getPCR(physicalRecord);
-		byte type = ElRecordAccess.getType(physicalRecord);
-
-		if (deweyID.isAttribute()) {
-			// the physical record has the pcr that we need
-			psNode = pathSynopsis.get(collection.getTX(), pcr);
-			value = ElRecordAccess.getValue(physicalRecord);
-		} else {
-			// get the correct pcr for a (probably) virtualized element
-			int level = deweyID.getLevel();
-			psNode = pathSynopsis.getAncestorOrParent(collection.getTX(), pcr,
-					level);
-			pcr = psNode.getPCR();
-
-			if (psNode.getLevel() == level - 1) {
-				value = ElRecordAccess.getValue(physicalRecord);
-			} else {
-				type = Kind.ELEMENT.ID;
+		if ((dist == 1)) {
+			return new ElNode(this, deweyID, ElRecordAccess.getType(record),
+					ElRecordAccess.getValue(record), psn);
+		} else if (dist <= 0) {
+			while (dist++ < 0) {
+				psn = psn.getParent();
 			}
+			return new ElNode(this, deweyID, Kind.ELEMENT.ID, null, psn);
+		} else {
+			throw new DocumentException(
+					"Node %s has level %s but PCR %s has level %s", deweyID,
+					deweyID.getLevel(), pcr, psn.getLevel());
 		}
-
-		return new ElNode(this, deweyID, type, value, psNode);
 	}
 }
