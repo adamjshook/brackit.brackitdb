@@ -666,20 +666,10 @@ public class BracketNode extends TXNode<BracketNode> {
 						deweyID.getDocID(), getKind(), name, value, pcr);
 	}
 
+	
 	@Override
-	public Stream<BracketNode> getChildren() throws DocumentException {
-		if (getKind() == Kind.ATTRIBUTE) {
-			return new EmptyStream<BracketNode>();
-		}
-
-		Tx tx = getTX();
-		MetaLockService<?> nls = getNls();
-		if (tx.getIsolationLevel().useReadLocks()) {
-			nls.lockTreeShared(tx, deweyID,
-					tx.getIsolationLevel().lockClass(false), false);
-		}
-
+	protected Stream<BracketNode> getChildrenInternal()
+			throws DocumentException {
 		return locator.collection.store.index.openChildStream(locator, deweyID, hintPageInfo);
 	}
-
 }
