@@ -100,13 +100,8 @@ public class PathIndexIteratorImpl<E extends Node<E>> implements Stream<E> {
 	@Override
 	public void close() {
 		if (iterator != null) {
-			try {
 				iterator.close();
-			} catch (IndexAccessException e) {
-				log.error(e);
-			} finally {
 				iterator = null;
-			}
 		}
 	}
 }
