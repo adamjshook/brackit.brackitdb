@@ -25,70 +25,52 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.index.element.impl;
+package org.brackit.server.xquery.function.bdb;
 
-import org.apache.log4j.Logger;
-import org.brackit.server.node.txnode.IndexEncoder;
-import org.brackit.server.store.index.IndexAccessException;
-import org.brackit.server.store.index.IndexIterator;
+import org.brackit.server.metadata.TXQueryContext;
+import org.brackit.server.session.Session;
+import org.brackit.server.xquery.compiler.DBCompiler;
+import org.brackit.xquery.QueryContext;
+import org.brackit.xquery.QueryException;
+import org.brackit.xquery.atomic.IntegerNumeric;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.function.AbstractFunction;
+import org.brackit.xquery.function.Signature;
+import org.brackit.xquery.sequence.type.AtomicType;
+import org.brackit.xquery.sequence.type.Cardinality;
+import org.brackit.xquery.sequence.type.SequenceType;
 import org.brackit.xquery.xdm.DocumentException;
-import org.brackit.xquery.xdm.Node;
-import org.brackit.xquery.xdm.Stream;
+import org.brackit.xquery.xdm.Sequence;
 
 /**
+ * 
  * @author Sebastian Baechle
  * 
  */
-public class ElementIndexIteratorImpl<E extends Node<E>> implements Stream<E> {
-	private static final Logger log = Logger
-			.getLogger(ElementIndexIteratorImpl.class);
+public class SetLockdepth extends AbstractFunction {
 
-	private IndexIterator iterator;
+	public static final QNm SET_LOCKDEPTH = new QNm(DBCompiler.BDB_NSURI,
+			DBCompiler.BDB_PREFIX, "set-lockdepth");
 
-	private final IndexEncoder<E> encoder;
-
-	private boolean first = true;
-
-	public ElementIndexIteratorImpl(IndexIterator iterator,
-			IndexEncoder<E> encoder) {
-		this.iterator = iterator;
-		this.encoder = encoder;
+	public SetLockdepth() {
+		super(SET_LOCKDEPTH, new Signature(new SequenceType(AtomicType.STR,
+				Cardinality.One), new SequenceType(AtomicType.INT,
+				Cardinality.One)), true);
 	}
 
 	@Override
-	public E next() throws DocumentException {
-		if (iterator == null) {
-			return null;
-		}
-
+	public Sequence execute(QueryContext ctx, Sequence[] args)
+			throws QueryException {
 		try {
-			if (!first) {
-				iterator.next();
-			} else {
-				first = false;
+			IntegerNumeric value = (IntegerNumeric) args[0];
+			Session session = ((TXQueryContext) ctx).getTX().getSession();
+			if (session != null) {
+				session.setLockDepth(value.intValue());
 			}
+			return value;
 
-			byte[] key = iterator.getKey();
-			if (key == null) {
-				return null;
-			}
-
-			byte[] value = iterator.getValue();
-
-			return encoder.decode(key, value);
-		} catch (DocumentException e) {
-			close();
-			throw e;
-		} catch (IndexAccessException e) {
+		} catch (Exception e) {
 			throw new DocumentException(e);
-		}
-	}
-
-	@Override
-	public void close() {
-		if (iterator != null) {
-			iterator.close();
-			iterator = null;
 		}
 	}
 }

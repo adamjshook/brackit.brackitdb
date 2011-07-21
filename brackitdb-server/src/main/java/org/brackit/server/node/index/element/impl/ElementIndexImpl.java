@@ -100,11 +100,7 @@ public class ElementIndexImpl<E extends TXNode<E>> implements ElementIndex<E> {
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		} finally {
-			try {
-				iterator.close();
-			} catch (IndexAccessException e) {
-				throw new DocumentException(e);
-			}
+			iterator.close();
 		}
 
 		IndexStatistics indexStatistics = null;

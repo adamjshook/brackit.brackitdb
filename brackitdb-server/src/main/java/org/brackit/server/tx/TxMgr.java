@@ -30,7 +30,7 @@ package org.brackit.server.tx;
 import java.util.Collection;
 
 import org.brackit.server.io.manager.BufferMgr;
-import org.brackit.server.session.SessionID;
+import org.brackit.server.session.Session;
 import org.brackit.server.tx.impl.TX;
 import org.brackit.server.tx.log.Log;
 
@@ -57,7 +57,7 @@ public interface TxMgr {
 
 	public Tx begin() throws TxException;
 
-	public Tx begin(IsolationLevel isolationLevel, SessionID connectionID,
+	public Tx begin(IsolationLevel isolationLevel, Session session,
 			boolean readOnly) throws TxException;
 
 	public Collection<TX> getTransactions();
