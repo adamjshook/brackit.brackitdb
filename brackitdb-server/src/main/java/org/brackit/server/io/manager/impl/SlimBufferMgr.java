@@ -52,6 +52,11 @@ import org.brackit.xquery.util.Cfg;
  * 
  */
 public class SlimBufferMgr implements BufferMgr, InfoContributor {
+	/**
+	 * 
+	 */
+	private static final String CNT_SUFFIX = ".cnt";
+
 	private static final Logger log = Logger.getLogger(SlimBufferMgr.class
 			.getName());
 
@@ -74,7 +79,7 @@ public class SlimBufferMgr implements BufferMgr, InfoContributor {
 
 	@Override
 	public synchronized void createBuffer(int bufferSize, int pageSize,
-			int containerID, String containerFile, int initialContainerSize,
+			int containerID, String containerName, int initialContainerSize,
 			int extendContainerSize) throws BufferException {
 		try {
 			if (bufferMapping[containerID] != null) {
@@ -82,11 +87,12 @@ public class SlimBufferMgr implements BufferMgr, InfoContributor {
 						"A container with ID %s already exists.", containerID);
 			}
 
-			File file = new File(containerFile);
-			if (!file.isAbsolute()) {
-				file = new File(storeDir + File.separator + containerFile);
+			File dir = new File(containerName + CNT_SUFFIX);
+			if (!dir.isAbsolute()) {
+				dir = new File(storeDir + File.separator + containerName
+						+ CNT_SUFFIX);
 			}
-			BlockSpace blockSpace = new DefaultBlockSpace(file.toString(),
+			BlockSpace blockSpace = new DefaultBlockSpace(dir.toString(),
 					containerID);
 			double extRatio = (double) extendContainerSize
 					/ (double) initialContainerSize;
@@ -95,18 +101,18 @@ public class SlimBufferMgr implements BufferMgr, InfoContributor {
 					transactionLog, this);
 			bufferMapping[containerID] = buffer;
 
-			Container cnt = new Container(file, containerID, bufferSize,
+			Container cnt = new Container(dir, containerID, bufferSize,
 					pageSize, initialContainerSize, extendContainerSize);
 			cnt.write();
 
 			log.info(String.format(
 					"Buffer for container '%s' successfully initialized",
-					containerFile));
+					containerName));
 		} catch (StoreException e) {
 			log.error(String.format("Error creating container file '%s'.",
-					containerFile), e);
+					containerName), e);
 			throw new BufferException(e,
-					"Could not create container file '%s'.", containerFile);
+					"Could not create container file '%s'.", containerName);
 		}
 	}
 
@@ -186,14 +192,13 @@ public class SlimBufferMgr implements BufferMgr, InfoContributor {
 
 	@Override
 	public synchronized void startBuffer(int bufferSize, int containerID,
-			String containerFile) throws BufferException {
+			String containerDir) throws BufferException {
 		if (bufferMapping[containerID] != null) {
 			throw new BufferException("A container with ID %s already exists.",
 					containerID);
 		}
 
-		BlockSpace blockSpace = new DefaultBlockSpace(containerFile,
-				containerID);
+		BlockSpace blockSpace = new DefaultBlockSpace(containerDir, containerID);
 		Buffer buffer = new TQBuffer(blockSpace, bufferSize, transactionLog,
 				this);
 
@@ -201,7 +206,7 @@ public class SlimBufferMgr implements BufferMgr, InfoContributor {
 
 		log.info(String.format(
 				"Buffer for container '%s' successfully initialized",
-				containerFile));
+				containerDir));
 	}
 
 	@Override
@@ -261,7 +266,7 @@ public class SlimBufferMgr implements BufferMgr, InfoContributor {
 		FilenameFilter filter = new FilenameFilter() {
 			@Override
 			public boolean accept(File dir, String name) {
-				return ((dir.isDirectory()) && (name.endsWith(".cnt")));
+				return ((dir.isDirectory()) && (name.endsWith(CNT_SUFFIX)));
 			}
 		};
 		for (File cntDir : new File(storeDir).listFiles(filter)) {

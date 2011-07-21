@@ -25,47 +25,52 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery.optimizer;
+package org.brackit.server.procedure.xmark.util;
 
-import org.brackit.server.metadata.manager.MetaDataMgr;
+import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.compiler.AST;
-import org.brackit.xquery.compiler.optimizer.DefaultOptimizer;
-import org.brackit.xquery.compiler.optimizer.Stage;
+import org.brackit.xquery.Tuple;
+import org.brackit.xquery.operator.Cursor;
+import org.brackit.xquery.xdm.Expr;
 
 /**
  * @author Sebastian Baechle
- *
+ * 
  */
-public class DBOptimizer extends DefaultOptimizer {
+public class Select implements Cursor {
+	private final Cursor in;
 
-	public DBOptimizer(MetaDataMgr mdm) {
-		super();
-		// perform path rewriting after simplification
-		getStages().add(1, new PathRewriting());
-		// perform index resolution after path recognition
-		getStages().add(1, new IndexResolution(mdm));
+	private final Expr predicate;
+
+	private final int[] projections;
+
+	public Select(Cursor in, Expr predicate) {
+		this(in, predicate, null);
 	}
 
-	private static class PathRewriting implements Stage {
-		@Override
-		public AST rewrite(AST ast) throws QueryException {
-			// TODO add rules for path rewriting here
-			return ast;
-		}		
+	public Select(Cursor in, Expr predicate, int... projections) {
+		this.in = in;
+		this.predicate = predicate;
+		this.projections = projections;
 	}
-	
-	private static class IndexResolution implements Stage {
-		private final MetaDataMgr mdm;
 
-		public IndexResolution(MetaDataMgr mdm) {
-			this.mdm = mdm;
-		}
+	@Override
+	public void close(QueryContext ctx) {
+		in.close(ctx);
+	}
 
-		@Override
-		public AST rewrite(AST ast) throws QueryException {
-			// TODO add rules for index resolution here
-			return ast;
-		}		
+	@Override
+	public Tuple next(QueryContext ctx) throws QueryException {
+		Tuple a;
+		while (((a = in.next(ctx)) != null)
+				&& (!predicate.evaluate(ctx, a).booleanValue(ctx)))
+			;
+		return (a != null) ? (projections != null) ? a.project(projections)
+				: a : null;
+	}
+
+	@Override
+	public void open(QueryContext ctx) throws QueryException {
+		in.open(ctx);
 	}
 }
