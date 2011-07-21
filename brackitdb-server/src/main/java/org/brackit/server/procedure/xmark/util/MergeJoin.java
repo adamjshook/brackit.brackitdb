@@ -31,8 +31,6 @@ import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
 import org.brackit.xquery.operator.Cursor;
-import org.brackit.xquery.operator.TupleImpl;
-import org.brackit.xquery.util.TupleUtil;
 import org.brackit.xquery.xdm.Expr;
 
 /**
@@ -110,13 +108,13 @@ public class MergeJoin implements Cursor {
 		do {
 			// System.out.println(String.format("Checking %s join %s", left,
 			// right));
-			Tuple joined = new TupleImpl(left, right);
+			Tuple joined = left.concat(right.array());
 
 			boolean match = predicate.evaluate(ctx, joined).booleanValue(ctx);
 
 			if (match) {
-				Tuple result = (projections != null) ? new TupleImpl(left,
-						right, projections) : joined;
+				Tuple result = (projections != null) ? joined
+						.project(projections) : joined;
 				right = null;
 				return result;
 			}
