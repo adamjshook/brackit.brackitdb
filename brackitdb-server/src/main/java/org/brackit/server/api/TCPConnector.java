@@ -222,7 +222,7 @@ public class TCPConnector implements Runnable {
 				TXQueryContext ctx = new TXQueryContext(tx, mdm);
 				xq.serialize(ctx, new PrintStream(to));
 
-				if (tx == null) {
+				if (session.isAutoCommit()) {
 					session.commit();
 				}
 			} catch (Throwable e) {

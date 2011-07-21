@@ -257,12 +257,8 @@ public class ElRecordScanner implements Stream<ElNode> {
 
 	public void close() {
 		if (iterator != null) {
-			try {
-				iterator.close();
-				iterator = null;
-			} catch (IndexAccessException e) {
-				log.error(e);
-			}
+			iterator.close();
+			iterator = null;
 		}
 	}
 
