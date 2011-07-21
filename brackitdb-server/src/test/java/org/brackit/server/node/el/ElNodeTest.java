@@ -62,6 +62,10 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		TXCollection<ElNode> locator = createDocument(new DocumentParser(
 				ROOT_ONLY_DOCUMENT));
 		ElNode root = locator.getDocument().getFirstChild();
+		
+		tx.commit();
+		tx = sm.taMgr.begin();
+		root = root.copyFor(tx);
 
 		printIndex(tx, "/media/ramdisk/testEmptyElementUnderRollback1_1.dot",
 				locator.getID(), true);

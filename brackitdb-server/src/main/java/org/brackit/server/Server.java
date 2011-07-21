@@ -27,11 +27,11 @@
  */
 package org.brackit.server;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.brackit.server.api.TCPConnector;
 import org.brackit.server.session.SessionMgr;
@@ -49,6 +49,23 @@ public final class Server {
 	public static final int PING_BYTE = 012;
 	public static final int PONG_BYTE = 210;
 	public static final int DEFAULT_DB_PORT = 24201;
+	
+	private class ShutdownThread extends Thread {
+		final Server server;
+		
+		public ShutdownThread(Server server) {
+			this.server = server;
+		}
+
+		@Override
+		public void run() {
+			try {
+				server.stopSingletonThread();
+			} catch (ServerException e) {
+				// ignore
+			}
+		}
+	}
 
 	private static class StartOption {
 		boolean install;
@@ -83,99 +100,41 @@ public final class Server {
 	}
 
 	private class SingletonThread extends Thread {
-		private int port;
-		private boolean checkedSocket;
-		private boolean established;
+		private final int port;
+		private final ServerSocket serverSocket;
 
-		SingletonThread(int port) {
+		SingletonThread(int port) throws Exception {
 			this.port = port;
-			this.checkedSocket = false;
-			this.established = false;
+			this.serverSocket = new ServerSocket(port);
 			setDaemon(false);
 		}
 
 		@Override
-		public void run() {
+		public void run() {			
 			int read = 0;
-			ServerSocket serverSocket = null;
-			Socket socket = null;
-
+			while (read != STOP_BYTE) {
+				try {
+					Socket socket = serverSocket.accept();
+					InputStream in = socket.getInputStream();
+					OutputStream out = socket.getOutputStream();
+					read = in.read();
+					if (read == STOP_BYTE) {
+						shutdown();
+					} else if (read == PING_BYTE) {
+						out.write(PONG_BYTE);
+					}
+					socket.close();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
 			try {
-				serverSocket = new ServerSocket(port);
-
-				// creation of server socket successfull -> no server instance
-				// running
-				setEstablished(true);
-
-				while (read != STOP_BYTE) {
-					socket = null;
-
-					try {
-						socket = serverSocket.accept();
-
-						InputStream in = socket.getInputStream();
-						OutputStream out = socket.getOutputStream();
-						read = in.read();
-
-						while (!ready.get()) {
-							try {
-								sleep(50);
-							} catch (InterruptedException e) { /* ignore */
-							}
-						}
-
-						if (read == STOP_BYTE) {
-							try {
-								System.out.println(String
-										.format("Shutting down server."));
-								if (con != null) {
-									con.shutdown();
-								}
-								db.shutdown();
-							} catch (ServerException e) {
-								System.out.println(String.format(
-										"Server shutdown failed: %s", e
-												.getMessage()));
-							}
-						} else if (read == PING_BYTE) {
-							out.write(PONG_BYTE);
-						}
-
-						socket.close();
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-				}
-			} catch (Exception e) {
-				// creation of server socket failed -> server instance already
-				// running
-				setEstablished(false);
-			}
-		}
-
-		private void setEstablished(boolean established) {
-			synchronized (this) {
-				this.checkedSocket = true;
-				this.established = established;
-				notifyAll();
-			}
-		}
-
-		private boolean isEstablished() {
-			synchronized (this) {
-				while (!checkedSocket) {
-					try {
-						wait();
-					} catch (InterruptedException e) {
-					}
-				}
-
-				return established;
+				serverSocket.close();
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
 	}
-
-	private final AtomicBoolean ready = new AtomicBoolean(false);
 
 	private BrackitDB db;
 
@@ -183,15 +142,14 @@ public final class Server {
 
 	public Server(StartOption startOption) throws ServerException {
 		if ((startOption.isInstall()) || (startOption.isStart())) {
-			makeSingleton();
+			startSingletonThread();
 		}
 		if (startOption.isInstall()) {
 			install();
-			ready.set(true);
 		}
 		if (startOption.isStart()) {
 			start();
-			ready.set(true);
+			Runtime.getRuntime().addShutdownHook(new ShutdownThread(this));
 		}
 		if (startOption.isClp()) {
 			try {
@@ -201,9 +159,8 @@ public final class Server {
 				System.out.println(e.getMessage());
 			}
 		}
-		if (startOption.isStop()) {
-			checkSingleton();
-			stop();
+		if (startOption.isStop()) {			
+			stopSingletonThread();
 		}
 	}
 
@@ -255,7 +212,7 @@ public final class Server {
 		}
 	}
 
-	private void install() throws ServerException {
+	private synchronized void install() throws ServerException {
 		System.out.print("Install server ... ");
 		try {
 			db = new BrackitDB(true);
@@ -268,7 +225,7 @@ public final class Server {
 		System.out.println("done.");
 	}
 
-	private void start() throws ServerException {
+	private synchronized void start() throws ServerException {
 		System.out.print("Start server ... ");
 		try {
 			db = new BrackitDB(false);
@@ -283,65 +240,60 @@ public final class Server {
 		System.out.println("done.");
 	}
 
-	private void stop() throws ServerException {
-		System.out.print("Stop server ... ");
-		try {
-			stopSingleton();
-		} catch (ServerException e) {
-			System.out.print("failed: ");
-			System.out.println(e.getMessage());
-			throw e;
-		}
-		System.out.println(" done.");
-	}
+	private void stopSingletonThread() throws ServerException {
+		int dbPort = Cfg.asInt(SessionMgr.DB_PORT, DEFAULT_DB_PORT);			
 
-	private void stopSingleton() throws ServerException {
 		try {
-			int dbPort = Cfg.asInt(SessionMgr.DB_PORT, DEFAULT_DB_PORT);
-			boolean serverStopped = false;
 			Socket socket = new Socket("localhost", dbPort);
 			OutputStream out = socket.getOutputStream();
 			out.write(STOP_BYTE);
+			out.flush();
+			socket.close();
 
-			while (!serverStopped) {
-				System.out.print(".");
+			for (int i = 0; i < 60; i++) {
 				try {
 					Thread.sleep(1000);
+					socket = new Socket("localhost", dbPort);
+					System.out.println("could still connect");
 				} catch (InterruptedException e) {
 					// ignore
-				}
-
-				try {
-					out.write(STOP_BYTE);
 				} catch (Exception e) {
-					serverStopped = true;
+					socket.close();
+					return;
 				}
 			}
-
-			socket.close();
+			throw new ServerException("Server seems to ignore shutdown signal");
 		} catch (Exception e) {
-			throw new ServerException(e);
+			// ignore
 		}
 	}
 
-	private void makeSingleton() throws ServerException {
-		int dbPort = Cfg.asInt(SessionMgr.DB_PORT, DEFAULT_DB_PORT);
-		SingletonThread singletonThread = new SingletonThread(dbPort);
-		singletonThread.start();
-
-		if (!singletonThread.isEstablished()) {
-			throw new ServerException("Server instance is already running");
+	private void startSingletonThread() throws ServerException {
+		try {
+			int dbPort = Cfg.asInt(SessionMgr.DB_PORT, DEFAULT_DB_PORT);
+			SingletonThread singletonThread = new SingletonThread(dbPort);
+			singletonThread.start();
+		} catch (Exception e) {
+			throw new ServerException(e, "Could not start server");
 		}
 	}
 
-	private void checkSingleton() throws ServerException {
-		int dbPort = Cfg.asInt(SessionMgr.DB_PORT, DEFAULT_DB_PORT);
-		SingletonThread singletonThread = new SingletonThread(dbPort);
-		singletonThread.start();
-
-		if (singletonThread.isEstablished()) {
-			throw new ServerException("No server instance running.");
+	private synchronized void shutdown() {
+		System.out.print("Shutdown server ... ");
+		try {
+			if (con != null) {
+				con.shutdown();
+			}
+		} catch (Exception e) {
+			// ignore
 		}
+		try {
+			db.shutdown();
+		} catch (ServerException e) {
+			System.out.print("failed: ");
+			System.out.println(e.getMessage());
+		}		
+		System.out.println("done.");
 	}
 
 	private static int check() {
