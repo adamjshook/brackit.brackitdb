@@ -94,5 +94,9 @@ public interface BPContext extends Latch {
 	public boolean isLeaf();
 
 	public BasePage getPage();
+	
+	public boolean externalizeValue(byte[] value);
+	
+	public byte[] externalize(byte[] value) throws IndexOperationException;
 
 }

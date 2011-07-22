@@ -122,7 +122,7 @@ public final class BracketIterImpl implements BracketIter {
 
 		assureContextValidity();
 
-		try {
+		try {			
 			page = tree.insertIntoLeaf(tx, rootPageID, page, deweyID, value,
 					ancestorsToInsert, openMode.doLog(), -1);
 			this.key = deweyID;

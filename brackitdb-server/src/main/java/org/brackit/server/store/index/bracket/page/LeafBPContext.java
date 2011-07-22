@@ -1156,7 +1156,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 			if (delPrep == null) {
 				// nothing to delete
-				return null;
+				return new BracketNodeSequence();
 			}
 
 			// get nodes that are supposed to be deleted
@@ -1248,7 +1248,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	}
 
 	@Override
-	public void clearData(boolean logged, long undoNextLSN)
+	public BracketNodeSequence clearData(boolean logged, long undoNextLSN)
 			throws IndexOperationException {
 
 		if (CHECK_OFFSET_INTEGRITY) {
@@ -1261,7 +1261,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 				BracketPage.LOW_KEY_OFFSET, BracketPage.KEY_AREA_END_OFFSET);
 
 		if (nodes.isEmpty()) {
-			return;
+			return nodes;
 		}
 
 		// clear data
@@ -1275,6 +1275,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		} else {
 			page.getHandle().setAssignedTo(tx);
 		}
+		
+		return nodes;
 	}
 
 	@Override

@@ -660,6 +660,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		// backups
 		backupMode = false;
 		backupLength = 0;
+		bufferedKey = null;
 	}
 
 	/**
@@ -671,6 +672,8 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	 */
 	protected void restore(boolean keepBackup) {
 
+		bufferedKey = null;
+		
 		if (!backupMode) {
 			throw new RuntimeException("There is no backup to be restored!");
 		}
