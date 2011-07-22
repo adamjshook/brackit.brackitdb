@@ -983,7 +983,7 @@ public final class BracketPage extends BasePage {
 	 * @return true if the allocation succeeded
 	 */
 	private boolean allocateRequiredSpace(int requiredSpace, int reservedSpace) {
-
+		
 		if (requiredSpace == 0) {
 			return true;
 		}
@@ -2212,12 +2212,11 @@ public final class BracketPage extends BasePage {
 	 */
 	public NavigationResult navigateNextToLastCF(DeweyIDBuffer currentDeweyID) {
 
+		navRes.reset();
+		
 		if (getRecordCount() == 0) {
-			navRes.reset();
 			return navRes;
 		}
-		
-		navRes.reset();
 
 		currentDeweyID.setTo(getLowKey());
 		int currentOffset = getKeyAreaStartOffset();
@@ -3842,7 +3841,10 @@ public final class BracketPage extends BasePage {
 		// required space determined
 
 		// reservedSpace for the highKey
-		int reservedSpace = 2 * lastNodeDeweyID.toBytes().length;
+		int reservedSpace = 0;
+		if (afterKeys == null) {
+			reservedSpace = 2 * lastNodeDeweyID.toBytes().length;
+		}
 		// allocate required space
 		if (!allocateRequiredSpace(requiredSpace, reservedSpace)) {
 			// page is full

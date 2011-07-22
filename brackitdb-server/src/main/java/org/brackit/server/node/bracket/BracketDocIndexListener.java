@@ -46,6 +46,8 @@ import org.brackit.xquery.xdm.Kind;
  */
 public class BracketDocIndexListener extends DefaultListener<BracketNode>
 		implements SubtreeListener<BracketNode> {
+	
+	private static final boolean BULK = false;
 
 	private final ListenMode listenMode;
 
@@ -164,7 +166,9 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 				iterator = index.open(locator.collection.getTX(),
 						node.locator.rootPageID, NavigationMode.TO_INSERT_POS,
 						deweyID, openMode);
-				iterator.startBulkInsert();
+				if (BULK) {
+					iterator.startBulkInsert();
+				}
 			}
 
 			iterator.insert(deweyID, record, ancestorsToInsert);
@@ -218,7 +222,9 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 
 		if (iterator != null) {
 			try {
-				iterator.endBulkInsert();
+				if (BULK) {
+					iterator.endBulkInsert();
+				}
 				iterator.close();
 			} catch (IndexAccessException e) {
 				throw new DocumentException(e);

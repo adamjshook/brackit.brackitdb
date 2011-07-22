@@ -151,11 +151,13 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 		}
 	}
 
-	protected boolean externalizeValue(byte[] value) {
+	@Override
+	public boolean externalizeValue(byte[] value) {
 		return (value.length > page.getUsableSpace() / 6);
 	}
 
-	protected byte[] externalize(byte[] value) throws IndexOperationException {
+	@Override
+	public byte[] externalize(byte[] value) throws IndexOperationException {
 		try {
 			PageID blobPageID = create(tx, page.getPageID().getContainerNo());
 			write(tx, blobPageID, value, false);

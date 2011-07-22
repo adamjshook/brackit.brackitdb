@@ -268,8 +268,9 @@ public interface Leaf extends BPContext {
 	 * @param logged
 	 * @param undoNextLSN
 	 * @throws IndexOperationException
+	 * @return the deleted node sequence
 	 */
-	public void clearData(boolean logged, long undoNextLSN)
+	public BracketNodeSequence clearData(boolean logged, long undoNextLSN)
 			throws IndexOperationException;
 
 	public HintPageInformation getHintPageInformation();
