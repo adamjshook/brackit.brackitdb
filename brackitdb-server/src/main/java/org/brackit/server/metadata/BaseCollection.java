@@ -71,6 +71,7 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 		super(collection);
 		this.dictionary = collection.dictionary;
 		this.docID = collection.docID;
+		this.materializables = collection.materializables;
 	}
 
 	public BaseCollection(DocID docID, String name, DictionaryMgr dictionary) {

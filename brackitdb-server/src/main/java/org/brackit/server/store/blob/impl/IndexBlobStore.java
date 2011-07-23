@@ -188,11 +188,7 @@ public class IndexBlobStore implements BlobStore {
 			throw new BlobStoreAccessException(e,
 					"An error occured while writing blob %s.", pageID);
 		} catch (IOException e) {
-			try {
-				iterator.close();
-			} catch (IndexAccessException e1) {
-				log.error(e1);
-			}
+			iterator.close();
 			throw new BlobStoreAccessException(e,
 					"Error reading input stream while writing blob %s.", pageID);
 		}

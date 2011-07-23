@@ -365,4 +365,136 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 					domNode.getClass());
 		}
 	}
+	
+	protected void checkSubtreePreOrderReduced(QueryContext ctx, final BracketNode node,
+			org.w3c.dom.Node domNode) throws Exception {
+		BracketNode child = null;
+		String nodeString = node.toString();
+
+		if (domNode instanceof Element) {
+			Element element = (Element) domNode;
+			assertEquals(nodeString + " is of type element", Kind.ELEMENT,
+					node.getKind());
+
+			// System.out.println("Checking name of element " +
+			// node.getDeweyID() + " level " + node.getDeweyID().getLevel() +
+			// " is " + element.getNodeName());
+
+			assertEquals(String.format("Name of node %s", nodeString),
+					element.getNodeName(), node.getName());
+			compareAttributes(ctx, node, element);
+
+			NodeList domChildNodes = element.getChildNodes();
+			ArrayList<BracketNode> children = new ArrayList<BracketNode>();
+
+			for (BracketNode c = node.getFirstChild(); c != null; c = c.getNextSibling()) {
+				// System.out.println(String.format("-> Found child of %s : %s",
+				// node, c));
+				children.add(c);
+			}
+
+			for (int i = 0; i < domChildNodes.getLength(); i++) {
+				org.w3c.dom.Node domChild = domChildNodes.item(i);
+				// System.out.println("Checking if child  " + ((domChild
+				// instanceof Element) ? domChild.getNodeName() :
+				// domChild.getNodeValue()) + " exists under " + node);
+
+				if (child == null) {
+					child = node.getFirstChild();
+					// System.out.println(String.format("First child of %s is %s",
+					// node, child));
+				} else {
+					child = child.getNextSibling();
+					// System.out.println(String.format("Next sibling of %s is %s",
+					// oldChild, child));
+				}
+
+				assertNotNull(
+						String.format("child node %s of node %s", i, nodeString),
+						child);
+
+				checkSubtreePreOrderReduced(ctx, child, domChild);
+			}
+
+			assertEquals(String.format("child count of element %s", nodeString),
+					domChildNodes.getLength(), children.size());
+
+		} else if (domNode instanceof Text) {
+			Text text = (Text) domNode;
+
+			assertEquals(nodeString + " is of type text : \"" + text.getNodeValue()
+					+ "\"", Kind.TEXT, node.getKind());
+			assertEquals(String.format("Text of node %s", nodeString), text
+					.getNodeValue().trim(), node.getValue());
+		} else {
+			throw new DocumentException("Unexpected dom node: %s",
+					domNode.getClass());
+		}
+	}
+	
+	protected void checkSubtreePostOrderReduced(QueryContext ctx, final BracketNode node,
+			org.w3c.dom.Node domNode) throws Exception {
+		BracketNode child = null;
+		String nodeString = node.toString();
+
+		if (domNode instanceof Element) {
+			Element element = (Element) domNode;
+			assertEquals(nodeString + " is of type element", Kind.ELEMENT,
+					node.getKind());
+
+			// System.out.println("Checking name of element " +
+			// node.getDeweyID() + " level " + node.getDeweyID().getLevel() +
+			// " is " + element.getNodeName());
+
+			assertEquals(String.format("Name of node %s", nodeString),
+					element.getNodeName(), node.getName());
+			compareAttributes(ctx, node, element);
+
+			NodeList domChildNodes = element.getChildNodes();
+			ArrayList<BracketNode> children = new ArrayList<BracketNode>();
+
+			for (BracketNode c = node.getLastChild(); c != null; c = c.getPreviousSibling()) {
+				// System.out.println(String.format("-> Found child of %s : %s",
+				// node, c));
+				children.add(c);
+			}
+
+			for (int i = domChildNodes.getLength() - 1; i >= 0; i--) {
+				org.w3c.dom.Node domChild = domChildNodes.item(i);
+				// System.out.println("Checking if child  " + ((domChild
+				// instanceof Element) ? domChild.getNodeName() :
+				// domChild.getNodeValue()) + " exists under " + node);
+
+				if (child == null) {
+					child = node.getLastChild();
+					// System.out.println(String.format("First child of %s is %s",
+					// node, child));
+				} else {
+					child = child.getPreviousSibling();
+					// System.out.println(String.format("Next sibling of %s is %s",
+					// oldChild, child));
+				}
+
+				assertNotNull(
+						String.format("child node %s of node %s", i, nodeString),
+						child);
+
+				checkSubtreePostOrderReduced(ctx, child, domChild);
+			}
+
+			assertEquals(String.format("child count of element %s", nodeString),
+					domChildNodes.getLength(), children.size());
+
+		} else if (domNode instanceof Text) {
+			Text text = (Text) domNode;
+
+			assertEquals(nodeString + " is of type text : \"" + text.getNodeValue()
+					+ "\"", Kind.TEXT, node.getKind());
+			assertEquals(String.format("Text of node %s", nodeString), text
+					.getNodeValue().trim(), node.getValue());
+		} else {
+			throw new DocumentException("Unexpected dom node: %s",
+					domNode.getClass());
+		}
+	}
 }

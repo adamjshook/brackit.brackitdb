@@ -28,6 +28,7 @@
 package org.brackit.server.node.txnode;
 
 import java.io.OutputStream;
+import java.io.PrintStream;
 
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.metadata.BaseCollection;
@@ -39,6 +40,7 @@ import org.brackit.server.store.index.Index;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.IndexIterator;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.node.SubtreePrinter;
 import org.brackit.xquery.node.parser.SubtreeParser;
 import org.brackit.xquery.node.stream.AtomStream;
 import org.brackit.xquery.node.stream.TransformerStream;
@@ -88,7 +90,19 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 
 	@Override
 	public void serialize(OutputStream out) throws DocumentException {
-		throw new DocumentException("Not implemented yet");
+		if (document != null) {
+			new SubtreePrinter(new PrintStream(out)).print(document);
+		} else {
+			Stream<? extends E> docs = getDocuments();
+			E doc;
+			try {
+				while ((doc = docs.next()) != null) {
+					new SubtreePrinter(new PrintStream(out)).print(doc);		
+				}
+			} finally {
+				docs.close();
+			}
+		}
 	}
 
 	@Override

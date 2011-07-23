@@ -185,11 +185,8 @@ public interface IndexIterator {
 
 	/**
 	 * Closes the iterator by releasing all held resources of the index
-	 * 
-	 * @throws IndexAccessException
-	 *             if there was an error closing the index
 	 */
-	public void close() throws IndexAccessException;
+	public void close();
 
 	/**
 	 * Returns the number of the current page

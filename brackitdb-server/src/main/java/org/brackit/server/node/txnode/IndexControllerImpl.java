@@ -145,7 +145,7 @@ public abstract class IndexControllerImpl<E extends TXNode<E>> implements
 	public List<? extends SubtreeListener<? super E>> getIndexListener(
 			ListenMode mode) throws DocumentException {
 		List<IndexDef> indexDefinitions = coll.get(Indexes.class)
-				.getIdxDefinitionsIncludingVirtual();
+				.getIndexDefs();
 		ArrayList<SubtreeListener<? super E>> listeners = new ArrayList(
 				indexDefinitions.size());
 
