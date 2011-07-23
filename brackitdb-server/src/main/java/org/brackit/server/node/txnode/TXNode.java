@@ -490,7 +490,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	@Override
 	public String getName() throws DocumentException {
 		if ((type != Kind.ELEMENT.ID) && (type != Kind.ATTRIBUTE.ID)) {
-			return null;
+			return "";
 		}
 		return getNameInternal();
 		// TODO extremely fine-grained and expensive!

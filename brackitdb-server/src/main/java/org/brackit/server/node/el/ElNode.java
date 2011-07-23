@@ -289,7 +289,7 @@ public class ElNode extends TXNode<ElNode> {
 	public String getNameInternal() throws DocumentException {
 		return ((type == Kind.ELEMENT.ID) || (type == Kind.ATTRIBUTE.ID)) ? psNode
 				.getName()
-				: null;
+				: "";
 	}
 
 	@Override
