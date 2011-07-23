@@ -27,6 +27,7 @@
  */
 package org.brackit.server.node.el;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
@@ -42,6 +43,7 @@ import org.brackit.server.tx.TxException;
 import org.brackit.xquery.node.SubtreePrinter;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.node.parser.FragmentHelper;
+import org.brackit.xquery.xdm.Collection;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
 import org.junit.Assert;
@@ -57,6 +59,32 @@ import org.xml.sax.InputSource;
 public class ElNodeTest extends TXNodeTest<ElNode> {
 	protected ElStore elStore;
 
+	@Test
+	public void testFromBytes() throws Exception {
+		Collection<ElNode> coll = createDocument(new DocumentParser(DOCUMENT));
+		ElNode root = coll.getDocument();
+		XTCdeweyID deweyID = new XTCdeweyID(root.getID(), new int[]{1,3});
+		ElNode department = root.getNode(deweyID);
+		check(department, deweyID, Kind.ELEMENT, "Department", "KurtMayer1.4.1963Dr.-Ing.HansMettmann12.9.1974Dipl.-Inf");
+		XTCdeweyID deweyID2 = new XTCdeweyID(root.getID(), new int[]{1,3,3});
+		ElNode member = root.getNode(deweyID2);
+		check(member, deweyID2, Kind.ELEMENT, "Member", "KurtMayer1.4.1963Dr.-Ing.");
+		XTCdeweyID deweyID3 = new XTCdeweyID(root.getID(), new int[]{1,3,3,3});
+		ElNode firstname = root.getNode(deweyID3);
+		check(firstname, deweyID3, Kind.ELEMENT, "Firstname", "Kurt");
+		XTCdeweyID deweyID4 = new XTCdeweyID(root.getID(), new int[]{1,3,3,3,3});
+		ElNode firstnameT = root.getNode(deweyID4);
+		check(firstnameT, deweyID4, Kind.TEXT, "", "Kurt");
+	}
+	
+	private void check(ElNode node, XTCdeweyID deweyID, Kind kind, String name, String value) throws DocumentException {
+		assertEquals("DeweyID is correct", deweyID, node.getDeweyID());
+		assertEquals("Kind is correct", kind, node.getKind());
+		assertEquals("Name is correct", name, node.getName());
+		assertEquals("Value is correct", value, node.getValue());
+	}
+	
+	
 	@Test
 	public void testEmptyElementUnderRollback1() throws Exception {
 		TXCollection<ElNode> locator = createDocument(new DocumentParser(

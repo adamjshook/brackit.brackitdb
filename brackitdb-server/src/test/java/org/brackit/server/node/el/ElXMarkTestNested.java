@@ -25,78 +25,40 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.txnode;
+package org.brackit.server.node.el;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintStream;
-
-import org.apache.log4j.Logger;
 import org.brackit.server.SysMockup;
-import org.brackit.server.io.buffer.BufferException;
-import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.metadata.TXQueryContext;
-import org.brackit.server.node.DocID;
-import org.brackit.server.store.index.IndexAccessException;
-import org.brackit.server.store.index.aries.BPlusIndex;
-import org.brackit.server.store.index.aries.display.DisplayVisitor;
+import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.tx.Tx;
-import org.brackit.xquery.node.NodeTest;
+import org.brackit.xquery.XMarkTestNested;
 import org.brackit.xquery.node.parser.DocumentParser;
+import org.brackit.xquery.xdm.Collection;
 import org.brackit.xquery.xdm.DocumentException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
-public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
-	protected static final Logger log = Logger.getLogger(TXNodeTest.class
-			.getName());
-
-	protected BPlusIndex index;
-
-	protected Tx tx;
+/**
+ * @author Sebastian Baechle
+ *
+ */
+public class ElXMarkTestNested extends XMarkTestNested {
 
 	protected SysMockup sm;
+	protected ElStore elStore;
+	protected Tx tx;
 
 	@Override
-	@Test
-	public void testStoreDocument() throws DocumentException,
-			IndexAccessException {
-		TXCollection<E> locator = createDocument(new DocumentParser(DOCUMENT));
-
-		printIndex(((TXQueryContext) ctx).getTX(),
-				"/media/ramdisk/document.dot", locator.getID(), true);
-	}
-
-	protected void printIndex(Tx transaction, String filename, DocID docID,
-			boolean showValues) throws IndexAccessException {
-		try {
-			PrintStream printer = new PrintStream(new File(filename));
-			index.traverse(transaction, new PageID(docID.value()),
-					new DisplayVisitor(printer, showValues));
-			printer.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	@Override
-	@After
-	public void tearDown() throws DocumentException, BufferException {
-	}
-
-	@Override
-	@Before
 	public void setUp() throws Exception {
-		super.setUp();
-
 		sm = new SysMockup();
-		index = new BPlusIndex(sm.bufferManager);
+		elStore = new ElStore(sm.bufferManager, sm.dictionary, sm.mls);
 		tx = sm.taMgr.begin();
-		ctx = new TXQueryContext(tx, null);
+		tx.setLockDepth(0);
+		super.setUp();
 	}
 
 	@Override
-	protected abstract TXCollection<E> createDocument(
-			DocumentParser documentParser) throws DocumentException;
+	protected Collection<?> createDoc(DocumentParser parser) throws DocumentException {
+		StorageSpec spec = new StorageSpec("test", sm.dictionary);
+		ElCollection collection = new ElCollection(tx, elStore);
+		collection.create(spec, parser);
+		return collection;
+	}
 }
