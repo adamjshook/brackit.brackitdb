@@ -37,11 +37,11 @@ import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.metadata.TXQueryContext;
 import org.brackit.server.node.DocID;
-import org.brackit.server.node.NodeTest;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.aries.BPlusIndex;
 import org.brackit.server.store.index.aries.display.DisplayVisitor;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.node.NodeTest;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.xdm.DocumentException;
 import org.junit.After;
@@ -51,39 +51,6 @@ import org.junit.Test;
 public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 	protected static final Logger log = Logger.getLogger(TXNodeTest.class
 			.getName());
-
-	protected static final String DOCUMENT = "<?xml version = '1.0' encoding = 'UTF-8'?>"
-			+ "<Organization>"
-			+ "<Department>"
-			+ "<Member key=\"12\" employee=\"true\">"
-			+ "<Firstname>Kurt</Firstname>"
-			+ "<Lastname>Mayer</Lastname>"
-			+ "<DateOfBirth>1.4.1963</DateOfBirth>"
-			+ "<Title>Dr.-Ing.</Title>"
-			+ "</Member>"
-			+ "<Member key=\"40\"  employe=\"false\">"
-			+ "<Firstname>Hans</Firstname>"
-			+ "<Lastname>Mettmann</Lastname>"
-			+ "<DateOfBirth>12.9.1974</DateOfBirth>"
-			+ "<Title>Dipl.-Inf</Title>"
-			+ "</Member>"
-			+ "<Member>"
-			+ "</Member>"
-			+ "<Member>"
-			+ "</Member>"
-			+ "</Department>"
-			+ "<Project id=\"4711\" priority=\"high\">"
-			+ "<Title>XML-DB</Title>"
-			+ "<Budget>10000</Budget>"
-			+ "</Project>"
-			+ "<Project id=\"666\" priority=\"evenhigher\">"
-			+ "<Title>DISS</Title>"
-			+ "<Budget>7000</Budget>"
-			+ "<Abstract>Native<b>XML</b>-Databases</Abstract>"
-			+ "</Project>"
-			+ "</Organization>";
-
-	protected static final String ROOT_ONLY_DOCUMENT = "<?xml version = '1.0' encoding = 'UTF-8'?><root/>";
 
 	protected BPlusIndex index;
 
@@ -125,8 +92,8 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 
 		sm = new SysMockup();
 		index = new BPlusIndex(sm.bufferManager);
+		tx = sm.taMgr.begin();
 		ctx = new TXQueryContext(tx, null);
-
 	}
 
 	@Override

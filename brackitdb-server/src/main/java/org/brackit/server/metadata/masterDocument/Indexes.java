@@ -28,7 +28,6 @@
 package org.brackit.server.metadata.masterDocument;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.brackit.server.metadata.materialize.Materializable;
@@ -55,10 +54,7 @@ public class Indexes implements Materializable {
 	}
 
 	public synchronized List<IndexDef> getIndexDefs() {
-		ArrayList<IndexDef> returnList = new ArrayList<IndexDef>();
-		for (IndexDef sid : indexes)
-			returnList.add(sid);
-		return Collections.unmodifiableList(returnList);
+		return new ArrayList<IndexDef>(indexes);
 	}
 
 	public synchronized IndexDef getIndexDef(int indexNo) {
@@ -68,10 +64,6 @@ public class Indexes implements Materializable {
 			}
 		}
 		return null;
-	}
-
-	public synchronized List<IndexDef> getIdxDefinitionsIncludingVirtual() {
-		return Collections.unmodifiableList(this.indexes);
 	}
 
 	@Override

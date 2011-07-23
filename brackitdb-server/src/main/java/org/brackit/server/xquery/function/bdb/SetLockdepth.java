@@ -25,63 +25,52 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.el;
+package org.brackit.server.xquery.function.bdb;
 
-import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.metadata.pathSynopsis.PSNode;
-import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
-import org.brackit.server.node.DocID;
-import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.metadata.TXQueryContext;
+import org.brackit.server.session.Session;
+import org.brackit.server.xquery.compiler.DBCompiler;
+import org.brackit.xquery.QueryContext;
+import org.brackit.xquery.QueryException;
+import org.brackit.xquery.atomic.IntegerNumeric;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.function.AbstractFunction;
+import org.brackit.xquery.function.Signature;
+import org.brackit.xquery.sequence.type.AtomicType;
+import org.brackit.xquery.sequence.type.Cardinality;
+import org.brackit.xquery.sequence.type.SequenceType;
 import org.brackit.xquery.xdm.DocumentException;
-import org.brackit.xquery.xdm.Kind;
+import org.brackit.xquery.xdm.Sequence;
 
 /**
  * 
  * @author Sebastian Baechle
  * 
  */
-public final class ElLocator {
+public class SetLockdepth extends AbstractFunction {
 
-	public final DocID docID;
+	public static final QNm SET_LOCKDEPTH = new QNm(DBCompiler.BDB_NSURI,
+			DBCompiler.BDB_PREFIX, "set-lockdepth");
 
-	public final PageID rootPageID;
-
-	public final PathSynopsisMgr pathSynopsis;
-
-	public final ElCollection collection;
-
-	public ElLocator(ElCollection collection, DocID docID, PageID rootPageID) {
-		this.docID = docID;
-		this.rootPageID = rootPageID;
-		this.collection = collection;
-		this.pathSynopsis = collection.getPathSynopsis();
+	public SetLockdepth() {
+		super(SET_LOCKDEPTH, new Signature(new SequenceType(AtomicType.STR,
+				Cardinality.One), new SequenceType(AtomicType.INT,
+				Cardinality.One)), true);
 	}
 
-	public ElLocator(ElCollection collection, ElLocator locator) {
-		this.docID = locator.docID;
-		this.rootPageID = locator.rootPageID;
-		this.collection = collection;
-		this.pathSynopsis = locator.pathSynopsis;
-	}
-
-	public ElNode fromBytes(XTCdeweyID deweyID, byte[] record)
-			throws DocumentException {
-		int pcr = ElRecordAccess.getPCR(record);
-		PSNode psn = pathSynopsis.get(collection.getTX(), pcr);
-		int dist = deweyID.getLevel() - psn.getLevel();
-
-		if ((dist == 1)) {
-			return new ElNode(this, deweyID, ElRecordAccess.getType(record),
-					ElRecordAccess.getValue(record), psn);
-		} else if (dist <= 0) {
-			while (dist++ < 0) {
-				psn = psn.getParent();
+	@Override
+	public Sequence execute(QueryContext ctx, Sequence[] args)
+			throws QueryException {
+		try {
+			IntegerNumeric value = (IntegerNumeric) args[0];
+			Session session = ((TXQueryContext) ctx).getTX().getSession();
+			if (session != null) {
+				session.setLockDepth(value.intValue());
 			}
-			return new ElNode(this, deweyID, Kind.ELEMENT.ID, null, psn);
-		} else {
-			throw new DocumentException(
-					"Node %s has level %s but PCR %s has level %s", deweyID,
-					deweyID.getLevel(), pcr, psn.getLevel());
+			return value;
+
+		} catch (Exception e) {
+			throw new DocumentException(e);
 		}
 	}
 }

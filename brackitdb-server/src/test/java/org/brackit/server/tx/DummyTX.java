@@ -29,6 +29,7 @@ package org.brackit.server.tx;
 
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.cache.CachedObjectHook;
+import org.brackit.server.session.Session;
 import org.brackit.server.tx.locking.LockControlBlock;
 import org.brackit.server.tx.log.LogOperation;
 
@@ -151,7 +152,11 @@ public class DummyTX implements Tx {
 
 	@Override
 	public boolean isReadOnly() {
-		// TODO Auto-generated method stub
 		return false;
+	}
+
+	@Override
+	public Session getSession() {
+		return null;
 	}
 }
