@@ -134,5 +134,12 @@
     	<type>jar</type>
     	<scope>compile</scope>
     </dependency>
+    <dependency>
+    	<groupId>org.brackit</groupId>
+    	<artifactId>brackit</artifactId>
+    	<version>0.0.2</version>
+    	<type>test-jar</type>
+    	<scope>test</scope>
+    </dependency>
   </dependencies>
 </project>
