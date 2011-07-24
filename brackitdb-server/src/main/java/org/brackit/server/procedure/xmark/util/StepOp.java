@@ -144,7 +144,7 @@ public class StepOp implements Cursor {
 
 	private boolean predicate(QueryContext ctx, Item item)
 			throws QueryException {
-		if (!test.matches(ctx, item)) {
+		if (!test.matches(item)) {
 			return false;
 		}
 
