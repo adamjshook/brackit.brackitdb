@@ -77,9 +77,17 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 		this.tx = tx;
 	}
 
+	protected BaseBlobHandle(BaseBlobHandle b, Tx tx) {
+		this.name = b.name;
+		this.store = b.store;
+		this.docID = b.docID;
+		this.persistor = b.persistor;
+		this.tx = tx;
+	}
+
 	@Override
 	public BlobHandle copyFor(Tx tx) {
-		return (this.tx.equals(tx)) ? this : new BaseBlobHandle(tx, store);
+		return (this.tx.equals(tx)) ? this : new BaseBlobHandle(this, tx);
 	}
 
 	@Override
