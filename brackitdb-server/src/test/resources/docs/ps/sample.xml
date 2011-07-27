@@ -1,0 +1,35 @@
+<bib>
+  <book id="book1">
+    <title>
+      Book1
+    </title>
+    <author>
+      Author1
+    </author>
+    <price>
+      1.99
+    </price>
+  </book>
+  <book id="book2">
+    <title>
+      Book2
+    </title>
+    <publisher>
+      Publisher2
+    </publisher>
+    <price>
+      2.99
+    </price>
+  </book>
+  <book id="book3">
+    <title>
+      Book3
+    </title>
+    <author>
+      Author3
+    </author>
+    <price>
+      3.99
+    </price>
+  </book>
+</bib>

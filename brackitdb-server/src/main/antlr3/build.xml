@@ -1,0 +1,8 @@
+<project default="generate" basedir=".">
+	<target name="generate" description="Generates ANTLR-based tools">
+		<echo message="Compiling IndexDef.g"/>
+		<java classname="org.antlr.Tool" classpath="antlr-3.2.jar">
+			<arg line="-v -o ../java org/brackit/server/node/index/definition/IndexDef.g"/>
+		</java>
+	</target>
+</project>
