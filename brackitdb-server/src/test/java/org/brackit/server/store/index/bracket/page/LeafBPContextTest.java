@@ -113,7 +113,7 @@ public class LeafBPContextTest {
 		leaf1.insertRecordAfter(new XTCdeweyID(docID, "1.7.1.7"), "attribute3".getBytes(), 0, true, -1, true);
 		leaf1.insertRecordAfter(new XTCdeweyID(docID, "1.7.2.3"), "text5".getBytes(), 0, true, -1, true);
 		leaf1.insertRecordAfter(new XTCdeweyID(docID, "1.7.3"), "text6".getBytes(), 0, true, -1, true);
-		leaf1.bulkLog();
+		leaf1.bulkLog(false, -1);
 		
 	}
 	
@@ -121,9 +121,9 @@ public class LeafBPContextTest {
 	public void testLog() throws Exception {
 
 		// delete some nodes
-		leaf1.deleteSequence(new XTCdeweyID(docID, "1.5.3"), new XTCdeweyID(docID, "1.5.7"), true, -1);
-		leaf1.deleteSequence(new XTCdeweyID(docID, "1.6.3"), new XTCdeweyID(docID, "1.6.3.5"), true, -1);
-		leaf1.deleteSequence(new XTCdeweyID(docID, "1.7.1.5"), new XTCdeweyID(docID, "1.7.2.3"), true, -1);
+		leaf1.deleteSequence(new XTCdeweyID(docID, "1.5.3"), new XTCdeweyID(docID, "1.5.7"), false, true, -1);
+		leaf1.deleteSequence(new XTCdeweyID(docID, "1.6.3"), new XTCdeweyID(docID, "1.6.3.5"), false, true, -1);
+		leaf1.deleteSequence(new XTCdeweyID(docID, "1.7.1.5"), new XTCdeweyID(docID, "1.7.2.3"), false, true, -1);
 		
 		// insert some nodes
 		leaf1.insertRecord(new XTCdeweyID(docID, "1.6.3.5.5.5"), "some text".getBytes(), 3, true, -1);

@@ -233,17 +233,6 @@ public final class BracketPage extends BasePage {
 	}
 
 	/**
-	 * Increases the KeyAreaEndOffset by the given value (negative values for
-	 * decreasing).
-	 * 
-	 * @param increase
-	 *            the increase value
-	 */
-	private void increaseKeyAreaEndOffset(int increase) {
-		setKeyAreaEndOffset(getKeyAreaEndOffset() + increase);
-	}
-
-	/**
 	 * Returns the low key (i.e. the DeweyID of the first node stored in this
 	 * page). If this page is empty, null will be returned.
 	 * 
@@ -676,287 +665,6 @@ public final class BracketPage extends BasePage {
 	}
 
 	/**
-	 * Inserts a new node (incl. required ancestors) after the current one. If
-	 * successful, the currentDeweyID buffer will contain the new node's
-	 * DeweyID.
-	 * 
-	 * @param key
-	 *            DeweyID of the new key
-	 * @param value
-	 *            the value to insert
-	 * @param ancestorsToInsert
-	 *            number of ancestors to insert implicitly
-	 * @param externalized
-	 *            indicates whether the value is an external PageID
-	 * @param currentOffset
-	 *            offset of the current node
-	 * @param currentDeweyID
-	 *            DeweyIDBuffer containing the DeweyID of the current node
-	 * @return offset of the newly inserted node or an errorcode (if new node is
-	 *         a duplicate or there is not enough space)
-	 */
-	public int insertAfter(XTCdeweyID key, byte[] value, int ancestorsToInsert,
-			boolean externalized, int currentOffset,
-			DeweyIDBuffer currentDeweyID) {
-
-		byte[] valueLengthField = getValueLengthField(value, externalized);
-
-		int newKeyOffset = 0;
-
-		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
-			// new node becomes the lowID
-			newKeyOffset = insertLowIDRecord(key, valueLengthField, value,
-					ancestorsToInsert);
-		} else {
-			newKeyOffset = insertNormalRecord(key, valueLengthField, value,
-					currentOffset, currentDeweyID);
-		}
-
-		// set current DeweyID to inserted key
-		if (newKeyOffset != INSERTION_NO_SPACE) {
-			currentDeweyID.setTo(key);
-		}
-
-		return newKeyOffset;
-	}
-
-	private int insertLowIDRecord(XTCdeweyID key, byte[] valueLengthField,
-			byte[] value, int ancestorsToInsert) {
-
-		// determine required space
-		int requiredSpace = BracketKey.DATA_REF_LENGTH
-				+ valueLengthField.length + value.length;
-
-		// determine size of the new lowID
-		XTCdeweyID lowID = getAncestorKey(key, ancestorsToInsert);
-		byte[] physicalLowID = lowID.toBytes();
-		requiredSpace += physicalLowID.length;
-
-		// determine beforeKeys (bracket keys between new LowID and the key to
-		// insert)
-		byte[] beforeKeys = null;
-		if (ancestorsToInsert > 0) {
-			beforeKeys = BracketKey.generateBracketKeys(lowID, key);
-			requiredSpace += beforeKeys.length;
-		}
-
-		BracketKey.Type keyType = key.isAttribute() ? BracketKey.Type.ATTRIBUTE
-				: BracketKey.Type.DATA;
-		BracketKey.Type lowIDType = (ancestorsToInsert > 0) ? BracketKey.Type.NODATA
-				: keyType;
-
-		byte[] afterKeys = null;
-		if (getRecordCount() > 0) {
-			// there is already a low ID stored
-
-			// calculate keys between new key and current low key
-			afterKeys = BracketKey.generateBracketKeys(key, getLowKey());
-
-			// adjust required space
-			requiredSpace += afterKeys.length
-					- (page[LOW_KEY_LENGTH_FIELD_NO] & 255);
-
-			// determine whether new low ID needs a data reference
-			if (key.isPrefixOf(getLowKey())) {
-				keyType = BracketKey.Type.NODATA;
-				requiredSpace -= (BracketKey.DATA_REF_LENGTH
-						+ valueLengthField.length + value.length);
-			}
-		}
-
-		// allocate required space
-		int reservedSpace = 2 * key.toBytes().length;
-		if (!allocateRequiredSpace(requiredSpace, reservedSpace)) {
-			return INSERTION_NO_SPACE;
-		}
-
-		// check whether a defragmentation is needed
-		if (requiredSpace > getFreeSpaceOffset() - getKeyAreaEndOffset()) {
-			// defragmentation
-			defragment(0);
-		}
-
-		// increase record counter
-		setEntryCount((short) (getRecordCount() + 1 + ancestorsToInsert));
-
-		// buffer key area
-		byte[] bufferedKeys = null;
-		if (afterKeys != null) {
-			bufferedKeys = new byte[getKeyAreaEndOffset()
-					- getKeyAreaStartOffset()];
-			for (int i = 0; i < bufferedKeys.length; i++) {
-				bufferedKeys[i] = page[getKeyAreaStartOffset() + i];
-			}
-		}
-
-		// buffer old lowIDType
-		BracketKey.Type oldLowIDType = getLowKeyType();
-
-		// write lowID
-		initializeLowKey(lowIDType, physicalLowID, lowID);
-
-		int returnOffset = LOW_KEY_OFFSET;
-		int currentOffset = getKeyAreaStartOffset();
-
-		// write beforeKeys if necessary
-		if (beforeKeys != null) {
-			System.arraycopy(beforeKeys, 0, page, currentOffset,
-					beforeKeys.length);
-			currentOffset += beforeKeys.length;
-			returnOffset = currentOffset - BracketKey.PHYSICAL_LENGTH;
-		}
-
-		// store value and write value reference
-		if (keyType.hasDataReference) {
-			writeValueReference(currentOffset,
-					storeValue(valueLengthField, value));
-			currentOffset += BracketKey.DATA_REF_LENGTH;
-		}
-
-		// write afterKeys
-		if (afterKeys != null) {
-			// count new records between new lowKey and old lowKey
-			int numberRecords = -1;
-			for (int i = 0; i < afterKeys.length; i += BracketKey.PHYSICAL_LENGTH) {
-				if (BracketKey.loadType(afterKeys, i) != BracketKey.Type.OVERFLOW) {
-					numberRecords++;
-				}
-			}
-
-			// write keys
-			System.arraycopy(afterKeys, 0, page, currentOffset,
-					afterKeys.length);
-			currentOffset += afterKeys.length;
-
-			// change record count
-			setEntryCount((short) (getRecordCount() + numberRecords));
-
-			// change last bracket key type
-			BracketKey.updateType(oldLowIDType, page, currentOffset
-					- BracketKey.PHYSICAL_LENGTH);
-
-			// write back buffered keys
-			System.arraycopy(bufferedKeys, 0, page, currentOffset,
-					bufferedKeys.length);
-
-			currentOffset += bufferedKeys.length;
-		}
-
-		// adjust key area end offset
-		setKeyAreaEndOffset(currentOffset);
-
-		return returnOffset;
-	}
-
-	private int insertNormalRecord(XTCdeweyID key, byte[] valueLengthField,
-			byte[] value, int currentOffset, DeweyIDBuffer currentDeweyID) {
-
-		// determine required space
-		int requiredSpace = BracketKey.DATA_REF_LENGTH
-				+ valueLengthField.length + value.length;
-
-		// check whether previous data record can be removed
-		boolean removeDataRecord = false;
-		boolean useRemovedRecordSpace = false;
-		int currentValueOffset = 0;
-		int currentRecordLength = 0;
-		int currentValueRefOffset = 0;
-
-		boolean currentNodeIsLowKey = (currentOffset == LOW_KEY_OFFSET);
-
-		// read current bracket key type
-		BracketKey.Type currentKeyType = (currentNodeIsLowKey ? getLowKeyType()
-				: BracketKey.loadType(page, currentOffset));
-
-		// check bracket key type of current node
-		if (currentKeyType == BracketKey.Type.DATA
-				&& currentDeweyID.isPrefixOf(key)) {
-
-			// data record can be removed
-			removeDataRecord = true;
-
-			// determine current record length
-			currentValueRefOffset = currentNodeIsLowKey ? getKeyAreaStartOffset()
-					: currentOffset + BracketKey.PHYSICAL_LENGTH;
-			currentValueOffset = getValueOffset(currentValueRefOffset);
-			currentRecordLength = getValueLength(currentValueOffset, true);
-
-			if (currentRecordLength >= valueLengthField.length + value.length) {
-				// the new gap in the value area can be used to store the new
-				// value
-				useRemovedRecordSpace = true;
-			}
-
-			// adjust required space
-			requiredSpace -= (BracketKey.DATA_REF_LENGTH + currentRecordLength);
-		}
-
-		// calculate bracket key between current node and the new one
-		byte[] beforeKeys = BracketKey.generateBracketKeys(currentDeweyID, key);
-		// adjust required space
-		requiredSpace += beforeKeys.length;
-
-		// determine offset for the next key
-		int nextKeyOffset = (currentNodeIsLowKey ? getKeyAreaStartOffset()
-				: currentOffset + BracketKey.PHYSICAL_LENGTH)
-				+ currentKeyType.dataReferenceLength;
-
-		// calculate key between new node and next node
-		BracketKey afterKey = null;
-		if (nextKeyOffset < getKeyAreaEndOffset()) {
-			// determine next node's DeweyID
-			currentDeweyID.backup();
-			currentDeweyID.update(BracketKey.loadNew(page, nextKeyOffset),
-					false);
-
-			afterKey = BracketKey.generateBracketKey(key, currentDeweyID);
-			currentDeweyID.restore(false);
-		}
-
-		// allocate required space
-		int reservedSpace = 2 * key.toBytes().length;
-		if (!allocateRequiredSpace(requiredSpace, reservedSpace)) {
-			return INSERTION_NO_SPACE;
-		}
-
-		// check whether a defragmentation is needed
-		int reqSpaceBetweenKeyAndValueArea = requiredSpace
-				+ (removeDataRecord ? currentRecordLength : 0)
-				- (useRemovedRecordSpace ? (valueLengthField.length + value.length)
-						: 0);
-		if (reqSpaceBetweenKeyAndValueArea > getFreeSpaceOffset()
-				- getKeyAreaEndOffset()) {
-			// defragmentation
-			defragment(removeDataRecord ? currentValueRefOffset : 0);
-			useRemovedRecordSpace = false;
-		}
-
-		// store value
-		int valueOffset = 0;
-		if (removeDataRecord && useRemovedRecordSpace) {
-			valueOffset = storeValue(valueLengthField, value,
-					currentValueOffset);
-		} else {
-			valueOffset = storeValue(valueLengthField, value);
-		}
-
-		// change current node's key type to NODATA, if necessary
-		if (removeDataRecord) {
-			currentKeyType = BracketKey.Type.NODATA;
-			if (currentNodeIsLowKey) {
-				setLowKeyType(currentKeyType);
-			} else {
-				BracketKey.updateType(currentKeyType, page, currentOffset);
-			}
-		}
-
-		// insert the new key, write the value reference, update and shift the
-		// following keys
-		return insertKeys(beforeKeys, afterKey, nextKeyOffset, valueOffset,
-				removeDataRecord);
-	}
-
-	/**
 	 * Returns the ancestor's DeweyID.
 	 * 
 	 * @param key
@@ -983,7 +691,7 @@ public final class BracketPage extends BasePage {
 	 * @return true if the allocation succeeded
 	 */
 	private boolean allocateRequiredSpace(int requiredSpace, int reservedSpace) {
-		
+
 		if (requiredSpace == 0) {
 			return true;
 		}
@@ -1181,93 +889,6 @@ public final class BracketPage extends BasePage {
 				value.length);
 
 		return valueOffset;
-	}
-
-	private int insertKeys(byte[] beforeKeys, BracketKey afterKey,
-			int nextKeyOffset, int valueOffset, boolean previousValueRemoved) {
-
-		// buffer remaining keys if necessary
-		byte[] keyBuffer = null;
-		if (afterKey != null) {
-			keyBuffer = new byte[getKeyAreaEndOffset() - nextKeyOffset];
-			// fill the buffer
-			System.arraycopy(page, nextKeyOffset, keyBuffer, 0,
-					keyBuffer.length);
-
-			// update the afterKey in the buffer
-			afterKey.store(keyBuffer, 0, true);
-		}
-
-		// determine startOffset
-		int startOffset = nextKeyOffset
-				- (previousValueRemoved ? BracketKey.DATA_REF_LENGTH : 0);
-		int currentOffset = startOffset;
-
-		// write beforeKeys
-		System.arraycopy(beforeKeys, 0, page, currentOffset, beforeKeys.length);
-		currentOffset += beforeKeys.length;
-
-		// count newly inserted nodes
-		for (int i = 0; i < beforeKeys.length; i += BracketKey.PHYSICAL_LENGTH) {
-			if (BracketKey.loadType(beforeKeys, i) != BracketKey.Type.OVERFLOW) {
-				addRecord();
-			}
-		}
-
-		int newKeyOffset = currentOffset - BracketKey.PHYSICAL_LENGTH;
-
-		// write value reference
-		writeValueReference(currentOffset, valueOffset);
-		currentOffset += BracketKey.DATA_REF_LENGTH;
-
-		// copy back the key buffer content
-		if (keyBuffer != null) {
-			System.arraycopy(keyBuffer, 0, page, currentOffset,
-					keyBuffer.length);
-		}
-
-		// adjust keyAreaEndOffset
-		increaseKeyAreaEndOffset(currentOffset - nextKeyOffset);
-
-		return newKeyOffset;
-	}
-
-	/**
-	 * Inserts the given node at the correct position in page.
-	 * 
-	 * @param key
-	 *            DeweyID of the new key
-	 * @param value
-	 *            the value to insert
-	 * @param ancestorsToInsert
-	 *            number of ancestors to insert implicitly
-	 * @param externalized
-	 *            indicates whether the value is an external PageID
-	 * @param currentDeweyID
-	 *            DeweyIDBuffer containing the DeweyID of the current node
-	 * @return offset of the newly inserted node or an errorcode (if new node is
-	 *         a duplicate or there is not enough space)
-	 */
-	public int insert(XTCdeweyID key, byte[] value, int ancestorsToInsert,
-			boolean externalized, DeweyIDBuffer currentDeweyID) {
-
-		int result = 0;
-
-		NavigationResult insertPos = this.navigateToInsertPos(key,
-				currentDeweyID);
-
-		if (insertPos.status == NavigationStatus.NOT_EXISTENT) {
-			// duplicate detected
-			result = INSERTION_DUPLICATE;
-		} else if (insertPos.status == NavigationStatus.FOUND) {
-			// actual insertion
-			result = insertAfter(key, value, ancestorsToInsert, externalized,
-					insertPos.keyOffset, currentDeweyID);
-		} else {
-			throw new RuntimeException("Not possible!");
-		}
-
-		return result;
 	}
 
 	/**
@@ -1695,8 +1316,7 @@ public final class BracketPage extends BasePage {
 		NavigationProperties prop = NavigationProfiles
 				.getPreviousByKeyOffset(currentOffset);
 
-		navigateGeneric(currentDeweyID,
-				LOW_KEY_OFFSET, prop, false);
+		navigateGeneric(currentDeweyID, LOW_KEY_OFFSET, prop, false);
 
 		if (navRes.status != NavigationStatus.FOUND) {
 			// previous key is the low key
@@ -2213,7 +1833,7 @@ public final class BracketPage extends BasePage {
 	public NavigationResult navigateNextToLastCF(DeweyIDBuffer currentDeweyID) {
 
 		navRes.reset();
-		
+
 		if (getRecordCount() == 0) {
 			return navRes;
 		}
@@ -2252,7 +1872,7 @@ public final class BracketPage extends BasePage {
 			}
 			currentOffset += BracketKey.PHYSICAL_LENGTH;
 		}
-		
+
 		if (navRes.status == NavigationStatus.FOUND) {
 			currentDeweyID.restore(false);
 		}
@@ -3346,8 +2966,7 @@ public final class BracketPage extends BasePage {
 			BracketKey.Type previousType = (delPrep.previousOffset == LOW_KEY_OFFSET) ? getLowKeyType()
 					: BracketKey.loadType(page, delPrep.previousOffset);
 			int startDeleteOffset = ((delPrep.previousOffset == LOW_KEY_OFFSET) ? getKeyAreaStartOffset()
-					: delPrep.previousOffset)
-					+ BracketKey.PHYSICAL_LENGTH
+					: delPrep.previousOffset + BracketKey.PHYSICAL_LENGTH)
 					+ previousType.dataReferenceLength;
 			int endDeleteOffset = (delPrep.endDeleteOffset == KEY_AREA_END_OFFSET) ? getKeyAreaEndOffset()
 					: delPrep.endDeleteOffset;
@@ -3453,6 +3072,73 @@ public final class BracketPage extends BasePage {
 
 		setEntryCount((short) (getRecordCount() - delPrep.numberOfNodes));
 
+	}
+
+	/**
+	 * Navigates to the split position determined by the desired occupancy rate.
+	 */
+	public NavigationResult navigateToSplitPosition(
+			DeweyIDBuffer currentDeweyID, final float occupancyRate) {
+
+		navRes.reset();
+
+		// find split position
+		final int neededDataVolume = (int) Math.floor(occupancyRate
+				* getUsedSpace());
+		int currentDataVolume = page[LOW_KEY_LENGTH_FIELD_NO] & 255;
+		int currentOffset = getKeyAreaStartOffset();
+
+		currentDeweyID.setTo(getLowKey());
+
+		// LowID data
+		if (getLowKeyType().hasDataReference) {
+			currentDataVolume += BracketKey.DATA_REF_LENGTH
+					+ getValueLength(getValueOffset(currentOffset), true);
+			currentOffset += BracketKey.DATA_REF_LENGTH;
+
+			if (currentDataVolume >= neededDataVolume) {
+				// split after LowID
+				navRes.keyOffset = LOW_KEY_OFFSET;
+				navRes.keyType = getLowKeyType();
+				navRes.status = NavigationStatus.FOUND;
+				return navRes;
+			}
+		}
+
+		BracketKey currentKey = new BracketKey();
+
+		// traverse page until the split position is found
+		int keyAreaEndOffset = getKeyAreaEndOffset();
+		while (currentOffset < keyAreaEndOffset) {
+			currentKey.load(page, currentOffset);
+			currentDeweyID.update(currentKey, false);
+
+			currentDataVolume += BracketKey.PHYSICAL_LENGTH;
+			currentOffset += BracketKey.PHYSICAL_LENGTH;
+
+			if (currentKey.type.hasDataReference) {
+				currentDataVolume += BracketKey.DATA_REF_LENGTH
+						+ getValueLength(getValueOffset(currentOffset), true);
+
+				// check possible split position
+				if (currentDataVolume >= neededDataVolume) {
+					currentOffset -= BracketKey.PHYSICAL_LENGTH;
+					break;
+				}
+
+				currentOffset += BracketKey.DATA_REF_LENGTH;
+			}
+		}
+
+		if (currentOffset == getKeyAreaEndOffset() || isLast(currentOffset)) {
+			// occupancy rate is set up too high
+			return navRes;
+		} else {
+			navRes.keyOffset = currentOffset;
+			navRes.keyType = currentKey.type;
+			navRes.status = NavigationStatus.FOUND;
+			return navRes;
+		}
 	}
 
 	/**

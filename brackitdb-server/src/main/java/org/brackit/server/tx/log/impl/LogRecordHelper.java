@@ -105,6 +105,12 @@ public class LogRecordHelper implements LoggableHelper {
 		return new LogRecord(Loggable.TYPE_CLR, taID, prevLSN, createOperation,
 				undoNextLSN);
 	}
+	
+	public Loggable createUpdateSpecial(TxID taID, long prevLSN,
+			LogOperation createOperation, long undoNextLSN) {
+		return new LogRecord(Loggable.TYPE_UPDATE_SPECIAL, taID, prevLSN, createOperation,
+				undoNextLSN);
+	}
 
 	public Loggable fromBytes(ByteBuffer buffer) throws LogException {
 		byte logRecordType = buffer.get();
@@ -116,10 +122,11 @@ public class LogRecordHelper implements LoggableHelper {
 
 		switch (logRecordType) {
 		case Loggable.TYPE_CLR:
+		case Loggable.TYPE_UPDATE_SPECIAL:
 			undoNextLSN = buffer.getLong();
 			logOperationType = buffer.get();
 			logOperation = fromBytes(logOperationType, buffer.slice());
-			return new LogRecord(Loggable.TYPE_CLR, taId, prevLSN,
+			return new LogRecord(logRecordType, taId, prevLSN,
 					logOperation, undoNextLSN);
 		case Loggable.TYPE_DUMMY:
 			undoNextLSN = buffer.getLong();

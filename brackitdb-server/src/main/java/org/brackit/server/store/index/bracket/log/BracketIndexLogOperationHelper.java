@@ -50,6 +50,8 @@ public class BracketIndexLogOperationHelper implements LogOperationHelper {
 		operationTypes.add(BracketIndexLogOperation.LEAF_INSERT);
 		operationTypes.add(BracketIndexLogOperation.LEAF_DELETE);
 		operationTypes.add(BracketIndexLogOperation.LEAF_UPDATE);
+		operationTypes.add(BracketIndexLogOperation.LEAF_SMO_INSERT);
+		operationTypes.add(BracketIndexLogOperation.LEAF_SMO_DELETE);
 
 		operationTypes.add(BracketIndexLogOperation.BRANCH_INSERT);
 		operationTypes.add(BracketIndexLogOperation.BRANCH_DELETE);
@@ -85,6 +87,8 @@ public class BracketIndexLogOperationHelper implements LogOperationHelper {
 		case BracketIndexLogOperation.LEAF_INSERT:
 		case BracketIndexLogOperation.LEAF_DELETE:
 		case BracketIndexLogOperation.LEAF_UPDATE:
+		case BracketIndexLogOperation.LEAF_SMO_INSERT:
+		case BracketIndexLogOperation.LEAF_SMO_DELETE:
 			return createNodeSequenceLogOperation(type, buffer, pageID,
 					rootPageID);
 

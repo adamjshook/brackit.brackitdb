@@ -56,9 +56,13 @@ public abstract class BracketIndexLogOperation extends LogOperation {
 
 	public static final byte LEAF_UPDATE = 39;
 	
-	public static final byte HIGHKEY_UPDATE = 40;
+	public static final byte LEAF_SMO_INSERT = 40;
+
+	public static final byte LEAF_SMO_DELETE = 41;	
 	
-	public static final byte FORMAT = 41;
+	public static final byte HIGHKEY_UPDATE = 42;
+	
+	public static final byte FORMAT = 43;
 
 	protected static final int BASE_SIZE = 2 * PageID.getSize();
 

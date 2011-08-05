@@ -259,12 +259,10 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 				long commitLsn = logEOT();
 			} catch (TxException e) {
 				if (log.isDebugEnabled()) {
-					log
-							.debug(
-									String
-											.format(
-													"Writing abort EOT log for %s failed. Starting rollback.",
-													toString()), e);
+					log.debug(
+							String.format(
+									"Writing abort EOT log for %s failed. Starting rollback.",
+									toString()), e);
 				}
 			}
 		}
@@ -309,8 +307,8 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 	public long logEOT() throws TxException {
 		if (prevLSN != -1) {
-			Loggable loggable = taMgr.getLog().getLoggableHelper().createEOT(
-					txID, prevLSN);
+			Loggable loggable = taMgr.getLog().getLoggableHelper()
+					.createEOT(txID, prevLSN);
 			long LSN = log(loggable, true);
 
 			if (log.isDebugEnabled()) {
@@ -331,8 +329,8 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	}
 
 	public long logUpdate(LogOperation logOperation) throws TxException {
-		Loggable loggable = taMgr.getLog().getLoggableHelper().createUpdate(
-				txID, prevLSN, logOperation);
+		Loggable loggable = taMgr.getLog().getLoggableHelper()
+				.createUpdate(txID, prevLSN, logOperation);
 		long LSN = log(loggable, true);
 
 		if (log.isDebugEnabled()) {
@@ -344,8 +342,8 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	}
 
 	public long logDummyCLR(long undoNextLSN) throws TxException {
-		Loggable loggable = taMgr.getLog().getLoggableHelper().createDummyCLR(
-				txID, prevLSN, undoNextLSN);
+		Loggable loggable = taMgr.getLog().getLoggableHelper()
+				.createDummyCLR(txID, prevLSN, undoNextLSN);
 		long LSN = log(loggable, true);
 
 		if (log.isDebugEnabled()) {
@@ -359,9 +357,24 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 	public long logCLR(LogOperation logOperation, long undoNextLSN)
 			throws TxException {
-		Loggable loggable = taMgr.getLog().getLoggableHelper().createCLR(txID,
-				prevLSN, logOperation, undoNextLSN);
+		Loggable loggable = taMgr.getLog().getLoggableHelper()
+				.createCLR(txID, prevLSN, logOperation, undoNextLSN);
 		long LSN = log(loggable, false);
+
+		if (log.isDebugEnabled()) {
+			log.debug(String.format(
+					"%s logged CLR %s for %s pointing to nextUndoLSN %s.",
+					toShortString(), LSN, logOperation, undoNextLSN));
+		}
+
+		return LSN;
+	}
+
+	public long logUpdateSpecial(LogOperation logOperation, long undoNextLSN)
+			throws TxException {
+		Loggable loggable = taMgr.getLog().getLoggableHelper()
+				.createUpdateSpecial(txID, prevLSN, logOperation, undoNextLSN);
+		long LSN = log(loggable, true);
 
 		if (log.isDebugEnabled()) {
 			log.debug(String.format(
@@ -391,8 +404,9 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 			return LSN;
 		} catch (LogException e) {
-			log.error(String.format("Could not write log record '%s'.",
-					loggable), e);
+			log.error(
+					String.format("Could not write log record '%s'.", loggable),
+					e);
 			throw new TxException(e, "Could not write log record '%s'.",
 					loggable);
 		}
@@ -423,16 +437,27 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 	long undo(Loggable record) throws LogException {
 		long nextUndoLSN;
+		LogOperation logOperation = null;
 		switch (record.getType()) {
 		case Loggable.TYPE_UPDATE:
 			if (log.isDebugEnabled()) {
-				log.debug(String.format("%s undo %s.", toShortString(), record
-						.getLSN()));
+				log.debug(String.format("%s undo %s.", toShortString(),
+						record.getLSN()));
 			}
 
-			LogOperation logOperation = record.getLogOperation();
-			logOperation.undo(this, record.getLSN(), record.getPrevLSN());
+			logOperation = record.getLogOperation();
 			nextUndoLSN = record.getPrevLSN();
+			logOperation.undo(this, record.getLSN(), nextUndoLSN);
+			break;
+		case Loggable.TYPE_UPDATE_SPECIAL:
+			if (log.isDebugEnabled()) {
+				log.debug(String.format("%s undo %s.", toShortString(),
+						record.getLSN()));
+			}
+
+			logOperation = record.getLogOperation();
+			nextUndoLSN = record.getUndoNextLSN();
+			logOperation.undo(this, record.getLSN(), nextUndoLSN);
 			break;
 		case Loggable.TYPE_DUMMY:
 		case Loggable.TYPE_CLR:

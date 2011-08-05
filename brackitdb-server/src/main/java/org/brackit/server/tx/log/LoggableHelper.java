@@ -47,6 +47,9 @@ public interface LoggableHelper {
 
 	public Loggable createCLR(TxID taID, long prevLSN,
 			LogOperation createOperation, long undoNextLSN);
+	
+	public Loggable createUpdateSpecial(TxID taID, long prevLSN,
+			LogOperation createOperation, long undoNextLSN);
 
 	public Loggable fromBytes(ByteBuffer buffer) throws LogException;
 }

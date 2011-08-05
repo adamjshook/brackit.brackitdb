@@ -34,6 +34,7 @@ import org.brackit.server.store.OpenMode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.bulkinsert.BulkInsertContext;
 import org.brackit.server.store.index.bracket.page.Leaf;
+import org.brackit.server.store.page.bracket.BracketNodeSequence;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 import org.brackit.server.tx.Tx;
@@ -90,8 +91,15 @@ public final class BracketIterImpl implements BracketIter {
 		}
 
 		if (page != null) {
-			page.cleanup();
-			page = null;
+			try {
+				// log remaining insert operations
+				page.bulkLog(false, -1);
+			} catch (IndexOperationException e) {
+				throw new IndexAccessException(e);
+			} finally {
+				page.cleanup();
+				page = null;
+			}
 		}
 		deweyIDBuffer = null;
 	}
@@ -122,9 +130,23 @@ public final class BracketIterImpl implements BracketIter {
 
 		assureContextValidity();
 
-		try {			
-			page = tree.insertIntoLeaf(tx, rootPageID, page, deweyID, value,
-					ancestorsToInsert, openMode.doLog(), -1);
+		try {
+			
+			// create sequence from record
+			BracketNodeSequence nodesToInsert = tree.recordToSequence(tx, page, deweyID,
+					value, ancestorsToInsert);
+			
+			// insert into page
+			if (!page.insertSequenceAfter(nodesToInsert, false, openMode.doLog(), -1, true)) {
+				// split necessary
+				
+				// log already inserted nodes
+				page.bulkLog(false, -1);
+				
+				// split + insert
+				page = tree.splitInsert(tx, rootPageID, page, nodesToInsert, openMode.doLog());
+			}
+			
 			this.key = deweyID;
 			this.value = value;
 			this.insertKey = null;
@@ -133,6 +155,10 @@ public final class BracketIterImpl implements BracketIter {
 			page = null;
 			close();
 			throw e;
+		} catch (IndexOperationException e) {
+			close();
+			throw new IndexAccessException(e,
+					"Error navigating to specified record.");
 		}
 	}
 
@@ -154,6 +180,7 @@ public final class BracketIterImpl implements BracketIter {
 			page = null;
 			bulkContext.cleanup();
 			bulkContext = null;
+			close();
 			throw e;
 		}
 	}
@@ -206,8 +233,6 @@ public final class BracketIterImpl implements BracketIter {
 			close();
 			throw e;
 		} catch (IndexOperationException e) {
-			page.cleanup();
-			page = null;
 			close();
 			throw new IndexAccessException(e,
 					"Error navigating to specified record.");
@@ -243,8 +268,6 @@ public final class BracketIterImpl implements BracketIter {
 			close();
 			throw e;
 		} catch (IndexOperationException e) {
-			page.cleanup();
-			page = null;
 			close();
 			throw new IndexAccessException(e, "Error moving to next record.");
 		}
@@ -342,8 +365,6 @@ public final class BracketIterImpl implements BracketIter {
 			close();
 			throw e;
 		} catch (IndexOperationException e) {
-			page.cleanup();
-			page = null;
 			close();
 			throw new IndexAccessException(e, "Error fetching next page.");
 		}
@@ -370,7 +391,7 @@ public final class BracketIterImpl implements BracketIter {
 		assureContextValidity();
 
 		try {
-			tree.deleteFromLeaf(tx, rootPageID, page, deleteListener, -1,
+			tree.deleteSubtree(tx, rootPageID, page, deleteListener, -1,
 					openMode.doLog());
 			page = null;
 		} catch (IndexAccessException e) {

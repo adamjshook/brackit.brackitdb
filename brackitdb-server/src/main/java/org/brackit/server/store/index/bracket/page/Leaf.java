@@ -83,6 +83,8 @@ public interface Leaf extends BPContext {
 	public void moveBeforeFirst();
 
 	public boolean moveNextToLastRecord() throws IndexOperationException;
+	
+	public boolean moveToSplitPosition(float occupancyRate) throws IndexOperationException;
 
 	/**
 	 * 
@@ -92,9 +94,9 @@ public interface Leaf extends BPContext {
 	 * @param logged
 	 * @param undoNextLSN
 	 * @param bulkLog
-	 *            if logged and delayedLog are set to true, delayed logging will
-	 *            be performed (i.e. no log record is written within this
-	 *            method, but at a later point in time)
+	 *            if logged and bulkLog are set to true, delayed logging will be
+	 *            performed (i.e. no log record is written within this method,
+	 *            but at a later point in time)
 	 * @return
 	 * @throws IndexOperationException
 	 */
@@ -104,19 +106,21 @@ public interface Leaf extends BPContext {
 
 	/**
 	 * Writes an INSERT log for the collected nodes in the 'insertRecordAfter'
-	 * method. May only be used in combination with the above-mentioned method.
+	 * or 'insertSequenceAfter' methods. May only be used in combination with
+	 * the above-mentioned methods.
 	 */
-	public void bulkLog() throws IndexOperationException;
+	public void bulkLog(boolean writeUndoNextLSN, long undoNextLSN) throws IndexOperationException;
 
 	public boolean insertRecord(XTCdeweyID deweyID, byte[] record,
 			int ancestorsToInsert, boolean logged, long undoNextLSN)
 			throws IndexOperationException;
 
-	public boolean insertSequenceAfter(BracketNodeSequence nodes,
-			boolean logged, long undoNextLSN) throws IndexOperationException;
+	public boolean insertSequenceAfter(BracketNodeSequence nodes, boolean SMO,
+			boolean logged, long undoNextLSN, boolean bulkLog)
+			throws IndexOperationException;
 
-	public boolean insertSequence(BracketNodeSequence nodes, boolean logged,
-			long undoNextLSN) throws IndexOperationException;
+	public boolean insertSequence(BracketNodeSequence nodes, boolean SMO,
+			boolean logged, long undoNextLSN) throws IndexOperationException;
 
 	public XTCdeweyID getKey();
 
@@ -149,7 +153,7 @@ public interface Leaf extends BPContext {
 	 * @return
 	 * @throws IndexOperationException
 	 */
-	public BracketNodeSequence deleteSequenceAfter(boolean logged,
+	public BracketNodeSequence deleteSequenceAfter(boolean SMO, boolean logged,
 			long undoNextLSN) throws IndexOperationException;
 
 	public void copyContentAndContextTo(Leaf other, boolean logged,
@@ -258,19 +262,14 @@ public interface Leaf extends BPContext {
 	 * @throws IndexOperationException
 	 */
 	public DeleteSequenceInfo deleteSequence(XTCdeweyID leftBorderDeweyID,
-			XTCdeweyID rightBorderDeweyID, boolean logged, long undoNextLSN)
-			throws IndexOperationException;
+			XTCdeweyID rightBorderDeweyID, boolean SMO, boolean logged,
+			long undoNextLSN) throws IndexOperationException;
 
 	/**
 	 * Deletes all nodes from this page. Highkey and other header data will be
 	 * preserved.
-	 * 
-	 * @param logged
-	 * @param undoNextLSN
-	 * @throws IndexOperationException
-	 * @return the deleted node sequence
 	 */
-	public BracketNodeSequence clearData(boolean logged, long undoNextLSN)
+	public BracketNodeSequence clearData(boolean SMO, boolean logged, long undoNextLSN)
 			throws IndexOperationException;
 
 	public HintPageInformation getHintPageInformation();

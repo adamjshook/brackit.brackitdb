@@ -31,6 +31,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.log4j.Logger;
 import org.brackit.server.io.buffer.PageID;
+import org.brackit.server.store.SearchMode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.BracketTree;
 import org.brackit.server.store.index.bracket.IndexOperationException;
@@ -53,7 +54,9 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 
 	public enum ActionType {
 		INSERT(BracketIndexLogOperation.LEAF_INSERT), DELETE(
-				BracketIndexLogOperation.LEAF_DELETE);
+				BracketIndexLogOperation.LEAF_DELETE), SMO_INSERT(
+				BracketIndexLogOperation.LEAF_SMO_INSERT), SMO_DELETE(
+				BracketIndexLogOperation.LEAF_SMO_DELETE);
 
 		private byte type;
 
@@ -103,11 +106,27 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 				return;
 			} catch (IndexAccessException e) {
 				throw new LogException(e,
-						"Redo of insert into into page %s failed", pageID);
+						"Redo of insert into index %s failed", rootPageID);
 			}
 		case LEAF_DELETE:
 			try {
 				redoPageContentUpdate(tx, ActionType.DELETE, LSN);
+				return;
+			} catch (IndexAccessException e) {
+				throw new LogException(e,
+						"Redo of delete from index %s failed", rootPageID);
+			}
+		case LEAF_SMO_INSERT:
+			try {
+				redoPageContentUpdate(tx, ActionType.SMO_INSERT, LSN);
+				return;
+			} catch (IndexAccessException e) {
+				throw new LogException(e,
+						"Redo of insert into into page %s failed", pageID);
+			}
+		case LEAF_SMO_DELETE:
+			try {
+				redoPageContentUpdate(tx, ActionType.SMO_DELETE, LSN);
 				return;
 			} catch (IndexAccessException e) {
 				throw new LogException(e, "Redo of delete from page %s failed",
@@ -124,15 +143,31 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 		switch (type) {
 		case LEAF_INSERT:
 			try {
-				undoPageContentUpdate(tx, ActionType.INSERT, LSN, undoNextLSN);
+				undoInsert(tx, LSN, undoNextLSN);
+				return;
+			} catch (IndexAccessException e) {
+				throw new LogException(e,
+						"Undo of insert into index %s failed", rootPageID);
+			}
+		case LEAF_DELETE:
+			try {
+				undoDelete(tx, LSN, undoNextLSN);
+				return;
+			} catch (IndexAccessException e) {
+				throw new LogException(e,
+						"Undo of delete from index %s failed", rootPageID);
+			}
+		case LEAF_SMO_INSERT:
+			try {
+				undoPageContentUpdate(tx, ActionType.SMO_INSERT, LSN, undoNextLSN);
 				return;
 			} catch (IndexAccessException e) {
 				throw new LogException(e,
 						"Undo of insert into into page %s failed", pageID);
 			}
-		case LEAF_DELETE:
+		case LEAF_SMO_DELETE:
 			try {
-				undoPageContentUpdate(tx, ActionType.DELETE, LSN, undoNextLSN);
+				undoPageContentUpdate(tx, ActionType.SMO_DELETE, LSN, undoNextLSN);
 				return;
 			} catch (IndexAccessException e) {
 				throw new LogException(e, "Undo of delete from page %s failed",
@@ -141,6 +176,37 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 		default:
 			throw new LogException("Unsupported update operation type: %s.",
 					type);
+		}
+	}
+
+	public void undoInsert(Tx tx, long LSN, long undoNextLSN)
+			throws IndexAccessException {
+
+		if (log.isTraceEnabled()) {
+			log.trace("Begin undo insert");
+		}
+
+		BracketTree tree = new BracketTree(tx.getBufferManager());
+		tree.deleteSequence(tx, rootPageID, nodes.getLowKey(),
+				nodes.getHighKey(), pageID, true, undoNextLSN);
+
+		if (log.isTraceEnabled()) {
+			log.trace("End undo insert");
+		}
+	}
+
+	public void undoDelete(Tx tx, long LSN, long undoNextLSN)
+			throws IndexAccessException {
+
+		if (log.isTraceEnabled()) {
+			log.trace("Begin undo delete");
+		}
+
+		BracketTree tree = new BracketTree(tx.getBufferManager());
+		tree.insertSequence(tx, rootPageID, nodes, pageID, true, undoNextLSN);
+
+		if (log.isTraceEnabled()) {
+			log.trace("End undo delete");
 		}
 	}
 
@@ -184,17 +250,18 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 				Leaf leaf = (Leaf) page;
 
 				switch (actionType) {
-				case INSERT:
-					if (!leaf.insertSequence(nodes, false, -1)) {
+				case SMO_INSERT:
+					if (!leaf.insertSequence(nodes, true, false, -1)) {
 						leaf.cleanup();
 						throw new IndexAccessException(
 								"Not enough space to redo the insert in page %s.",
 								pageID);
 					}
 					break;
-				case DELETE:
+				case SMO_DELETE:
 					DeleteSequenceInfo delInfo = leaf.deleteSequence(
-							nodes.getLowKey(), nodes.getHighKey(), false, -1);
+							nodes.getLowKey(), nodes.getHighKey(), true, false,
+							-1);
 					if (delInfo.checkLeftNeighbor || delInfo.checkRightNeighbor) {
 						leaf.cleanup();
 						throw new IndexAccessException(
@@ -260,9 +327,9 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 			Leaf leaf = (Leaf) page;
 
 			switch (actionType) {
-			case INSERT:
+			case SMO_INSERT:
 				DeleteSequenceInfo delInfo = leaf.deleteSequence(
-						nodes.getLowKey(), nodes.getHighKey(), true,
+						nodes.getLowKey(), nodes.getHighKey(), true, true,
 						undoNextLSN);
 				if (delInfo.checkLeftNeighbor || delInfo.checkRightNeighbor) {
 					leaf.cleanup();
@@ -277,8 +344,8 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 							pageID);
 				}
 				break;
-			case DELETE:
-				if (!leaf.insertSequence(nodes, true, undoNextLSN)) {
+			case SMO_DELETE:
+				if (!leaf.insertSequence(nodes, true, true, undoNextLSN)) {
 					leaf.cleanup();
 					throw new IndexAccessException(
 							"Not enough space to undo the deletion in page %s.",
@@ -311,6 +378,12 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 			break;
 		case LEAF_DELETE:
 			typeString = "Delete from";
+			break;
+		case LEAF_SMO_INSERT:
+			typeString = "SMO Insert into";
+			break;
+		case LEAF_SMO_DELETE:
+			typeString = "SMO Delete from";
 			break;
 		default:
 			typeString = "Unkown in";
