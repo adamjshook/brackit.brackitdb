@@ -84,9 +84,9 @@ public class ExprOp implements Cursor {
 				if (it != null) {
 					Item item = it.next();
 					if (item != null) {
-						return (projections != null) ? new TupleImpl(tuple, it
-								.next(), projections) : new TupleImpl(tuple,
-								(Sequence) it.next());
+						Tuple tmp = tuple.concat(it.next());
+						return (projections != null) ? tmp.project(projections)
+								: tmp;
 					}
 
 					it.close();

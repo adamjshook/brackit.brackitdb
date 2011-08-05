@@ -37,6 +37,6 @@ import org.junit.runners.Suite.SuiteClasses;
  * 
  */
 @RunWith(Suite.class)
-@SuiteClasses( { BlinkIndexStandardTest.class, })
+@SuiteClasses( { BlinkIndexStandardTest.class })
 public class BlinkIndexTest {
 }

@@ -25,63 +25,52 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.el;
+package org.brackit.server.procedure.xmark.util;
 
-import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.metadata.pathSynopsis.PSNode;
-import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
-import org.brackit.server.node.DocID;
-import org.brackit.server.node.XTCdeweyID;
-import org.brackit.xquery.xdm.DocumentException;
-import org.brackit.xquery.xdm.Kind;
+import org.brackit.xquery.QueryContext;
+import org.brackit.xquery.QueryException;
+import org.brackit.xquery.Tuple;
+import org.brackit.xquery.operator.Cursor;
+import org.brackit.xquery.xdm.Expr;
 
 /**
- * 
  * @author Sebastian Baechle
  * 
  */
-public final class ElLocator {
+public class Select implements Cursor {
+	private final Cursor in;
 
-	public final DocID docID;
+	private final Expr predicate;
 
-	public final PageID rootPageID;
+	private final int[] projections;
 
-	public final PathSynopsisMgr pathSynopsis;
-
-	public final ElCollection collection;
-
-	public ElLocator(ElCollection collection, DocID docID, PageID rootPageID) {
-		this.docID = docID;
-		this.rootPageID = rootPageID;
-		this.collection = collection;
-		this.pathSynopsis = collection.getPathSynopsis();
+	public Select(Cursor in, Expr predicate) {
+		this(in, predicate, null);
 	}
 
-	public ElLocator(ElCollection collection, ElLocator locator) {
-		this.docID = locator.docID;
-		this.rootPageID = locator.rootPageID;
-		this.collection = collection;
-		this.pathSynopsis = locator.pathSynopsis;
+	public Select(Cursor in, Expr predicate, int... projections) {
+		this.in = in;
+		this.predicate = predicate;
+		this.projections = projections;
 	}
 
-	public ElNode fromBytes(XTCdeweyID deweyID, byte[] record)
-			throws DocumentException {
-		int pcr = ElRecordAccess.getPCR(record);
-		PSNode psn = pathSynopsis.get(collection.getTX(), pcr);
-		int dist = deweyID.getLevel() - psn.getLevel();
+	@Override
+	public void close(QueryContext ctx) {
+		in.close(ctx);
+	}
 
-		if ((dist == 1)) {
-			return new ElNode(this, deweyID, ElRecordAccess.getType(record),
-					ElRecordAccess.getValue(record), psn);
-		} else if (dist <= 0) {
-			while (dist++ < 0) {
-				psn = psn.getParent();
-			}
-			return new ElNode(this, deweyID, Kind.ELEMENT.ID, null, psn);
-		} else {
-			throw new DocumentException(
-					"Node %s has level %s but PCR %s has level %s", deweyID,
-					deweyID.getLevel(), pcr, psn.getLevel());
-		}
+	@Override
+	public Tuple next(QueryContext ctx) throws QueryException {
+		Tuple a;
+		while (((a = in.next(ctx)) != null)
+				&& (!predicate.evaluate(ctx, a).booleanValue(ctx)))
+			;
+		return (a != null) ? (projections != null) ? a.project(projections)
+				: a : null;
+	}
+
+	@Override
+	public void open(QueryContext ctx) throws QueryException {
+		in.open(ctx);
 	}
 }

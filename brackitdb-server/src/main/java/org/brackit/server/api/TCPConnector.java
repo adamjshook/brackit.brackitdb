@@ -222,7 +222,7 @@ public class TCPConnector implements Runnable {
 				TXQueryContext ctx = new TXQueryContext(tx, mdm);
 				xq.serialize(ctx, new PrintStream(to));
 
-				if (tx == null) {
+				if (session.isAutoCommit()) {
 					session.commit();
 				}
 			} catch (Throwable e) {
@@ -238,12 +238,14 @@ public class TCPConnector implements Runnable {
 			}
 		}
 
-		private void writeString(OutputStream out, String s) throws IOException {
-			int r;
-			ByteArrayInputStream response = new ByteArrayInputStream(s
-					.getBytes("UTF-8"));
-			while ((r = response.read()) > 0) {
-				out.write(r);
+		private void writeString(OutputStream out, String s) throws IOException {			
+			if (s != null) {
+				ByteArrayInputStream response = new ByteArrayInputStream(s
+						.getBytes("UTF-8"));
+				int r;
+				while ((r = response.read()) > 0) {
+					out.write(r);
+				}
 			}
 			out.write(0);
 		}

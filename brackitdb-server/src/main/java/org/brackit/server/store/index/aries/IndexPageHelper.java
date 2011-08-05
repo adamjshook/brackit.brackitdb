@@ -27,9 +27,6 @@
  */
 package org.brackit.server.store.index.aries;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.Handle;
@@ -79,7 +76,8 @@ public final class IndexPageHelper extends PageContextFactory {
 		if (pageType == PageType.INDEX_TREE) {
 			try {
 				if (context.getKey() == null) {
-					fail(String.format("Tree page %s is empty", pageID));
+					throw new AssertionError(String.format(
+							"Tree page %s is empty", pageID));
 				}
 
 				PageID currentChild = context.getBeforePageID();
@@ -90,17 +88,18 @@ public final class IndexPageHelper extends PageContextFactory {
 
 					try {
 						if (separatorKey != null)
-							assertTrue(
-									String
-											.format(
-													"child separator key '%s' (page %s) > next separator key '%s' in an ancestor",
-													keyType
-															.toString(currentKey),
-													handle,
-													keyType
-															.toString(separatorKey)),
-									((separatorKey == null) || keyType.compare(
-											currentKey, separatorKey) <= 0));
+							if (!((separatorKey == null) || keyType.compare(
+									currentKey, separatorKey) <= 0)) {
+								throw new AssertionError(
+										String
+												.format(
+														"child separator key '%s' (page %s) > next separator key '%s' in an ancestor",
+														keyType
+																.toString(currentKey),
+														handle,
+														keyType
+																.toString(separatorKey)));
+							}
 					} catch (Exception e) {
 						// TODO Auto-generated catch block
 						System.out.println(context);
@@ -112,16 +111,19 @@ public final class IndexPageHelper extends PageContextFactory {
 							buffer, currentChild, currentKey);
 
 					if (childHighKey != null)
-						assertTrue(
-								String
-										.format(
-												"child highKey '%s' (page %s) < next separator key '%s (page %s)'",
-												keyType.toString(childHighKey),
-												currentChild, keyType
-														.toString(currentKey),
-												handle.getPageID()),
-								((childHighKey == null) || keyType.compare(
-										childHighKey, currentKey) < 1));
+						if (!((childHighKey == null) || keyType.compare(
+								childHighKey, currentKey) < 1)) {
+							throw new AssertionError(
+									String
+											.format(
+													"child highKey '%s' (page %s) < next separator key '%s (page %s)'",
+													keyType
+															.toString(childHighKey),
+													currentChild,
+													keyType
+															.toString(currentKey),
+													handle.getPageID()));
+						}
 
 					currentChild = context.getAfterPageID();
 
@@ -130,25 +132,27 @@ public final class IndexPageHelper extends PageContextFactory {
 								currentKey);
 
 						if (context.isUnique()) {
-							assertTrue(
-									String
-											.format(
-													"previous separator key '%s' < currentSeparatorKey '%s'",
-													keyType
-															.toString(previousKey),
-													keyType
-															.toString(currentKey)),
-									comparison < 0);
+							if (!(comparison < 0)) {
+								throw new AssertionError(
+										String
+												.format(
+														"previous separator key '%s' < currentSeparatorKey '%s'",
+														keyType
+																.toString(previousKey),
+														keyType
+																.toString(currentKey)));
+							}
 						} else {
-							assertTrue(
-									String
-											.format(
-													"previous separator key '%s' <= currentSeparatorKey '%s'",
-													keyType
-															.toString(previousKey),
-													keyType
-															.toString(currentKey)),
-									comparison <= 0);
+							if (!(comparison <= 0)) {
+								throw new AssertionError(
+										String
+												.format(
+														"previous separator key '%s' <= currentSeparatorKey '%s'",
+														keyType
+																.toString(previousKey),
+														keyType
+																.toString(currentKey)));
+							}
 						}
 					}
 
@@ -173,10 +177,12 @@ public final class IndexPageHelper extends PageContextFactory {
 				if (previousKey != null) {
 					int comparison = keyType.compare(previousKey, currentKey);
 					try {
-						assertTrue(String.format(
-								"previousKey '%s' > currentKey '%s'", keyType
-										.toString(previousKey), keyType
-										.toString(currentKey)), comparison < 1);
+						if (!(comparison < 1)) {
+							throw new AssertionError(String.format(
+									"previousKey '%s' > currentKey '%s'",
+									keyType.toString(previousKey), keyType
+											.toString(currentKey)));
+						}
 					} catch (Error e) {
 						System.err.println(context.dump("illegal page"));
 						throw e;
@@ -184,11 +190,16 @@ public final class IndexPageHelper extends PageContextFactory {
 
 					if (comparison == 0) {
 						try {
-							assertTrue(String.format(
-									"previousValue '%s' >= currentValue '%s'",
-									field.toString(previousValue), field
-											.toString(currentValue)), field
-									.compare(previousValue, currentValue) < 0);
+							if (!(field.compare(previousValue, currentValue) < 0)) {
+								throw new AssertionError(
+										String
+												.format(
+														"previousValue '%s' >= currentValue '%s'",
+														field
+																.toString(previousValue),
+														field
+																.toString(currentValue)));
+							}
 						} catch (Error e) {
 							System.err.println(context.dump("illegal page"));
 							throw e;
@@ -207,8 +218,9 @@ public final class IndexPageHelper extends PageContextFactory {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			fail(String.format("Page %s has an unexpected page type: %s",
-					pageID, pageType));
+			throw new AssertionError(String
+					.format("Page %s has an unexpected page type: %s", pageID,
+							pageType));
 		}
 
 		handle.unlatch();

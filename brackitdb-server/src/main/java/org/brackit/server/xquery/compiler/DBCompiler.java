@@ -27,9 +27,13 @@
  */
 package org.brackit.server.xquery.compiler;
 
+import org.brackit.server.xquery.function.bdb.SetIsolation;
+import org.brackit.server.xquery.function.bdb.SetLockdepth;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.translator.PipelineCompiler;
+import org.brackit.xquery.module.Functions;
+import org.brackit.xquery.module.Namespaces;
 import org.brackit.xquery.xdm.Expr;
 
 /**
@@ -38,7 +42,15 @@ import org.brackit.xquery.xdm.Expr;
  */
 public class DBCompiler extends PipelineCompiler {
 
+	public static final String BDB_PREFIX = "bdb";
+	
+	public static final String BDB_NSURI = "http://brackit.org/ns/bdb";
+
 	static {
+		Namespaces.predefine(BDB_PREFIX, BDB_NSURI);
+		Functions.predefine(new SetIsolation());
+		Functions.predefine(new SetLockdepth());
+		
 		// TODO register db-specific functions
 		// Example:
 		// Functions.predefine(new CreateIndex());

@@ -112,9 +112,9 @@ public class StepOp implements Cursor {
 					while ((next = stream.next()) != null) {
 						foundRelative = true;
 						if (predicate(ctx, next)) {
-							return (projections != null) ? new TupleImpl(a,
-									next, projections) : new TupleImpl(a,
-									(Sequence) next);
+							return (projections != null) ? a.concat(
+									next.array()).project(projections) : a
+									.concat((Sequence) next);
 						}
 					}
 
@@ -122,10 +122,9 @@ public class StepOp implements Cursor {
 					stream = null;
 
 					if ((!foundRelative) && (pipeSingle)) {
-						Tuple joined = new TupleImpl(a, (Sequence) null);
-						return (projections != null) ? new TupleImpl(a, null,
-								projections)
-								: new TupleImpl(a, (Sequence) null);
+						Tuple joined = a.concat((Sequence) null);
+						return (projections != null) ? joined
+								.project(projections) : joined;
 					}
 				}
 
@@ -145,7 +144,7 @@ public class StepOp implements Cursor {
 
 	private boolean predicate(QueryContext ctx, Item item)
 			throws QueryException {
-		if (!test.matches(ctx, item)) {
+		if (!test.matches(item)) {
 			return false;
 		}
 

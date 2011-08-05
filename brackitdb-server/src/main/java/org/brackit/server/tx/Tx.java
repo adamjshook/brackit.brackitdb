@@ -29,6 +29,7 @@ package org.brackit.server.tx;
 
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.cache.CachedObjectUser;
+import org.brackit.server.session.Session;
 import org.brackit.server.tx.locking.LockControlBlock;
 import org.brackit.server.tx.log.LogOperation;
 
@@ -41,6 +42,8 @@ public interface Tx extends CachedObjectUser {
 	public TxID getID();
 
 	public IsolationLevel getIsolationLevel();
+	
+	public Session getSession();
 
 	public boolean isReadOnly();
 

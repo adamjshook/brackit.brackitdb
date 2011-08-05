@@ -47,6 +47,7 @@ import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.metadata.BlobHandle;
 import org.brackit.server.metadata.DBCollection;
+import org.brackit.server.metadata.DBItem;
 import org.brackit.server.metadata.manager.impl.MetaDataMgrImpl;
 import org.brackit.server.metadata.masterDocument.Indexes;
 import org.brackit.server.store.index.aries.BPlusIndex;
@@ -96,54 +97,53 @@ public class MetaDataMgrImplTest {
 
 	protected static final String ROOT_ONLY_DOCUMENT = "<?xml version = '1.0' encoding = 'UTF-8'?><root/>";
 
-	protected Tx ctx;
+	protected Tx tx;
 
-	protected Tx ctx2;
+	protected Tx tx2;
 
 	protected SysMockup sm;
 
-	protected MetaDataMgrImpl metaDataMgr;
+	protected MetaDataMgrImpl mdm;
 
 	@Test
 	public void testInstall() throws Exception {
-		metaDataMgr.start(ctx, true);
+		mdm.start(tx, true);
 	}
 
 	@Test
 	public void testShutdown() throws Exception {
-		metaDataMgr.start(ctx, true);
-		metaDataMgr.shutdown();
+		mdm.start(tx, true);
+		mdm.shutdown();
 	}
 
 	@Test
 	public void testStart() throws Exception {
-		metaDataMgr.start(ctx, true);
-		ctx.commit();
-		metaDataMgr = new MetaDataMgrImpl(sm.taMgr);
-		metaDataMgr.start(ctx2, false);
+		mdm.start(tx, true);
+		tx.commit();
+		mdm = new MetaDataMgrImpl(sm.taMgr);
+		mdm.start(tx2, false);
 	}
 
 	@Test
 	public void testPutDocument() throws Exception {
-		metaDataMgr.start(ctx, true);
-		metaDataMgr.create(ctx, "/test.xml", new DocumentParser(DOCUMENT));
-		DBCollection<?> collection = metaDataMgr.lookup(ctx, "/test.xml");
+		mdm.start(tx, true);
+		mdm.create(tx, "/test.xml", new DocumentParser(DOCUMENT));
+		DBCollection<?> collection = mdm.lookup(tx, "/test.xml");
 	}
 
 	@Test
 	public void testPutCollection() throws Exception {
-		metaDataMgr.start(ctx, true);
+		mdm.start(tx, true);
 		List<Node<?>> documents = new ArrayList<Node<?>>();
 		int docCount = 3;
-		DBCollection<?> collection = metaDataMgr.create(ctx, "/test.col");
+		DBCollection<?> collection = mdm.create(tx, "/test.col");
 
 		for (int i = 0; i < docCount; i++) {
-			collection.add(new DocumentParser(DOCUMENT));
-			documents.add(collection.getDocument());
+			Node<?> doc = collection.add(new DocumentParser(DOCUMENT));
+			documents.add(doc);
 
 			int j = 0;
 			Stream<? extends Node<?>> docs = collection.getDocuments();
-			Node<?> doc;
 			while ((doc = docs.next()) != null) {
 				assertEquals("documents are equal", documents.get(j), doc);
 				j++;
@@ -156,11 +156,11 @@ public class MetaDataMgrImplTest {
 
 	@Test
 	public void testPutDocumentDuplicate() throws Exception {
-		metaDataMgr.start(ctx, true);
-		metaDataMgr.create(ctx, "/test.xml", new DocumentParser(DOCUMENT));
-		DBCollection<?> collection = metaDataMgr.lookup(ctx, "/test.xml");
+		mdm.start(tx, true);
+		mdm.create(tx, "/test.xml", new DocumentParser(DOCUMENT));
+		DBCollection<?> collection = mdm.lookup(tx, "/test.xml");
 		try {
-			DBCollection<?> collection2 = metaDataMgr.create(ctx, "/test.xml",
+			DBCollection<?> collection2 = mdm.create(tx, "/test.xml",
 					new DocumentParser(DOCUMENT));
 			Assert.fail("Duplicate insertion was not detected.");
 		} catch (DocumentException e) {
@@ -170,24 +170,20 @@ public class MetaDataMgrImplTest {
 
 	@Test
 	public void testMkDirAndPut() throws Exception {
-		metaDataMgr.start(ctx, true);
-		metaDataMgr.mkdir(ctx, "/myDir");
-		metaDataMgr.create(ctx, "/myDir" + "/test.xml", new DocumentParser(
-				DOCUMENT));
-		DBCollection<?> collection = metaDataMgr.lookup(ctx, "/myDir"
-				+ "/test.xml");
+		mdm.start(tx, true);
+		mdm.mkdir(tx, "/myDir");
+		mdm.create(tx, "/myDir" + "/test.xml", new DocumentParser(DOCUMENT));
+		DBCollection<?> collection = mdm.lookup(tx, "/myDir" + "/test.xml");
 	}
 
 	@Test
 	public void testMkDirAndPutDuplicate() throws Exception {
-		metaDataMgr.start(ctx, true);
-		metaDataMgr.mkdir(ctx, "/myDir");
-		metaDataMgr.create(ctx, "/myDir" + "/test.xml", new DocumentParser(
-				DOCUMENT));
-		DBCollection<?> collection = metaDataMgr.lookup(ctx, "/myDir"
-				+ "/test.xml");
+		mdm.start(tx, true);
+		mdm.mkdir(tx, "/myDir");
+		mdm.create(tx, "/myDir" + "/test.xml", new DocumentParser(DOCUMENT));
+		DBCollection<?> collection = mdm.lookup(tx, "/myDir" + "/test.xml");
 		try {
-			DBCollection<?> collection2 = metaDataMgr.create(ctx, "/myDir"
+			DBCollection<?> collection2 = mdm.create(tx, "/myDir"
 					+ "/test.xml", new DocumentParser(DOCUMENT));
 			Assert.fail("Duplicate insertion was not detected.");
 		} catch (DocumentException e) {
@@ -197,30 +193,27 @@ public class MetaDataMgrImplTest {
 
 	@Test
 	public void testMkDirAndDelete() throws Exception {
-		metaDataMgr.start(ctx, true);
-		metaDataMgr.mkdir(ctx, "/myDir");
-		metaDataMgr.drop(ctx, "/myDir");
+		mdm.start(tx, true);
+		mdm.mkdir(tx, "/myDir");
+		mdm.drop(tx, "/myDir");
 	}
 
 	@Test
 	public void testMkDirPutAndDelete() throws Exception {
-		metaDataMgr.start(ctx, true);
-		metaDataMgr.mkdir(ctx, "/myDir");
-		metaDataMgr.create(ctx, "/myDir" + "/test.xml", new DocumentParser(
-				DOCUMENT));
-		DBCollection<?> collection = metaDataMgr.lookup(ctx, "/myDir"
-				+ "/test.xml");
-		metaDataMgr.drop(ctx, "/myDir");
+		mdm.start(tx, true);
+		mdm.mkdir(tx, "/myDir");
+		mdm.create(tx, "/myDir" + "/test.xml", new DocumentParser(DOCUMENT));
+		DBCollection<?> collection = mdm.lookup(tx, "/myDir" + "/test.xml");
+		mdm.drop(tx, "/myDir");
 		try {
-			DBCollection<?> collection2 = metaDataMgr.lookup(ctx, collection
-					.getID());
+			DBCollection<?> collection2 = mdm.lookup(tx, collection.getID());
 			Assert
 					.fail("Implicitly deleted collection could be accessed by ID.");
 		} catch (DocumentException e) {
 			// expected
 		}
 		try {
-			DBCollection<?> collection2 = metaDataMgr.lookup(ctx, "/myDir"
+			DBCollection<?> collection2 = mdm.lookup(tx, "/myDir"
 					+ "/test.xml");
 			Assert
 					.fail("Implicitly deleted collection could be accessed by name.");
@@ -231,13 +224,13 @@ public class MetaDataMgrImplTest {
 
 	@Test
 	public void testDeleteDocument() throws Exception {
-		metaDataMgr.start(ctx, true);
-		metaDataMgr.create(ctx, "/test.xml", new DocumentParser(DOCUMENT));
-		DBCollection<?> collection = metaDataMgr.lookup(ctx, "/test.xml");
-		metaDataMgr.drop(ctx, "/test.xml");
-		ctx.commit();
+		mdm.start(tx, true);
+		mdm.create(tx, "/test.xml", new DocumentParser(DOCUMENT));
+		DBCollection<?> collection = mdm.lookup(tx, "/test.xml");
+		mdm.drop(tx, "/test.xml");
+		tx.commit();
 		try {
-			collection = metaDataMgr.lookup(ctx, "/test.xml");
+			collection = mdm.lookup(tx, "/test.xml");
 			Assert.fail("Locator found after delete.");
 		} catch (DocumentException e) {
 			e.printStackTrace();
@@ -247,86 +240,152 @@ public class MetaDataMgrImplTest {
 
 	@Test
 	public void testGetAliveLocatorByNameFirst() throws Exception {
-		metaDataMgr.start(ctx, true);
-		metaDataMgr.create(ctx, "/test.xml", new DocumentParser(DOCUMENT));
-		(new BPlusIndex(sm.bufferManager)).dump(ctx, new PageID(5), System.out);
-		DBCollection<?> collection = metaDataMgr.lookup(ctx, "/test.xml");
-		DBCollection<?> collection2 = metaDataMgr.lookup(ctx, collection
-				.getID());
+		mdm.start(tx, true);
+		mdm.create(tx, "/test.xml", new DocumentParser(DOCUMENT));
+		(new BPlusIndex(sm.bufferManager)).dump(tx, new PageID(5), System.out);
+		DBCollection<?> collection = mdm.lookup(tx, "/test.xml");
+		DBCollection<?> collection2 = mdm.lookup(tx, collection.getID());
 		Assert.assertSame("Got same collection object back", collection,
 				collection2);
 	}
 
 	@Test
 	public void testGetAliveLocatorByIDFirst() throws Exception {
-		metaDataMgr.start(ctx, true);
-		metaDataMgr.create(ctx, "/test.xml", new DocumentParser(DOCUMENT));
+		mdm.start(tx, true);
+		mdm.create(tx, "/test.xml", new DocumentParser(DOCUMENT));
 		// (new BPlusIndex(bufferMgr)).dump(ctx, new PageID(5), System.out);
-		DBCollection<?> collection = metaDataMgr.lookup(ctx, "/test.xml");
-		DBCollection<?> collection2 = metaDataMgr.lookup(ctx, collection
-				.getID());
+		DBCollection<?> collection = mdm.lookup(tx, "/test.xml");
+		DBCollection<?> collection2 = mdm.lookup(tx, collection.getID());
 		Assert.assertSame("Got same collection object back", collection,
 				collection2);
 	}
 
 	@Test
 	public void testGetDeadLocatorByNameFirst() throws Exception {
-		metaDataMgr.start(ctx, true);
-		metaDataMgr.create(ctx, "/test.xml", new DocumentParser(DOCUMENT));
-		ctx.commit();
-		metaDataMgr.shutdown();
-		metaDataMgr.start(ctx2, false);
-		DBCollection<?> collection = metaDataMgr.lookup(ctx, "/test.xml");
-		DBCollection<?> collection2 = metaDataMgr.lookup(ctx, collection
-				.getID());
+		mdm.start(tx, true);
+		mdm.create(tx, "/test.xml", new DocumentParser(DOCUMENT));
+		tx.commit();
+		mdm.shutdown();
+		mdm.start(tx2, false);
+		DBCollection<?> collection = mdm.lookup(tx, "/test.xml");
+		DBCollection<?> collection2 = mdm.lookup(tx, collection.getID());
 		Assert.assertSame("Got same collection object back", collection,
 				collection2);
 	}
 
 	@Test
 	public void testGetDeadLocatorByIDFirst() throws Exception {
-		metaDataMgr.start(ctx, true);
-		metaDataMgr.create(ctx, "/test.xml", new DocumentParser(DOCUMENT));
-		ctx.commit();
-		metaDataMgr.shutdown();
-		metaDataMgr.start(ctx2, false);
-		DBCollection<?> collection = metaDataMgr.lookup(ctx, "/test.xml");
-		DBCollection<?> collection2 = metaDataMgr.lookup(ctx, collection
-				.getID());
+		mdm.start(tx, true);
+		mdm.create(tx, "/test.xml", new DocumentParser(DOCUMENT));
+		tx.commit();
+		mdm.shutdown();
+		mdm.start(tx2, false);
+		DBCollection<?> collection = mdm.lookup(tx, "/test.xml");
+		DBCollection<?> collection2 = mdm.lookup(tx, collection.getID());
 		Assert.assertSame("Got same collection object back", collection,
 				collection2);
 	}
 
 	@Test
 	public void testGetDeadLocatorCheckIndexes() throws Exception {
-		metaDataMgr.start(ctx, true);
-		DBCollection<?> original = metaDataMgr.create(ctx, "/test.xml",
+		mdm.start(tx, true);
+		DBCollection<?> original = mdm.create(tx, "/test.xml",
 				new DocumentParser(DOCUMENT));
 		original.getIndexController().createIndex("create element index");
-		ctx.commit();
-		metaDataMgr.shutdown();
-		metaDataMgr.start(ctx2, false);
-		DBCollection<?> collection = metaDataMgr.lookup(ctx, "/test.xml");
+		tx.commit();
+		mdm.shutdown();
+		mdm.start(tx2, false);
+		DBCollection<?> collection = mdm.lookup(tx, "/test.xml");
 		System.out.println(collection.get(Indexes.class).getIndexDefs());
 	}
 
 	@Test
-	public void testPutAndGetBlob() throws Exception, IOException {
-		metaDataMgr.start(ctx, true);
-		byte[] bytes = new byte[1024 * 10];
-		new Random(123456789).nextBytes(bytes);
-		metaDataMgr.putBlob(ctx, new ByteArrayInputStream(bytes), "/test.bin",
+	public void testPutAndGetBlobAliveByPath() throws Exception, IOException {
+		mdm.start(tx, true);
+		byte[] blob = createBlob();
+		mdm.putBlob(tx, new ByteArrayInputStream(blob), "/test.bin",
 				SysMockup.CONTAINER_NO);
-		BlobHandle handle = metaDataMgr.getBlob(ctx, "/test.bin");
-
-		ByteBuffer buffer = ByteBuffer.allocate(bytes.length);
-		byte[] chunk = new byte[256];
+		BlobHandle handle = mdm.getBlob(tx, "/test.bin");
 		InputStream stream = handle.read();
+		checkBlob(blob, stream);
+	}
 
+	@Test
+	public void testPutAndGetAliveBlobByID() throws Exception, IOException {
+		mdm.start(tx, true);
+		byte[] blob = createBlob();
+		BlobHandle handle = mdm.putBlob(tx, new ByteArrayInputStream(blob),
+				"/test.bin", SysMockup.CONTAINER_NO);
+		handle = mdm.getBlob(tx, handle.getID());
+		InputStream stream = handle.read();
+		checkBlob(blob, stream);
+	}
+	
+	@Test
+	public void testPutAndGetBlobDeadByPath() throws Exception, IOException {
+		mdm.start(tx, true);
+		byte[] blob = createBlob();
+		mdm.putBlob(tx, new ByteArrayInputStream(blob), "/test.bin",
+				SysMockup.CONTAINER_NO);
+		tx.commit();
+		mdm.shutdown();
+		mdm.start(tx, false);
+		BlobHandle handle = mdm.getBlob(tx, "/test.bin");
+		InputStream stream = handle.read();
+		checkBlob(blob, stream);
+	}
+
+	@Test
+	public void testPutAndGetDeadBlobByID() throws Exception, IOException {
+		mdm.start(tx, true);
+		byte[] blob = createBlob();
+		BlobHandle handle = mdm.putBlob(tx, new ByteArrayInputStream(blob),
+				"/test.bin", SysMockup.CONTAINER_NO);
+		tx.commit();
+		mdm.shutdown();
+		mdm.start(tx, false);
+		handle = mdm.getBlob(tx, handle.getID());
+		InputStream stream = handle.read();
+		checkBlob(blob, stream);
+	}
+	
+	@Test
+	public void testPutAndGetBlobItemAliveByPath() throws Exception, IOException {
+		mdm.start(tx, true);
+		byte[] blob = createBlob();
+		mdm.putBlob(tx, new ByteArrayInputStream(blob), "/test.bin",
+				SysMockup.CONTAINER_NO);
+		DBItem<?> item = mdm.getItem(tx, "/test.bin");
+		InputStream stream = ((BlobHandle) item).read();
+		checkBlob(blob, stream);
+	}
+	
+	@Test
+	public void testPutAndGetBlobItemDeadByPath() throws Exception, IOException {
+		mdm.start(tx, true);
+		byte[] blob = createBlob();
+		mdm.putBlob(tx, new ByteArrayInputStream(blob), "/test.bin",
+				SysMockup.CONTAINER_NO);
+		tx.commit();
+		mdm.shutdown();
+		mdm.start(tx, false);
+		DBItem<?> item = mdm.getItem(tx, "/test.bin");
+		InputStream stream = ((BlobHandle) item).read();
+		checkBlob(blob, stream);
+	}
+
+	private byte[] createBlob() {
+		byte[] blob = new byte[1024 * 10];
+		new Random(123456789).nextBytes(blob);
+		return blob;
+	}
+	
+	private void checkBlob(byte[] bytes, InputStream stream) throws IOException {
+		ByteBuffer buffer = ByteBuffer.allocate(bytes.length);
+		byte[] chunk = new byte[256];		
 		for (int read = stream.read(chunk); read > 0; read = stream.read(chunk)) {
 			buffer.put(chunk, 0, read);
 		}
-
 		assertEquals("Read same amount of bytes", bytes.length, buffer
 				.position());
 		assertTrue("Read same content", Arrays.equals(bytes, buffer.array()));
@@ -338,9 +397,9 @@ public class MetaDataMgrImplTest {
 
 	@Before
 	public void setUp() throws Exception {
-		sm = new SysMockup();
-		metaDataMgr = new MetaDataMgrImpl(sm.taMgr);
-		ctx = sm.taMgr.begin();
-		ctx2 = sm.taMgr.begin();
+		sm = new SysMockup(false);
+		mdm = new MetaDataMgrImpl(sm.taMgr);
+		tx = sm.taMgr.begin();
+		tx2 = sm.taMgr.begin();
 	}
 }

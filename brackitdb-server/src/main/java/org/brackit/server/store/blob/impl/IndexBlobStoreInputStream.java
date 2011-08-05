@@ -140,15 +140,10 @@ public class IndexBlobStoreInputStream extends InputStream {
 
 	@Override
 	public synchronized void close() throws IOException {
-		try {
-			buf = null;
-
-			if (iterator != null) {
-				iterator.close();
-				iterator = null;
-			}
-		} catch (IndexAccessException e) {
-			throw new IOException(e);
+		buf = null;
+		if (iterator != null) {
+			iterator.close();
+			iterator = null;
 		}
 	}
 }

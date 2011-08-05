@@ -103,7 +103,7 @@ public class BlinkIndexIterator implements IndexIterator {
 		return valueType;
 	}
 
-	public void close() throws IndexAccessException {
+	public void close() {
 		if (page != null) {
 			if ((!on) && (openMode != OpenMode.LOAD)) {
 				page.latchS();

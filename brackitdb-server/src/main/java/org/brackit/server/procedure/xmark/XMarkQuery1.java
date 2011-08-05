@@ -45,6 +45,7 @@ import org.brackit.server.procedure.xmark.util.MergeJoin;
 import org.brackit.server.procedure.xmark.util.NavigationExpander;
 import org.brackit.server.procedure.xmark.util.NestExpr;
 import org.brackit.server.procedure.xmark.util.NodeTest;
+import org.brackit.server.procedure.xmark.util.Select;
 import org.brackit.server.procedure.xmark.util.Split;
 import org.brackit.server.procedure.xmark.util.StreamOperator;
 import org.brackit.server.procedure.xmark.util.TextTest;
@@ -64,7 +65,6 @@ import org.brackit.xquery.expr.VCmpExpr;
 import org.brackit.xquery.expr.VCmpExpr.Cmp;
 import org.brackit.xquery.node.stream.filter.Filter;
 import org.brackit.xquery.operator.Cursor;
-import org.brackit.xquery.operator.Select;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.util.path.PathException;
 import org.brackit.xquery.xdm.DocumentException;
@@ -164,32 +164,32 @@ public class XMarkQuery1 implements Procedure {
 		long start = System.currentTimeMillis();
 		Cursor in1 = (shareDocumentScan) ? split.createClient()
 				: new DocumentScan(doc.getFirstChild());
-		in1 = new Select.SelectCursor(in1, new NodeTest("site", false));
+		in1 = new Select(in1, new NodeTest("site", false));
 
 		Cursor in2 = (shareDocumentScan) ? split.createClient()
 				: new DocumentScan(doc.getFirstChild());
-		in2 = new Select.SelectCursor(in2, new NodeTest("people", false));
+		in2 = new Select(in2, new NodeTest("people", false));
 
 		Cursor in3 = (shareDocumentScan) ? split.createClient()
 				: new DocumentScan(doc.getFirstChild());
-		in3 = new Select.SelectCursor(in3, new NodeTest("person", false));
+		in3 = new Select(in3, new NodeTest("person", false));
 
 		Cursor in4 = (shareDocumentScan) ? split.createClient()
 				: new DocumentScan(doc.getFirstChild());
-		in4 = new Select.SelectCursor(in4, new NodeTest("id", true));
+		in4 = new Select(in4, new NodeTest("id", true));
 		in4 = new ExprOp(in4, new Str("person0"));
-		in4 = new Select.SelectCursor(in4, new NestExpr(new VCmpExpr(Cmp.eq,
+		in4 = new Select(in4, new NestExpr(new VCmpExpr(Cmp.eq,
 				new BoundVariable(new QNm("l"), 0), new BoundVariable(new QNm(
 						"r"), 1)), new int[][] { new int[] { 0, 2 },
 				new int[] { 1 } }), 0);
 
 		Cursor in5 = (shareDocumentScan) ? split.createClient()
 				: new DocumentScan(doc.getFirstChild());
-		in5 = new Select.SelectCursor(in5, new NodeTest("name", false));
+		in5 = new Select(in5, new NodeTest("name", false));
 
 		Cursor in6 = (shareDocumentScan) ? split.createClient()
 				: new DocumentScan(doc.getFirstChild());
-		in6 = new Select.SelectCursor(in6, new TextTest());
+		in6 = new Select(in6, new TextTest());
 
 		Cursor join;
 		join = new MergeJoin(in1, in2, new AxisPredicate(Axis.PARENT,
@@ -248,7 +248,7 @@ public class XMarkQuery1 implements Procedure {
 
 		NavigationExpander attributeExpander = new NavigationExpander(join, 0,
 				new Attribute(null, new Str("id"), null), true);
-		Select.SelectCursor select = new Select.SelectCursor(attributeExpander,
+		Select select = new Select(attributeExpander,
 				new NestExpr(new VCmpExpr(Cmp.eq, new BoundVariable(
 						new QNm("l"), 0), new Str("person0")),
 						new int[][] { new int[] { 1, 2 } }), 0);
