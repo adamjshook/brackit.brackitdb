@@ -30,7 +30,6 @@ package org.brackit.server.node.el;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
@@ -49,7 +48,6 @@ import org.brackit.xquery.node.parser.ListenMode;
 import org.brackit.xquery.node.parser.StreamSubtreeProcessor;
 import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.node.parser.SubtreeParser;
-import org.brackit.xquery.node.stream.IteratorStream;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
 import org.brackit.xquery.xdm.OperationNotSupportedException;
@@ -61,7 +59,53 @@ import org.brackit.xquery.xdm.Stream;
  * 
  */
 public class ElNode extends TXNode<ElNode> {
-	private static final Logger log = Logger.getLogger(ElNode.class);
+	
+	private class AttributeStream implements Stream<ElNode> {
+		private IndexIterator it;
+
+		@Override
+		public ElNode next() throws DocumentException {
+			try {
+				if (it == null) {
+					ElStore r = locator.collection.store;
+					it = r.index.open(getTX(), locator.rootPageID,
+							SearchMode.LEAST_HAVING_PREFIX, deweyID.toBytes(),
+							null, OpenMode.READ, hintPageID, hintPageLSN);
+					if (it.getKey() == null) {
+						it.close();
+						throw new DocumentException(
+								"No record found with key having %s as prefix.",
+								deweyID);
+					}
+				} else if (!it.next()) {
+					return null;
+				}
+
+				XTCdeweyID id = new XTCdeweyID(deweyID.getDocID(), it.getKey());
+
+				if (!id.isAttributeOf(deweyID)) {
+					return null;
+				} else {
+					byte[] record = it.getValue();
+					PageID hintPageID = it.getCurrentPageID();
+					long hintPageLSN = it.getCurrentLSN();
+
+					ElNode attribute = locator.fromBytes(id, record);
+					attribute.hintPageID = hintPageID;
+					attribute.hintPageLSN = hintPageLSN;
+					return attribute;
+				}
+			} catch (IndexAccessException e) {
+				throw new DocumentException(e);
+			}
+		}
+
+		public void close() {
+			if (it != null) {
+				it.close();
+			}
+		}
+	}
 
 	protected final ElLocator locator;
 
@@ -245,7 +289,7 @@ public class ElNode extends TXNode<ElNode> {
 	public String getNameInternal() throws DocumentException {
 		return ((type == Kind.ELEMENT.ID) || (type == Kind.ATTRIBUTE.ID)) ? psNode
 				.getName()
-				: null;
+				: "";
 	}
 
 	@Override
@@ -443,46 +487,7 @@ public class ElNode extends TXNode<ElNode> {
 	@Override
 	public Stream<? extends ElNode> getAttributesInternal()
 			throws OperationNotSupportedException, DocumentException {
-		try {
-			ArrayList<ElNode> attributes = new ArrayList<ElNode>();
-			ElStore r = locator.collection.store;
-
-			IndexIterator iterator = r.index.open(getTX(), locator.rootPageID,
-					SearchMode.LEAST_HAVING_PREFIX, deweyID.toBytes(), null,
-					OpenMode.READ, hintPageID, hintPageLSN);
-
-			if (iterator.getKey() == null) {
-				iterator.close();
-				throw new DocumentException(
-						"No record found with key having %s as prefix.",
-						deweyID);
-			}
-
-			do {
-				XTCdeweyID currentDeweyID = new XTCdeweyID(deweyID.getDocID(),
-						iterator.getKey());
-
-				if (!currentDeweyID.isAttributeOf(deweyID)) {
-					iterator.close();
-					return new IteratorStream<ElNode>(attributes);
-				} else {
-					byte[] record = iterator.getValue();
-					PageID hintPageID = iterator.getCurrentPageID();
-					long hintPageLSN = iterator.getCurrentLSN();
-
-					ElNode attribute = locator
-							.fromBytes(currentDeweyID, record);
-					attribute.hintPageID = hintPageID;
-					attribute.hintPageLSN = hintPageLSN;
-					attributes.add(attribute);
-				}
-			} while (iterator.next());
-
-			iterator.close();
-			return new IteratorStream<ElNode>(attributes);
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
-		}
+		return new AttributeStream();
 	}
 
 	@Override

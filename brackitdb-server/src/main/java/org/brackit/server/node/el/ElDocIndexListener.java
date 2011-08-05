@@ -173,12 +173,7 @@ public class ElDocIndexListener extends DefaultListener<ElNode> implements
 		}
 
 		if (iterator != null) {
-			try {
-				iterator.close();
-			} catch (IndexAccessException e) {
-				throw new DocumentException(e);
-			}
-
+			iterator.close();
 			iterator = null;
 		}
 	}
@@ -220,11 +215,7 @@ public class ElDocIndexListener extends DefaultListener<ElNode> implements
 	@Override
 	public void fail() throws DocumentException {
 		if (iterator != null) {
-			try {
-				iterator.close();
-			} catch (IndexAccessException e) {
-				throw new DocumentException(e);
-			}
+			iterator.close();
 		}
 	}
 }

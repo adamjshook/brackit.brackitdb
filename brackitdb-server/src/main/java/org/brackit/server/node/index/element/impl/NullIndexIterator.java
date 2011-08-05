@@ -50,7 +50,7 @@ public class NullIndexIterator implements IndexIterator {
 	}
 
 	@Override
-	public void close() throws IndexAccessException {
+	public void close() {
 	}
 
 	@Override

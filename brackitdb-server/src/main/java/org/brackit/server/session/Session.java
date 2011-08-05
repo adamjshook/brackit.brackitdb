@@ -31,8 +31,8 @@ import org.apache.log4j.Logger;
 import org.brackit.server.tx.IsolationLevel;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxException;
-import org.brackit.server.tx.TxState;
 import org.brackit.server.tx.TxMgr;
+import org.brackit.server.tx.TxState;
 
 /**
  * Server-side session object managing state of client connections. Caution:
@@ -166,7 +166,7 @@ public final class Session {
 				throw new SessionException("Session is already in a tx.");
 			}
 
-			tx = taMgr.begin(isolationLevel, sessionID, readOnly);
+			tx = taMgr.begin(isolationLevel, this, readOnly);
 			tx.setLockDepth(lockDepth);
 
 			if (log.isDebugEnabled()) {

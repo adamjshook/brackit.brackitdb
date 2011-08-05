@@ -67,8 +67,7 @@ public class BrackitDB {
 
 	private final int SYS_CNT_NO = 0;
 
-	private final String SYS_CNT_NAME = Cfg.asString(SYS_CNT_FILE_NAME,
-			"syscnt");
+	private final String SYS_CNT_NAME = Cfg.asString(SYS_CNT_FILE_NAME, "sys");
 
 	private final int SYS_CNT_BLKSIZE = Cfg.asInt(SYS_CNT_BLK_SIZE, 8192);
 

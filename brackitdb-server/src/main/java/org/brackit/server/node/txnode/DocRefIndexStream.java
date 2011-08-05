@@ -53,15 +53,10 @@ public class DocRefIndexStream implements Stream<DocID> {
 
 	@Override
 	public void close() {
-		try {
-			if (iterator != null) {
-				iterator.close();
-			}
-
-			iterator = null;
-		} catch (IndexAccessException e) {
-			log.error(e);
+		if (iterator != null) {
+			iterator.close();
 		}
+		iterator = null;
 	}
 
 	@Override

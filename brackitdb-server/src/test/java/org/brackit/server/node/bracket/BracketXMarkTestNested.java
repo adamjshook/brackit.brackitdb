@@ -25,63 +25,48 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.el;
+package org.brackit.server.node.bracket;
 
-import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.metadata.pathSynopsis.PSNode;
-import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
-import org.brackit.server.node.DocID;
-import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.SysMockup;
+import org.brackit.server.node.txnode.StorageSpec;
+import org.brackit.server.tx.Tx;
+import org.brackit.server.xquery.DBXQuery;
+import org.brackit.xquery.QueryException;
+import org.brackit.xquery.XMarkTestNested;
+import org.brackit.xquery.XQuery;
+import org.brackit.xquery.node.parser.DocumentParser;
+import org.brackit.xquery.xdm.Collection;
 import org.brackit.xquery.xdm.DocumentException;
-import org.brackit.xquery.xdm.Kind;
 
 /**
- * 
  * @author Sebastian Baechle
- * 
+ *
  */
-public final class ElLocator {
+public class BracketXMarkTestNested extends XMarkTestNested {
 
-	public final DocID docID;
+	protected SysMockup sm;
+	protected BracketStore elStore;
+	protected Tx tx;
 
-	public final PageID rootPageID;
-
-	public final PathSynopsisMgr pathSynopsis;
-
-	public final ElCollection collection;
-
-	public ElLocator(ElCollection collection, DocID docID, PageID rootPageID) {
-		this.docID = docID;
-		this.rootPageID = rootPageID;
-		this.collection = collection;
-		this.pathSynopsis = collection.getPathSynopsis();
+	@Override
+	protected XQuery xquery(String query) throws QueryException {
+		return new DBXQuery(query, null);
+	}
+	
+	@Override
+	public void setUp() throws Exception {
+		sm = new SysMockup();
+		elStore = new BracketStore(sm.bufferManager, sm.dictionary, sm.mls);
+		tx = sm.taMgr.begin();
+		tx.setLockDepth(0);
+		super.setUp();
 	}
 
-	public ElLocator(ElCollection collection, ElLocator locator) {
-		this.docID = locator.docID;
-		this.rootPageID = locator.rootPageID;
-		this.collection = collection;
-		this.pathSynopsis = locator.pathSynopsis;
-	}
-
-	public ElNode fromBytes(XTCdeweyID deweyID, byte[] record)
-			throws DocumentException {
-		int pcr = ElRecordAccess.getPCR(record);
-		PSNode psn = pathSynopsis.get(collection.getTX(), pcr);
-		int dist = deweyID.getLevel() - psn.getLevel();
-
-		if ((dist == 1)) {
-			return new ElNode(this, deweyID, ElRecordAccess.getType(record),
-					ElRecordAccess.getValue(record), psn);
-		} else if (dist <= 0) {
-			while (dist++ < 0) {
-				psn = psn.getParent();
-			}
-			return new ElNode(this, deweyID, Kind.ELEMENT.ID, null, psn);
-		} else {
-			throw new DocumentException(
-					"Node %s has level %s but PCR %s has level %s", deweyID,
-					deweyID.getLevel(), pcr, psn.getLevel());
-		}
+	@Override
+	protected Collection<?> createDoc(DocumentParser parser) throws DocumentException {
+		StorageSpec spec = new StorageSpec("test", sm.dictionary);
+		BracketCollection collection = new BracketCollection(tx, elStore);
+		collection.create(spec, parser);
+		return collection;
 	}
 }

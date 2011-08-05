@@ -31,7 +31,6 @@ import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
 import org.brackit.xquery.operator.Cursor;
-import org.brackit.xquery.operator.TupleImpl;
 import org.brackit.xquery.xdm.Expr;
 import org.brackit.xquery.xdm.Sequence;
 
@@ -84,8 +83,8 @@ public class NLJoin implements Cursor {
 				Tuple lojTuple = null;
 
 				if ((!delivered) && (leftOuterJoin)) {
-					return (projections != null) ? new TupleImpl(left, null,
-							projections) : new TupleImpl(left, (Sequence) null);
+					Tuple tmp = left.concat((Sequence) null);
+					return (projections != null) ? tmp.project(projections) : tmp;
 				}
 
 				inner.close(ctx);
@@ -100,12 +99,11 @@ public class NLJoin implements Cursor {
 				continue;
 			}
 
-			Tuple joined = new TupleImpl(left, right);
+			Tuple joined = left.concat(right.array());
 
 			if (predicate.evaluate(ctx, joined).booleanValue(ctx)) {
 				delivered = true;
-				return (projections != null) ? new TupleImpl(left, right,
-						projections) : new TupleImpl(left, right);
+				return (projections != null) ? joined.project(projections) : joined;
 			}
 		}
 

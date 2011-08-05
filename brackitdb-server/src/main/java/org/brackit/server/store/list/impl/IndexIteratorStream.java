@@ -50,11 +50,7 @@ public class IndexIteratorStream implements Stream<byte[]> {
 
 	@Override
 	public void close() {
-		try {
-			it.close();
-		} catch (IndexAccessException e) {
-			log.error(e);
-		}
+		it.close();
 	}
 
 	@Override

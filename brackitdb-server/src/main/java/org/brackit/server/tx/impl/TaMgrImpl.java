@@ -34,7 +34,7 @@ import org.apache.log4j.Logger;
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.manager.BufferMgr;
-import org.brackit.server.session.SessionID;
+import org.brackit.server.session.Session;
 import org.brackit.server.tx.IsolationLevel;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.TxID;
@@ -266,20 +266,19 @@ public class TaMgrImpl implements TxMgr {
 		return begin(IsolationLevel.SERIALIZABLE, null, false);
 	}
 
-	public TX begin(IsolationLevel isolationLevel, SessionID connectionID,
+	public TX begin(IsolationLevel isolationLevel, Session session,
 			boolean readOnly) throws TxException {
 		long nextTSN = TSNSequence.incrementAndGet();
 		TxID txID = new TxID(nextTSN);
-		TX transaction = new TX(this, txID, isolationLevel, readOnly,
-				connectionID, timeout);
-		txTable.put(txID, transaction);
-		transaction.join();
+		TX tx = new TX(this, txID, isolationLevel, readOnly, session, timeout);
+		txTable.put(txID, tx);
+		tx.join();
 
 		if (log.isDebugEnabled()) {
-			log.debug(String.format("Transaction %s started.", transaction));
+			log.debug(String.format("Transaction %s started.", tx));
 		}
 
-		return transaction;
+		return tx;
 	}
 
 	public Collection<TX> getTransactions() {

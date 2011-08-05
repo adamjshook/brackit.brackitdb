@@ -43,7 +43,6 @@ import org.brackit.server.store.Field;
 import org.brackit.server.store.OpenMode;
 import org.brackit.server.store.SearchMode;
 import org.brackit.server.store.blob.BlobStore;
-import org.brackit.server.store.blob.BlobStoreAccessException;
 import org.brackit.server.store.blob.impl.SimpleBlobStore;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.bulkinsert.BulkInsertContext;
@@ -56,8 +55,8 @@ import org.brackit.server.store.index.bracket.page.Leaf;
 import org.brackit.server.store.index.bracket.page.PageContextFactory;
 import org.brackit.server.store.index.bracket.stats.DefaultScanStats;
 import org.brackit.server.store.index.bracket.stats.LastChildScanStats;
-import org.brackit.server.store.index.bracket.stats.ScanStats;
 import org.brackit.server.store.index.bracket.stats.PreviousSiblingScanStats;
+import org.brackit.server.store.index.bracket.stats.ScanStats;
 import org.brackit.server.store.page.bracket.BracketNodeSequence;
 import org.brackit.server.store.page.bracket.BracketPage;
 import org.brackit.server.store.page.bracket.DeleteSequenceInfo;
@@ -1016,41 +1015,11 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-	protected void readLockEntry(Tx tx, PageID rootPageID, BPContext page,
-			byte[] key, byte[] value) throws IndexOperationException {
-	}
-
-	protected void updateLockEntry(Tx tx, PageID rootPageID, BPContext page,
-			byte[] key, byte[] value) throws IndexOperationException {
-	}
-
-	protected void downgradeLockEntry(Tx tx, PageID rootPageID, BPContext page,
-			byte[] key, byte[] value) throws IndexOperationException {
-	}
-
 	protected Leaf moveNext(Tx tx, PageID rootPageID, Leaf page,
 			OpenMode openMode) throws IndexAccessException {
-		byte[] currentKey = null;
-		byte[] currentValue = null;
 
 		try {
-			if (openMode != OpenMode.LOAD) {
-				if (openMode.forUpdate()) {
-					downgradeLockEntry(tx, rootPageID, page, currentKey,
-							currentValue);
-				}
-			}
-
 			if (page.moveNext()) {
-				if (openMode != OpenMode.LOAD) {
-					if (openMode.forUpdate()) {
-						updateLockEntry(tx, rootPageID, page, page.getKey()
-								.toBytes(), page.getValue());
-					} else {
-						readLockEntry(tx, rootPageID, page, page.getKey()
-								.toBytes(), page.getValue());
-					}
-				}
 				return page;
 			}
 
@@ -1058,22 +1027,6 @@ public final class BracketTree extends PageContextFactory {
 				if (log.isTraceEnabled()) {
 					log.trace("Reached end of index.");
 				}
-
-				// if (openMode != OpenMode.LOAD)
-				// {
-				// // lock EOF
-				// if (openMode.forUpdate())
-				// {
-				// updateLockEntry(tx, rootPageID, page,
-				// page.getKey().toBytes(), page.getValue());
-				// }
-				// else
-				// {
-				// readLockEntry(tx, rootPageID, page, page.getKey().toBytes(),
-				// page.getValue());
-				// }
-				// }
-
 				page.cleanup();
 				return null;
 			}
@@ -1098,17 +1051,6 @@ public final class BracketTree extends PageContextFactory {
 				e.printStackTrace();
 			}
 
-			// lock key or EOF
-			if (openMode != OpenMode.LOAD) {
-				if (openMode.forUpdate()) {
-					updateLockEntry(tx, rootPageID, page, page.getKey()
-							.toBytes(), page.getValue());
-				} else {
-					readLockEntry(tx, rootPageID, page,
-							page.getKey().toBytes(), page.getValue());
-				}
-			}
-
 			return next;
 		} catch (IndexOperationException e) {
 			page.cleanup();
@@ -1118,27 +1060,8 @@ public final class BracketTree extends PageContextFactory {
 
 	protected Branch moveNext(Tx tx, PageID rootPageID, Branch page,
 			OpenMode openMode) throws IndexAccessException {
-		byte[] currentKey = null;
-		byte[] currentValue = null;
-
 		try {
-			if (openMode != OpenMode.LOAD) {
-				if (openMode.forUpdate()) {
-					downgradeLockEntry(tx, rootPageID, page, currentKey,
-							currentValue);
-				}
-			}
-
 			if (page.moveNext()) {
-				if (openMode != OpenMode.LOAD) {
-					if (openMode.forUpdate()) {
-						updateLockEntry(tx, rootPageID, page, page.getKey(),
-								page.getValue());
-					} else {
-						readLockEntry(tx, rootPageID, page, page.getKey(),
-								page.getValue());
-					}
-				}
 				return page;
 			}
 
@@ -1146,18 +1069,6 @@ public final class BracketTree extends PageContextFactory {
 				if (log.isTraceEnabled()) {
 					log.trace("Reached end of index.");
 				}
-
-				if (openMode != OpenMode.LOAD) {
-					// lock EOF
-					if (openMode.forUpdate()) {
-						updateLockEntry(tx, rootPageID, page, page.getKey(),
-								page.getValue());
-					} else {
-						readLockEntry(tx, rootPageID, page, page.getKey(),
-								page.getValue());
-					}
-				}
-
 				return page;
 			}
 
@@ -1179,17 +1090,6 @@ public final class BracketTree extends PageContextFactory {
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			}
-
-			// lock key or EOF
-			if (openMode != OpenMode.LOAD) {
-				if (openMode.forUpdate()) {
-					updateLockEntry(tx, rootPageID, page, page.getKey(),
-							page.getValue());
-				} else {
-					readLockEntry(tx, rootPageID, page, page.getKey(),
-							page.getValue());
-				}
 			}
 
 			return next;
@@ -2819,18 +2719,6 @@ public final class BracketTree extends PageContextFactory {
 			root.cleanup();
 			throw new IndexAccessException(e,
 					"Could not log root collapse operations.");
-		}
-	}
-
-	public Leaf readFromLeaf(Tx tx, PageID rootPageID, Leaf leaf, byte[] key,
-			byte[] value) throws IndexAccessException {
-		// TODO
-		try {
-			readLockEntry(tx, rootPageID, leaf, key, value);
-			return leaf;
-		} catch (IndexOperationException e) {
-			leaf.cleanup();
-			throw new IndexAccessException(e);
 		}
 	}
 

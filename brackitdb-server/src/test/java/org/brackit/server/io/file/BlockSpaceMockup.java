@@ -83,7 +83,7 @@ public class BlockSpaceMockup implements BlockSpace {
 	public void create(int blkSize, int iniSize, double extent)
 			throws StoreException {
 		this.blockSize = blkSize;
-		this.maxBlockNo = 0;
+		this.maxBlockNo = 1; // avoid block 0
 		this.blocks = new HashMap<Integer, byte[]>();
 	}
 
