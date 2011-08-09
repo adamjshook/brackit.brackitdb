@@ -42,7 +42,7 @@ public class DBOptimizer extends DefaultOptimizer {
 	public DBOptimizer(MetaDataMgr mdm) {
 		super();
 		// perform index matching as last step
-		getStages().add(1, new IndexMatching(mdm));
+		getStages().add(new IndexMatching(mdm));
 	}
 
 	private static class IndexMatching implements Stage {
