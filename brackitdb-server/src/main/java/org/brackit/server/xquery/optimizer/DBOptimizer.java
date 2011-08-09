@@ -41,24 +41,14 @@ public class DBOptimizer extends DefaultOptimizer {
 
 	public DBOptimizer(MetaDataMgr mdm) {
 		super();
-		// perform path rewriting after simplification
-		getStages().add(1, new PathRewriting());
-		// perform index resolution after path recognition
-		getStages().add(1, new IndexResolution(mdm));
+		// perform index matching as last step
+		getStages().add(1, new IndexMatching(mdm));
 	}
 
-	private static class PathRewriting implements Stage {
-		@Override
-		public AST rewrite(AST ast) throws QueryException {
-			// TODO add rules for path rewriting here
-			return ast;
-		}		
-	}
-	
-	private static class IndexResolution implements Stage {
+	private static class IndexMatching implements Stage {
 		private final MetaDataMgr mdm;
 
-		public IndexResolution(MetaDataMgr mdm) {
+		public IndexMatching(MetaDataMgr mdm) {
 			this.mdm = mdm;
 		}
 
