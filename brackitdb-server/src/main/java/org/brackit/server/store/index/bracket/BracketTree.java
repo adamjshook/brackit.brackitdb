@@ -50,6 +50,7 @@ import org.brackit.server.store.index.bracket.bulkinsert.SeparatorEntry;
 import org.brackit.server.store.index.bracket.page.BPContext;
 import org.brackit.server.store.index.bracket.page.BracketContext;
 import org.brackit.server.store.index.bracket.page.Branch;
+import org.brackit.server.store.index.bracket.page.DelayedSubtreeDeleteListener;
 import org.brackit.server.store.index.bracket.page.EmptyLeafException;
 import org.brackit.server.store.index.bracket.page.Leaf;
 import org.brackit.server.store.index.bracket.page.PageContextFactory;
@@ -1682,6 +1683,7 @@ public final class BracketTree extends PageContextFactory {
 		PageID middlePageID = null;
 		XTCdeweyID firstNode = nodesToInsert.getLowKey();
 		byte[] oldLeftHighKey = left.getHighKeyBytes();
+		BracketNodeSequence remainingNodes = null;
 
 		try {
 
@@ -1744,31 +1746,38 @@ public final class BracketTree extends PageContextFactory {
 				// insert nodes in left page
 				if (!left.insertSequenceAfter(nodesToInsert, false, logged, -1,
 						true)) {
-					// nodes still do not fit into left page -> try right page
-					insertLeft = false;
-					separatorKey = firstNode.toBytes();
-					if (!left.setHighKeyBytes(separatorKey, logged, -1)) {
-						// not enough space for highkey!
-						// move at least one record to the right page
-						XTCdeweyID beforeInsertKey = null;
-						int runCount = 0;
-						do {
-							if (runCount == 1) {
-								beforeInsertKey = right.getKey();
+					if (left.isBeforeFirst()) {
+						// sequence does not fit into an empty page -> split sequence
+						remainingNodes = nodesToInsert.split();
+						left.insertSequenceAfter(nodesToInsert, false, logged, -1,
+								true);
+					} else {
+						// nodes still do not fit into left page -> try right page
+						insertLeft = false;
+						separatorKey = firstNode.toBytes();
+						if (!left.setHighKeyBytes(separatorKey, logged, -1)) {
+							// not enough space for highkey!
+							// move at least one record to the right page
+							XTCdeweyID beforeInsertKey = null;
+							int runCount = 0;
+							do {
+								if (runCount == 1) {
+									beforeInsertKey = right.getKey();
+								}
+								left.moveNextToLastRecord();
+								moveNodes(left, right, logged, logged);
+								separatorKey = right.getLowKeyBytes();
+								runCount++;
+								// try to set highkey again
+							} while (!left
+									.setHighKeyBytes(separatorKey, logged, -1));
+	
+							// find correct insertion position in right page
+							if (beforeInsertKey != null) {
+								right.moveBeforeFirst();
+								right.navigateContextFree(beforeInsertKey,
+										NavigationMode.TO_KEY);
 							}
-							left.moveNextToLastRecord();
-							moveNodes(left, right, logged, logged);
-							separatorKey = right.getLowKeyBytes();
-							runCount++;
-							// try to set highkey again
-						} while (!left
-								.setHighKeyBytes(separatorKey, logged, -1));
-
-						// find correct insertion position in right page
-						if (beforeInsertKey != null) {
-							right.moveBeforeFirst();
-							right.navigateContextFree(beforeInsertKey,
-									NavigationMode.TO_KEY);
 						}
 					}
 				}
@@ -1779,20 +1788,25 @@ public final class BracketTree extends PageContextFactory {
 				if (!right.insertSequenceAfter(nodesToInsert, false, logged,
 						-1, true)) {
 					if (right.getEntryCount() == 0) {
-						throw new IndexOperationException(
-								"Node sequence does not fit into an empty page!");
-					}
-					// nodes do not fit into right page -> allocate a new one
-					middle = allocateLeaf(tx, -1, left.getUnitID(), rootPageID,
-							logged);
-					middlePageID = middle.getPageID();
-					middle.setHighKeyBytes(right.getLowKeyBytes(), logged, -1);
-					tx.getStatistics()
-							.increment(TxStats.BTREE_LEAF_ALLOCATIONS);
-					if (!middle.insertSequenceAfter(nodesToInsert, false,
-							logged, -1, true)) {
-						throw new IndexOperationException(
-								"Node sequence does not fit into an empty page!");
+						// sequence does not fit into an empty page -> split sequence
+						remainingNodes = nodesToInsert.split();
+						right.insertSequenceAfter(nodesToInsert, false, logged, -1,
+								true);
+					} else {
+						// nodes do not fit into right page -> allocate a new one
+						middle = allocateLeaf(tx, -1, left.getUnitID(), rootPageID,
+								logged);
+						middlePageID = middle.getPageID();
+						middle.setHighKeyBytes(right.getLowKeyBytes(), logged, -1);
+						tx.getStatistics()
+								.increment(TxStats.BTREE_LEAF_ALLOCATIONS);
+						if (!middle.insertSequenceAfter(nodesToInsert, false,
+								logged, -1, true)) {
+							// sequence does not fit into an empty page -> split sequence
+							remainingNodes = nodesToInsert.split();
+							middle.insertSequenceAfter(nodesToInsert, false, logged, -1,
+									true);
+						}
 					}
 				}
 			}
@@ -1870,6 +1884,13 @@ public final class BracketTree extends PageContextFactory {
 
 			// log user insert in target page and make split invisible
 			target.bulkLog(true, rememberedLSN);
+			
+			if (remainingNodes != null) {
+				// insert sequence was split
+				if (!target.insertSequenceAfter(remainingNodes, false, logged, -1, false)) {
+					target = splitInsert(tx, rootPageID, target, remainingNodes, logged);
+				}
+			}
 
 			return target;
 
@@ -2348,8 +2369,7 @@ public final class BracketTree extends PageContextFactory {
 		try {
 			while (true) {
 				// try to locate separator in this page
-				if (page.search(targetHeight > 1 ? SearchMode.GREATER_OR_EQUAL
-						: SearchMode.GREATER, separatorKey, null) <= 0) {
+				if (page.search(SearchMode.GREATER_OR_EQUAL, separatorKey, null) <= 0) {
 					// separator is greater or equal: inspect previous pointer
 					PageID p;
 					if (page.getPosition() > 1) {
@@ -2390,12 +2410,7 @@ public final class BracketTree extends PageContextFactory {
 				// follow "next" pointer of this page while
 				// we hold the latch on this page
 				pageID = page.getValueAsPageID();
-				BPContext cont = getPage(tx, pageID, true, false);
-				if (cont.isLeaf()) {
-					Leaf leaf = (Leaf) cont;
-					System.out.println();
-				}
-				Branch next = (Branch) cont;
+				Branch next = (Branch) getPage(tx, pageID, true, false);
 				page.cleanup();
 				page = next;
 			}
@@ -2752,15 +2767,6 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-	private PageID determineNextPageID(Tx tx, Branch parent)
-			throws IndexOperationException {
-		if (parent.getPosition() == 1) {
-			return parent.getLowPageID();
-		} else {
-			return parent.getValueAsPageID();
-		}
-	}
-
 	protected Branch deleteFromBranch(Tx tx, PageID rootPageID, Branch page,
 			byte[] deleteKey, boolean logged, long undoNextLSN)
 			throws IndexAccessException {
@@ -2849,61 +2855,62 @@ public final class BracketTree extends PageContextFactory {
 			leaf.clearData(false, logged, -1);
 			beforeLSN = tx.checkPrevLSN();
 
-			XTCdeweyID oldPreviousHighKey = previous.getHighKey();
+			// XTCdeweyID oldPreviousHighKey = previous.getHighKey();
 
-//			// set previous highkey
-//			if (!previous.setHighKeyBytes(leaf.getHighKeyBytes(), logged, -1)) {
-//				// highkey does not fit into previous page
-//				// -> move some nodes to current page
-//				previous.moveToSplitPosition(0.5f);
-//				moveNodes(previous, leaf, logged, logged);
-//
-//				// delete separator
-//				parent = deleteSeparator(tx, rootPageID, unchainPageID, 0,
-//						oldPreviousHighKey.toBytes(), logged);
-//				parent.cleanup();
-//				parent = null;
-//
-//				// add new separator
-//				insertSeparator(tx, rootPageID, leaf.getLowKeyBytes(),
-//						previousID, unchainPageID, 0, logged);
-//
-//				// skip underflow handling during undo processing
-//				logDummyCLR(tx, beforeLSN);
-//
-//				// cleanup
-//				previous.cleanup();
-//				previous = null;
-//				leaf.cleanup();
-//				leaf = null;
-//
-//			} else {
+			// // set previous highkey
+			// if (!previous.setHighKeyBytes(leaf.getHighKeyBytes(), logged,
+			// -1)) {
+			// // highkey does not fit into previous page
+			// // -> move some nodes to current page
+			// previous.moveToSplitPosition(0.5f);
+			// moveNodes(previous, leaf, logged, logged);
+			//
+			// // delete separator
+			// parent = deleteSeparator(tx, rootPageID, unchainPageID, 0,
+			// oldPreviousHighKey.toBytes(), logged);
+			// parent.cleanup();
+			// parent = null;
+			//
+			// // add new separator
+			// insertSeparator(tx, rootPageID, leaf.getLowKeyBytes(),
+			// previousID, unchainPageID, 0, logged);
+			//
+			// // skip underflow handling during undo processing
+			// logDummyCLR(tx, beforeLSN);
+			//
+			// // cleanup
+			// previous.cleanup();
+			// previous = null;
+			// leaf.cleanup();
+			// leaf = null;
+			//
+			// } else {
 
-				// set pointers
-				previous.setNextPageID(nextID, logged, -1);
-				next.setPrevPageID(previousID, logged, -1);
+			// set pointers
+			previous.setNextPageID(nextID, logged, -1);
+			next.setPrevPageID(previousID, logged, -1);
 
-				// cleanup previous
-				previous.cleanup();
-				previous = null;
+			// cleanup previous
+			previous.cleanup();
+			previous = null;
 
-				// delete separator
-				parent = deleteSeparator(tx, rootPageID, unchainPageID, 0,
-						oldPreviousHighKey.toBytes(), logged);
-				parent.cleanup();
-				parent = null;
+			// delete separator
+			parent = deleteSeparator(tx, rootPageID, unchainPageID, 0,
+					leaf.getHighKeyBytes(), logged);
+			parent.cleanup();
+			parent = null;
 
-				// delete leaf
-				leaf.setNextPageID(null, logged, -1);
-				leaf.setPrevPageID(null, logged, -1);
-				leaf.setHighKey(null, logged, -1);
-				leaf.format(leaf.getUnitID(), rootPageID, logged, -1);
-				leaf.deletePage();
-				leaf = null;
+			// delete leaf
+			leaf.setNextPageID(null, logged, -1);
+			leaf.setPrevPageID(null, logged, -1);
+			leaf.setHighKey(null, logged, -1);
+			leaf.format(leaf.getUnitID(), rootPageID, logged, -1);
+			leaf.deletePage();
+			leaf = null;
 
-				// skip underflow handling during undo processing
-				logDummyCLR(tx, beforeLSN);
-//			}
+			// skip underflow handling during undo processing
+			logDummyCLR(tx, beforeLSN);
+			// }
 
 		} catch (IndexOperationException e) {
 			if (previous != null) {
@@ -3174,174 +3181,174 @@ public final class BracketTree extends PageContextFactory {
 				navMode).printStats();
 	}
 
-	public void deleteSubtree(Tx tx, PageID rootPageID, Leaf left,
+	public void deleteSubtreeOld(Tx tx, PageID rootPageID, Leaf left,
 			SubtreeDeleteListener deleteListener, long undoNextLSN,
 			boolean logged) throws IndexAccessException {
-		Leaf right = null;
-		Leaf temp = null;
-		Branch parent = null;
-
-		try {
-
-			List<PageID> externalPageIDs = new ArrayList<PageID>();
-			XTCdeweyID subtreeRoot = left.getKey();
-
-			// find "correct" left page (that contains the node PREVIOUS to the
-			// subtree root)
-			// delete subtree (beginning) from left page
-			while (true) { // while an EmptyLeafException occurs (-> max. one
-							// time)
-				try {
-					// try to delete subtree locally
-					if (left.deleteSubtreeStart(deleteListener,
-							externalPageIDs, false, logged, undoNextLSN)) {
-						// deletion successful within current leaf
-						deleteExternalized(tx, externalPageIDs);
-						return;
-					} else {
-						// load next page
-
-						XTCdeweyID highKey = left.getHighKey();
-
-						if (highKey == null || !subtreeRoot.isPrefixOf(highKey)) {
-							// subtree is not continued in next page
-							deleteExternalized(tx, externalPageIDs);
-							deleteListener.subtreeEnd();
-							return;
-						}
-
-						// subtree is (probably) continued in next page
-						right = (Leaf) getPage(tx, left.getNextPageID(), true,
-								false);
-
-						break;
-					}
-				} catch (EmptyLeafException ex) {
-					// current leaf needs to be unchained
-
-					if (left.getNextPageID() == null) {
-						// left is last page and becomes empty
-						left.deleteSubtreeEnd(subtreeRoot, deleteListener,
-								null, false, logged, undoNextLSN);
-						return;
-					}
-
-					// find correct left page
-					PageID previousPageID = left.getPrevPageID();
-					left.cleanup();
-					temp = left;
-					left = (Leaf) getPage(tx, previousPageID, true, false);
-					left.assignDeweyIDBuffer(temp);
-					temp = null;
-					XTCdeweyID highKey = null;
-
-					while (true) {
-						temp = (Leaf) getPage(tx, left.getNextPageID(), true,
-								false);
-						highKey = temp.getHighKey();
-						if (subtreeRoot.compareDivisions(highKey) >= 0) {
-							left.cleanup();
-							temp.assignDeweyIDBuffer(left);
-							left = temp;
-							temp = null;
-						} else {
-							// subtree root is located in leaf
-							if (subtreeRoot.compareDivisions(temp.getLowKey()) == 0) {
-								right = temp;
-								temp = null;
-							} else {
-								left.cleanup();
-								temp.assignDeweyIDBuffer(left);
-								left = temp;
-								temp = null;
-							}
-							break;
-						}
-					}
-
-					if (right != null) {
-						// found next page to inspect
-						break;
-					}
-				}
-			}
-
-			// begin of subtree deleted from left page -> inspect current right
-			// page
-
-			List<PageID> innerPageIDs = new ArrayList<PageID>();
-			XTCdeweyID newHighKey = null;
-			// inspect leaf pages until subtree end is found
-			while (!right.deleteSubtreeEnd(subtreeRoot, deleteListener,
-					externalPageIDs, false, logged, undoNextLSN)) {
-
-				PageID nextPageID = right.getNextPageID();
-				if (nextPageID == null) {
-					// right page is last leaf -> right page becomes empty, but
-					// is not unchained
-
-					// notify listeners about subtree end
-					deleteListener.subtreeEnd();
-					break;
-				}
-
-				innerPageIDs.add(right.getPageID());
-				newHighKey = right.getHighKey();
-				temp = (Leaf) getPage(tx, nextPageID, true, false);
-				right.cleanup();
-				temp.assignDeweyIDBuffer(right);
-				right = temp;
-				temp = null;
-			}
-
-			PageID leftPageID = left.getPageID();
-			PageID rightPageID = right.getPageID();
-
-			// postcommit hook for blob values
-			deleteExternalized(tx, externalPageIDs);
-
-			if (innerPageIDs.isEmpty()) {
-				// deletion finished
-				right.cleanup();
-				right = null;
-				return;
-			}
-
-			// new chaining between left and right page
-			left.setNextPageID(rightPageID, logged, undoNextLSN);
-			right.setPrevPageID(leftPageID, logged, undoNextLSN);
-			byte[] oldHighKey = left.getHighKeyBytes();
-			left.setHighKey(newHighKey, logged, undoNextLSN);
-
-			// postcommit hook for deleting the inner pages
-			tx.addPostCommitHook(new DeletePageHook(rootPageID, innerPageIDs));
-
-			// delete all page pointers between the left border and right border
-			// page
-			deleteLeafReferences(tx, rootPageID, leftPageID, rightPageID,
-					oldHighKey, logged);
-
-			right.cleanup();
-			right = null;
-			left.cleanup();
-			left = null;
-
-		} catch (IndexOperationException e) {
-			if (left != null) {
-				left.cleanup();
-			}
-			if (right != null) {
-				right.cleanup();
-			}
-			if (temp != null) {
-				temp.cleanup();
-			}
-			if (parent != null) {
-				parent.cleanup();
-			}
-			throw new IndexAccessException(e, "Error deleting from index %s.",
-					rootPageID);
-		}
+		// Leaf right = null;
+		// Leaf temp = null;
+		// Branch parent = null;
+		//
+		// try {
+		//
+		// List<PageID> externalPageIDs = new ArrayList<PageID>();
+		// XTCdeweyID subtreeRoot = left.getKey();
+		//
+		// // find "correct" left page (that contains the node PREVIOUS to the
+		// // subtree root)
+		// // delete subtree (beginning) from left page
+		// while (true) { // while an EmptyLeafException occurs (-> max. one
+		// // time)
+		// try {
+		// // try to delete subtree locally
+		// if (left.deleteSubtreeStart(deleteListener,
+		// externalPageIDs, false, logged, undoNextLSN)) {
+		// // deletion successful within current leaf
+		// deleteExternalized(tx, externalPageIDs);
+		// return;
+		// } else {
+		// // load next page
+		//
+		// XTCdeweyID highKey = left.getHighKey();
+		//
+		// if (highKey == null || !subtreeRoot.isPrefixOf(highKey)) {
+		// // subtree is not continued in next page
+		// deleteExternalized(tx, externalPageIDs);
+		// deleteListener.subtreeEnd();
+		// return;
+		// }
+		//
+		// // subtree is (probably) continued in next page
+		// right = (Leaf) getPage(tx, left.getNextPageID(), true,
+		// false);
+		//
+		// break;
+		// }
+		// } catch (EmptyLeafException ex) {
+		// // current leaf needs to be unchained
+		//
+		// if (left.getNextPageID() == null) {
+		// // left is last page and becomes empty
+		// left.deleteSubtreeEnd(subtreeRoot, deleteListener,
+		// null, false, logged, undoNextLSN);
+		// return;
+		// }
+		//
+		// // find correct left page
+		// PageID previousPageID = left.getPrevPageID();
+		// left.cleanup();
+		// temp = left;
+		// left = (Leaf) getPage(tx, previousPageID, true, false);
+		// left.assignDeweyIDBuffer(temp);
+		// temp = null;
+		// XTCdeweyID highKey = null;
+		//
+		// while (true) {
+		// temp = (Leaf) getPage(tx, left.getNextPageID(), true,
+		// false);
+		// highKey = temp.getHighKey();
+		// if (subtreeRoot.compareDivisions(highKey) >= 0) {
+		// left.cleanup();
+		// temp.assignDeweyIDBuffer(left);
+		// left = temp;
+		// temp = null;
+		// } else {
+		// // subtree root is located in leaf
+		// if (subtreeRoot.compareDivisions(temp.getLowKey()) == 0) {
+		// right = temp;
+		// temp = null;
+		// } else {
+		// left.cleanup();
+		// temp.assignDeweyIDBuffer(left);
+		// left = temp;
+		// temp = null;
+		// }
+		// break;
+		// }
+		// }
+		//
+		// if (right != null) {
+		// // found next page to inspect
+		// break;
+		// }
+		// }
+		// }
+		//
+		// // begin of subtree deleted from left page -> inspect current right
+		// // page
+		//
+		// List<PageID> innerPageIDs = new ArrayList<PageID>();
+		// XTCdeweyID newHighKey = null;
+		// // inspect leaf pages until subtree end is found
+		// while (!right.deleteSubtreeEnd(subtreeRoot, deleteListener,
+		// externalPageIDs, false, logged, undoNextLSN)) {
+		//
+		// PageID nextPageID = right.getNextPageID();
+		// if (nextPageID == null) {
+		// // right page is last leaf -> right page becomes empty, but
+		// // is not unchained
+		//
+		// // notify listeners about subtree end
+		// deleteListener.subtreeEnd();
+		// break;
+		// }
+		//
+		// innerPageIDs.add(right.getPageID());
+		// newHighKey = right.getHighKey();
+		// temp = (Leaf) getPage(tx, nextPageID, true, false);
+		// right.cleanup();
+		// temp.assignDeweyIDBuffer(right);
+		// right = temp;
+		// temp = null;
+		// }
+		//
+		// PageID leftPageID = left.getPageID();
+		// PageID rightPageID = right.getPageID();
+		//
+		// // postcommit hook for blob values
+		// deleteExternalized(tx, externalPageIDs);
+		//
+		// if (innerPageIDs.isEmpty()) {
+		// // deletion finished
+		// right.cleanup();
+		// right = null;
+		// return;
+		// }
+		//
+		// // new chaining between left and right page
+		// left.setNextPageID(rightPageID, logged, undoNextLSN);
+		// right.setPrevPageID(leftPageID, logged, undoNextLSN);
+		// byte[] oldHighKey = left.getHighKeyBytes();
+		// left.setHighKey(newHighKey, logged, undoNextLSN);
+		//
+		// // postcommit hook for deleting the inner pages
+		// tx.addPostCommitHook(new DeletePageHook(rootPageID, innerPageIDs));
+		//
+		// // delete all page pointers between the left border and right border
+		// // page
+		// deleteLeafReferences(tx, rootPageID, leftPageID, rightPageID,
+		// oldHighKey, logged);
+		//
+		// right.cleanup();
+		// right = null;
+		// left.cleanup();
+		// left = null;
+		//
+		// } catch (IndexOperationException e) {
+		// if (left != null) {
+		// left.cleanup();
+		// }
+		// if (right != null) {
+		// right.cleanup();
+		// }
+		// if (temp != null) {
+		// temp.cleanup();
+		// }
+		// if (parent != null) {
+		// parent.cleanup();
+		// }
+		// throw new IndexAccessException(e, "Error deleting from index %s.",
+		// rootPageID);
+		// }
 	}
 
 	private void deleteExternalized(Tx tx, List<PageID> externalPageIDs) {
@@ -3349,6 +3356,136 @@ public final class BracketTree extends PageContextFactory {
 			tx.addPostCommitHook(new DeleteExternalizedHook(blobStore,
 					externalPageIDs));
 		}
+	}
+
+	public void deleteSubtree(Tx tx, PageID rootPageID, Leaf leaf,
+			SubtreeDeleteListener deleteListener, boolean logged)
+			throws IndexAccessException {
+
+		Leaf next = null;
+
+		try {
+
+			XTCdeweyID subtreeRoot = leaf.getKey();
+			XTCdeweyID descendKey = subtreeRoot;
+
+			DelayedSubtreeDeleteListener delayedListener = new DelayedSubtreeDeleteListener(
+					deleteListener);
+
+			List<PageID> externalPageIDs = new ArrayList<PageID>();
+			List<PageID> localExternalPageIDs = new ArrayList<PageID>();
+
+			boolean firstPage = true;
+
+			// loop traversing all spanned leaf pages
+			while (true) {
+				localExternalPageIDs.clear();
+				delayedListener.reset();
+
+				if (leaf == null) {
+					// descend via index
+					leaf = descendToPosition(tx, rootPageID,
+							NavigationMode.TO_KEY, descendKey,
+							new DeweyIDBuffer(),
+							scannerMap.get(NavigationMode.TO_KEY), true);
+					if (!firstPage) {
+						if (!leaf.isFirst()) {
+							// may never happen
+							throw new IndexOperationException();
+						}
+						leaf.moveBeforeFirst();
+					}
+				}
+
+				boolean finished = false;
+				boolean emptyPage = false;
+
+				// delete nodes from this page
+				if (firstPage) {
+					finished = leaf.deleteSubtreeStart(delayedListener,
+							localExternalPageIDs, logged);
+					emptyPage = (leaf.isFirst() && !finished);
+				} else {
+					finished = leaf.deleteSubtreeEnd(subtreeRoot,
+							delayedListener, localExternalPageIDs, logged);
+					emptyPage = !finished;
+				}
+
+				if (emptyPage) {
+					if (leaf.isLastInLevel()) {
+						// leaf may become empty
+						externalPageIDs.addAll(localExternalPageIDs);
+						delayedListener.flush();
+						leaf.clearData(false, logged, -1);
+						leaf.cleanup();
+						leaf = null;
+						return;
+					}
+
+					// delete this page
+					try {
+						next = handleLeafUnderflow(tx, rootPageID, leaf, logged);
+						leaf = null;
+						externalPageIDs.addAll(localExternalPageIDs);
+						delayedListener.flush();
+					} catch (UnchainException e) {
+						// leaf changed -> descend down the tree again
+						leaf = null;
+						continue;
+					}
+				} else {
+					externalPageIDs.addAll(localExternalPageIDs);
+					delayedListener.flush();
+				}
+
+				if (!finished) {
+					// deletion not yet finished
+					if (next == null) {
+						// load next page
+						next = (Leaf) getPage(tx, leaf.getNextPageID(), true,
+								false);
+						leaf.cleanup();
+						leaf = null;
+					}
+
+					// declare next page as current leaf
+					leaf = next;
+					next = null;
+
+					// refresh descendKey
+					descendKey = leaf.getLowKey();
+
+				} else {
+
+					// delete external values after commit
+					deleteExternalized(tx, externalPageIDs);
+
+					// cleanup
+					if (leaf != null) {
+						leaf.cleanup();
+						leaf = null;
+					}
+					if (next != null) {
+						next.cleanup();
+						next = null;
+					}
+					return;
+				}
+
+				firstPage = false;
+			}
+
+		} catch (IndexOperationException e) {
+			if (leaf != null) {
+				leaf.cleanup();
+				leaf = null;
+			}
+			if (next != null) {
+				next.cleanup();
+				next = null;
+			}
+		}
+
 	}
 
 	public void deleteSequence(Tx tx, PageID rootPageID,
@@ -3581,7 +3718,8 @@ public final class BracketTree extends PageContextFactory {
 			boolean logRight) throws IndexOperationException {
 
 		// delete nodes from left page
-		BracketNodeSequence nodesToMove = left.deleteSequenceAfter(true,
+		BracketNodeSequence nodesToMove = left.isBeforeFirst() ? left
+				.clearData(true, logLeft, -1) : left.deleteSequenceAfter(true,
 				logLeft, -1);
 
 		// move right leaf's cursor to the beginning

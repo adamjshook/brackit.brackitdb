@@ -131,22 +131,24 @@ public final class BracketIterImpl implements BracketIter {
 		assureContextValidity();
 
 		try {
-			
+
 			// create sequence from record
-			BracketNodeSequence nodesToInsert = tree.recordToSequence(tx, page, deweyID,
-					value, ancestorsToInsert);
-			
+			BracketNodeSequence nodesToInsert = tree.recordToSequence(tx, page,
+					deweyID, value, ancestorsToInsert);
+
 			// insert into page
-			if (!page.insertSequenceAfter(nodesToInsert, false, openMode.doLog(), -1, true)) {
+			if (!page.insertSequenceAfter(nodesToInsert, false,
+					openMode.doLog(), -1, true)) {
 				// split necessary
-				
+
 				// log already inserted nodes
 				page.bulkLog(false, -1);
-				
+
 				// split + insert
-				page = tree.splitInsert(tx, rootPageID, page, nodesToInsert, openMode.doLog());
+				page = tree.splitInsert(tx, rootPageID, page, nodesToInsert,
+						openMode.doLog());
 			}
-			
+
 			this.key = deweyID;
 			this.value = value;
 			this.insertKey = null;
@@ -391,7 +393,7 @@ public final class BracketIterImpl implements BracketIter {
 		assureContextValidity();
 
 		try {
-			tree.deleteSubtree(tx, rootPageID, page, deleteListener, -1,
+			tree.deleteSubtree(tx, rootPageID, page, deleteListener,
 					openMode.doLog());
 			page = null;
 		} catch (IndexAccessException e) {

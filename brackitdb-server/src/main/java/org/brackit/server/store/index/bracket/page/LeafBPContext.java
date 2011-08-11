@@ -827,9 +827,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	@Override
 	public boolean deleteSubtreeStart(SubtreeDeleteListener deleteListener,
-			List<PageID> externalPageIDs, boolean isStructureModification,
-			boolean logged, long undoNextLSN) throws IndexOperationException,
-			EmptyLeafException {
+			List<PageID> externalPageIDs, boolean logged)
+			throws IndexOperationException {
 
 		if (CHECK_OFFSET_INTEGRITY) {
 			declareContextSensitive();
@@ -843,47 +842,72 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 				externalPageIDs = new ArrayList<PageID>();
 			}
 
-			DeletePreparation delPrep = null;
+			DeletePrepareListener delPrepListener = new DeletePrepareListenerImpl(
+					externalPageIDs, deleteListener);
+			DeletePreparation delPrep = page.deleteSubtreeStartPrepare(
+					currentOffset, currentDeweyID, delPrepListener);
 
-			if (currentOffset == BracketPage.LOW_KEY_OFFSET) {
-				// maybe the page has to be deleted completely / unchained
-				// -> DeleteListener's callback invocations should not be
-				// propagated to the outside yet
-
-				DelayedSubtreeDeleteListener delayedListener = new DelayedSubtreeDeleteListener(
-						deleteListener);
-				List<PageID> tempExternalPageIDs = deleteExternalValues ? externalPageIDs
-						: new ArrayList<PageID>();
-				DeletePrepareListener delPrepListener = new DeletePrepareListenerImpl(
-						tempExternalPageIDs, delayedListener);
-				delPrep = page.deleteSubtreeStartPrepare(currentOffset,
-						currentDeweyID, delPrepListener);
-
-				if (delPrep.endDeleteOffset == BracketPage.KEY_AREA_END_OFFSET) {
-					// leaf needs to be unchained
-					throw EmptyLeafException.EMPTY_LEAF_EXCEPTION;
-				}
-
-				// propagate DeleteListener's callback methods
-				delayedListener.flush();
-				if (!deleteExternalValues) {
-					externalPageIDs.addAll(tempExternalPageIDs);
-				}
-
-			} else {
-				DeletePrepareListener delPrepListener = new DeletePrepareListenerImpl(
-						externalPageIDs, deleteListener);
-				delPrep = page.deleteSubtreeStartPrepare(currentOffset,
-						currentDeweyID, delPrepListener);
-			}
+			// if (currentOffset == BracketPage.LOW_KEY_OFFSET) {
+			// // maybe the page has to be deleted completely / unchained
+			// // -> DeleteListener's callback invocations should not be
+			// // propagated to the outside yet
+			//
+			// DelayedSubtreeDeleteListener delayedListener = new
+			// DelayedSubtreeDeleteListener(
+			// deleteListener);
+			// List<PageID> tempExternalPageIDs = deleteExternalValues ?
+			// externalPageIDs
+			// : new ArrayList<PageID>();
+			// DeletePrepareListener delPrepListener = new
+			// DeletePrepareListenerImpl(
+			// tempExternalPageIDs, delayedListener);
+			// delPrep = page.deleteSubtreeStartPrepare(currentOffset,
+			// currentDeweyID, delPrepListener);
+			//
+			// if (delPrep.endDeleteOffset == BracketPage.KEY_AREA_END_OFFSET) {
+			// // leaf needs to be unchained
+			// throw EmptyLeafException.EMPTY_LEAF_EXCEPTION;
+			// }
+			//
+			// // propagate DeleteListener's callback methods
+			// delayedListener.flush();
+			// if (!deleteExternalValues) {
+			// externalPageIDs.addAll(tempExternalPageIDs);
+			// }
+			//
+			// } else {
+			// DeletePrepareListener delPrepListener = new
+			// DeletePrepareListenerImpl(
+			// externalPageIDs, deleteListener);
+			// delPrep = page.deleteSubtreeStartPrepare(currentOffset,
+			// currentDeweyID, delPrepListener);
+			// }
 
 			// delete external values
 			if (deleteExternalValues) {
 				deleteExternalized(externalPageIDs);
 			}
 
+			if (delPrep.startDeleteOffset == BracketPage.LOW_KEY_OFFSET
+					&& delPrep.endDeleteOffset == BracketPage.KEY_AREA_END_OFFSET) {
+				// entire page needs to be deleted -> do not physically delete
+				// the page, but let it unchain by the bracket tree
+				return false;
+			}
+
+			BracketNodeSequence nodes = page.getBracketNodeSequence(delPrep);
+
 			// delete
 			page.delete(delPrep, new ExternalValueLoaderImpl());
+
+			// log delete
+			if (logged) {
+				LogOperation operation = new NodeSequenceLogOperation(
+						ActionType.DELETE, getPageID(), getRootPageID(), nodes);
+				log(tx, operation, -1);
+			} else {
+				page.getHandle().setAssignedTo(tx);
+			}
 
 			// reset context information
 			moveBeforeFirst();
@@ -898,8 +922,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	@Override
 	public boolean deleteSubtreeEnd(XTCdeweyID subtreeRoot,
 			SubtreeDeleteListener deleteListener, List<PageID> externalPageIDs,
-			boolean isStructureModification, boolean logged, long undoNextLSN)
-			throws IndexOperationException {
+			boolean logged) throws IndexOperationException {
 		try {
 			if (CHECK_OFFSET_INTEGRITY) {
 				declareContextFree();
@@ -931,11 +954,23 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 				// entire page needs to be deleted -> do not physically delete
 				// the page, but let it unchain by the bracket tree
 				return false;
-			} else {
-				// delete
-				page.delete(delPrep, null);
-				return true;
 			}
+
+			BracketNodeSequence nodes = page.getBracketNodeSequence(delPrep);
+
+			// delete
+			page.delete(delPrep, null);
+
+			// log delete
+			if (logged) {
+				LogOperation operation = new NodeSequenceLogOperation(
+						ActionType.DELETE, getPageID(), getRootPageID(), nodes);
+				log(tx, operation, -1);
+			} else {
+				page.getHandle().setAssignedTo(tx);
+			}
+
+			return true;
 
 		} catch (BracketPageException e) {
 			throw new IndexOperationException(e);

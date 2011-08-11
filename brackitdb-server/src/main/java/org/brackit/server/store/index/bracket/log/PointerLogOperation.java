@@ -289,6 +289,7 @@ public class PointerLogOperation extends BracketIndexLogOperation {
 			break;
 		case BEFORE_PAGE:
 			typeString = "BEFORE";
+			break;
 		default:
 			typeString = "UNKNOWN";
 		}
