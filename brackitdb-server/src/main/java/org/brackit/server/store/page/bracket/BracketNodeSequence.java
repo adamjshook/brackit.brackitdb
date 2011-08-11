@@ -87,7 +87,6 @@ public final class BracketNodeSequence {
 
 		byte[] valueLength = BracketPage.getValueLengthField(value,
 				externalized);
-		;
 
 		int dataLength = 1 + lowIDLength + 1 + bracketKeys.length
 				+ valueLength.length + value.length;
@@ -167,7 +166,7 @@ public final class BracketNodeSequence {
 
 		this.numberOfDataRecords = numberOfRecords;
 	}
-	
+
 	/**
 	 * Creates an empty sequence.
 	 */
@@ -177,7 +176,7 @@ public final class BracketNodeSequence {
 		this.highKey = null;
 		this.numberOfDataRecords = 0;
 	}
-	
+
 	public boolean isEmpty() {
 		return (data == null);
 	}
@@ -211,11 +210,11 @@ public final class BracketNodeSequence {
 	 * @return the high key
 	 */
 	public XTCdeweyID getHighKey() {
-		
+
 		if (this.isEmpty()) {
 			return null;
 		}
-		
+
 		if (highKey != null) {
 			return highKey;
 		}
@@ -305,7 +304,7 @@ public final class BracketNodeSequence {
 	 * @return the value length of the current node
 	 */
 	protected int getValueLength(int currentOffset) {
-		
+
 		if (this.isEmpty()) {
 			return 0;
 		}
@@ -408,7 +407,7 @@ public final class BracketNodeSequence {
 	 * @return the internal length (in Byte) of the BracketNodeSequence
 	 */
 	public int getLength() {
-		return data == null ? 0: data.length;
+		return data == null ? 0 : data.length;
 	}
 
 	/**
@@ -439,7 +438,7 @@ public final class BracketNodeSequence {
 		if (other.isEmpty()) {
 			return;
 		}
-		
+
 		// if this is empty
 		if (this.isEmpty()) {
 			this.data = other.data;
@@ -448,10 +447,10 @@ public final class BracketNodeSequence {
 			this.numberOfDataRecords = other.numberOfDataRecords;
 			return;
 		}
-		
+
 		// backup original value
 		buffer.backup();
-		
+
 		// determine highkey
 		SimpleDeweyID highKey = null;
 		if (this.highKey != null) {
@@ -460,16 +459,17 @@ public final class BracketNodeSequence {
 			setToLastNode(buffer);
 			highKey = buffer;
 		}
-		
+
 		// compute keys between this highkey and the other's lowkey
 		byte[] keys = BracketKey.generateBracketKeys(highKey, other.lowKey);
-		BracketKey.updateType(other.getLowKeyType(), keys, keys.length - BracketKey.PHYSICAL_LENGTH);
-		
+		BracketKey.updateType(other.getLowKeyType(), keys, keys.length
+				- BracketKey.PHYSICAL_LENGTH);
+
 		// calculate new length
 		int otherStartOffset = other.getStartOffset();
 		int otherLength = other.data.length - otherStartOffset;
 		int length = data.length + keys.length + otherLength;
-		
+
 		// create new internal representation
 		byte[] newData = new byte[length];
 		int currentOffset = 0;
@@ -477,8 +477,9 @@ public final class BracketNodeSequence {
 		currentOffset += data.length;
 		System.arraycopy(keys, 0, newData, currentOffset, keys.length);
 		currentOffset += keys.length;
-		System.arraycopy(other.data, otherStartOffset, newData, currentOffset, otherLength);
-		
+		System.arraycopy(other.data, otherStartOffset, newData, currentOffset,
+				otherLength);
+
 		// update fields
 		this.data = newData;
 		if (other.highKey != null) {
@@ -490,5 +491,77 @@ public final class BracketNodeSequence {
 		this.numberOfDataRecords += other.numberOfDataRecords;
 
 		buffer.restore(false);
+	}
+
+	/**
+	 * Splits this BracketNodeSequence into two parts and returns the second
+	 * part.
+	 */
+	public BracketNodeSequence split() {
+
+		DeweyIDBuffer deweyIDbuffer = new DeweyIDBuffer();
+		deweyIDbuffer.setTo(lowKey);
+		int currentOffset = getStartOffset() + getValueLength(LOW_KEY_OFFSET);
+
+		int limit = data.length / 2;
+
+		BracketKey currentKey = new BracketKey();
+		currentKey.type = getLowKeyType();
+		int dataRecords1 = 0;
+		int dataRecords2 = 0;
+		while (true) {
+			currentKey.load(data, currentOffset);
+			deweyIDbuffer.update(currentKey, false);
+
+			currentOffset += BracketKey.PHYSICAL_LENGTH;
+
+			if (currentKey.type.hasDataReference) {
+				dataRecords1++;
+				int valueLength = BracketPage.getValueLength(currentOffset,
+						true, data);
+				currentOffset += valueLength;
+				if (currentOffset > limit) {
+					break;
+				}
+			}
+		}
+
+		// deweyIDBuffer contains DeweyID of the first part's last node
+		highKey = deweyIDbuffer.getDeweyID();
+		byte[] data1 = new byte[currentOffset];
+		System.arraycopy(data, 0, data1, 0, currentOffset);
+		dataRecords2 = numberOfDataRecords - dataRecords1;
+		numberOfDataRecords = dataRecords1;
+		
+		// determine second part's lowkey
+		while (true) {
+			currentKey.load(data, currentOffset);
+			deweyIDbuffer.update(currentKey, false);
+
+			currentOffset += BracketKey.PHYSICAL_LENGTH;
+
+			if (currentKey.type != BracketKey.Type.OVERFLOW) {
+				break;
+			}
+		}
+		byte[] secondLowKeyBytes = deweyIDbuffer.getDeweyID().toBytes();
+		if (secondLowKeyBytes.length > 255) {
+			throw new RuntimeException("StartDeweyID is too long!");
+		}
+		
+		// calculate data2 length
+		int length2 = 2 + secondLowKeyBytes.length + (data.length - currentOffset);
+		// fill data2
+		byte[] data2 = new byte[length2];
+		int data2Offset = 0;
+		data2[data2Offset++] = (byte) secondLowKeyBytes.length;
+		System.arraycopy(secondLowKeyBytes, 0, data2, data2Offset, secondLowKeyBytes.length);
+		data2Offset += secondLowKeyBytes.length;
+		data2[data2Offset++] = currentKey.type.physicalValue;
+		System.arraycopy(data, currentOffset, data2, data2Offset, data.length - currentOffset);
+		
+		this.data = data1;
+		this.numberOfDataRecords = dataRecords1;
+		return new BracketNodeSequence(data2, dataRecords2);
 	}
 }

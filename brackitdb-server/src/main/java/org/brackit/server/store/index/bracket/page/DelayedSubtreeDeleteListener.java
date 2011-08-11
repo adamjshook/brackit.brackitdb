@@ -71,4 +71,9 @@ public class DelayedSubtreeDeleteListener implements SubtreeDeleteListener {
 	public void subtreeEnd() throws IndexOperationException {
 		subtreeEnd = true;
 	}
+	
+	public void reset() {
+		nodes.clear();
+		subtreeEnd = false;
+	}
 }

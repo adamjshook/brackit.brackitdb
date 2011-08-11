@@ -83,8 +83,9 @@ public interface Leaf extends BPContext {
 	public void moveBeforeFirst();
 
 	public boolean moveNextToLastRecord() throws IndexOperationException;
-	
-	public boolean moveToSplitPosition(float occupancyRate) throws IndexOperationException;
+
+	public boolean moveToSplitPosition(float occupancyRate)
+			throws IndexOperationException;
 
 	/**
 	 * 
@@ -109,7 +110,8 @@ public interface Leaf extends BPContext {
 	 * or 'insertSequenceAfter' methods. May only be used in combination with
 	 * the above-mentioned methods.
 	 */
-	public void bulkLog(boolean writeUndoNextLSN, long undoNextLSN) throws IndexOperationException;
+	public void bulkLog(boolean writeUndoNextLSN, long undoNextLSN)
+			throws IndexOperationException;
 
 	public boolean insertRecord(XTCdeweyID deweyID, byte[] record,
 			int ancestorsToInsert, boolean logged, long undoNextLSN)
@@ -183,9 +185,7 @@ public interface Leaf extends BPContext {
 	 * @param deleteListener
 	 * @param externalPageIDs
 	 *            a list for collecting external values
-	 * @param isStructureModification
 	 * @param logged
-	 * @param undoNextLSN
 	 * @return true if deletion of subtree is completed, and false if the next
 	 *         page has to be inspected
 	 * @throws IndexOperationException
@@ -194,9 +194,8 @@ public interface Leaf extends BPContext {
 	 *             deletion not yet executed)
 	 */
 	public boolean deleteSubtreeStart(SubtreeDeleteListener deleteListener,
-			List<PageID> externalPageIDs, boolean isStructureModification,
-			boolean logged, long undoNextLSN) throws IndexOperationException,
-			EmptyLeafException;
+			List<PageID> externalPageIDs, boolean logged)
+			throws IndexOperationException;
 
 	/**
 	 * Deletes all nodes from the beginning of this page until the specified
@@ -209,16 +208,13 @@ public interface Leaf extends BPContext {
 	 * @param deleteListener
 	 * @param externalPageIDs
 	 *            a list for collecting external values
-	 * @param isStructureModification
 	 * @param logged
-	 * @param undoNextLSN
 	 * @return
 	 * @throws IndexOperationException
 	 */
 	public boolean deleteSubtreeEnd(XTCdeweyID subtreeRoot,
 			SubtreeDeleteListener deleteListener, List<PageID> externalPageIDs,
-			boolean isStructureModification, boolean logged, long undoNextLSN)
-			throws IndexOperationException;
+			boolean logged) throws IndexOperationException;
 
 	/**
 	 * Assigns the given DeweyIDBuffer to this leaf.
@@ -269,8 +265,8 @@ public interface Leaf extends BPContext {
 	 * Deletes all nodes from this page. Highkey and other header data will be
 	 * preserved.
 	 */
-	public BracketNodeSequence clearData(boolean SMO, boolean logged, long undoNextLSN)
-			throws IndexOperationException;
+	public BracketNodeSequence clearData(boolean SMO, boolean logged,
+			long undoNextLSN) throws IndexOperationException;
 
 	public HintPageInformation getHintPageInformation();
 
