@@ -88,7 +88,7 @@ public final class IndexPageHelper extends PageContextFactory {
 
 					try {
 						if (separatorKey != null)
-							if (((separatorKey == null) || keyType.compare(
+							if (!((separatorKey == null) || keyType.compare(
 									currentKey, separatorKey) <= 0)) {
 								throw new RuntimeException(
 										String
@@ -111,7 +111,7 @@ public final class IndexPageHelper extends PageContextFactory {
 							buffer, currentChild, currentKey);
 
 					if (childHighKey != null)
-						if (((childHighKey == null) || keyType.compare(
+						if (!((childHighKey == null) || keyType.compare(
 								childHighKey, currentKey) < 1)) {
 							throw new RuntimeException(
 									String
@@ -132,7 +132,7 @@ public final class IndexPageHelper extends PageContextFactory {
 								currentKey);
 
 						if (context.isUnique()) {
-							if (comparison < 0) {
+							if (!(comparison < 0)) {
 								throw new RuntimeException(
 										String
 												.format(
@@ -143,7 +143,7 @@ public final class IndexPageHelper extends PageContextFactory {
 																.toString(currentKey)));
 							}
 						} else {
-							if (comparison <= 0) {
+							if (!(comparison <= 0)) {
 								throw new RuntimeException(
 										String
 												.format(
@@ -179,7 +179,7 @@ public final class IndexPageHelper extends PageContextFactory {
 				if (previousKey != null) {
 					int comparison = keyType.compare(previousKey, currentKey);
 					try {
-						if (comparison < 1) {
+						if (!(comparison < 1)) {
 							throw new RuntimeException(String.format(
 									"previousKey '%s' > currentKey '%s'",
 									keyType.toString(previousKey), keyType
@@ -195,7 +195,7 @@ public final class IndexPageHelper extends PageContextFactory {
 									.getEntryCount())
 							|| (context.isLastInLevel())) {
 						try {
-							if (field.compare(previousValue, currentValue) < 0) {
+							if (!(field.compare(previousValue, currentValue) < 0)) {
 								throw new RuntimeException(
 										String
 												.format(
