@@ -143,10 +143,6 @@ public interface Leaf extends BPContext {
 
 	public int getOffset();
 
-	public boolean split(Leaf emptyRightPage, XTCdeweyID key,
-			boolean forUpdate, boolean splitAfterCurrent, boolean logged,
-			long undoNextLSN) throws IndexOperationException;
-
 	/**
 	 * Deletes and returns all nodes following the current position.
 	 * 
@@ -157,9 +153,6 @@ public interface Leaf extends BPContext {
 	 */
 	public BracketNodeSequence deleteSequenceAfter(boolean SMO, boolean logged,
 			long undoNextLSN) throws IndexOperationException;
-
-	public void copyContentAndContextTo(Leaf other, boolean logged,
-			long undoNextLSN);
 
 	public XTCdeweyID getLowKey();
 
@@ -270,6 +263,6 @@ public interface Leaf extends BPContext {
 
 	public HintPageInformation getHintPageInformation();
 
-	public boolean setValue(byte[] value, boolean isStructureModification,
-			boolean logged, long undoNextLSN) throws IndexOperationException;
+	public boolean setValue(byte[] value, boolean logged, long undoNextLSN)
+			throws IndexOperationException;
 }

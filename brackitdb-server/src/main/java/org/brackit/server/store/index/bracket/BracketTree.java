@@ -82,6 +82,7 @@ public final class BracketTree extends PageContextFactory {
 	private static final boolean BRANCH_COMPRESSION = false;
 	public static final boolean COLLECT_STATS = false;
 	private static final int NEIGHBOR_LEAFS_TO_SCAN = 2;
+	private static final float OCCUPANCY_RATE_DEFAULT = 0.5f;
 
 	private final BlobStore blobStore;
 	private final EnumMap<NavigationMode, LeafScanner> scannerMap = new EnumMap<NavigationMode, LeafScanner>(
@@ -1110,64 +1111,68 @@ public final class BracketTree extends PageContextFactory {
 			XTCdeweyID insertKey, byte[] insertValue, int ancestorsToInsert,
 			BulkInsertContext bulkContext, boolean logged, long undoNextLSN)
 			throws IndexAccessException {
-		try {
-			if (log.isTraceEnabled()) {
-				log.trace(leaf.dump(String.format(
-						"Leaf Page %s for insert of (%s, %s) at %s", leaf,
-						insertKey, Field.EL_REC.toString(insertValue),
-						leaf.getOffset())));
-			}
-
-			/*
-			 * Optimistically try to insert record in page saving the
-			 * computation of required space. If this fails we will have to
-			 * perform a split
-			 */
-			while (!leaf.insertRecordAfter(insertKey, insertValue,
-					ancestorsToInsert, logged, undoNextLSN, false)) {
-				if (log.isTraceEnabled()) {
-					log.trace(String
-							.format("Splitting leaf page %s for insert of (%s, %s) at %s",
-									leaf, insertKey,
-									Field.EL_REC.toString(insertValue),
-									leaf.getOffset()));
-				}
-
-				XTCdeweyID ancestorInsertKey = BracketPage.getAncestorKey(
-						insertKey, ancestorsToInsert);
-
-				// Split and propagate if necessary.
-				if (leaf.getPageID().equals(rootPageID)) {
-					leaf = splitRootLeaf(tx, rootPageID, leaf,
-							ancestorInsertKey, false, logged);
-					// leftmost page / current left page has changed due to root
-					// split
-					bulkContext.initialize(leaf);
-				} else {
-					leaf = splitNonRootLeafBulk(tx, rootPageID, leaf,
-							ancestorInsertKey, bulkContext, logged);
-				}
-
-				if (log.isTraceEnabled()) {
-					log.trace(leaf.dump(String
-							.format("Splitted leaf page %s before insert of (%s, %s) at %s",
-									leaf, insertKey,
-									Field.EL_REC.toString(insertValue),
-									leaf.getOffset())));
-				}
-			}
-
-			if (log.isTraceEnabled()) {
-				log.trace(leaf.dump("Leaf Page after insert"));
-			}
-
-			tx.getStatistics().increment(TxStats.BTREE_INSERTS);
-
-			return leaf;
-		} catch (IndexOperationException e) {
-			leaf.cleanup();
-			throw new IndexAccessException(e, "Could not log record insertion.");
-		}
+		
+		leaf.cleanup();
+		throw new IndexAccessException("Not implemented yet");
+		
+//		try {
+//			if (log.isTraceEnabled()) {
+//				log.trace(leaf.dump(String.format(
+//						"Leaf Page %s for insert of (%s, %s) at %s", leaf,
+//						insertKey, Field.EL_REC.toString(insertValue),
+//						leaf.getOffset())));
+//			}
+//
+//			/*
+//			 * Optimistically try to insert record in page saving the
+//			 * computation of required space. If this fails we will have to
+//			 * perform a split
+//			 */
+//			while (!leaf.insertRecordAfter(insertKey, insertValue,
+//					ancestorsToInsert, logged, undoNextLSN, false)) {
+//				if (log.isTraceEnabled()) {
+//					log.trace(String
+//							.format("Splitting leaf page %s for insert of (%s, %s) at %s",
+//									leaf, insertKey,
+//									Field.EL_REC.toString(insertValue),
+//									leaf.getOffset()));
+//				}
+//
+//				XTCdeweyID ancestorInsertKey = BracketPage.getAncestorKey(
+//						insertKey, ancestorsToInsert);
+//
+//				// Split and propagate if necessary.
+//				if (leaf.getPageID().equals(rootPageID)) {
+//					leaf = splitRootLeaf(tx, rootPageID, leaf,
+//							ancestorInsertKey, false, logged);
+//					// leftmost page / current left page has changed due to root
+//					// split
+//					bulkContext.initialize(leaf);
+//				} else {
+//					leaf = splitNonRootLeafBulk(tx, rootPageID, leaf,
+//							ancestorInsertKey, bulkContext, logged);
+//				}
+//
+//				if (log.isTraceEnabled()) {
+//					log.trace(leaf.dump(String
+//							.format("Splitted leaf page %s before insert of (%s, %s) at %s",
+//									leaf, insertKey,
+//									Field.EL_REC.toString(insertValue),
+//									leaf.getOffset())));
+//				}
+//			}
+//
+//			if (log.isTraceEnabled()) {
+//				log.trace(leaf.dump("Leaf Page after insert"));
+//			}
+//
+//			tx.getStatistics().increment(TxStats.BTREE_INSERTS);
+//
+//			return leaf;
+//		} catch (IndexOperationException e) {
+//			leaf.cleanup();
+//			throw new IndexAccessException(e, "Could not log record insertion.");
+//		}
 	}
 
 	public Leaf insertIntoLeaf(Tx tx, PageID rootPageID, Leaf leaf,
@@ -1252,10 +1257,10 @@ public final class BracketTree extends PageContextFactory {
 
 				// Split and propagate if necessary.
 				if (page.getPageID().equals(rootPageID)) {
-					page = splitRoot(tx, rootPageID, page, insertKey,
+					page = splitRootBranch(tx, rootPageID, page, insertKey,
 							insertValue, logged);
 				} else {
-					page = splitNonRoot(tx, rootPageID, page, insertKey,
+					page = splitNonRootBranch(tx, rootPageID, page, insertKey,
 							insertValue, logged);
 				}
 
@@ -1503,114 +1508,148 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-	protected Leaf splitNonRootLeaf(Tx tx, PageID rootPageID, Leaf left,
-			XTCdeweyID key, boolean forUpdate, boolean logged)
+	/**
+	 * Splits a leaf page without changing any user data.
+	 */
+	protected Leaf split(Tx tx, PageID rootPageID, Leaf left, boolean logged)
 			throws IndexAccessException {
+
+		long rememberedLSN = tx.checkPrevLSN();
 		PageID leftPageID = left.getPageID();
+		Branch root = null;
+		boolean rootSplit = (leftPageID.equals(rootPageID));
+
+		// prepare root split
+		if (rootSplit) {
+			Leaf rootLeaf = null;
+			try {
+
+				rootLeaf = left;
+				left = null;
+				left = allocateLeaf(tx, -1, rootLeaf.getUnitID(), rootPageID,
+						logged);
+				leftPageID = left.getPageID();
+
+				// copy root to left page
+				BracketContext rootContext = rootLeaf.getContext();
+				BracketNodeSequence rootContent = rootLeaf.clearData(true,
+						logged, -1);
+				left.insertSequenceAfter(rootContent, true, logged, -1, false);
+				left.setContext(rootContext);
+
+				// reformat root page
+				root = (Branch) rootLeaf.format(false, rootLeaf.getUnitID(),
+						rootPageID, 1, BRANCH_COMPRESSION, logged, -1);
+				root.setLastInLevel(true);
+				// reposition context in converted root page
+				root.moveFirst();
+				// point to left page
+				root.setLowPageID(leftPageID, logged, -1);
+
+			} catch (IndexOperationException e) {
+				if (rootLeaf != null) {
+					rootLeaf.cleanup();
+				}
+				if (left != null) {
+					left.cleanup();
+				}
+				throw new IndexAccessException(e);
+			}
+		}
+
 		PageID rightPageID = null;
 		Leaf right = null;
 		Leaf target = null;
+		byte[] oldLeftHighKey = left.getHighKeyBytes();
 
 		try {
-			if (log.isTraceEnabled()) {
-				log.trace(String.format("Splitting non-root leaf page %s.",
-						leftPageID));
-				log.trace(left.dump("Split Page"));
-			}
-
-			// Remember LSN of previously logged action.
-			long rememberedLSN = tx.checkPrevLSN();
 
 			// allocate and format new right page
 			right = allocateLeaf(tx, -1, left.getUnitID(), rootPageID, logged);
 			rightPageID = right.getPageID();
+			tx.getStatistics().increment(TxStats.BTREE_LEAF_ALLOCATIONS);
 
-			boolean insertLeft = false;
-			byte[] separatorKey = null;
+			// remember current position
+			BracketContext currentPos = left.getContext();
 
-			if (!forUpdate && left.isLast()) {
-				// no split necessary
-				insertLeft = false;
-				left.setHighKey(key, logged, -1);
-				separatorKey = key.toBytes();
-			} else {
+			// move nodes from left to right
+			left.moveToSplitPosition(OCCUPANCY_RATE_DEFAULT);
+			boolean returnLeft = (left.getOffset() < currentPos.keyOffset);
+			moveNodes(left, right, logged, logged);
+			right.moveBeforeFirst();
+			byte[] separatorKey = right.getLowKeyBytes();
 
-				// actual split
-				insertLeft = left.split(right, key, forUpdate, false, logged,
-						-1);
-				separatorKey = right.getLowKeyBytes();
-
+			// set left highkey
+			if (!left.setHighKeyBytes(separatorKey, logged, -1)) {
+				throw new IndexAccessException(
+						"Highkey does not fit into a half-full leaf page.");
 			}
 
-			// update next pointer if it exists
+			// set right highkey
+			if (!right.setHighKeyBytes(oldLeftHighKey, logged, -1)) {
+				// can not happen, since right page contains at most the data
+				// from left page
+			}
+
 			PageID nextPageID = left.getNextPageID();
 
 			// chain left page with right page
-			left.setNextPageID(right.getPageID(), logged, -1);
-			right.setPrevPageID(left.getPageID(), logged, -1);
+			left.setNextPageID(rightPageID, logged, -1);
+			right.setPrevPageID(leftPageID, logged, -1);
 
+			// set next page pointer
 			if (nextPageID != null) {
 				Leaf next = (Leaf) getPage(tx, nextPageID, true, false);
 
 				try {
-					right.setNextPageID(next.getPageID(), logged, -1);
-					next.setPrevPageID(right.getPageID(), logged, -1);
+					right.setNextPageID(nextPageID, logged, -1);
+					next.setPrevPageID(rightPageID, logged, -1);
 				} finally {
 					next.cleanup();
 				}
 			}
 
-			// split at this level is complete
-			if (log.isTraceEnabled()) {
-				log.trace(String.format("Split of non-root page %s completed.",
-						left));
-				log.trace(left.dump("Left page (splitted)"));
-				log.trace(right.dump("Right page (new)"));
+			// insert separator(s)
+			if (rootSplit) {
+				root.insert(separatorKey, rightPageID.getBytes(), logged, -1);
+			} else {
+				insertSeparator(tx, rootPageID, separatorKey, leftPageID,
+						rightPageID, 0, logged);
 			}
-
-			// write dummy CLR to make split at this level invisible to undo
-			// processing
-			rememberedLSN = logDummyCLR(tx, rememberedLSN);
-
-			// verifySplitPages(left, right, keyType, insertKey, separatorKey,
-			// insertPosition, splitPosition, insertIntoLeft,
-			// newInsertPosition);
-
-			insertSeparator(tx, rootPageID, separatorKey, leftPageID,
-					rightPageID, left.getHeight(), logged);
-
-			// write dummy CLR to make also split propagation invisible to undo
-			// processing
+			
 			logDummyCLR(tx, rememberedLSN);
 
-			tx.getStatistics().increment(TxStats.BTREE_LEAF_ALLOCATIONS);
-
-			// Free unneeded split page
-			if (insertLeft) {
-				// unlatch and unfix right split page
+			// Free unneeded split pages & set target page to correct offset
+			if (returnLeft) {
 				right.cleanup();
 				right = null;
 				target = left;
 				left = null;
+				
+				target.setContext(currentPos);
+				
 			} else {
-				// unlatch and unfix right left split page and switch to right
-				// page
 				left.cleanup();
 				left = null;
 				target = right;
 				right = null;
+				
+				target.navigateContextFree(currentPos.key, NavigationMode.TO_KEY);
 			}
 
 			return target;
+
 		} catch (IndexOperationException e) {
-			throw new IndexAccessException(e,
-					"Could not log page split operations.");
+			throw new IndexAccessException(e);
 		} finally {
 			if (left != null) {
 				left.cleanup();
 			}
 			if (right != null) {
 				right.cleanup();
+			}
+			if (root != null) {
+				root.cleanup();
 			}
 		}
 	}
@@ -1747,12 +1786,14 @@ public final class BracketTree extends PageContextFactory {
 				if (!left.insertSequenceAfter(nodesToInsert, false, logged, -1,
 						true)) {
 					if (left.isBeforeFirst()) {
-						// sequence does not fit into an empty page -> split sequence
+						// sequence does not fit into an empty page -> split
+						// sequence
 						remainingNodes = nodesToInsert.split();
-						left.insertSequenceAfter(nodesToInsert, false, logged, -1,
-								true);
+						left.insertSequenceAfter(nodesToInsert, false, logged,
+								-1, true);
 					} else {
-						// nodes still do not fit into left page -> try right page
+						// nodes still do not fit into left page -> try right
+						// page
 						insertLeft = false;
 						separatorKey = firstNode.toBytes();
 						if (!left.setHighKeyBytes(separatorKey, logged, -1)) {
@@ -1769,9 +1810,9 @@ public final class BracketTree extends PageContextFactory {
 								separatorKey = right.getLowKeyBytes();
 								runCount++;
 								// try to set highkey again
-							} while (!left
-									.setHighKeyBytes(separatorKey, logged, -1));
-	
+							} while (!left.setHighKeyBytes(separatorKey,
+									logged, -1));
+
 							// find correct insertion position in right page
 							if (beforeInsertKey != null) {
 								right.moveBeforeFirst();
@@ -1788,24 +1829,28 @@ public final class BracketTree extends PageContextFactory {
 				if (!right.insertSequenceAfter(nodesToInsert, false, logged,
 						-1, true)) {
 					if (right.getEntryCount() == 0) {
-						// sequence does not fit into an empty page -> split sequence
+						// sequence does not fit into an empty page -> split
+						// sequence
 						remainingNodes = nodesToInsert.split();
-						right.insertSequenceAfter(nodesToInsert, false, logged, -1,
-								true);
+						right.insertSequenceAfter(nodesToInsert, false, logged,
+								-1, true);
 					} else {
-						// nodes do not fit into right page -> allocate a new one
-						middle = allocateLeaf(tx, -1, left.getUnitID(), rootPageID,
-								logged);
+						// nodes do not fit into right page -> allocate a new
+						// one
+						middle = allocateLeaf(tx, -1, left.getUnitID(),
+								rootPageID, logged);
 						middlePageID = middle.getPageID();
-						middle.setHighKeyBytes(right.getLowKeyBytes(), logged, -1);
-						tx.getStatistics()
-								.increment(TxStats.BTREE_LEAF_ALLOCATIONS);
+						middle.setHighKeyBytes(right.getLowKeyBytes(), logged,
+								-1);
+						tx.getStatistics().increment(
+								TxStats.BTREE_LEAF_ALLOCATIONS);
 						if (!middle.insertSequenceAfter(nodesToInsert, false,
 								logged, -1, true)) {
-							// sequence does not fit into an empty page -> split sequence
+							// sequence does not fit into an empty page -> split
+							// sequence
 							remainingNodes = nodesToInsert.split();
-							middle.insertSequenceAfter(nodesToInsert, false, logged, -1,
-									true);
+							middle.insertSequenceAfter(nodesToInsert, false,
+									logged, -1, true);
 						}
 					}
 				}
@@ -1884,11 +1929,13 @@ public final class BracketTree extends PageContextFactory {
 
 			// log user insert in target page and make split invisible
 			target.bulkLog(true, rememberedLSN);
-			
+
 			if (remainingNodes != null) {
 				// insert sequence was split
-				if (!target.insertSequenceAfter(remainingNodes, false, logged, -1, false)) {
-					target = splitInsert(tx, rootPageID, target, remainingNodes, logged);
+				if (!target.insertSequenceAfter(remainingNodes, false, logged,
+						-1, false)) {
+					target = splitInsert(tx, rootPageID, target,
+							remainingNodes, logged);
 				}
 			}
 
@@ -1912,128 +1959,128 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-	protected Leaf splitNonRootLeafBulk(Tx tx, PageID rootPageID, Leaf left,
-			XTCdeweyID key, BulkInsertContext bulkContext, boolean logged)
-			throws IndexAccessException {
-		PageID leftPageID = left.getPageID();
-		Leaf right = bulkContext.getCurrentRightPage();
-
-		try {
-			if (log.isTraceEnabled()) {
-				log.trace(String.format("Splitting non-root leaf page %s.",
-						leftPageID));
-				log.trace(left.dump("Split Page"));
-			}
-
-			// Remember LSN of previously logged action.
-			long rememberedLSN = tx.checkPrevLSN();
-
-			Leaf resultLeaf = null;
-			boolean writeSeparators = false;
-
-			if (right == null) {
-				// allocate new right page
-				right = allocateLeaf(tx, -1, left.getUnitID(), rootPageID,
-						logged);
-				PageID rightPageID = right.getPageID();
-
-				byte[] separatorKey = null;
-
-				boolean insertLeft = false;
-
-				if (left.isLast()) {
-					// no split necessary
-					left.setHighKey(key, logged, -1);
-					separatorKey = key.toBytes();
-					insertLeft = false;
-				} else {
-					// actual split
-					left.split(right, key, false, true, logged, -1);
-					separatorKey = right.getLowKeyBytes();
-					insertLeft = true;
-				}
-
-				PageID nextPageID = left.getNextPageID();
-
-				if (!bulkContext.firstSplitOccured()) {
-					// this is the first split
-					bulkContext.setNextPageID(nextPageID);
-					bulkContext.setBeforeFirstSplitLSN(rememberedLSN);
-				}
-
-				// chain left page with right page
-				left.setNextPageID(rightPageID, logged, -1);
-				right.setPrevPageID(leftPageID, logged, -1);
-
-				// set right page's next pointer
-				right.setNextPageID(nextPageID, logged, -1);
-
-				Leaf newLeftPage = null;
-				Leaf newRightPage = null;
-
-				if (insertLeft) {
-					newLeftPage = left;
-					newRightPage = right;
-				} else {
-					newLeftPage = right;
-					newRightPage = null;
-					if (!bulkContext.isLeftmostPage(left)) {
-						left.cleanup();
-						left = null;
-					}
-				}
-
-				writeSeparators = bulkContext.splitOccurred(new SeparatorEntry(
-						separatorKey, rightPageID), newLeftPage, newRightPage);
-				writeSeparators = writeSeparators && !insertLeft;
-				resultLeaf = newLeftPage;
-
-			} else {
-				// continue bulk insert in right page
-
-				left.setHighKey(key, logged, -1);
-				right.moveBeforeFirst();
-				byte[] separatorKey = key.toBytes();
-
-				if (!bulkContext.isLeftmostPage(left)) {
-					left.cleanup();
-					left = null;
-				}
-
-				writeSeparators = bulkContext.overflowOccurred(separatorKey);
-				resultLeaf = right;
-
-			}
-
-			if (writeSeparators) {
-				completeBulkInsert(tx, rootPageID, bulkContext, logged);
-			}
-
-			if (log.isTraceEnabled()) {
-				log.trace(String.format("Split of non-root page %s completed.",
-						left));
-				log.trace(left.dump("Left page (splitted)"));
-				log.trace(right.dump("Right page (new)"));
-			}
-
-			tx.getStatistics().increment(TxStats.BTREE_LEAF_ALLOCATIONS);
-
-			left = null;
-			right = null;
-
-			return resultLeaf;
-		} catch (IndexOperationException e) {
-			throw new IndexAccessException(e,
-					"Could not log page split operations.");
-		} finally {
-			if (left != null) {
-				left.cleanup();
-			}
-			if (right != null) {
-				right.cleanup();
-			}
-		}
-	}
+//	protected Leaf splitNonRootLeafBulk(Tx tx, PageID rootPageID, Leaf left,
+//			XTCdeweyID key, BulkInsertContext bulkContext, boolean logged)
+//			throws IndexAccessException {
+//		PageID leftPageID = left.getPageID();
+//		Leaf right = bulkContext.getCurrentRightPage();
+//
+//		try {
+//			if (log.isTraceEnabled()) {
+//				log.trace(String.format("Splitting non-root leaf page %s.",
+//						leftPageID));
+//				log.trace(left.dump("Split Page"));
+//			}
+//
+//			// Remember LSN of previously logged action.
+//			long rememberedLSN = tx.checkPrevLSN();
+//
+//			Leaf resultLeaf = null;
+//			boolean writeSeparators = false;
+//
+//			if (right == null) {
+//				// allocate new right page
+//				right = allocateLeaf(tx, -1, left.getUnitID(), rootPageID,
+//						logged);
+//				PageID rightPageID = right.getPageID();
+//
+//				byte[] separatorKey = null;
+//
+//				boolean insertLeft = false;
+//
+//				if (left.isLast()) {
+//					// no split necessary
+//					left.setHighKey(key, logged, -1);
+//					separatorKey = key.toBytes();
+//					insertLeft = false;
+//				} else {
+//					// actual split
+//					left.split(right, key, false, true, logged, -1);
+//					separatorKey = right.getLowKeyBytes();
+//					insertLeft = true;
+//				}
+//
+//				PageID nextPageID = left.getNextPageID();
+//
+//				if (!bulkContext.firstSplitOccured()) {
+//					// this is the first split
+//					bulkContext.setNextPageID(nextPageID);
+//					bulkContext.setBeforeFirstSplitLSN(rememberedLSN);
+//				}
+//
+//				// chain left page with right page
+//				left.setNextPageID(rightPageID, logged, -1);
+//				right.setPrevPageID(leftPageID, logged, -1);
+//
+//				// set right page's next pointer
+//				right.setNextPageID(nextPageID, logged, -1);
+//
+//				Leaf newLeftPage = null;
+//				Leaf newRightPage = null;
+//
+//				if (insertLeft) {
+//					newLeftPage = left;
+//					newRightPage = right;
+//				} else {
+//					newLeftPage = right;
+//					newRightPage = null;
+//					if (!bulkContext.isLeftmostPage(left)) {
+//						left.cleanup();
+//						left = null;
+//					}
+//				}
+//
+//				writeSeparators = bulkContext.splitOccurred(new SeparatorEntry(
+//						separatorKey, rightPageID), newLeftPage, newRightPage);
+//				writeSeparators = writeSeparators && !insertLeft;
+//				resultLeaf = newLeftPage;
+//
+//			} else {
+//				// continue bulk insert in right page
+//
+//				left.setHighKey(key, logged, -1);
+//				right.moveBeforeFirst();
+//				byte[] separatorKey = key.toBytes();
+//
+//				if (!bulkContext.isLeftmostPage(left)) {
+//					left.cleanup();
+//					left = null;
+//				}
+//
+//				writeSeparators = bulkContext.overflowOccurred(separatorKey);
+//				resultLeaf = right;
+//
+//			}
+//
+//			if (writeSeparators) {
+//				completeBulkInsert(tx, rootPageID, bulkContext, logged);
+//			}
+//
+//			if (log.isTraceEnabled()) {
+//				log.trace(String.format("Split of non-root page %s completed.",
+//						left));
+//				log.trace(left.dump("Left page (splitted)"));
+//				log.trace(right.dump("Right page (new)"));
+//			}
+//
+//			tx.getStatistics().increment(TxStats.BTREE_LEAF_ALLOCATIONS);
+//
+//			left = null;
+//			right = null;
+//
+//			return resultLeaf;
+//		} catch (IndexOperationException e) {
+//			throw new IndexAccessException(e,
+//					"Could not log page split operations.");
+//		} finally {
+//			if (left != null) {
+//				left.cleanup();
+//			}
+//			if (right != null) {
+//				right.cleanup();
+//			}
+//		}
+//	}
 
 	protected void completeBulkInsert(Tx tx, PageID rootPageID,
 			BulkInsertContext bulkContext, boolean logged)
@@ -2089,102 +2136,6 @@ public final class BracketTree extends PageContextFactory {
 
 	}
 
-	protected Leaf splitRootLeaf(Tx tx, PageID rootPageID, Leaf root,
-			XTCdeweyID key, boolean forUpdate, boolean logged)
-			throws IndexAccessException {
-		long rememberedLSN = tx.checkPrevLSN();
-		Leaf left = null;
-		Leaf right = null;
-
-		try {
-			if (log.isTraceEnabled()) {
-				log.trace(String.format("Begin split of root page %s.",
-						rootPageID));
-				log.trace(root.dump("Root page"));
-			}
-
-			// fetch and latch new left and right page
-			left = allocateLeaf(tx, -1, root.getUnitID(), rootPageID, logged);
-			right = allocateLeaf(tx, -1, root.getUnitID(), rootPageID, logged);
-
-			boolean insertLeft = false;
-			byte[] separatorKey = null;
-
-			if (!forUpdate && root.isLast()) {
-				// no split necessary
-				insertLeft = false;
-				root.setHighKey(key, logged, -1);
-				separatorKey = key.toBytes();
-			} else {
-
-				// actual split
-				insertLeft = root.split(right, key, forUpdate, false, logged,
-						-1);
-				separatorKey = right.getLowKeyBytes();
-
-			}
-
-			// copy remaining data from root to left page
-			root.copyContentAndContextTo(left, logged, -1);
-			left.setHighKey(root.getHighKey(), logged, -1);
-
-			// chain left page with right page
-			left.setNextPageID(right.getPageID(), logged, -1);
-			right.setPrevPageID(left.getPageID(), logged, -1);
-
-			// reformat root page
-			Branch rootBranch = (Branch) root.format(false, root.getUnitID(),
-					rootPageID, root.getHeight() + 1, BRANCH_COMPRESSION,
-					logged, -1);
-			rootBranch.setLastInLevel(true);
-			// reposition context in converted root page
-			rootBranch.moveFirst();
-
-			// insert separator in converted root page
-			rootBranch.insert(separatorKey, right.getPageID().getBytes(),
-					logged, -1);
-			rootBranch.setLowPageID(left.getPageID(), logged, -1);
-
-			// root split is complete
-			if (log.isTraceEnabled()) {
-				log.trace(String.format("Split of root page %s completed.",
-						root));
-				log.trace(root.dump("Root page"));
-				log.trace(left.dump("Left page"));
-				log.trace(right.dump("Right page"));
-			}
-
-			// write dummy CLR to make also split propagation invisible to undo
-			// processing
-			logDummyCLR(tx, rememberedLSN);
-
-			// statistic accounting for root page splits -> index height
-			tx.getStatistics().increment(TxStats.BTREE_ROOT_SPLITS);
-
-			// Free unneeded split page and return
-			if (insertLeft) {
-				// unlatch and unfix right split page
-				right.cleanup();
-				root.cleanup();
-				return left;
-			} else {
-				// unlatch and unfix left split page
-				left.cleanup();
-				root.cleanup();
-				return right;
-			}
-		} catch (IndexOperationException e) {
-			if (left != null) {
-				left.cleanup();
-			}
-			if (right != null) {
-				right.cleanup();
-			}
-			root.cleanup();
-			throw new IndexAccessException(e, "Error during root split.");
-		}
-	}
-
 	public Leaf updateInLeaf(Tx tx, PageID rootPageID, Leaf leaf,
 			byte[] newValue, long undoNextLSN) throws IndexAccessException {
 		boolean logged = true;
@@ -2194,7 +2145,7 @@ public final class BracketTree extends PageContextFactory {
 				log.trace(leaf.dump("Page before update"));
 			}
 
-			while (!leaf.setValue(newValue, false, logged, undoNextLSN)) {
+			while (!leaf.setValue(newValue, logged, undoNextLSN)) {
 				// not enough space for update -> split
 				if (log.isTraceEnabled()) {
 					log.trace(String.format(
@@ -2203,13 +2154,7 @@ public final class BracketTree extends PageContextFactory {
 				}
 
 				// Split and propagate if necessary.
-				if (leaf.getPageID().equals(rootPageID)) {
-					leaf = splitRootLeaf(tx, rootPageID, leaf, leaf.getKey(),
-							true, logged);
-				} else {
-					leaf = splitNonRootLeaf(tx, rootPageID, leaf,
-							leaf.getKey(), true, logged);
-				}
+				leaf = split(tx, rootPageID, leaf, logged);
 
 				if (log.isTraceEnabled()) {
 					log.trace(String.format(
@@ -2229,7 +2174,7 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-	protected Branch splitNonRoot(Tx tx, PageID rootPageID, Branch left,
+	protected Branch splitNonRootBranch(Tx tx, PageID rootPageID, Branch left,
 			byte[] insertKey, byte[] insertValue, boolean logged)
 			throws IndexAccessException {
 		PageID leftPageID = left.getPageID();
@@ -2503,7 +2448,7 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-	protected Branch splitRoot(Tx tx, PageID rootPageID, Branch root,
+	protected Branch splitRootBranch(Tx tx, PageID rootPageID, Branch root,
 			byte[] insertKey, byte[] insertValue, boolean logged)
 			throws IndexAccessException {
 		long rememberedLSN = tx.checkPrevLSN();
@@ -3760,6 +3705,10 @@ public final class BracketTree extends PageContextFactory {
 				pageRecord, ancestorsToInsert, externalize);
 
 		return sequence;
+	}
+	
+	public LeafScanner getLeafScanner(NavigationMode navMode) {
+		return scannerMap.get(navMode);
 	}
 
 }
