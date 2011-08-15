@@ -86,11 +86,13 @@ public class BracketIndexLogOperationHelper implements LogOperationHelper {
 
 		case BracketIndexLogOperation.LEAF_INSERT:
 		case BracketIndexLogOperation.LEAF_DELETE:
-		case BracketIndexLogOperation.LEAF_UPDATE:
 		case BracketIndexLogOperation.LEAF_SMO_INSERT:
 		case BracketIndexLogOperation.LEAF_SMO_DELETE:
 			return createNodeSequenceLogOperation(type, buffer, pageID,
 					rootPageID);
+			
+		case BracketIndexLogOperation.LEAF_UPDATE:
+			return createLeafUpdateLogOperation(buffer, pageID, rootPageID);
 
 		case BracketIndexLogOperation.BEFORE_PAGE:
 		case BracketIndexLogOperation.NEXT_PAGE:
@@ -123,6 +125,18 @@ public class BracketIndexLogOperationHelper implements LogOperationHelper {
 
 		return new BranchUpdateLogOperation(type, pageID, rootPageID, key,
 				oldValue, value);
+	}
+	
+	private LogOperation createLeafUpdateLogOperation(ByteBuffer buffer, PageID pageID, PageID rootPageID) {
+		
+		byte[] keyBytes = new byte[buffer.getShort() & 0xFFFF];
+		buffer.get(keyBytes);
+		byte[] oldValue = new byte[buffer.getShort() & 0xFFFF];
+		buffer.get(oldValue);
+		byte[] newValue = new byte[buffer.getShort() & 0xFFFF];
+		buffer.get(newValue);
+		
+		return new LeafUpdateLogOperation(pageID, rootPageID, keyBytes, oldValue, newValue);		
 	}
 
 	private LogOperation createPointerLogOperation(byte type,

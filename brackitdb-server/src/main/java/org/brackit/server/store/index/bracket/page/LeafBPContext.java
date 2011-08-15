@@ -39,6 +39,7 @@ import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.SubtreeDeleteListener;
 import org.brackit.server.store.index.bracket.log.HighkeyLogOperation;
+import org.brackit.server.store.index.bracket.log.LeafUpdateLogOperation;
 import org.brackit.server.store.index.bracket.log.NodeSequenceLogOperation;
 import org.brackit.server.store.index.bracket.log.NodeSequenceLogOperation.ActionType;
 import org.brackit.server.store.index.bracket.log.PointerLogOperation;
@@ -69,8 +70,6 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	private static final boolean CHECK_BUFFER_INTEGRITY = false;
 	private static final boolean CHECK_OFFSET_INTEGRITY = false;
-
-	private final float OCCUPANCY_RATE_DEFAULT = 0.5f;
 
 	public static final int NEXT_PAGE_FIELD_NO = AbstractBPContext.RESERVED_SIZE;
 	public static final int RESERVED_SIZE = NEXT_PAGE_FIELD_NO
@@ -342,8 +341,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	}
 
 	@Override
-	public boolean setValue(byte[] value, boolean isStructureModification,
-			boolean logged, long undoNextLSN) throws IndexOperationException {
+	public boolean setValue(byte[] value, boolean logged, long undoNextLSN)
+			throws IndexOperationException {
 
 		if (CHECK_OFFSET_INTEGRITY) {
 			declareContextSensitive();
@@ -355,6 +354,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			oldValue = page.getValue(currentOffset);
 		} catch (ExternalValueException e) {
 			oldExternalPageID = e.externalPageID;
+			oldValue = oldExternalPageID.getBytes();
 		}
 
 		boolean externalize = externalizeValue(value);
@@ -365,6 +365,15 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		if (!page.update(value, externalize, currentOffset)) {
 			return false;
+		}
+
+		// log update
+		if (logged) {
+			LogOperation operation = new LeafUpdateLogOperation(getPageID(),
+					getRootPageID(), getKey(), oldValue, value);
+			log(tx, operation, undoNextLSN);
+		} else {
+			page.getHandle().setAssignedTo(tx);
 		}
 
 		if (oldExternalPageID != null) {
@@ -622,85 +631,6 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		currentOffset = BracketPage.BEFORE_LOW_KEY_OFFSET;
 		bufferedValue = null;
 		bufferedKeyType = null;
-	}
-
-	@Override
-	public boolean split(Leaf rightLeaf, XTCdeweyID key, boolean forUpdate,
-			boolean splitAfterCurrent, boolean logged, long undoNextLSN)
-			throws IndexOperationException {
-
-		try {
-			LeafBPContext rightPage = (LeafBPContext) rightLeaf;
-
-			this.initBuffer();
-			rightPage.initBuffer();
-
-			// prepare split
-			DeletePreparation delPrep = splitAfterCurrent ? page
-					.splitAfterCurrentPrepare(currentOffset, currentDeweyID)
-					: page.splitPrepare(OCCUPANCY_RATE_DEFAULT, currentDeweyID);
-
-			boolean returnLeftPage = (currentOffset < delPrep.startDeleteOffset);
-
-			// get nodes that have to be transferred to the right page
-			BracketNodeSequence nodes = page.getBracketNodeSequence(delPrep);
-
-			// delete nodes from left page
-			page.delete(delPrep, new ExternalValueLoaderImpl());
-
-			// set highKey/separator
-			XTCdeweyID highKey = this.getHighKey();
-			this.setHighKey(delPrep.startDeleteDeweyID, logged, undoNextLSN);
-			rightPage.setHighKey(highKey, logged, undoNextLSN);
-
-			// insert nodes into right page
-			rightPage.page.insertSequenceAfter(nodes, rightPage.currentOffset,
-					rightPage.currentDeweyID);
-
-			// set correct context(s)
-			if (returnLeftPage) {
-				// right page
-				rightPage.moveBeforeFirst();
-			} else {
-				// left page
-				this.moveBeforeFirst();
-
-				// right page
-				if (forUpdate) {
-					if (rightPage.navigateContextFree(key,
-							NavigationMode.TO_KEY) != NavigationStatus.FOUND) {
-						throw new RuntimeException("Error during leaf split!");
-					}
-				} else {
-					if (rightPage.navigateContextFree(key,
-							NavigationMode.TO_INSERT_POS) != NavigationStatus.FOUND) {
-						throw new RuntimeException("Error during leaf split!");
-					}
-				}
-			}
-
-			return returnLeftPage;
-
-		} catch (BracketPageException e) {
-			throw new IndexOperationException(e);
-		}
-	}
-
-	@Override
-	public void copyContentAndContextTo(Leaf otherLeaf, boolean logged,
-			long undoNextLSN) {
-		LeafBPContext other = (LeafBPContext) otherLeaf;
-
-		other.initBuffer();
-
-		// copy content
-		BracketNodeSequence content = page.getBracketNodeSequence(getLowKey(),
-				BracketPage.LOW_KEY_OFFSET, BracketPage.KEY_AREA_END_OFFSET);
-		other.page.insertSequenceAfter(content,
-				BracketPage.BEFORE_LOW_KEY_OFFSET, other.currentDeweyID);
-
-		// copy context
-		otherLeaf.setContext(this.getContext());
 	}
 
 	@Override
