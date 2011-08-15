@@ -78,6 +78,9 @@ public interface Tx extends CachedObjectUser {
 	public long logCLR(LogOperation logOperation, long undoNextLSN)
 			throws TxException;
 
+	public long logUpdateSpecial(LogOperation logOperation, long undoNextLSN)
+			throws TxException;
+
 	public void addPreCommitHook(PreCommitHook hook);
 
 	public void addPostCommitHook(PostCommitHook hook);

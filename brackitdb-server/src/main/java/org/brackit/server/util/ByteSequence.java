@@ -70,8 +70,8 @@ public final class ByteSequence {
 	}
 
 	public int get(byte[] b) {
-		int get = Math.max(length - buffer.position(), b.length);
-		buffer.get(b);
+		int get = Math.min(length - buffer.position(), b.length);
+		buffer.get(b, 0, get);
 		return get;
 	}
 
