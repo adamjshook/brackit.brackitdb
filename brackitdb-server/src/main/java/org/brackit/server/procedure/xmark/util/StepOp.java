@@ -31,9 +31,8 @@ import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
-import org.brackit.xquery.expr.Axis;
+import org.brackit.xquery.expr.Accessor;
 import org.brackit.xquery.operator.Cursor;
-import org.brackit.xquery.operator.TupleImpl;
 import org.brackit.xquery.sequence.type.ItemTest;
 import org.brackit.xquery.xdm.Expr;
 import org.brackit.xquery.xdm.Item;
@@ -53,7 +52,7 @@ public class StepOp implements Cursor {
 
 	private final int position;
 
-	private final Axis axis;
+	private final Accessor axis;
 
 	private final ItemTest test;
 
@@ -81,12 +80,12 @@ public class StepOp implements Cursor {
 
 	private boolean foundRelative;
 
-	public StepOp(Cursor in, int position, Axis axis, ItemTest test,
+	public StepOp(Cursor in, int position, Accessor axis, ItemTest test,
 			Expr[] predicates, boolean pipeSingle) {
 		this(in, position, axis, test, predicates, pipeSingle, null);
 	}
 
-	public StepOp(Cursor in, int position, Axis axis, ItemTest test,
+	public StepOp(Cursor in, int position, Accessor axis, ItemTest test,
 			Expr[] predicates, boolean pipeSingle, int... projections) {
 		super();
 		this.in = in;
