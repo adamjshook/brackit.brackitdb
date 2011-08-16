@@ -665,21 +665,6 @@ public final class BracketPage extends BasePage {
 	}
 
 	/**
-	 * Returns the ancestor's DeweyID.
-	 * 
-	 * @param key
-	 *            the key to insert
-	 * @param ancestorsToInsert
-	 *            the number of ancestors to be inserted implicitly
-	 * @return the ancestor's DeweyID
-	 */
-	public static XTCdeweyID getAncestorKey(XTCdeweyID key,
-			int ancestorsToInsert) {
-		return (ancestorsToInsert == 0) ? key : key.getAncestor(key.getLevel()
-				- ancestorsToInsert - (key.isAttribute() ? 1 : 0));
-	}
-
-	/**
 	 * Checks whether there is enough free space and then allocates the required
 	 * space.
 	 * 
@@ -1153,35 +1138,6 @@ public final class BracketPage extends BasePage {
 			navigateGeneric(currentDeweyID, LOW_KEY_OFFSET,
 					NavigationProfiles.BY_DEWEYID, false);
 		}
-
-		currentDeweyID.disableCompareMode();
-		return navRes;
-	}
-
-	/**
-	 * Navigates to first DeweyID that is grater or equal to the specified
-	 * DeweyID.
-	 * 
-	 * @param key
-	 *            the DeweyID to navigate to
-	 * @param currentDeweyID
-	 *            DeweyIDBuffer containing the DeweyID of the reference node
-	 * @return the navigation result
-	 */
-	public NavigationResult navigateGreaterOrEqual(XTCdeweyID key,
-			DeweyIDBuffer currentDeweyID) {
-
-		if (getRecordCount() == 0) {
-			navRes.reset();
-			return navRes;
-		}
-
-		// initialize buffer
-		currentDeweyID.setTo(getLowKey());
-		currentDeweyID.enableCompareMode(key);
-
-		navigateGeneric(currentDeweyID, BEFORE_LOW_KEY_OFFSET,
-				NavigationProfiles.GREATER_OR_EQUAL, false);
 
 		currentDeweyID.disableCompareMode();
 		return navRes;
@@ -3142,143 +3098,6 @@ public final class BracketPage extends BasePage {
 	}
 
 	/**
-	 * Prepares a split operation. The split position is determined by the
-	 * desired occupancy rate in this page.
-	 * 
-	 * @param occupancyRate
-	 *            the desired occupancy rate
-	 * @param tempDeweyID
-	 *            DeweyIDBuffer for temporary DeweyIDs (the original content of
-	 *            tempDeweyID will be preserved!)
-	 * @return the delete preparation object for the nodes that are shifted to
-	 *         the right page
-	 */
-	public DeletePreparation splitPrepare(final float occupancyRate,
-			DeweyIDBuffer tempDeweyID) {
-		// assert(0 <= occupancyRate <= 1)
-
-		if (getRecordCount() < 2) {
-			new RuntimeException(
-					"Splitting of page with less than two nodes not supported!");
-		}
-
-		// find split position
-		final int neededDataVolume = (int) Math.floor(occupancyRate
-				* getUsedSpace());
-		int currentDataVolume = page[LOW_KEY_LENGTH_FIELD_NO] & 255;
-		int currentOffset = getKeyAreaStartOffset();
-
-		XTCdeweyID previousDeweyID = null;
-		int previousOffset = 0;
-		XTCdeweyID splitDeweyID = null;
-		int splitOffset = 0;
-
-		// LowID data
-		if (getLowKeyType().hasDataReference) {
-			currentDataVolume += BracketKey.DATA_REF_LENGTH
-					+ getValueLength(getValueOffset(currentOffset), true);
-			currentOffset += BracketKey.DATA_REF_LENGTH;
-
-			if (currentDataVolume >= neededDataVolume) {
-				// split after LowID
-				previousDeweyID = getLowKey();
-				previousOffset = LOW_KEY_OFFSET;
-			}
-		}
-
-		tempDeweyID.backup();
-		tempDeweyID.setTo(getLowKey());
-		BracketKey currentKey = new BracketKey();
-
-		// traverse page until the split position is found
-		int keyAreaEndOffset = getKeyAreaEndOffset();
-		while (currentOffset < keyAreaEndOffset) {
-			currentKey.load(page, currentOffset);
-			tempDeweyID.update(currentKey, false);
-
-			if (previousDeweyID != null) {
-				// previous node already found; navigate to the actual split key
-				if (currentKey.type != BracketKey.Type.OVERFLOW) {
-					splitDeweyID = tempDeweyID.getDeweyID();
-					splitOffset = currentOffset;
-					break;
-				}
-				currentOffset += BracketKey.PHYSICAL_LENGTH;
-			} else {
-				// look for the previous node
-
-				currentDataVolume += BracketKey.PHYSICAL_LENGTH;
-				currentOffset += BracketKey.PHYSICAL_LENGTH;
-
-				if (currentKey.type.hasDataReference) {
-					currentDataVolume += BracketKey.DATA_REF_LENGTH
-							+ getValueLength(getValueOffset(currentOffset),
-									true);
-
-					// check possible split position
-					if (currentDataVolume >= neededDataVolume) {
-						previousDeweyID = tempDeweyID.getDeweyID();
-						previousOffset = currentOffset
-								- BracketKey.PHYSICAL_LENGTH;
-					}
-
-					currentOffset += BracketKey.DATA_REF_LENGTH;
-				}
-			}
-		}
-
-		if (splitDeweyID == null) {
-			// previous node is the last node of this page -> move at least ONE
-			// node to the new page
-
-			// buffer backup DeweyID, since the following navigation will
-			// destroy the backup
-			XTCdeweyID backupDeweyID = tempDeweyID.getBackupDeweyID();
-			tempDeweyID.resetBackup();
-
-			NavigationResult previous = navigatePrevious(previousOffset,
-					tempDeweyID);
-
-			splitDeweyID = previousDeweyID;
-			splitOffset = previousOffset;
-			previousDeweyID = tempDeweyID.getDeweyID();
-			previousOffset = previous.keyOffset;
-
-			// restore original DeweyID
-			tempDeweyID.setTo(backupDeweyID);
-		} else {
-			// restore original DeweyID
-			tempDeweyID.restore(false);
-		}
-
-		// split position determined; create DeletePreparation
-		int numberOfNodes = 0;
-		int numberOfDataRecords = 0;
-		int dataRecordSize = 0;
-
-		currentOffset = splitOffset;
-		while (currentOffset < keyAreaEndOffset) {
-			BracketKey.Type currentType = BracketKey.loadType(page,
-					currentOffset);
-			currentOffset += BracketKey.PHYSICAL_LENGTH;
-
-			if (currentType != BracketKey.Type.OVERFLOW) {
-				numberOfNodes++;
-				if (currentType != BracketKey.Type.NODATA) {
-					numberOfDataRecords++;
-					dataRecordSize += getValueLength(
-							getValueOffset(currentOffset), true);
-					currentOffset += BracketKey.DATA_REF_LENGTH;
-				}
-			}
-		}
-
-		return new DeletePreparation(previousDeweyID, previousOffset,
-				splitDeweyID, splitOffset, null, KEY_AREA_END_OFFSET,
-				numberOfNodes, numberOfDataRecords, dataRecordSize, 0);
-	}
-
-	/**
 	 * Checks the integrity of this bracket page. Throws a RuntimeException if
 	 * there is something wrong.
 	 */
@@ -3529,7 +3348,7 @@ public final class BracketPage extends BasePage {
 		// reservedSpace for the highKey
 		int reservedSpace = 0;
 		if (afterKeys == null) {
-			reservedSpace = 2 * lastNodeDeweyID.toBytes().length;
+			reservedSpace = lastNodeDeweyID.toBytes().length * ((getContextDataOffset() == 0) ? 2 : 1);
 		}
 		// allocate required space
 		if (!allocateRequiredSpace(requiredSpace, reservedSpace)) {

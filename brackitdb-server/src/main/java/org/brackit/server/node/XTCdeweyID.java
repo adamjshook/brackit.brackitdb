@@ -364,7 +364,7 @@ public class XTCdeweyID implements java.io.Serializable,
 				divisionValues.length);
 		this.level = level;
 	}
-	
+
 	public XTCdeweyID(DocID docID, int length, int[] divisionValues) {
 		this.docID = docID;
 		this.divisionValues = Arrays.copyOf(divisionValues, length);
@@ -1425,8 +1425,8 @@ public class XTCdeweyID implements java.io.Serializable,
 	 */
 	public boolean isPrefixOrGreater(int extraDivision, XTCdeweyID other) {
 
-		boolean isPrefix = (this.divisionValues.length < other.divisionValues.length);
-		int upperBound = (isPrefix ? this.divisionValues.length
+		boolean isShorter = (this.divisionValues.length < other.divisionValues.length);
+		int upperBound = (isShorter ? this.divisionValues.length
 				: other.divisionValues.length);
 
 		for (int i = 0; i < upperBound; i++) {
@@ -1436,12 +1436,14 @@ public class XTCdeweyID implements java.io.Serializable,
 		}
 
 		// check extra division
-		if (isPrefix) {
+		if (isShorter) {
 			if (extraDivision != other.divisionValues[upperBound]) {
 				return (extraDivision > other.divisionValues[upperBound]);
 			}
 		}
 
-		return isPrefix;
+		// at this point, one DeweyID is a prefix of the other one -> this
+		// DeweyID is either a prefix of the other, or greater
+		return true;
 	}
 }

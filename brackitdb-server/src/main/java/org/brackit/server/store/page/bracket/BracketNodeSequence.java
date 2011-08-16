@@ -48,6 +48,21 @@ public final class BracketNodeSequence {
 	private byte[] data;
 
 	private int numberOfDataRecords;
+	
+	/**
+	 * Returns the ancestor's DeweyID.
+	 * 
+	 * @param key
+	 *            the key to insert
+	 * @param ancestorsToInsert
+	 *            the number of ancestors to be inserted implicitly
+	 * @return the ancestor's DeweyID
+	 */
+	private static XTCdeweyID getAncestorKey(XTCdeweyID key,
+			int ancestorsToInsert) {
+		return (ancestorsToInsert == 0) ? key : key.getAncestor(key.getLevel()
+				- ancestorsToInsert - (key.isAttribute() ? 1 : 0));
+	}
 
 	/**
 	 * Constructs a BracketNodeSequence from a single node.
@@ -73,7 +88,7 @@ public final class BracketNodeSequence {
 					: BracketKey.Type.DATA);
 			bracketKeys = new byte[0];
 		} else {
-			XTCdeweyID ancestorKey = BracketPage.getAncestorKey(deweyID,
+			XTCdeweyID ancestorKey = BracketNodeSequence.getAncestorKey(deweyID,
 					numberOfAncestors);
 			physicalLowID = ancestorKey.toBytes();
 			lowIDType = BracketKey.Type.NODATA;
