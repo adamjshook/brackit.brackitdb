@@ -29,6 +29,7 @@ package org.brackit.server.node.bracket;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -37,6 +38,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.brackit.server.ServerException;
 import org.brackit.server.node.XTCdeweyID;
@@ -56,7 +60,10 @@ import org.brackit.xquery.xdm.Kind;
 import org.brackit.xquery.xdm.Stream;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.w3c.dom.Attr;
+import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
@@ -78,15 +85,15 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 	public void storeBigDocument() throws ServerException, IOException,
 			DocumentException {
 		BracketCollection coll = (BracketCollection) createDocument(new DocumentParser(
-				bigDocument));		
+				bigDocument));
 		BracketLocator locator = coll.getDocument().locator;
 		BracketNode root = coll.getDocument().getNode(
 				XTCdeweyID.newRootID(locator.docID));
 
-//		FileOutputStream outputFile = new FileOutputStream("leafs.txt");
-//		PrintStream out = new PrintStream(outputFile, false, "UTF-8");
-//		coll.store.index.dump(tx, locator.rootPageID, out);
-//		outputFile.close();
+		// FileOutputStream outputFile = new FileOutputStream("leafs.txt");
+		// PrintStream out = new PrintStream(outputFile, false, "UTF-8");
+		// coll.store.index.dump(tx, locator.rootPageID, out);
+		// outputFile.close();
 	}
 
 	@Ignore
@@ -99,10 +106,10 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		BracketNode root = coll.getDocument().getNode(
 				XTCdeweyID.newRootID(locator.docID));
 
-//		FileOutputStream outputFile = new FileOutputStream("leafs.txt");
-//		PrintStream out = new PrintStream(outputFile, false, "UTF-8");
-//		coll.store.index.dump(tx, locator.rootPageID, out);
-//		outputFile.close();
+		// FileOutputStream outputFile = new FileOutputStream("leafs.txt");
+		// PrintStream out = new PrintStream(outputFile, false, "UTF-8");
+		// coll.store.index.dump(tx, locator.rootPageID, out);
+		// outputFile.close();
 	}
 
 	public static void main(String[] args) throws Exception {
@@ -110,25 +117,54 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		test.setUp();
 		test.traverse(true, 1);
 	}
-	
+
+	@Ignore
 	@Test
 	public void testDeleteRollback() throws Exception {
-		
+
 		BracketCollection coll = (BracketCollection) createDocument(new DocumentParser(
 				bigDocument));
-		
+
+		// FileOutputStream outputFile = new FileOutputStream("leafs_old.txt");
+		// PrintStream out = new PrintStream(outputFile, false, "UTF-8");
+		// coll.store.index.dump(tx, coll.getDocument().locator.rootPageID,
+		// out);
+		// outputFile.close();
+
 		tx.commit();
 		tx = sm.taMgr.begin(IsolationLevel.NONE, null, false);
 		coll = coll.copyFor(tx);
-		
+
 		BracketLocator locator = coll.getDocument().locator;
 		BracketNode root = coll.getDocument().getNode(
 				XTCdeweyID.newRootID(locator.docID));
-		
+
 		BracketNode test = root.getNode(new XTCdeweyID("2:1.9"));
-		test.delete();	
+		test.delete();
+
+		tx.rollback();
 		
-		tx.rollback();		
+		tx = sm.taMgr.begin(IsolationLevel.NONE, null, false);
+		coll = coll.copyFor(tx);
+
+		locator = coll.getDocument().locator;
+		root = coll.getDocument().getNode(XTCdeweyID.newRootID(locator.docID));
+
+		Node domRoot = createDomTree(ctx, new InputSource(new FileReader(
+				bigDocument)));
+		System.out.println("DOM-Tree created!");
+
+		long start = System.currentTimeMillis();
+		checkSubtreePreOrderReduced(ctx, root, domRoot); // check document index
+		long end = System.currentTimeMillis();
+		System.out.println("Preorder Traversal: " + (end - start) / 1000f);
+		
+		tx.commit();
+
+		// outputFile = new FileOutputStream("leafs.txt");
+		// out = new PrintStream(outputFile, false, "UTF-8");
+		// coll.store.index.dump(tx, locator.rootPageID, out);
+		// outputFile.close();
 	}
 
 	@Ignore
@@ -371,9 +407,9 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 					domNode.getClass());
 		}
 	}
-	
-	protected void checkSubtreePreOrderReduced(QueryContext ctx, final BracketNode node,
-			org.w3c.dom.Node domNode) throws Exception {
+
+	protected void checkSubtreePreOrderReduced(QueryContext ctx,
+			final BracketNode node, org.w3c.dom.Node domNode) throws Exception {
 		BracketNode child = null;
 		String nodeString = node.toString();
 
@@ -393,7 +429,8 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 			NodeList domChildNodes = element.getChildNodes();
 			ArrayList<BracketNode> children = new ArrayList<BracketNode>();
 
-			for (BracketNode c = node.getFirstChild(); c != null; c = c.getNextSibling()) {
+			for (BracketNode c = node.getFirstChild(); c != null; c = c
+					.getNextSibling()) {
 				// System.out.println(String.format("-> Found child of %s : %s",
 				// node, c));
 				children.add(c);
@@ -415,21 +452,22 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 					// oldChild, child));
 				}
 
-				assertNotNull(
-						String.format("child node %s of node %s", i, nodeString),
-						child);
+				assertNotNull(String.format("child node %s of node %s", i,
+						nodeString), child);
 
 				checkSubtreePreOrderReduced(ctx, child, domChild);
 			}
 
-			assertEquals(String.format("child count of element %s", nodeString),
+			assertEquals(
+					String.format("child count of element %s", nodeString),
 					domChildNodes.getLength(), children.size());
 
 		} else if (domNode instanceof Text) {
 			Text text = (Text) domNode;
 
-			assertEquals(nodeString + " is of type text : \"" + text.getNodeValue()
-					+ "\"", Kind.TEXT, node.getKind());
+			assertEquals(
+					nodeString + " is of type text : \"" + text.getNodeValue()
+							+ "\"", Kind.TEXT, node.getKind());
 			assertEquals(String.format("Text of node %s", nodeString), text
 					.getNodeValue().trim(), node.getValue());
 		} else {
@@ -437,9 +475,9 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 					domNode.getClass());
 		}
 	}
-	
-	protected void checkSubtreePostOrderReduced(QueryContext ctx, final BracketNode node,
-			org.w3c.dom.Node domNode) throws Exception {
+
+	protected void checkSubtreePostOrderReduced(QueryContext ctx,
+			final BracketNode node, org.w3c.dom.Node domNode) throws Exception {
 		BracketNode child = null;
 		String nodeString = node.toString();
 
@@ -459,7 +497,8 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 			NodeList domChildNodes = element.getChildNodes();
 			ArrayList<BracketNode> children = new ArrayList<BracketNode>();
 
-			for (BracketNode c = node.getLastChild(); c != null; c = c.getPreviousSibling()) {
+			for (BracketNode c = node.getLastChild(); c != null; c = c
+					.getPreviousSibling()) {
 				// System.out.println(String.format("-> Found child of %s : %s",
 				// node, c));
 				children.add(c);
@@ -481,21 +520,22 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 					// oldChild, child));
 				}
 
-				assertNotNull(
-						String.format("child node %s of node %s", i, nodeString),
-						child);
+				assertNotNull(String.format("child node %s of node %s", i,
+						nodeString), child);
 
 				checkSubtreePostOrderReduced(ctx, child, domChild);
 			}
 
-			assertEquals(String.format("child count of element %s", nodeString),
+			assertEquals(
+					String.format("child count of element %s", nodeString),
 					domChildNodes.getLength(), children.size());
 
 		} else if (domNode instanceof Text) {
 			Text text = (Text) domNode;
 
-			assertEquals(nodeString + " is of type text : \"" + text.getNodeValue()
-					+ "\"", Kind.TEXT, node.getKind());
+			assertEquals(
+					nodeString + " is of type text : \"" + text.getNodeValue()
+							+ "\"", Kind.TEXT, node.getKind());
 			assertEquals(String.format("Text of node %s", nodeString), text
 					.getNodeValue().trim(), node.getValue());
 		} else {
@@ -503,4 +543,93 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 					domNode.getClass());
 		}
 	}
+	
+	protected void compareAttributes(QueryContext ctx, BracketNode node, Element element)
+	throws Exception {
+		NamedNodeMap domAttributes = element.getAttributes();
+		Stream<? extends BracketNode> attributes = node.getAttributes();
+		
+		int attributesSize = 0;
+		BracketNode c;
+		while ((c = attributes.next()) != null) {
+			attributesSize++;
+		
+			int ancestorLevel = 0;
+			for (BracketNode ancestor = node; ancestor != null; ancestor = ancestor
+					.getParent()) {
+				if (ancestorLevel == 0) {
+					try {
+						assertTrue(String.format("node %s is attribute of %s",
+								c, ancestor), c.isAttributeOf(ancestor));
+					} catch (AssertionError e) {
+						c.isAttributeOf(ancestor);
+						throw e;
+					}
+					assertTrue(String.format("node %s is parent of %s",
+							ancestor, c), ancestor.isParentOf(c));
+				}
+				assertTrue(String.format("node %s is ancestor of %s", ancestor,
+						c), ancestor.isAncestorOf(c));
+				ancestorLevel++;
+			}
+		}
+		attributes.close();
+		
+		assertEquals(String.format("attribute count of element %s", node),
+				domAttributes.getLength(), attributesSize);
+		
+		// check if all stored attributes really exist
+		for (int i = 0; i < domAttributes.getLength(); i++) {
+			Attr domAttribute = (Attr) domAttributes.item(i);
+			BracketNode attribute = node.getAttribute(domAttribute.getName());
+			assertNotNull(String.format("Attribute \"%s\" of node %s",
+					domAttribute.getName(), node), attribute);
+			assertEquals(attribute + " is of type attribute", Kind.ATTRIBUTE,
+					attribute.getKind());
+			assertEquals(String.format(
+					"Value of attribute \"%s\" (%s) of node %s", domAttribute
+							.getName(), attribute, node), domAttribute
+					.getValue(), attribute.getValue());
+		}
+	}
+	
+	protected org.w3c.dom.Node createDomTree(QueryContext ctx,
+			InputSource source) throws Exception {
+		try {
+			DocumentBuilderFactory factory = DocumentBuilderFactory
+					.newInstance();
+			DocumentBuilder builder = factory.newDocumentBuilder();
+			Document document = builder.parse(source);
+			fix(document.getDocumentElement());
+			return document.getDocumentElement();
+		} catch (Exception e) {
+			throw new DocumentException(
+					"An error occured while creating DOM input source: %s", e
+							.getMessage());
+		}
+	}
+	
+	private boolean fix(org.w3c.dom.Node node) {
+		if (node == null) {
+			return false;
+		}
+		if (node.getNodeType() == Node.TEXT_NODE) {
+			String trimmed = node.getTextContent().trim();
+			if (trimmed.isEmpty()) {
+				node.getParentNode().removeChild(node);
+				return true;
+			} else {
+				node.setNodeValue(trimmed);
+			}
+		} else if (node.getNodeType() == Node.ELEMENT_NODE) { 
+			NodeList children = node.getChildNodes();
+			for (int i = 0; i < children.getLength(); i++) {
+				if (fix(children.item(i))) {
+					i--; // child deleted, step one back
+				}
+			}
+		}
+		return false;
+	}
+
 }
