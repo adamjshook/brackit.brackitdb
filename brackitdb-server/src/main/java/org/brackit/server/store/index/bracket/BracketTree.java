@@ -51,7 +51,6 @@ import org.brackit.server.store.index.bracket.page.BPContext;
 import org.brackit.server.store.index.bracket.page.BracketContext;
 import org.brackit.server.store.index.bracket.page.Branch;
 import org.brackit.server.store.index.bracket.page.DelayedSubtreeDeleteListener;
-import org.brackit.server.store.index.bracket.page.EmptyLeafException;
 import org.brackit.server.store.index.bracket.page.Leaf;
 import org.brackit.server.store.index.bracket.page.PageContextFactory;
 import org.brackit.server.store.index.bracket.stats.DefaultScanStats;
@@ -59,7 +58,6 @@ import org.brackit.server.store.index.bracket.stats.LastChildScanStats;
 import org.brackit.server.store.index.bracket.stats.PreviousSiblingScanStats;
 import org.brackit.server.store.index.bracket.stats.ScanStats;
 import org.brackit.server.store.page.bracket.BracketNodeSequence;
-import org.brackit.server.store.page.bracket.BracketPage;
 import org.brackit.server.store.page.bracket.DeleteSequenceInfo;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
@@ -67,7 +65,6 @@ import org.brackit.server.tx.PostCommitHook;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.TxStats;
-import org.brackit.server.tx.log.LogOperation;
 
 /**
  * @author Martin Hiller
@@ -2314,8 +2311,13 @@ public final class BracketTree extends PageContextFactory {
 		try {
 			while (true) {
 				// try to locate separator in this page
-				if (page.search(SearchMode.GREATER_OR_EQUAL, separatorKey, null) <= 0) {
-					// separator is greater or equal: inspect previous pointer
+				int search = page.search(SearchMode.GREATER_OR_EQUAL, separatorKey, null);
+				if (search <= 0) {
+					// The context is positioned at an entry that is 
+					// greater or equal than the separator. The parent page
+					// may be left of this entry (e.g. 
+
+					// inspect previous pointer
 					PageID p;
 					if (page.getPosition() > 1) {
 						page.hasPrevious();
@@ -2324,7 +2326,10 @@ public final class BracketTree extends PageContextFactory {
 					} else {
 						p = page.getLowPageID();
 					}
+
 					if (p.equals(targetPageID)) {
+						parentPage = page;
+					} else if ((search == 0) && (page.getValueAsPageID().equals(targetPageID))) {
 						parentPage = page;
 					}
 				} else if (!page.isAfterLast()) {
@@ -2376,6 +2381,22 @@ public final class BracketTree extends PageContextFactory {
 		// do not perform latch coupling
 		Branch parent = descendToParent(tx, rootPageID, rootPageID,
 				separatorKey, leftPageID, height + 1);
+		
+		byte[] value = rightPageID.getBytes();
+		try {
+			// After page deletions it may happen that the separator pointing
+			// to the (unsplitted) left page is greater or equal the new 
+			// separator. In this case, the old separator must be updated to
+			// point to the new right page and the new separator must be pointing
+			// to the left page.
+			if ((!parent.isAfterLast()) && (parent.getValueAsPageID().equals(leftPageID))) {
+				parent.setPageIDAsValue(rightPageID, logged, -1);
+				value = leftPageID.getBytes();
+			}
+		} catch (IndexOperationException e) {
+			parent.cleanup();
+			throw new IndexAccessException(e);
+		}
 
 		if (log.isTraceEnabled()) {
 			log.trace(String.format(
@@ -2384,7 +2405,7 @@ public final class BracketTree extends PageContextFactory {
 		}
 
 		parent = insertIntoBranch(tx, rootPageID, parent, separatorKey,
-				rightPageID.getBytes(), logged, -1);
+				value, logged, -1);
 		parent.cleanup();
 	}
 
@@ -2914,7 +2935,10 @@ public final class BracketTree extends PageContextFactory {
 				// collapse root if right page is not splitted concurrently
 				// separator is missing
 				if (next.isLastInLevel()) {
-					return collapseRoot(tx, parent, page, next, logged);
+					Branch root = collapseRoot(tx, parent, page, next, logged);
+					// write CLR to skip tree reorganization during undo
+					logDummyCLR(tx, rememberedLSN);
+					return root;
 				}
 			}
 			parent.cleanup();

@@ -368,7 +368,7 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 	public boolean moveNext() {
 		if (currentPos < entryCount) {
 			currentPos++;
-			return (currentPos < entryCount);
+			return (currentPos < entryCount - 1);
 		} else {
 			return false;
 		}
