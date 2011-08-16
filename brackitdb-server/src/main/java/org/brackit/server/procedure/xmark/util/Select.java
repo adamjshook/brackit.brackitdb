@@ -63,7 +63,7 @@ public class Select implements Cursor {
 	public Tuple next(QueryContext ctx) throws QueryException {
 		Tuple a;
 		while (((a = in.next(ctx)) != null)
-				&& (!predicate.evaluate(ctx, a).booleanValue(ctx)))
+				&& (!predicate.evaluate(ctx, a).booleanValue()))
 			;
 		return (a != null) ? (projections != null) ? a.project(projections)
 				: a : null;

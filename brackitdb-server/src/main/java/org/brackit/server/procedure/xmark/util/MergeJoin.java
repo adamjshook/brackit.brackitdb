@@ -110,7 +110,7 @@ public class MergeJoin implements Cursor {
 			// right));
 			Tuple joined = left.concat(right.array());
 
-			boolean match = predicate.evaluate(ctx, joined).booleanValue(ctx);
+			boolean match = predicate.evaluate(ctx, joined).booleanValue();
 
 			if (match) {
 				Tuple result = (projections != null) ? joined

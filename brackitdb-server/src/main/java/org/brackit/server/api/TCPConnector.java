@@ -47,7 +47,7 @@ import org.brackit.server.session.Session;
 import org.brackit.server.session.SessionID;
 import org.brackit.server.session.SessionMgr;
 import org.brackit.server.tx.Tx;
-import org.brackit.server.xquery.DBXQuery;
+import org.brackit.server.xquery.DBCompileChain;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.XQuery;
 
@@ -218,7 +218,7 @@ public class TCPConnector implements Runnable {
 					log.trace("Query: " + query);
 				}
 
-				XQuery xq = new DBXQuery(query, mdm);
+				XQuery xq = new XQuery(new DBCompileChain(mdm, tx), query);
 				TXQueryContext ctx = new TXQueryContext(tx, mdm);
 				xq.serialize(ctx, new PrintStream(to));
 
