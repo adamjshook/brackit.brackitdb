@@ -36,6 +36,7 @@ import org.brackit.server.io.buffer.log.PageLogOperationHelper;
 import org.brackit.server.node.el.index.log.ElBPlusIndexLogOperationHelper;
 import org.brackit.server.store.index.aries.log.BPlusIndexLogOperationHelper;
 import org.brackit.server.store.index.bracket.log.BracketIndexLogOperationHelper;
+import org.brackit.server.store.index.blink.log.BlinkIndexLogOperationHelper;
 import org.brackit.server.tx.TxID;
 import org.brackit.server.tx.log.LogException;
 import org.brackit.server.tx.log.LogOperation;
@@ -57,6 +58,7 @@ public class LogRecordHelper implements LoggableHelper {
 		helperSet = new HashSet<LogOperationHelper>();
 		helperSet.add(new PageLogOperationHelper());
 		helperSet.add(new BPlusIndexLogOperationHelper());
+		helperSet.add(new BlinkIndexLogOperationHelper());
 		helperSet.add(new ElBPlusIndexLogOperationHelper());
 		helperSet.add(new BracketIndexLogOperationHelper());
 	}
@@ -126,7 +128,7 @@ public class LogRecordHelper implements LoggableHelper {
 			undoNextLSN = buffer.getLong();
 			logOperationType = buffer.get();
 			logOperation = fromBytes(logOperationType, buffer.slice());
-			return new LogRecord(logRecordType, taId, prevLSN,
+			return new LogRecord(Loggable.TYPE_CLR, taId, prevLSN,
 					logOperation, undoNextLSN);
 		case Loggable.TYPE_DUMMY:
 			undoNextLSN = buffer.getLong();

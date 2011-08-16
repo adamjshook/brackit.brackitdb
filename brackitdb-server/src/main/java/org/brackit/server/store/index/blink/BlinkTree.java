@@ -693,6 +693,22 @@ public class BlinkTree extends PageContextFactory {
 		PageContext parent = descendToParent(tx, rootPageID, rootPageID,
 				separatorKey, leftPageID, height + 1);
 
+		byte[] value = rightPageID.getBytes();
+		try {
+			// After page deletions it may happen that the separator pointing
+			// to the (unsplitted) left page is greater or equal the new 
+			// separator. In this case, the old separator must be updated to
+			// point to the new right page and the new separator must be pointing
+			// to the left page.
+			if ((!parent.isAfterLast()) && (parent.getValueAsPageID().equals(leftPageID))) {
+				parent.setPageIDAsValue(rightPageID, logged, -1);
+				value = leftPageID.getBytes();
+			}
+		} catch (IndexOperationException e) {
+			parent.cleanup();
+			throw new IndexAccessException(e);
+		}		
+		
 		if (log.isTraceEnabled()) {
 			Field keyType = parent.getKeyType();
 			log.trace(String.format(
@@ -701,7 +717,7 @@ public class BlinkTree extends PageContextFactory {
 		}
 
 		parent = insertIntoPage(tx, rootPageID, parent, separatorKey,
-				rightPageID.getBytes(), true, compact, logged, -1);
+				value, true, compact, logged, -1);
 		parent.cleanup();
 	}
 
@@ -995,9 +1011,14 @@ public class BlinkTree extends PageContextFactory {
 
 			while (true) {
 				// try to locate separator in this page
-				if (page
-						.search(SearchMode.GREATER_OR_EQUAL, separatorKey, null) <= 0) {
-					// separator is greater or equal: inspect previous pointer
+				int search = page
+						.search(SearchMode.GREATER_OR_EQUAL, separatorKey, null);
+				if (search <= 0) {
+					// The context is positioned at an entry that is 
+					// greater or equal than the separator. The parent page
+					// may be left of this entry (e.g. 
+
+					// inspect previous pointer
 					PageID p;
 					if (page.getPosition() > 1) {
 						page.hasPrevious();
@@ -1006,7 +1027,10 @@ public class BlinkTree extends PageContextFactory {
 					} else {
 						p = page.getLowPageID();
 					}
+
 					if (p.equals(targetPageID)) {
+						parentPage = page;
+					} else if ((search == 0) && (page.getValueAsPageID().equals(targetPageID))) {
 						parentPage = page;
 					}
 				} else if (!page.isAfterLast()) {
@@ -1132,7 +1156,10 @@ public class BlinkTree extends PageContextFactory {
 				// collapse root if right page is not splitted concurrently
 				// separator is missing
 				if (next.isLastInLevel()) {
-					return collapseRoot(tx, parent, page, next, logged);
+					PageContext root = collapseRoot(tx, parent, page, next, logged);
+					// write CLR to skip tree reorganization during undo
+					logDummyCLR(tx, rememberedLSN);
+					return root;
 				}
 			}
 			parent.cleanup();

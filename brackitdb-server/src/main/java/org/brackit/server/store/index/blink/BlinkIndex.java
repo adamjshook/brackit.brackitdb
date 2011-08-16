@@ -140,13 +140,14 @@ public class BlinkIndex implements Index {
 		if (it.getKey() != null) {
 			PageID currentPageID = null;
 
-			if ((currentPageID == null)
-					|| (!it.getCurrentPageID().equals(currentPageID))) {
-				currentPageID = it.getCurrentPageID();
-				out.append(String.format("-------------- %s --------------\n",
-						currentPageID));
-			}
 			do {
+				if ((currentPageID == null)
+						|| (!it.getCurrentPageID().equals(currentPageID))) {
+					currentPageID = it.getCurrentPageID();
+					out.append(String.format("-------------- %s --------------\n",
+							currentPageID));
+				}
+				
 				byte[] key = it.getKey();
 				byte[] value = it.getValue();
 				out.append(String.format("%7s. %s -> %s\n", ++i,

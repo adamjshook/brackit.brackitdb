@@ -33,25 +33,25 @@ import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.tx.log.LogOperation;
 
 public abstract class BlinkIndexLogOperation extends LogOperation {
-	public static final byte NEXT_PAGE = 11;
+	public static final byte NEXT_PAGE = 51;
 
-	public static final byte PREV_PAGE = 12;
+	public static final byte PREV_PAGE = 52;
 
-	public static final byte BEFORE_PAGE = 13;
+	public static final byte BEFORE_PAGE = 53;
 
-	public static final byte FORMAT = 14;
+	public static final byte FORMAT = 54;
 
-	public static final byte USER_INSERT = 15;
+	public static final byte USER_INSERT = 55;
 
-	public static final byte USER_DELETE = 16;
+	public static final byte USER_DELETE = 56;
 
-	public static final byte USER_UPDATE = 17;
+	public static final byte USER_UPDATE = 57;
 
-	public static final byte SMO_INSERT = 18;
+	public static final byte SMO_INSERT = 58;
 
-	public static final byte SMO_DELETE = 19;
+	public static final byte SMO_DELETE = 59;
 
-	public static final byte SMO_UPDATE = 20;
+	public static final byte SMO_UPDATE = 60;
 
 	protected static final int BASE_SIZE = 2 * PageID.getSize();
 
