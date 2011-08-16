@@ -118,6 +118,12 @@ public class DummyTX implements Tx {
 			throws TxException {
 		return 0;
 	}
+	
+	@Override
+	public long logUpdateSpecial(LogOperation logOperation, long undoNextLSN)
+			throws TxException {
+		return 0;
+	}
 
 	@Override
 	public long logDummyCLR(long undoNextLSN) throws TxException {
