@@ -28,19 +28,49 @@
 package org.brackit.server.xquery;
 
 import org.brackit.server.metadata.manager.MetaDataMgr;
+import org.brackit.server.tx.Tx;
 import org.brackit.server.xquery.compiler.DBCompiler;
+import org.brackit.server.xquery.function.bdb.SetIsolation;
+import org.brackit.server.xquery.function.bdb.SetLockdepth;
 import org.brackit.server.xquery.optimizer.DBOptimizer;
-import org.brackit.xquery.QueryException;
-import org.brackit.xquery.XQuery;
-import org.brackit.xquery.compiler.parser.ANTLRParser;
+import org.brackit.xquery.compiler.CompileChain;
+import org.brackit.xquery.compiler.optimizer.Optimizer;
+import org.brackit.xquery.compiler.translator.Translator;
+import org.brackit.xquery.module.Functions;
+import org.brackit.xquery.module.Namespaces;
 
 /**
  * @author Sebastian Baechle
- *
+ * 
  */
-public class DBXQuery extends XQuery {
+public class DBCompileChain extends CompileChain {
 
-	public DBXQuery(String query, MetaDataMgr store) throws QueryException {
-		super(query, new ANTLRParser(), new DBOptimizer(store), new DBCompiler());
+	public static final String BDB_PREFIX = "bdb";
+
+	public static final String BDB_NSURI = "http://brackit.org/ns/bdb";
+
+	static {
+		Namespaces.predefine(BDB_PREFIX, BDB_NSURI);
+		Functions.predefine(new SetIsolation());
+		Functions.predefine(new SetLockdepth());
+	}
+
+	private final MetaDataMgr mdm;
+
+	private final Tx tx;
+
+	public DBCompileChain(MetaDataMgr mdm, Tx tx) {
+		this.mdm = mdm;
+		this.tx = tx;
+	}
+
+	@Override
+	protected Translator getTranslator() {
+		return new DBCompiler(getModuleResolver());
+	}
+
+	@Override
+	protected Optimizer getOptimizer() {
+		return new DBOptimizer(mdm, tx);
 	}
 }

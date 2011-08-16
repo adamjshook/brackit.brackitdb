@@ -77,8 +77,7 @@ public class NavigationExpander implements Cursor {
 					public boolean filter(Node<?> node)
 							throws DocumentException {
 						try {
-							return !predicate.evaluate(ctx, node).booleanValue(
-									ctx);
+							return !predicate.evaluate(ctx, node).booleanValue();
 						} catch (QueryException e) {
 							throw new DocumentException(e);
 						}
