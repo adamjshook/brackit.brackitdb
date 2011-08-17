@@ -30,7 +30,7 @@ package org.brackit.server.store.index.aries;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.tx.thread.Latch;
 import org.brackit.server.tx.thread.LatchFactory;

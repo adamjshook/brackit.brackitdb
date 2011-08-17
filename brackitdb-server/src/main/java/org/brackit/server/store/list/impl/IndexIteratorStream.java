@@ -27,7 +27,7 @@
  */
 package org.brackit.server.store.list.impl;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.IndexIterator;
 import org.brackit.xquery.xdm.DocumentException;

@@ -32,7 +32,7 @@ import static org.junit.Assert.assertEquals;
 import java.util.Collections;
 import java.util.LinkedList;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.store.Field;
 import org.brackit.server.store.index.IndexAccessException;
 import org.junit.Test;

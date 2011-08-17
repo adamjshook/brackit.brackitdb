@@ -29,7 +29,7 @@ package org.brackit.server.store;
 
 import java.util.Random;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.store.index.Index;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.thread.ThreadCB;

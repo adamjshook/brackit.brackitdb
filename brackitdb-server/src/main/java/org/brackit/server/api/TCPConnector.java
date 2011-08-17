@@ -39,7 +39,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.metadata.TXQueryContext;
 import org.brackit.server.metadata.manager.MetaDataMgr;

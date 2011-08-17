@@ -27,7 +27,7 @@
  */
 package org.brackit.server.node.index.path.impl;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.node.index.cas.impl.CASIndexIteratorImpl;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.store.index.IndexAccessException;

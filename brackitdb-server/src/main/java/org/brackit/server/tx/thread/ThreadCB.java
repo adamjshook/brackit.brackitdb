@@ -30,7 +30,7 @@ package org.brackit.server.tx.thread;
 import java.util.HashMap;
 import java.util.Random;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 
 public final class ThreadCB {

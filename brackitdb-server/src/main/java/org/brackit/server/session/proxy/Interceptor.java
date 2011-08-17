@@ -31,7 +31,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.HashSet;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * Abstract base for all Interceptors.

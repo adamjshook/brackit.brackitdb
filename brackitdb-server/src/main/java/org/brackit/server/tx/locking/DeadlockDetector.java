@@ -41,7 +41,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxState;
 import org.brackit.server.tx.TxMgr;

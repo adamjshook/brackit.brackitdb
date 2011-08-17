@@ -38,7 +38,7 @@ import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Comparator;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.store.Field;
 import org.brackit.xquery.util.Cfg;
