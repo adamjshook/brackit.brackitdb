@@ -29,7 +29,7 @@ package org.brackit.server.node.el.index.log;
 
 import java.nio.ByteBuffer;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.el.ElRecordAccess;
 import org.brackit.server.node.el.index.ElBPlusTree;

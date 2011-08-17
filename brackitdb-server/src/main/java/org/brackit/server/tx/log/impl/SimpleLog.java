@@ -29,7 +29,7 @@ package org.brackit.server.tx.log.impl;
 
 import java.nio.ByteBuffer;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.tx.log.Log;
 import org.brackit.server.tx.log.LogException;
 import org.brackit.server.tx.log.LogProperties;

@@ -29,7 +29,7 @@ package org.brackit.server.util.sort;
 
 import java.util.Arrays;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.junit.Test;
 
 public class MergeSortStrategyTest {

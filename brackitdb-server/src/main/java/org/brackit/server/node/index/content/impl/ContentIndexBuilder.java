@@ -27,7 +27,7 @@
  */
 package org.brackit.server.node.index.content.impl;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.index.content.ContentIndex;

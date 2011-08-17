@@ -27,7 +27,7 @@
  */
 package org.brackit.server.node.el;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;

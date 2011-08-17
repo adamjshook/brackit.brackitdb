@@ -31,7 +31,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.tx.log.LogException;
 import org.brackit.server.tx.log.impl.LogFileMockup;
 import org.brackit.server.util.ByteSequence;

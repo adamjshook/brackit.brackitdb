@@ -41,7 +41,7 @@ import java.util.Random;
 
 import junit.framework.Assert;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.SysMockup;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.PageID;

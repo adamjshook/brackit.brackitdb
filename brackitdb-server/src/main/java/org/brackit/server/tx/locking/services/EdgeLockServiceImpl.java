@@ -29,7 +29,7 @@ package org.brackit.server.tx.locking.services;
 
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.XTClock;
