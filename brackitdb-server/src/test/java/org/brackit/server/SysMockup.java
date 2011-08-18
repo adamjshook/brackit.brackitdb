@@ -86,7 +86,7 @@ public class SysMockup {
 			DocumentException {
 		taMgr = new TaMgrMockup();
 		bufferManager = (BufferMgrMockup) taMgr.getBufferManager();
-		bufferManager.createBuffer(BUFFER_SIZE, BLOCK_SIZE, CONTAINER_NO,
+		bufferManager.createBuffer(BUFFER_SIZE, LARGE_BLOCK_SIZE, CONTAINER_NO,
 				CONTAINER_NAME, INITIAL_SIZE, EXTEND_SIZE);
 		buffer = bufferManager.getBuffer(CONTAINER_NO);
 		dictionary = new DictionaryMgr03(bufferManager);
@@ -100,7 +100,7 @@ public class SysMockup {
 
 	public Buffer recreateBuffer() throws BufferException {
 		bufferManager.dropBuffer(CONTAINER_NO);
-		bufferManager.createBuffer(BUFFER_SIZE, BLOCK_SIZE, CONTAINER_NO,
+		bufferManager.createBuffer(BUFFER_SIZE, LARGE_BLOCK_SIZE, CONTAINER_NO,
 				CONTAINER_NAME, INITIAL_SIZE, EXTEND_SIZE);
 		buffer = bufferManager.getBuffer(CONTAINER_NO);
 		return buffer;

@@ -55,7 +55,7 @@ public class ElRecordAccess implements ElPlaceHolderHelper {
 	private final static int TYPE_MASK = 7;
 
 	public final static int getPCR(byte[] physicalRecord) {
-		int pcrSize = getPCRsize(physicalRecord);
+		int pcrSize = ((physicalRecord[0] & PCR_SIZE_MASK) + 1);
 		return (pcrSize > 0) ? Calc.toInt(physicalRecord, 1, pcrSize) : 0;
 	}
 
@@ -68,7 +68,7 @@ public class ElRecordAccess implements ElPlaceHolderHelper {
 	}
 
 	public final static String getValue(byte[] physicalRecord) {
-		int pcrSize = getPCRsize(physicalRecord);
+		int pcrSize = ((physicalRecord[0] & PCR_SIZE_MASK) + 1);
 		int valueOffset = 1 + pcrSize;
 		int valueLength = physicalRecord.length - valueOffset;
 		String value = "";
@@ -98,7 +98,7 @@ public class ElRecordAccess implements ElPlaceHolderHelper {
 
 		byte[] physicalRecord = new byte[1 + pcrLength + valueLength];
 
-		setType(physicalRecord, type);
+		physicalRecord[0] = (byte) ((physicalRecord[0] & ~(TYPE_MASK << 2)) | (type << 2));
 
 		if (value != null) {
 			System.arraycopy(valueBytes, 0, physicalRecord, 1 + pcrLength,
