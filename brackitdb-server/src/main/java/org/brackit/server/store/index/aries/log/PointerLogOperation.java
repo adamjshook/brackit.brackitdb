@@ -29,7 +29,7 @@ package org.brackit.server.store.index.aries.log;
 
 import java.nio.ByteBuffer;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.aries.BPlusTree;

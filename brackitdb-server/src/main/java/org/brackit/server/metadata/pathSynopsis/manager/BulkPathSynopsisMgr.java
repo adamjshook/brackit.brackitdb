@@ -27,7 +27,7 @@
  */
 package org.brackit.server.metadata.pathSynopsis.manager;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.metadata.pathSynopsis.converter.PSConverter;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;

@@ -29,7 +29,7 @@ package org.brackit.server.tx.locking.table;
 
 import java.util.Arrays;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxStats;
 import org.brackit.server.tx.locking.LockClass;

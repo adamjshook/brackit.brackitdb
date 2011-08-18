@@ -28,6 +28,7 @@
 package org.brackit.server.xquery.optimizer;
 
 import org.brackit.server.metadata.manager.MetaDataMgr;
+import org.brackit.server.tx.Tx;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.optimizer.DefaultOptimizer;
@@ -39,17 +40,19 @@ import org.brackit.xquery.compiler.optimizer.Stage;
  */
 public class DBOptimizer extends DefaultOptimizer {
 
-	public DBOptimizer(MetaDataMgr mdm) {
+	public DBOptimizer(MetaDataMgr mdm, Tx tx) {
 		super();
 		// perform index matching as last step
-		getStages().add(new IndexMatching(mdm));
+		getStages().add(new IndexMatching(mdm, tx));
 	}
 
 	private static class IndexMatching implements Stage {
 		private final MetaDataMgr mdm;
+		private final Tx tx;
 
-		public IndexMatching(MetaDataMgr mdm) {
+		public IndexMatching(MetaDataMgr mdm, Tx tx) {
 			this.mdm = mdm;
+			this.tx = tx;
 		}
 
 		@Override

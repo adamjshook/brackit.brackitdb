@@ -36,7 +36,7 @@ import java.util.TreeSet;
 
 import junit.framework.Assert;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.XQueryBaseTest;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;

@@ -101,7 +101,7 @@ public class NLJoin implements Cursor {
 
 			Tuple joined = left.concat(right.array());
 
-			if (predicate.evaluate(ctx, joined).booleanValue(ctx)) {
+			if (predicate.evaluate(ctx, joined).booleanValue()) {
 				delivered = true;
 				return (projections != null) ? joined.project(projections) : joined;
 			}

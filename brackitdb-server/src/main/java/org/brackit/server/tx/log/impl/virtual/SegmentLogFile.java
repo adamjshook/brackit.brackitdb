@@ -27,7 +27,7 @@
  */
 package org.brackit.server.tx.log.impl.virtual;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.tx.log.LogException;
 import org.brackit.server.tx.log.impl.LogFile;
 

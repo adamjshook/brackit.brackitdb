@@ -30,7 +30,7 @@ package org.brackit.server.tx.impl;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.manager.BufferMgr;
@@ -451,8 +451,8 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 		switch (record.getType()) {
 		case Loggable.TYPE_UPDATE:
 			if (log.isDebugEnabled()) {
-				log.debug(String.format("%s undo %s.", toShortString(),
-						record.getLSN()));
+				log.debug(String.format("%s undo %s.", toShortString(), record
+						.getLSN()));
 			}
 
 			logOperation = record.getLogOperation();

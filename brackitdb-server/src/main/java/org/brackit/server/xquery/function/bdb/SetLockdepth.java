@@ -29,10 +29,10 @@ package org.brackit.server.xquery.function.bdb;
 
 import org.brackit.server.metadata.TXQueryContext;
 import org.brackit.server.session.Session;
-import org.brackit.server.xquery.compiler.DBCompiler;
+import org.brackit.server.xquery.DBCompileChain;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.atomic.IntegerNumeric;
+import org.brackit.xquery.atomic.IntNumeric;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.function.AbstractFunction;
 import org.brackit.xquery.function.Signature;
@@ -49,8 +49,8 @@ import org.brackit.xquery.xdm.Sequence;
  */
 public class SetLockdepth extends AbstractFunction {
 
-	public static final QNm SET_LOCKDEPTH = new QNm(DBCompiler.BDB_NSURI,
-			DBCompiler.BDB_PREFIX, "set-lockdepth");
+	public static final QNm SET_LOCKDEPTH = new QNm(DBCompileChain.BDB_NSURI,
+			DBCompileChain.BDB_PREFIX, "set-lockdepth");
 
 	public SetLockdepth() {
 		super(SET_LOCKDEPTH, new Signature(new SequenceType(AtomicType.STR,
@@ -62,7 +62,7 @@ public class SetLockdepth extends AbstractFunction {
 	public Sequence execute(QueryContext ctx, Sequence[] args)
 			throws QueryException {
 		try {
-			IntegerNumeric value = (IntegerNumeric) args[0];
+			IntNumeric value = (IntNumeric) args[0];
 			Session session = ((TXQueryContext) ctx).getTX().getSession();
 			if (session != null) {
 				session.setLockDepth(value.intValue());

@@ -33,7 +33,7 @@ import static org.junit.Assert.fail;
 import java.util.Collections;
 import java.util.LinkedList;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.SysMockup;
 import org.brackit.server.io.buffer.PageID;

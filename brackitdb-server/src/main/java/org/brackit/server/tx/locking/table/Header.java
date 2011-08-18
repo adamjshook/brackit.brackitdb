@@ -27,7 +27,7 @@
  */
 package org.brackit.server.tx.locking.table;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.locking.LockName;
 import org.brackit.server.tx.locking.LockState;

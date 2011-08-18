@@ -30,7 +30,7 @@ package org.brackit.server.metadata.manager.impl;
 import java.io.InputStream;
 import java.util.ArrayList;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
@@ -422,7 +422,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 	private Item<Directory> getItemByID(Tx tx, int id, boolean forUpdate)
 			throws ItemNotFoundException, MetaDataException, DocumentException {
-		IndexController<ElNode> indexController = mdCollection
+		IndexController<ElNode> indexController = mdCollection.copyFor(tx)
 				.getIndexController();
 		Stream<? extends Node<?>> stream = indexController.openCASIndex(
 				mdIDCasIndexNo, null, new Str(Integer.toString(id)), null,
@@ -456,7 +456,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		;
 		String name = path.toString();
 
-		IndexController<ElNode> indexController = mdCollection
+		IndexController<ElNode> indexController = mdCollection.copyFor(tx)
 				.getIndexController();
 		Stream<? extends TXNode<?>> stream = indexController.openCASIndex(
 				mdNameCasIndexNo, null, new Str(name), null, true, true,

@@ -27,7 +27,7 @@
  */
 package org.brackit.server.store.index.blink;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.index.external.IndexStatistics;
 import org.brackit.server.store.Field;
