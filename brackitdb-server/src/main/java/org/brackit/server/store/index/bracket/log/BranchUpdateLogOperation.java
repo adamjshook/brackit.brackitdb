@@ -30,7 +30,7 @@ package org.brackit.server.store.index.bracket.log;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-import org.apache.log4j.Logger;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.store.SearchMode;
 import org.brackit.server.store.index.IndexAccessException;

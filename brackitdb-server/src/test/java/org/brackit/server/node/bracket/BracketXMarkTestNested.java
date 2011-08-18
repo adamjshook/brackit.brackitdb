@@ -30,10 +30,7 @@ package org.brackit.server.node.bracket;
 import org.brackit.server.SysMockup;
 import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.tx.Tx;
-import org.brackit.server.xquery.DBXQuery;
-import org.brackit.xquery.QueryException;
 import org.brackit.xquery.XMarkTestNested;
-import org.brackit.xquery.XQuery;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.xdm.Collection;
 import org.brackit.xquery.xdm.DocumentException;
@@ -47,11 +44,6 @@ public class BracketXMarkTestNested extends XMarkTestNested {
 	protected SysMockup sm;
 	protected BracketStore elStore;
 	protected Tx tx;
-
-	@Override
-	protected XQuery xquery(String query) throws QueryException {
-		return new DBXQuery(query, null);
-	}
 	
 	@Override
 	public void setUp() throws Exception {
