@@ -29,14 +29,15 @@ package org.brackit.server.session;
 
 import java.util.Random;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.procedure.InfoContributor;
 import org.brackit.server.procedure.ProcedureUtil;
 import org.brackit.server.procedure.statistics.ListConnections;
 import org.brackit.server.session.async.Job;
 import org.brackit.server.session.async.JobScheduler;
+import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.TxMgr;
 import org.brackit.xquery.util.Cfg;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * @author Sebastian Baechle
@@ -225,6 +226,11 @@ public final class SessionMgrImpl implements SessionMgr, InfoContributor {
 			Session session = getSessionInternal(sessionID);
 
 			if ((session != null) && (session.checkTX() != null)) {
+				try {
+					session.checkTX().leave();
+				} catch (TxException e) {
+					log.error(e);
+				}
 				scheduler.schedule(new LogoutJob(session), false);
 			}
 
