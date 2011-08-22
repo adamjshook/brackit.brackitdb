@@ -39,7 +39,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.metadata.TXQueryContext;
 import org.brackit.server.metadata.manager.MetaDataMgr;
@@ -50,6 +49,7 @@ import org.brackit.server.tx.Tx;
 import org.brackit.server.xquery.DBCompileChain;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.XQuery;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * 
@@ -92,7 +92,7 @@ public class TCPConnector implements Runnable {
 		} catch (SocketTimeoutException e) {
 			// ignore
 		} catch (IOException e) {
-			e.printStackTrace();
+			log.error(e);
 		} finally {
 			try {
 				server.close();
@@ -191,19 +191,19 @@ public class TCPConnector implements Runnable {
 						to.deferedFlush();
 					}
 				}
-				sm.logout(session.getSessionID());
-
+			} catch (Exception e) {
+				log.error(e);
+			} finally {
 				if (log.isTraceEnabled()) {
 					log.trace("Close TCP connection");
 				}
-			} catch (Exception e) {
-				e.printStackTrace();
-			} finally {
-				sm.logout(session.getSessionID());
+				if (session != null) {
+					sm.logout(session.getSessionID());
+				}
 				try {
 					socket.close();
 				} catch (Exception e) {
-					e.printStackTrace();
+					log.error(e);
 				}
 			}
 		}
