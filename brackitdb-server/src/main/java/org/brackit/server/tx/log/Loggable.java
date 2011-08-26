@@ -41,6 +41,10 @@ public interface Loggable {
 	public static final byte TYPE_EOT = (byte) 2;
 
 	public static final byte TYPE_DUMMY = (byte) 3;
+	
+	// UPDATE SPECIAL logs an update operation together with an UndoNextLSN
+	// -> like a CLR, but with Undo processing
+	public static final byte TYPE_UPDATE_SPECIAL = (byte) 4;
 
 	public byte getType();
 

@@ -35,6 +35,7 @@ import java.util.Set;
 import org.brackit.server.io.buffer.log.PageLogOperationHelper;
 import org.brackit.server.node.el.index.log.ElBPlusIndexLogOperationHelper;
 import org.brackit.server.store.index.aries.log.BPlusIndexLogOperationHelper;
+import org.brackit.server.store.index.bracket.log.BracketIndexLogOperationHelper;
 import org.brackit.server.store.index.blink.log.BlinkIndexLogOperationHelper;
 import org.brackit.server.tx.TxID;
 import org.brackit.server.tx.log.LogException;
@@ -59,6 +60,7 @@ public class LogRecordHelper implements LoggableHelper {
 		helperSet.add(new BPlusIndexLogOperationHelper());
 		helperSet.add(new BlinkIndexLogOperationHelper());
 		helperSet.add(new ElBPlusIndexLogOperationHelper());
+		helperSet.add(new BracketIndexLogOperationHelper());
 	}
 
 	public LogRecordHelper() {
@@ -105,6 +107,12 @@ public class LogRecordHelper implements LoggableHelper {
 		return new LogRecord(Loggable.TYPE_CLR, taID, prevLSN, createOperation,
 				undoNextLSN);
 	}
+	
+	public Loggable createUpdateSpecial(TxID taID, long prevLSN,
+			LogOperation createOperation, long undoNextLSN) {
+		return new LogRecord(Loggable.TYPE_UPDATE_SPECIAL, taID, prevLSN, createOperation,
+				undoNextLSN);
+	}
 
 	public Loggable fromBytes(ByteBuffer buffer) throws LogException {
 		byte logRecordType = buffer.get();
@@ -116,6 +124,7 @@ public class LogRecordHelper implements LoggableHelper {
 
 		switch (logRecordType) {
 		case Loggable.TYPE_CLR:
+		case Loggable.TYPE_UPDATE_SPECIAL:
 			undoNextLSN = buffer.getLong();
 			logOperationType = buffer.get();
 			logOperation = fromBytes(logOperationType, buffer.slice());

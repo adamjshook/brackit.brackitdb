@@ -78,7 +78,7 @@ public class LogRecord implements Loggable {
 		this.undoNextLSN = undoNextLSN;
 
 		this.sizeInBytes = BASE_SIZE
-				+ (((undoNextLSN != -1) || (type == TYPE_DUMMY)) ? SizeConstants.LONG_SIZE
+				+ (((undoNextLSN != -1) || (type == TYPE_DUMMY) || (type == TYPE_UPDATE_SPECIAL)) ? SizeConstants.LONG_SIZE
 						: 0)
 				+ ((logOperation != null) ? SizeConstants.BYTE_SIZE
 						+ logOperation.getSize() : 0);
@@ -128,6 +128,7 @@ public class LogRecord implements Loggable {
 			logOperation.toBytes(bb);
 			break;
 		case TYPE_CLR:
+		case TYPE_UPDATE_SPECIAL:
 			bb.putLong(undoNextLSN);
 			bb.put(logOperation.getType());
 			logOperation.toBytes(bb);

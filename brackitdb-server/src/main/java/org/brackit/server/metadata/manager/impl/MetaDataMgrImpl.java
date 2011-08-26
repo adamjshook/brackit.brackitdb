@@ -45,6 +45,8 @@ import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr03;
 import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.node.bracket.BracketCollection;
+import org.brackit.server.node.bracket.BracketStore;
 import org.brackit.server.node.el.ElCollection;
 import org.brackit.server.node.el.ElNode;
 import org.brackit.server.node.el.ElStore;
@@ -105,6 +107,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	private final HookedCache<DocID, BlobHandle> blobCache;
 
 	private final ElStore elStore;
+	
+	private final BracketStore bracketStore;
 
 	private final BlobStore blobStore;
 
@@ -131,6 +135,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		mls = new UnifiedMetaLockService("DocumentLockService", maxLocks,
 				maxTransactions);
 		elStore = new ElStore(bufferMgr, defaultDictionary, mls);
+		bracketStore = new BracketStore(bufferMgr, defaultDictionary, mls);
 		blobStore = new IndexBlobStore(bufferMgr);
 	}
 
@@ -219,10 +224,10 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		TXCollection<?> collection = null;
 
 		StorageSpec spec = new StorageSpec(name, defaultDictionary);
-		ElCollection elCollection = new ElCollection(tx, elStore);
-		elCollection.create(spec, parser);
+		BracketCollection bracketCollection = new BracketCollection(tx, bracketStore);
+		bracketCollection.create(spec, parser);
 
-		collection = elCollection;
+		collection = bracketCollection;
 		Document document = new Document(collection.getID(), name, directory,
 				null);
 		collection.setPersistor(document);
@@ -255,10 +260,10 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		TXCollection<?> collection = null;
 
 		StorageSpec spec = new StorageSpec(name, defaultDictionary);
-		ElCollection elCollection = new ElCollection(tx, elStore);
-		elCollection.create(spec);
+		BracketCollection bracketCollection = new BracketCollection(tx, bracketStore);
+		bracketCollection.create(spec);
 
-		collection = elCollection;
+		collection = bracketCollection;
 		Document document = new Document(collection.getID(), name, directory,
 				null);
 		collection.setPersistor(document);
@@ -345,14 +350,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	private DBCollection<?> buildCollection(Tx tx, Document document)
 			throws DocumentException {
 
-		TXCollection<?> collection = null;
-		Node<?> node = document.getMasterDocNode();
-		boolean elementless = (node
-				.getAttribute(ElCollection.PATHSYNOPSIS_ID_ATTRIBUTE) != null);
-		if (elementless) {
-			collection = new ElCollection(tx, elStore);
-		}
-		collection.init(node);
+		TXCollection<?> collection = new BracketCollection(tx, bracketStore);
+		collection.init(document.getMasterDocNode());
 		collection.setPersistor(document);
 
 		return collection;

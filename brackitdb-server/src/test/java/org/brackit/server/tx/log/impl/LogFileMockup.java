@@ -123,9 +123,7 @@ public final class LogFileMockup implements LogFile {
 		if (checkOpen)
 			checkOpen();
 
-		int read = Math.min(buffer.getLength() - buffer.position(), b.length);
-		buffer.get(b);
-		return read;
+		return buffer.get(b);
 	}
 
 	@Override
