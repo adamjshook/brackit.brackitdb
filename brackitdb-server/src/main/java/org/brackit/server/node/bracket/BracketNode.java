@@ -520,9 +520,11 @@ public class BracketNode extends TXNode<BracketNode> {
 		XTCdeweyID parentDeweyID = deweyID.getParent();
 		if (parentDeweyID.isDocument()) {
 			return new BracketNode(locator);
+		} else if (parentDeweyID.isAttributeRoot()) {
+			parentDeweyID = parentDeweyID.getParent();
 		}
 
-		return getNodeGeneric(NavigationMode.TO_KEY, deweyID.getParent());
+		return getNodeGeneric(NavigationMode.TO_KEY, parentDeweyID);
 	}
 
 	@Override
@@ -533,7 +535,8 @@ public class BracketNode extends TXNode<BracketNode> {
 	private List<SubtreeListener<? super BracketNode>> getListener(
 			ListenMode mode) throws DocumentException {
 		ArrayList<SubtreeListener<? super BracketNode>> listeners = new ArrayList<SubtreeListener<? super BracketNode>>();
-		listeners.add(new DebugListener());
+		listeners.addAll(locator.collection.indexController
+				.getIndexListener(mode));
 		return listeners;
 	}
 

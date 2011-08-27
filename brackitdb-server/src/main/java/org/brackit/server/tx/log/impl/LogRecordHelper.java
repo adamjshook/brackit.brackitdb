@@ -128,19 +128,19 @@ public class LogRecordHelper implements LoggableHelper {
 			undoNextLSN = buffer.getLong();
 			logOperationType = buffer.get();
 			logOperation = fromBytes(logOperationType, buffer.slice());
-			return new LogRecord(Loggable.TYPE_CLR, taId, prevLSN,
+			return new LogRecord(logRecordType, taId, prevLSN,
 					logOperation, undoNextLSN);
 		case Loggable.TYPE_DUMMY:
 			undoNextLSN = buffer.getLong();
-			return new LogRecord(Loggable.TYPE_DUMMY, taId, prevLSN, null,
+			return new LogRecord(logRecordType, taId, prevLSN, null,
 					undoNextLSN);
 		case Loggable.TYPE_UPDATE:
 			logOperationType = buffer.get();
 			logOperation = fromBytes(logOperationType, buffer.slice());
-			return new LogRecord(Loggable.TYPE_UPDATE, taId, prevLSN,
+			return new LogRecord(logRecordType, taId, prevLSN,
 					logOperation, -1);
 		case Loggable.TYPE_EOT:
-			return new LogRecord(Loggable.TYPE_EOT, taId, prevLSN, null, -1);
+			return new LogRecord(logRecordType, taId, prevLSN, null, -1);
 		default:
 			return new LogRecord(logRecordType, taId, prevLSN, null, -1);
 		}

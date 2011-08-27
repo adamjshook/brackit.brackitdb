@@ -381,7 +381,10 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 						"Repairing freespace information for %s after crash.",
 						dataFileName));
 
-				for (int i = 0; i < blockCnt; i++) {
+				// the first block reserved, for compatibility with the code which
+				// depends on the old IOMgr
+				freeSpaceInfo.set(0);
+				for (int i = 1; i < blockCnt; i++) {
 					dataFile.read(i, block, 1);
 					if (block[0] != 0) {
 						freeSpaceInfo.set(i);
@@ -443,7 +446,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			throw new StoreException("invalid lba");
 		}
 		try {
-			block[0] = 1;
+			//block[0] = 1;
 			dataFile.write(lba, block, numBlocks);
 		} catch (FileException e) {
 			throw new StoreException(e);

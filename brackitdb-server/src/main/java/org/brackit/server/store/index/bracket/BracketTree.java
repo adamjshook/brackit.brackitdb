@@ -1108,68 +1108,68 @@ public final class BracketTree extends PageContextFactory {
 			XTCdeweyID insertKey, byte[] insertValue, int ancestorsToInsert,
 			BulkInsertContext bulkContext, boolean logged, long undoNextLSN)
 			throws IndexAccessException {
-		
+
 		leaf.cleanup();
 		throw new IndexAccessException("Not implemented yet");
-		
-//		try {
-//			if (log.isTraceEnabled()) {
-//				log.trace(leaf.dump(String.format(
-//						"Leaf Page %s for insert of (%s, %s) at %s", leaf,
-//						insertKey, Field.EL_REC.toString(insertValue),
-//						leaf.getOffset())));
-//			}
-//
-//			/*
-//			 * Optimistically try to insert record in page saving the
-//			 * computation of required space. If this fails we will have to
-//			 * perform a split
-//			 */
-//			while (!leaf.insertRecordAfter(insertKey, insertValue,
-//					ancestorsToInsert, logged, undoNextLSN, false)) {
-//				if (log.isTraceEnabled()) {
-//					log.trace(String
-//							.format("Splitting leaf page %s for insert of (%s, %s) at %s",
-//									leaf, insertKey,
-//									Field.EL_REC.toString(insertValue),
-//									leaf.getOffset()));
-//				}
-//
-//				XTCdeweyID ancestorInsertKey = BracketPage.getAncestorKey(
-//						insertKey, ancestorsToInsert);
-//
-//				// Split and propagate if necessary.
-//				if (leaf.getPageID().equals(rootPageID)) {
-//					leaf = splitRootLeaf(tx, rootPageID, leaf,
-//							ancestorInsertKey, false, logged);
-//					// leftmost page / current left page has changed due to root
-//					// split
-//					bulkContext.initialize(leaf);
-//				} else {
-//					leaf = splitNonRootLeafBulk(tx, rootPageID, leaf,
-//							ancestorInsertKey, bulkContext, logged);
-//				}
-//
-//				if (log.isTraceEnabled()) {
-//					log.trace(leaf.dump(String
-//							.format("Splitted leaf page %s before insert of (%s, %s) at %s",
-//									leaf, insertKey,
-//									Field.EL_REC.toString(insertValue),
-//									leaf.getOffset())));
-//				}
-//			}
-//
-//			if (log.isTraceEnabled()) {
-//				log.trace(leaf.dump("Leaf Page after insert"));
-//			}
-//
-//			tx.getStatistics().increment(TxStats.BTREE_INSERTS);
-//
-//			return leaf;
-//		} catch (IndexOperationException e) {
-//			leaf.cleanup();
-//			throw new IndexAccessException(e, "Could not log record insertion.");
-//		}
+
+		// try {
+		// if (log.isTraceEnabled()) {
+		// log.trace(leaf.dump(String.format(
+		// "Leaf Page %s for insert of (%s, %s) at %s", leaf,
+		// insertKey, Field.EL_REC.toString(insertValue),
+		// leaf.getOffset())));
+		// }
+		//
+		// /*
+		// * Optimistically try to insert record in page saving the
+		// * computation of required space. If this fails we will have to
+		// * perform a split
+		// */
+		// while (!leaf.insertRecordAfter(insertKey, insertValue,
+		// ancestorsToInsert, logged, undoNextLSN, false)) {
+		// if (log.isTraceEnabled()) {
+		// log.trace(String
+		// .format("Splitting leaf page %s for insert of (%s, %s) at %s",
+		// leaf, insertKey,
+		// Field.EL_REC.toString(insertValue),
+		// leaf.getOffset()));
+		// }
+		//
+		// XTCdeweyID ancestorInsertKey = BracketPage.getAncestorKey(
+		// insertKey, ancestorsToInsert);
+		//
+		// // Split and propagate if necessary.
+		// if (leaf.getPageID().equals(rootPageID)) {
+		// leaf = splitRootLeaf(tx, rootPageID, leaf,
+		// ancestorInsertKey, false, logged);
+		// // leftmost page / current left page has changed due to root
+		// // split
+		// bulkContext.initialize(leaf);
+		// } else {
+		// leaf = splitNonRootLeafBulk(tx, rootPageID, leaf,
+		// ancestorInsertKey, bulkContext, logged);
+		// }
+		//
+		// if (log.isTraceEnabled()) {
+		// log.trace(leaf.dump(String
+		// .format("Splitted leaf page %s before insert of (%s, %s) at %s",
+		// leaf, insertKey,
+		// Field.EL_REC.toString(insertValue),
+		// leaf.getOffset())));
+		// }
+		// }
+		//
+		// if (log.isTraceEnabled()) {
+		// log.trace(leaf.dump("Leaf Page after insert"));
+		// }
+		//
+		// tx.getStatistics().increment(TxStats.BTREE_INSERTS);
+		//
+		// return leaf;
+		// } catch (IndexOperationException e) {
+		// leaf.cleanup();
+		// throw new IndexAccessException(e, "Could not log record insertion.");
+		// }
 	}
 
 	public Leaf insertIntoLeaf(Tx tx, PageID rootPageID, Leaf leaf,
@@ -1613,7 +1613,7 @@ public final class BracketTree extends PageContextFactory {
 				insertSeparator(tx, rootPageID, separatorKey, leftPageID,
 						rightPageID, 0, logged);
 			}
-			
+
 			logDummyCLR(tx, rememberedLSN);
 
 			// Free unneeded split pages & set target page to correct offset
@@ -1622,16 +1622,17 @@ public final class BracketTree extends PageContextFactory {
 				right = null;
 				target = left;
 				left = null;
-				
+
 				target.setContext(currentPos);
-				
+
 			} else {
 				left.cleanup();
 				left = null;
 				target = right;
 				right = null;
-				
-				target.navigateContextFree(currentPos.key, NavigationMode.TO_KEY);
+
+				target.navigateContextFree(currentPos.key,
+						NavigationMode.TO_KEY);
 			}
 
 			return target;
@@ -1956,128 +1957,128 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-//	protected Leaf splitNonRootLeafBulk(Tx tx, PageID rootPageID, Leaf left,
-//			XTCdeweyID key, BulkInsertContext bulkContext, boolean logged)
-//			throws IndexAccessException {
-//		PageID leftPageID = left.getPageID();
-//		Leaf right = bulkContext.getCurrentRightPage();
-//
-//		try {
-//			if (log.isTraceEnabled()) {
-//				log.trace(String.format("Splitting non-root leaf page %s.",
-//						leftPageID));
-//				log.trace(left.dump("Split Page"));
-//			}
-//
-//			// Remember LSN of previously logged action.
-//			long rememberedLSN = tx.checkPrevLSN();
-//
-//			Leaf resultLeaf = null;
-//			boolean writeSeparators = false;
-//
-//			if (right == null) {
-//				// allocate new right page
-//				right = allocateLeaf(tx, -1, left.getUnitID(), rootPageID,
-//						logged);
-//				PageID rightPageID = right.getPageID();
-//
-//				byte[] separatorKey = null;
-//
-//				boolean insertLeft = false;
-//
-//				if (left.isLast()) {
-//					// no split necessary
-//					left.setHighKey(key, logged, -1);
-//					separatorKey = key.toBytes();
-//					insertLeft = false;
-//				} else {
-//					// actual split
-//					left.split(right, key, false, true, logged, -1);
-//					separatorKey = right.getLowKeyBytes();
-//					insertLeft = true;
-//				}
-//
-//				PageID nextPageID = left.getNextPageID();
-//
-//				if (!bulkContext.firstSplitOccured()) {
-//					// this is the first split
-//					bulkContext.setNextPageID(nextPageID);
-//					bulkContext.setBeforeFirstSplitLSN(rememberedLSN);
-//				}
-//
-//				// chain left page with right page
-//				left.setNextPageID(rightPageID, logged, -1);
-//				right.setPrevPageID(leftPageID, logged, -1);
-//
-//				// set right page's next pointer
-//				right.setNextPageID(nextPageID, logged, -1);
-//
-//				Leaf newLeftPage = null;
-//				Leaf newRightPage = null;
-//
-//				if (insertLeft) {
-//					newLeftPage = left;
-//					newRightPage = right;
-//				} else {
-//					newLeftPage = right;
-//					newRightPage = null;
-//					if (!bulkContext.isLeftmostPage(left)) {
-//						left.cleanup();
-//						left = null;
-//					}
-//				}
-//
-//				writeSeparators = bulkContext.splitOccurred(new SeparatorEntry(
-//						separatorKey, rightPageID), newLeftPage, newRightPage);
-//				writeSeparators = writeSeparators && !insertLeft;
-//				resultLeaf = newLeftPage;
-//
-//			} else {
-//				// continue bulk insert in right page
-//
-//				left.setHighKey(key, logged, -1);
-//				right.moveBeforeFirst();
-//				byte[] separatorKey = key.toBytes();
-//
-//				if (!bulkContext.isLeftmostPage(left)) {
-//					left.cleanup();
-//					left = null;
-//				}
-//
-//				writeSeparators = bulkContext.overflowOccurred(separatorKey);
-//				resultLeaf = right;
-//
-//			}
-//
-//			if (writeSeparators) {
-//				completeBulkInsert(tx, rootPageID, bulkContext, logged);
-//			}
-//
-//			if (log.isTraceEnabled()) {
-//				log.trace(String.format("Split of non-root page %s completed.",
-//						left));
-//				log.trace(left.dump("Left page (splitted)"));
-//				log.trace(right.dump("Right page (new)"));
-//			}
-//
-//			tx.getStatistics().increment(TxStats.BTREE_LEAF_ALLOCATIONS);
-//
-//			left = null;
-//			right = null;
-//
-//			return resultLeaf;
-//		} catch (IndexOperationException e) {
-//			throw new IndexAccessException(e,
-//					"Could not log page split operations.");
-//		} finally {
-//			if (left != null) {
-//				left.cleanup();
-//			}
-//			if (right != null) {
-//				right.cleanup();
-//			}
-//		}
-//	}
+	// protected Leaf splitNonRootLeafBulk(Tx tx, PageID rootPageID, Leaf left,
+	// XTCdeweyID key, BulkInsertContext bulkContext, boolean logged)
+	// throws IndexAccessException {
+	// PageID leftPageID = left.getPageID();
+	// Leaf right = bulkContext.getCurrentRightPage();
+	//
+	// try {
+	// if (log.isTraceEnabled()) {
+	// log.trace(String.format("Splitting non-root leaf page %s.",
+	// leftPageID));
+	// log.trace(left.dump("Split Page"));
+	// }
+	//
+	// // Remember LSN of previously logged action.
+	// long rememberedLSN = tx.checkPrevLSN();
+	//
+	// Leaf resultLeaf = null;
+	// boolean writeSeparators = false;
+	//
+	// if (right == null) {
+	// // allocate new right page
+	// right = allocateLeaf(tx, -1, left.getUnitID(), rootPageID,
+	// logged);
+	// PageID rightPageID = right.getPageID();
+	//
+	// byte[] separatorKey = null;
+	//
+	// boolean insertLeft = false;
+	//
+	// if (left.isLast()) {
+	// // no split necessary
+	// left.setHighKey(key, logged, -1);
+	// separatorKey = key.toBytes();
+	// insertLeft = false;
+	// } else {
+	// // actual split
+	// left.split(right, key, false, true, logged, -1);
+	// separatorKey = right.getLowKeyBytes();
+	// insertLeft = true;
+	// }
+	//
+	// PageID nextPageID = left.getNextPageID();
+	//
+	// if (!bulkContext.firstSplitOccured()) {
+	// // this is the first split
+	// bulkContext.setNextPageID(nextPageID);
+	// bulkContext.setBeforeFirstSplitLSN(rememberedLSN);
+	// }
+	//
+	// // chain left page with right page
+	// left.setNextPageID(rightPageID, logged, -1);
+	// right.setPrevPageID(leftPageID, logged, -1);
+	//
+	// // set right page's next pointer
+	// right.setNextPageID(nextPageID, logged, -1);
+	//
+	// Leaf newLeftPage = null;
+	// Leaf newRightPage = null;
+	//
+	// if (insertLeft) {
+	// newLeftPage = left;
+	// newRightPage = right;
+	// } else {
+	// newLeftPage = right;
+	// newRightPage = null;
+	// if (!bulkContext.isLeftmostPage(left)) {
+	// left.cleanup();
+	// left = null;
+	// }
+	// }
+	//
+	// writeSeparators = bulkContext.splitOccurred(new SeparatorEntry(
+	// separatorKey, rightPageID), newLeftPage, newRightPage);
+	// writeSeparators = writeSeparators && !insertLeft;
+	// resultLeaf = newLeftPage;
+	//
+	// } else {
+	// // continue bulk insert in right page
+	//
+	// left.setHighKey(key, logged, -1);
+	// right.moveBeforeFirst();
+	// byte[] separatorKey = key.toBytes();
+	//
+	// if (!bulkContext.isLeftmostPage(left)) {
+	// left.cleanup();
+	// left = null;
+	// }
+	//
+	// writeSeparators = bulkContext.overflowOccurred(separatorKey);
+	// resultLeaf = right;
+	//
+	// }
+	//
+	// if (writeSeparators) {
+	// completeBulkInsert(tx, rootPageID, bulkContext, logged);
+	// }
+	//
+	// if (log.isTraceEnabled()) {
+	// log.trace(String.format("Split of non-root page %s completed.",
+	// left));
+	// log.trace(left.dump("Left page (splitted)"));
+	// log.trace(right.dump("Right page (new)"));
+	// }
+	//
+	// tx.getStatistics().increment(TxStats.BTREE_LEAF_ALLOCATIONS);
+	//
+	// left = null;
+	// right = null;
+	//
+	// return resultLeaf;
+	// } catch (IndexOperationException e) {
+	// throw new IndexAccessException(e,
+	// "Could not log page split operations.");
+	// } finally {
+	// if (left != null) {
+	// left.cleanup();
+	// }
+	// if (right != null) {
+	// right.cleanup();
+	// }
+	// }
+	// }
 
 	protected void completeBulkInsert(Tx tx, PageID rootPageID,
 			BulkInsertContext bulkContext, boolean logged)
@@ -2311,11 +2312,12 @@ public final class BracketTree extends PageContextFactory {
 		try {
 			while (true) {
 				// try to locate separator in this page
-				int search = page.search(SearchMode.GREATER_OR_EQUAL, separatorKey, null);
+				int search = page.search(SearchMode.GREATER_OR_EQUAL,
+						separatorKey, null);
 				if (search <= 0) {
-					// The context is positioned at an entry that is 
+					// The context is positioned at an entry that is
 					// greater or equal than the separator. The parent page
-					// may be left of this entry (e.g. 
+					// may be left of this entry (e.g.
 
 					// inspect previous pointer
 					PageID p;
@@ -2329,7 +2331,8 @@ public final class BracketTree extends PageContextFactory {
 
 					if (p.equals(targetPageID)) {
 						parentPage = page;
-					} else if ((search == 0) && (page.getValueAsPageID().equals(targetPageID))) {
+					} else if ((search == 0)
+							&& (page.getValueAsPageID().equals(targetPageID))) {
 						parentPage = page;
 					}
 				} else if (!page.isAfterLast()) {
@@ -2381,15 +2384,17 @@ public final class BracketTree extends PageContextFactory {
 		// do not perform latch coupling
 		Branch parent = descendToParent(tx, rootPageID, rootPageID,
 				separatorKey, leftPageID, height + 1);
-		
+
 		byte[] value = rightPageID.getBytes();
 		try {
 			// After page deletions it may happen that the separator pointing
-			// to the (unsplitted) left page is greater or equal the new 
+			// to the (unsplitted) left page is greater or equal the new
 			// separator. In this case, the old separator must be updated to
-			// point to the new right page and the new separator must be pointing
+			// point to the new right page and the new separator must be
+			// pointing
 			// to the left page.
-			if ((!parent.isAfterLast()) && (parent.getValueAsPageID().equals(leftPageID))) {
+			if ((!parent.isAfterLast())
+					&& (parent.getValueAsPageID().equals(leftPageID))) {
 				parent.setPageIDAsValue(rightPageID, logged, -1);
 				value = leftPageID.getBytes();
 			}
@@ -2404,8 +2409,8 @@ public final class BracketTree extends PageContextFactory {
 					Field.DEWEYID.toString(separatorKey), rightPageID, parent));
 		}
 
-		parent = insertIntoBranch(tx, rootPageID, parent, separatorKey,
-				value, logged, -1);
+		parent = insertIntoBranch(tx, rootPageID, parent, separatorKey, value,
+				logged, -1);
 		parent.cleanup();
 	}
 
@@ -3385,26 +3390,33 @@ public final class BracketTree extends PageContextFactory {
 						// leaf may become empty
 						externalPageIDs.addAll(localExternalPageIDs);
 						delayedListener.flush();
+						finished = true;
+						deleteListener.subtreeEnd();
 						leaf.clearData(false, logged, -1);
-						leaf.cleanup();
-						leaf = null;
-						return;
-					}
+					} else {
 
-					// delete this page
-					try {
-						next = handleLeafUnderflow(tx, rootPageID, leaf, logged);
-						leaf = null;
-						externalPageIDs.addAll(localExternalPageIDs);
-						delayedListener.flush();
-					} catch (UnchainException e) {
-						// leaf changed -> descend down the tree again
-						leaf = null;
-						continue;
+						// delete this page
+						try {
+							next = handleLeafUnderflow(tx, rootPageID, leaf,
+									logged);
+							leaf = null;
+							externalPageIDs.addAll(localExternalPageIDs);
+							delayedListener.flush();
+						} catch (UnchainException e) {
+							// leaf changed -> descend down the tree again
+							leaf = null;
+							continue;
+						}
 					}
 				} else {
 					externalPageIDs.addAll(localExternalPageIDs);
 					delayedListener.flush();
+					
+					if (!finished && leaf.isLastInLevel()) {
+						// subtree deletion finished anyway
+						finished = true;
+						deleteListener.subtreeEnd();
+					}
 				}
 
 				if (!finished) {
@@ -3489,10 +3501,14 @@ public final class BracketTree extends PageContextFactory {
 				leaf = (Leaf) page;
 				page = null;
 
+				XTCdeweyID lowKey = leaf.getLowKey();
+				XTCdeweyID highKey = leaf.getHighKey();
+
 				// is leftBorderDeweyID included in this page?
-				if (leftBorderDeweyID.compareDivisions(leaf.getLowKey()) < 0
-						|| leftBorderDeweyID
-								.compareDivisions(leaf.getHighKey()) >= 0) {
+				if (lowKey == null
+						|| leftBorderDeweyID.compareDivisions(lowKey) < 0
+						|| highKey != null
+						&& leftBorderDeweyID.compareDivisions(highKey) >= 0) {
 					// left border not included
 					leaf.cleanup();
 					leaf = null;
@@ -3537,7 +3553,7 @@ public final class BracketTree extends PageContextFactory {
 					}
 				}
 
-				if (deleteInfo.checkRightNeighbor) {
+				if (deleteInfo.checkRightNeighbor && !leaf.isLastInLevel()) {
 					// deletion not yet finished
 					if (next == null) {
 						// load next page
@@ -3730,7 +3746,7 @@ public final class BracketTree extends PageContextFactory {
 
 		return sequence;
 	}
-	
+
 	public LeafScanner getLeafScanner(NavigationMode navMode) {
 		return scannerMap.get(navMode);
 	}

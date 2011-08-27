@@ -171,14 +171,14 @@ public class FormatLogOperation extends BracketIndexLogOperation {
 
 		try {
 			if (page.getLSN() < LSN) {
-				if ((page.getRootPageID() != null)
-						&& (!page.getRootPageID().equals(rootPageID))) {
-					page.cleanup();
-					throw new IndexAccessException(
-							"Redo format page %s failed because"
-									+ " it does not belong to index %s.",
-							pageID, rootPageID);
-				}
+//				if ((page.getRootPageID() != null)
+//						&& (!page.getRootPageID().equals(rootPageID))) {
+//					page.cleanup();
+//					throw new IndexAccessException(
+//							"Redo format page %s failed because"
+//									+ " it does not belong to index %s.",
+//							pageID, rootPageID);
+//				}
 
 				page.format(leaf, unitID, rootPageID, height, compressed,
 						false, -1);
