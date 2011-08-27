@@ -36,7 +36,6 @@ import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.node.txnode.TXCollection;
 import org.brackit.server.store.index.Index;
 import org.brackit.server.store.index.IndexAccessException;
-import org.brackit.server.store.index.aries.visitor.IndexStatisticsVisitor;
 import org.brackit.server.tx.Tx;
 import org.brackit.xquery.node.parser.SubtreeParser;
 import org.brackit.xquery.xdm.DocumentException;
@@ -54,16 +53,20 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	protected PathSynopsisMgr pathSynopsis;
 
 	protected final BracketStore store;
+	
+	protected final BracketIndexController indexController;
 
 	public BracketCollection(Tx tx, BracketStore elStore) {
 		super(tx);
 		this.store = elStore;
+		this.indexController = new BracketIndexController(this);
 	}
 
 	protected BracketCollection(BracketCollection collection, Tx tx) {
 		super(collection, tx);
 		this.store = collection.store;
 		this.pathSynopsis = collection.pathSynopsis;
+		this.indexController = new BracketIndexController(this);
 	}
 
 	@Override
@@ -200,8 +203,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	@Override
 	public IndexController<BracketNode> getIndexController()
 	{
-		// TODO Auto-generated method stub
-		return null;
+		return indexController;
 	}
 
 	public BracketStore getRecordManager() {

@@ -250,6 +250,7 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 				Leaf leaf = (Leaf) page;
 
 				switch (actionType) {
+				case INSERT:
 				case SMO_INSERT:
 					if (!leaf.insertSequence(nodes, true, false, -1)) {
 						leaf.cleanup();
@@ -258,6 +259,7 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 								pageID);
 					}
 					break;
+				case DELETE:
 				case SMO_DELETE:
 					DeleteSequenceInfo delInfo = leaf.deleteSequence(
 							nodes.getLowKey(), nodes.getHighKey(), true, false,
@@ -266,12 +268,6 @@ public class NodeSequenceLogOperation extends BracketIndexLogOperation {
 						leaf.cleanup();
 						throw new IndexAccessException(
 								"Deletion redo in page %s spans across several leaf pages.",
-								pageID);
-					} else if (delInfo.producesEmptyLeaf
-							&& leaf.getNextPageID() != null) {
-						leaf.cleanup();
-						throw new IndexAccessException(
-								"Deletion redo in page %s would result in an empty page.",
 								pageID);
 					}
 					break;
