@@ -527,7 +527,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 					.navigatePreviousSibling(currentOffset, currentDeweyID);
 			break;
 		case NEXT_ATTRIBUTE:
-			navRes = page.navigateNextAttribute(currentOffset, currentDeweyID);
+			navRes = page.navigateNextAttribute(currentOffset, currentDeweyID, bufferedKeyType);
 			break;
 		case TO_INSERT_POS:
 		case TO_KEY:

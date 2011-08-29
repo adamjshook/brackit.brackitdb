@@ -2006,12 +2006,49 @@ public final class BracketPage extends BasePage {
 	 *            the offset of the reference node
 	 * @param currentDeweyID
 	 *            DeweyIDBuffer containing the DeweyID of the reference node
+	 * @param currentKeyType
+	 *            bracket key type of the reference node; this is just an
+	 *            optimization and may be null, if not known.
 	 * @return the navigation result
 	 */
 	public NavigationResult navigateNextAttribute(int currentOffset,
-			DeweyIDBuffer currentDeweyID) {
-		return navigateGeneric(currentDeweyID, currentOffset,
-				NavigationProfiles.NEXT_ATTRIBUTE, false);
+			DeweyIDBuffer currentDeweyID, BracketKey.Type currentKeyType) {
+//		return navigateGeneric(currentDeweyID, currentOffset,
+//				NavigationProfiles.NEXT_ATTRIBUTE, false);
+
+		int keyAreaEndOffset = getKeyAreaEndOffset();
+		BracketKey currentKey = new BracketKey();
+
+		if (currentOffset == LOW_KEY_OFFSET) {
+			currentOffset = getKeyAreaStartOffset()
+					+ getLowKeyType().dataReferenceLength;
+		} else {
+			if (currentKeyType == null) {
+				currentKey.load(page, currentOffset);
+				currentKeyType = currentKey.type;
+			}
+			currentOffset += BracketKey.PHYSICAL_LENGTH
+					+ currentKeyType.dataReferenceLength;
+		}
+
+		navRes.reset();
+		if (currentOffset < keyAreaEndOffset) {
+			
+			currentKey.load(page, currentOffset);
+			currentKeyType = currentKey.type;
+
+			currentDeweyID.update(currentKey, false);
+			
+			if (currentKeyType == BracketKey.Type.ATTRIBUTE) {
+				navRes.status = NavigationStatus.FOUND;
+				navRes.keyOffset = currentOffset;
+				navRes.keyType = currentKeyType;
+				navRes.levelDiff = 0;
+			}
+		} else {
+			navRes.status = NavigationStatus.AFTER_LAST;
+		}
+		return navRes;
 	}
 
 	/**
@@ -2033,7 +2070,7 @@ public final class BracketPage extends BasePage {
 
 		if (refNode.status == NavigationStatus.FOUND) {
 			// invoke navigation method
-			navigateNextAttribute(refNode.keyOffset, currentDeweyID);
+			navigateNextAttribute(refNode.keyOffset, currentDeweyID, refNode.keyType);
 		} else if (refNode.status == NavigationStatus.BEFORE_FIRST) {
 			// continue navigation
 
