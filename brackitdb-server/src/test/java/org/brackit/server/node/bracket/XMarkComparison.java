@@ -129,23 +129,18 @@ public class XMarkComparison {
 	
 	private long queryDoc(TXCollection<?> coll, XQuery query) throws Exception {
 		
-		long[] results = new long[QUERY_COUNT];
 		long start = 0;
 		long end = 0;
 		
 		QueryContext ctx = createContext();
 		ctx.setDefaultContext(coll.getDocument(), Int32.ONE, Int32.ONE);
+		start = System.currentTimeMillis();
 		for (int i = 0; i < QUERY_COUNT; i++) {
-			start = System.currentTimeMillis();
-			pseudoSerialize(query.execute(ctx));			
-			end = System.currentTimeMillis();
-			results[i] = end - start;
+			pseudoSerialize(query.execute(ctx));
 		}
-		long sum = 0;
-		for (int i = 0; i < QUERY_COUNT; i++) {
-			sum += results[i];
-		}
-		return sum / QUERY_COUNT;		
+		end = System.currentTimeMillis();
+		
+		return (end - start) / QUERY_COUNT;		
 	}
 
 	@Test
