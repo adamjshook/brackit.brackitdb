@@ -60,6 +60,7 @@ import org.junit.Test;
  */
 public class XMarkComparison {
 	
+	private static final int WARMUP_COUNT = 3;
 	private static final int QUERY_COUNT = 5;
 	
 	protected static final String QUERY_DIR = "/xmark/queries/orig/";
@@ -119,21 +120,30 @@ public class XMarkComparison {
 	}
 	
 	private void query(String queryName) throws Exception {
+		query(queryName, WARMUP_COUNT);
+	}
+	
+	private void query(String queryName, int warmupCount) throws Exception {
 		
 		XQuery query = xquery(readQuery(QUERY_DIR, queryName));
-		long elResult = queryDoc(elColl, query);
+		long elResult = queryDoc(elColl, query, warmupCount);
 		System.out.println(String.format("EL:      %5d", elResult));
-		long bracketResult = queryDoc(bracketColl, query);
+		long bracketResult = queryDoc(bracketColl, query, warmupCount);
 		System.out.println(String.format("Bracket: %5d", bracketResult));
 	}
 	
-	private long queryDoc(TXCollection<?> coll, XQuery query) throws Exception {
+	private long queryDoc(TXCollection<?> coll, XQuery query, int warmupCount) throws Exception {
 		
 		long start = 0;
 		long end = 0;
 		
 		QueryContext ctx = createContext();
 		ctx.setDefaultContext(coll.getDocument(), Int32.ONE, Int32.ONE);
+		
+		for (int i = 0; i < warmupCount; i++) {
+			pseudoSerialize(query.execute(ctx));
+		}
+		
 		start = System.currentTimeMillis();
 		for (int i = 0; i < QUERY_COUNT; i++) {
 			pseudoSerialize(query.execute(ctx));
@@ -146,7 +156,7 @@ public class XMarkComparison {
 	@Test
 	public void xmark01() throws Exception, IOException {
 		System.out.println("\nXMark01\n--------------------");
-		query("q01.xq");
+		query("q01.xq", 10);
 	}
 
 	@Test
