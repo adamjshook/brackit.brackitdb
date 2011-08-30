@@ -1014,35 +1014,23 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-	protected Leaf moveNext(Tx tx, PageID rootPageID, Leaf page,
+	protected Leaf moveNextPage(Tx tx, PageID rootPageID, Leaf page,
 			OpenMode openMode) throws IndexAccessException {
 
 		try {
-			if (page.moveNext()) {
-				return page;
-			}
+			PageID nextPageID = page.getNextPageID();
 
-			if (page.isLastInLevel()) {
-				if (log.isTraceEnabled()) {
-					log.trace("Reached end of index.");
-				}
+			if (nextPageID == null) {
 				page.cleanup();
 				return null;
 			}
 
-			if (log.isTraceEnabled()) {
-				log.trace(String
-						.format("Reached end of current page %s. Attempting to proceed to next page %s.",
-								page, page.getNextPageID()));
-			}
-
-			Leaf next = (Leaf) getPage(tx, page.getNextPageID(),
+			Leaf next = (Leaf) getPage(tx, nextPageID,
 					openMode.forUpdate(), false);
 
-			if (log.isTraceEnabled()) {
-				log.trace(String.format("Switching to next page %s.", next));
-			}
 			page.cleanup();
+			next.assignDeweyIDBuffer(page);
+			
 			try {
 				next.moveFirst();
 			} catch (Exception e) {
@@ -1310,13 +1298,24 @@ public final class BracketTree extends PageContextFactory {
 					hintLeaf.assignDeweyIDBuffer(deweyIDBuffer);
 
 					if (navMode == NavigationMode.TO_KEY) {
-						// try to find the reference key
+						
+						// assumption: hintPageInfo already contains the correct position
+						hintLeaf.setContext(key, hintPageInfo.currentOffset);
+						
+					} else if (navMode == NavigationMode.PARENT) {
+						
+						XTCdeweyID parentDeweyID = key.getParent();
+						if (parentDeweyID.isAttributeRoot()) {
+							parentDeweyID = parentDeweyID.getParent();
+						}
+						
+						// check current page
 						boolean useHintPage = false;
 						XTCdeweyID hintLeafHighKey = hintLeaf.getHighKey();
 						if (hintLeafHighKey == null
-								|| key.compareDivisions(hintLeaf.getHighKey()) < 0) {
+								|| parentDeweyID.compareDivisions(hintLeaf.getHighKey()) < 0) {
 							NavigationStatus navStatus = hintLeaf
-									.navigateContextFree(key,
+									.navigateContextFree(parentDeweyID,
 											NavigationMode.TO_KEY);
 							if (navStatus == NavigationStatus.FOUND) {
 								useHintPage = true;
@@ -1326,6 +1325,7 @@ public final class BracketTree extends PageContextFactory {
 							hintLeaf.cleanup();
 							hintLeaf = null;
 						}
+						
 					} else {
 						hintLeaf.setContext(key, hintPageInfo.currentOffset);
 					}
@@ -1377,7 +1377,7 @@ public final class BracketTree extends PageContextFactory {
 		}
 
 		if (hintLeaf != null) {
-			if (navMode == NavigationMode.TO_KEY) {
+			if (navMode == NavigationMode.TO_KEY || navMode == NavigationMode.PARENT) {
 				// target node already found
 				return hintLeaf;
 			}

@@ -254,7 +254,9 @@ public final class BracketIterImpl implements BracketIter {
 		assureContextValidity();
 
 		try {
-			page = tree.moveNext(tx, rootPageID, page, openMode);
+			if (!page.moveNext()) {
+				page = tree.moveNextPage(tx, rootPageID, page, openMode);
+			}
 
 			if (page == null) {
 				return false;

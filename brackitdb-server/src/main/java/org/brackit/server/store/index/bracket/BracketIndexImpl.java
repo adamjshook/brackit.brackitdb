@@ -122,14 +122,14 @@ public class BracketIndexImpl implements BracketIndex {
 		return tree.printLeafScannerStats(navMode);
 	}
 
-	/**
-	 * @see org.brackit.server.store.index.bracket.BracketIndex#openChildStream(org.brackit.server.node.bracket.BracketLocator,
-	 *      org.brackit.server.node.XTCdeweyID,
-	 *      org.brackit.server.store.index.bracket.HintPageInformation)
-	 */
 	@Override
 	public Stream<BracketNode> openChildStream(BracketLocator locator,
 			XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo) {
 		return new ChildStream(locator, tree, parentDeweyID, hintPageInfo);
+	}
+
+	public Stream<BracketNode> openSubtreeStream(BracketLocator locator,
+			XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo) {
+		return new SubtreeStream(locator, tree, subtreeRoot, hintPageInfo);
 	}
 }

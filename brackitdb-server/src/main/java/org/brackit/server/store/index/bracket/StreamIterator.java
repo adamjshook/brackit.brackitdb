@@ -30,6 +30,7 @@ package org.brackit.server.store.index.bracket;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.BracketLocator;
 import org.brackit.server.node.bracket.BracketNode;
+import org.brackit.server.store.OpenMode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.page.Leaf;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
@@ -44,20 +45,29 @@ import org.brackit.xquery.xdm.Stream;
  */
 public abstract class StreamIterator implements Stream<BracketNode> {
 
+	protected static final OpenMode OPEN_MODE = OpenMode.READ;
+
 	protected Leaf page;
 	protected XTCdeweyID currentKey;
 	protected final BracketLocator locator;
 	protected final BracketTree tree;
 	protected final Tx tx;
 	protected final DeweyIDBuffer deweyIDBuffer;
+	protected final XTCdeweyID startDeweyID;
+	protected final HintPageInformation hintPageInfo;
+	protected boolean returnDocument;
 	private boolean firstUsage;
-	
-	public StreamIterator(BracketLocator locator, BracketTree tree) {
+
+	public StreamIterator(BracketLocator locator, BracketTree tree,
+			XTCdeweyID startDeweyID, HintPageInformation hintPageInfo, boolean returnDocumentFirst) {
 		this.locator = locator;
 		this.tree = tree;
+		this.startDeweyID = startDeweyID;
+		this.hintPageInfo = hintPageInfo;
 		this.tx = locator.collection.getTX();
 		this.deweyIDBuffer = new DeweyIDBuffer();
 		this.firstUsage = true;
+		this.returnDocument = returnDocumentFirst;
 	}
 
 	/**
@@ -78,29 +88,39 @@ public abstract class StreamIterator implements Stream<BracketNode> {
 	public BracketNode next() throws DocumentException {
 
 		try {
-		
+
 			if (firstUsage) {
-				// go to first node
-				initializeContext();
+				
+				if (returnDocument) {
+					returnDocument = false;
+					return new BracketNode(locator);
+				}
+				
+				firstUsage = false;
+				// try to load the hint page
+				if (hintPageInfo != null) {
+					page = tree.loadHintPage(tx, startDeweyID, hintPageInfo,
+							OPEN_MODE, deweyIDBuffer);
+				}
+				first();				
 			} else {
 				// go to next node
 				nextInternal();
 			}
-			
+
 			if (page == null) {
 				// context initialization or navigating to next node failed
 				return null;
 			}
-	
-			firstUsage = false;
-	
-			// at this point, we know that the navigation succeeded and the context
+
+			// at this point, we know that the navigation succeeded and the
+			// context
 			// points to a valid node
 			currentKey = page.getKey();
 			BracketNode node = locator.fromBytes(currentKey, page.getValue());
 			node.hintPageInfo = page.getHintPageInformation();
 			return node;
-		
+
 		} catch (IndexOperationException e) {
 			page.cleanup();
 			page = null;
@@ -111,8 +131,10 @@ public abstract class StreamIterator implements Stream<BracketNode> {
 		}
 	}
 
-	protected abstract void initializeContext() throws IndexOperationException, IndexAccessException;
+	protected abstract void first() throws IndexOperationException,
+			IndexAccessException;
 
-	protected abstract void nextInternal() throws IndexOperationException, IndexAccessException;
+	protected abstract void nextInternal() throws IndexOperationException,
+			IndexAccessException;
 
 }

@@ -28,10 +28,13 @@
 package org.brackit.server.node.bracket;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.URL;
 
 import org.brackit.server.node.el.ElMockup;
@@ -74,6 +77,9 @@ public class XMarkComparison {
 	protected static BracketMockup bracketStore;
 	
 	protected static ElMockup elStore;
+	
+//	protected QueryContext ctx;
+//	protected Collection<?> coll;
 
 	protected String readQuery(String dirname, String filename)
 			throws IOException {
@@ -210,7 +216,7 @@ public class XMarkComparison {
 	@Test
 	public void xmark10() throws Exception, IOException {		
 		System.out.println("\nXMark10\n--------------------");
-		query("q10.xq");
+		query("q10.xq", 0);
 	}
 
 	@Test
@@ -272,13 +278,24 @@ public class XMarkComparison {
 		System.out.println("\nXMark20\n--------------------");
 		query("q20.xq");
 	}
+	
+	protected PrintStream createBuffer() {
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		return new PrintStream(out) {
+			final OutputStream baos = out;
+
+			public String toString() {
+				return baos.toString();
+			}
+		};
+	}
 
 	@BeforeClass
 	public static void setUpClass() throws Exception, FileNotFoundException {
 		bracketStore = new BracketMockup(); 
 		elStore = new ElMockup();
-		//URL url = XMarkComparison.class.getResource("/xmark/auction.xml");
-		//File file = new File(url.getFile().replaceAll("%20", " "));
+//		URL url = XMarkComparison.class.getResource("/xmark/auction.xml");
+//		File file = new File(url.getFile().replaceAll("%20", " "));
 		File file = new File("xmark10.xml");
 		
 		System.out.println("Putting document into ELStore...");		
@@ -300,6 +317,8 @@ public class XMarkComparison {
 	public void setUp() throws Exception {
 		bracketColl = bracketStore.newTXforDocument(bracketColl, true);
 		elColl = elStore.newTXforDocument(elColl, true);
+//		ctx = new QueryContext();
+//		coll = bracketColl;
 	}
 	
 	@After
@@ -349,7 +368,7 @@ public class XMarkComparison {
 		setUpClass();
 		XMarkComparison xmark = new XMarkComparison();
 		xmark.setUp();
-		xmark.xmark01();
+		xmark.xmark06();
 		xmark.tearDown();
 		tearDownClass();
 	}
