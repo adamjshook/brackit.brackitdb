@@ -147,6 +147,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	private int currentOffset;
 	private DeweyIDBuffer currentDeweyID;
+	private int level;
 
 	private byte[] bufferedValue;
 	private BracketKey.Type bufferedKeyType;
@@ -179,7 +180,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		}
 
 		currentDeweyID.setTo(deweyID);
-		setCurrentOffset(offset);
+		setOffset(offset);
 	}
 
 	@Override
@@ -302,7 +303,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
-			setCurrentOffset(navRes.keyOffset, navRes.keyType);
+			setOffset(navRes.keyOffset, navRes.keyType);
 			return true;
 		} else {
 			return false;
@@ -317,7 +318,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
-			setCurrentOffset(navRes.keyOffset, navRes.keyType);
+			setOffset(navRes.keyOffset, navRes.keyType);
 			return true;
 		} else {
 			return false;
@@ -333,7 +334,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
-			setCurrentOffset(navRes.keyOffset, navRes.keyType);
+			setOffset(navRes.keyOffset, navRes.keyType, navRes.levelDiff);
 			return true;
 		} else {
 			return false;
@@ -442,7 +443,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 				page.getHandle().setAssignedTo(tx);
 			}
 
-			setCurrentOffset(returnVal);
+			setOffset(returnVal);
 			bufferedValue = record;
 			return true;
 		}
@@ -491,7 +492,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 				page.getHandle().setAssignedTo(tx);
 			}
 
-			setCurrentOffset(returnVal);
+			setOffset(returnVal);
 			bufferedValue = record;
 			return true;
 		}
@@ -541,7 +542,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		if (navRes.status == NavigationStatus.FOUND
 				|| navRes.status == NavigationStatus.POSSIBLY_FOUND) {
 			// adjust current offset
-			setCurrentOffset(navRes.keyOffset, navRes.keyType);
+			setOffset(navRes.keyOffset, navRes.keyType);
 		} else {
 			moveBeforeFirst();
 		}
@@ -608,7 +609,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		if (navRes.status == NavigationStatus.FOUND
 				|| navRes.status == NavigationStatus.POSSIBLY_FOUND) {
 			// adjust current offset
-			setCurrentOffset(navRes.keyOffset, navRes.keyType);
+			setOffset(navRes.keyOffset, navRes.keyType);
 		} else {
 			moveBeforeFirst();
 		}
@@ -631,6 +632,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		currentOffset = BracketPage.BEFORE_LOW_KEY_OFFSET;
 		bufferedValue = null;
 		bufferedKeyType = null;
+		level = -1;
 	}
 
 	@Override
@@ -957,22 +959,38 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		return returnBuffer;
 	}
 
-	private void setCurrentOffset(int offset) {
+	private void setOffset(int offset) {
 		bufferedKeyType = null;
 		if (offset <= BracketPage.LOW_KEY_OFFSET
 				|| offset != currentOffset + BracketKey.PHYSICAL_LENGTH) {
 			bufferedValue = null;
 		}
 		currentOffset = offset;
+		level = -1;
 	}
 
-	private void setCurrentOffset(int offset, BracketKey.Type keyType) {
+	private void setOffset(int offset, BracketKey.Type keyType) {
 		bufferedKeyType = keyType;
 		if (offset <= BracketPage.LOW_KEY_OFFSET
 				|| offset != currentOffset + BracketKey.PHYSICAL_LENGTH) {
 			bufferedValue = null;
 		}
 		currentOffset = offset;
+		level = -1;
+	}
+	
+	private void setOffset(int offset, BracketKey.Type keyType, int levelDiff) {
+		bufferedKeyType = keyType;
+		if (offset <= BracketPage.LOW_KEY_OFFSET
+				|| offset != currentOffset + BracketKey.PHYSICAL_LENGTH) {
+			bufferedValue = null;
+		}
+		currentOffset = offset;
+		if (level != -1) {
+			level += levelDiff;
+		} else {
+			level = currentDeweyID.getLevel();
+		}
 	}
 
 	private void declareContextFree() {
@@ -1072,7 +1090,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 				page.getHandle().setAssignedTo(tx);
 			}
 
-			setCurrentOffset(returnVal);
+			setOffset(returnVal);
 			return true;
 		}
 	}
@@ -1106,7 +1124,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 				page.getHandle().setAssignedTo(tx);
 			}
 
-			setCurrentOffset(returnVal);
+			setOffset(returnVal);
 			return true;
 		}
 	}
@@ -1168,7 +1186,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
-			setCurrentOffset(navRes.keyOffset, navRes.keyType);
+			setOffset(navRes.keyOffset, navRes.keyType);
 			return true;
 		} else {
 			return false;
@@ -1190,7 +1208,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
-			setCurrentOffset(navRes.keyOffset, navRes.keyType);
+			setOffset(navRes.keyOffset, navRes.keyType);
 		} else {
 			moveBeforeFirst();
 		}
@@ -1213,7 +1231,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
-			setCurrentOffset(navRes.keyOffset, navRes.keyType);
+			setOffset(navRes.keyOffset, navRes.keyType);
 		} else {
 			moveBeforeFirst();
 		}
@@ -1289,11 +1307,31 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
-			setCurrentOffset(navRes.keyOffset, navRes.keyType);
+			setOffset(navRes.keyOffset, navRes.keyType);
 			return true;
 		} else {
 			return false;
 		}
-
+	}
+	
+	@Override
+	public boolean isAttribute() {
+		if (currentOffset == BracketPage.BEFORE_LOW_KEY_OFFSET) {
+			return false;
+		}
+		if (bufferedKeyType != null) {
+			return bufferedKeyType == BracketKey.Type.ATTRIBUTE;
+		}
+		return currentDeweyID.isAttribute();
+	}
+	
+	@Override
+	public int getLevel() {
+		if (level != -1) {
+			return level;
+		} else {
+			level = (currentOffset == BracketPage.BEFORE_LOW_KEY_OFFSET) ? -1 : currentDeweyID.getLevel();
+			return level;
+		}
 	}
 }

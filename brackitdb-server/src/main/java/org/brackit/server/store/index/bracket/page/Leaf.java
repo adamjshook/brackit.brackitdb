@@ -265,4 +265,15 @@ public interface Leaf extends BPContext {
 
 	public boolean setValue(byte[] value, boolean logged, long undoNextLSN)
 			throws IndexOperationException;
+
+	/**
+	 * @return true iff this page context points to an attribute node
+	 */
+	public boolean isAttribute();
+
+	/**
+	 * @return the level of the node this context points to (remark: attributes
+	 *         are considered to be on the same level like their element)
+	 */
+	public int getLevel();
 }

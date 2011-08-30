@@ -464,6 +464,23 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	public int getLevelDifferenceTo(SimpleDeweyID other) {
 		return getLevel(other) - getLevel(this);
 	}
+	
+	public int getLevel() {
+		
+		int level = 0;
+
+		for (int i = 0; i < currentLength; i++) {
+			if (currentBuffer[i] % 2 == 1) {
+				level++;
+			}
+		}
+
+		if (isAttribute()) {
+			level -= 2;
+		}
+
+		return level;
+	}
 
 	/**
 	 * Sets this buffer to its parent DeweyID. For attributes the corresponding

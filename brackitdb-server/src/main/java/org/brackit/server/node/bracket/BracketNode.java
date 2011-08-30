@@ -186,7 +186,7 @@ public class BracketNode extends TXNode<BracketNode> {
 		try {
 			BracketIter iterator = locator.collection.store.index.open(getTX(),
 					locator.rootPageID, navMode, referenceDeweyID,
-					OpenMode.READ, hintPageInfo);
+					OpenMode.READ, navMode != NavigationMode.TO_KEY ? hintPageInfo : null);
 			if (iterator == null) {
 				return null;
 			}
@@ -287,7 +287,8 @@ public class BracketNode extends TXNode<BracketNode> {
 	@Override
 	public Stream<? extends BracketNode> getSubtreeInternal()
 			throws DocumentException {
-		return new BracketSubtreeStream(locator, deweyID);
+		return locator.collection.store.index.openSubtreeStream(locator, deweyID,
+				hintPageInfo);
 	}
 
 	@Override
@@ -517,14 +518,11 @@ public class BracketNode extends TXNode<BracketNode> {
 
 	@Override
 	public BracketNode getParentInternal() throws DocumentException {
-		XTCdeweyID parentDeweyID = deweyID.getParent();
-		if (parentDeweyID.isDocument()) {
+		if (deweyID.isRoot()) {
 			return new BracketNode(locator);
-		} else if (parentDeweyID.isAttributeRoot()) {
-			parentDeweyID = parentDeweyID.getParent();
 		}
 
-		return getNodeGeneric(NavigationMode.TO_KEY, parentDeweyID);
+		return getNodeGeneric(NavigationMode.PARENT, deweyID);
 	}
 
 	@Override
@@ -618,6 +616,9 @@ public class BracketNode extends TXNode<BracketNode> {
 		StringBuilder text = new StringBuilder();
 
 		try {
+			
+			Stream<BracketNode> subtree = r.index.openSubtreeStream(locator, deweyID,
+					hintPageInfo);
 
 			XTCdeweyID openDeweyID = (type == Kind.DOCUMENT.ID) ? XTCdeweyID
 					.newRootID(locator.docID) : deweyID;

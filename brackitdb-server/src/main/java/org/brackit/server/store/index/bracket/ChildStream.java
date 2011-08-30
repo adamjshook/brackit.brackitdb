@@ -29,7 +29,6 @@ package org.brackit.server.store.index.bracket;
 
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.BracketLocator;
-import org.brackit.server.store.OpenMode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 
@@ -39,55 +38,42 @@ import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
  */
 public final class ChildStream extends StreamIterator {
 
-	private static final OpenMode OPEN_MODE = OpenMode.READ;
-
-	private final XTCdeweyID parentDeweyID;
-	private final HintPageInformation hintPageInfo;
-
 	public ChildStream(BracketLocator locator, BracketTree tree,
 			XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo) {
-		super(locator, tree);
-		this.parentDeweyID = parentDeweyID;
-		this.hintPageInfo = hintPageInfo;
+		super(locator, tree, parentDeweyID, hintPageInfo, false);
 	}
 
 	/**
-	 * @see org.brackit.server.store.index.bracket.StreamIterator#initializeContext()
+	 * @see org.brackit.server.store.index.bracket.StreamIterator#first()
 	 */
 	@Override
-	protected void initializeContext() throws IndexOperationException,
+	protected void first() throws IndexOperationException,
 			IndexAccessException {
 
-		if (parentDeweyID.isDocument()) {
+		if (startDeweyID.isDocument()) {
 			page = tree.openInternal(tx, locator.rootPageID,
 					NavigationMode.TO_KEY,
-					XTCdeweyID.newRootID(parentDeweyID.getDocID()), OPEN_MODE,
-					hintPageInfo, deweyIDBuffer);
+					XTCdeweyID.newRootID(startDeweyID.getDocID()), OPEN_MODE,
+					null, deweyIDBuffer);
 		} else {
 			
-			if (!OPEN_MODE.doLog()) {
-				tx.addFlushHook(locator.rootPageID.getContainerNo());
-			}
-			
-			if (hintPageInfo != null) {
-				page = tree.loadHintPage(tx, parentDeweyID, hintPageInfo, OPEN_MODE, deweyIDBuffer);
-				if (page != null) {
-					NavigationStatus navStatus = page.navigateFirstChild();
-					if (navStatus == NavigationStatus.FOUND) {
-						return;
-					} else if ((navStatus == NavigationStatus.NOT_EXISTENT)) {
-						page.cleanup();
-						page = null;
-						return;
-					}
-					page = tree.navigateAfterHintPageFail(tx, locator.rootPageID,
-							NavigationMode.FIRST_CHILD, parentDeweyID, OPEN_MODE, page,
-							deweyIDBuffer, navStatus);
+			if (page != null) {
+				// hint page was already loaded
+				NavigationStatus navStatus = page.navigateFirstChild();
+				if (navStatus == NavigationStatus.FOUND) {
+					return;
+				} else if ((navStatus == NavigationStatus.NOT_EXISTENT)) {
+					page.cleanup();
+					page = null;
 					return;
 				}
+				page = tree.navigateAfterHintPageFail(tx, locator.rootPageID,
+						NavigationMode.FIRST_CHILD, startDeweyID, OPEN_MODE, page,
+						deweyIDBuffer, navStatus);
+				return;
 			}
 			
-			page = tree.navigateViaIndexAccess(tx, locator.rootPageID, NavigationMode.FIRST_CHILD, parentDeweyID, OPEN_MODE, deweyIDBuffer);
+			page = tree.navigateViaIndexAccess(tx, locator.rootPageID, NavigationMode.FIRST_CHILD, startDeweyID, OPEN_MODE, deweyIDBuffer);
 		}
 	}
 

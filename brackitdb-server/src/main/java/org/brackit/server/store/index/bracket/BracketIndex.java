@@ -157,5 +157,6 @@ public interface BracketIndex {
 			throws IndexAccessException;
 	
 	public Stream<BracketNode> openChildStream(BracketLocator locator, XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo);
-
+	
+	public Stream<BracketNode> openSubtreeStream(BracketLocator locator, XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo);
 }
