@@ -165,6 +165,16 @@ public final class BracketPage extends BasePage {
 		public byte[] value;
 	}
 
+	public class UnresolvedValue {
+		public final boolean externalized;
+		public final byte[] value;
+
+		public UnresolvedValue(boolean externalized, byte[] value) {
+			this.externalized = externalized;
+			this.value = value;
+		}
+	}
+
 	/**
 	 * Creates a bracket page.
 	 * 
@@ -370,31 +380,22 @@ public final class BracketPage extends BasePage {
 	}
 
 	/**
-	 * Returns the value for the key beginning at 'keyOffset'.
+	 * Returns the value for the key beginning at 'keyOffset'. The value is
+	 * resolved i.e. if the current node does not store an own record, the
+	 * nearest descendant record is used. If the record is externalized, it is
+	 * automatically loaded from the Blob store.
 	 * 
 	 * @param keyOffset
 	 *            the offset where the key starts
+	 * @param extValueLoader
+	 *            a loader for externalized values
 	 * @return value the value as byte array
 	 * @throws ExternalValueException
-	 *             if the the current value is externalized and needs to be
-	 *             loaded from a Blob page
 	 */
-	public byte[] getValue(int keyOffset) throws ExternalValueException {
-		return getValueInternal(getValueOffset(getNextValueRefOffset(keyOffset)));
-	}
-
-	/**
-	 * Loads the value beginning at 'valueOffset'.
-	 * 
-	 * @param valueOffset
-	 *            the value offset
-	 * @return loaded value as byte array
-	 * @throws ExternalValueException
-	 *             if the the current value is externalized and needs to be
-	 *             loaded from a Blob page
-	 */
-	private byte[] getValueInternal(int valueOffset)
+	public byte[] getValue(int keyOffset, ExternalValueLoader extValueLoader)
 			throws ExternalValueException {
+
+		int valueOffset = getValueOffset(getNextValueRefOffset(keyOffset));
 
 		// determine value length
 		int valueLength = page[valueOffset++] & 255;
@@ -406,8 +407,91 @@ public final class BracketPage extends BasePage {
 
 			if (byte1 == 255 && byte2 == 255) {
 				// external value!
-				throw new ExternalValueException(PageID.fromBytes(page,
+				return extValueLoader.loadExternalValue(PageID.fromBytes(page,
 						valueOffset));
+			} else {
+				valueLength = (byte1 << 8) | byte2;
+			}
+		}
+
+		// copy value field
+		byte[] result = new byte[valueLength];
+		System.arraycopy(page, valueOffset, result, 0, valueLength);
+
+		return result;
+	}
+
+	/**
+	 * Returns the unresolved value, i.e. if this node does not store a value, a
+	 * null value (for UnresolvedValue.value) is returned. Externalized values
+	 * are not loaded. Instead, the external PageID is taken as value.
+	 * 
+	 * @param keyOffset
+	 *            the offset where the key starts
+	 * @return value the value
+	 */
+	public UnresolvedValue getValueUnresolved(int keyOffset) {
+
+		if (keyOffset == LOW_KEY_OFFSET) {
+			if (!getLowKeyType().hasDataReference) {
+				return new UnresolvedValue(false, null);
+			}
+			keyOffset = getKeyAreaStartOffset();
+		} else {
+			if (!BracketKey.hasDataReference(page, keyOffset)) {
+				return new UnresolvedValue(false, null);
+			}
+			keyOffset += BracketKey.PHYSICAL_LENGTH;
+		}
+
+		int valueOffset = getValueOffset(keyOffset);
+
+		// determine value length
+		int valueLength = page[valueOffset++] & 255;
+
+		boolean externalized = false;
+
+		if (valueLength == 255) {
+
+			int byte1 = page[valueOffset++] & 255;
+			int byte2 = page[valueOffset++] & 255;
+
+			if (byte1 == 255 && byte2 == 255) {
+				// external value
+				valueLength = PageID.getSize();
+				externalized = true;
+			} else {
+				valueLength = (byte1 << 8) | byte2;
+			}
+		}
+
+		// copy value field
+		byte[] result = new byte[valueLength];
+		System.arraycopy(page, valueOffset, result, 0, valueLength);
+
+		return new UnresolvedValue(externalized, result);
+	}
+
+	/**
+	 * Loads the value beginning at 'valueOffset'.
+	 * 
+	 * @param valueOffset
+	 *            the value offset
+	 * @return loaded value as byte array
+	 */
+	private byte[] getValueInternal(int valueOffset) {
+
+		// determine value length
+		int valueLength = page[valueOffset++] & 255;
+
+		if (valueLength == 255) {
+
+			int byte1 = page[valueOffset++] & 255;
+			int byte2 = page[valueOffset++] & 255;
+
+			if (byte1 == 255 && byte2 == 255) {
+				// external value -> return PageID
+				valueLength = PageID.getSize();
 			} else {
 				valueLength = (byte1 << 8) | byte2;
 			}
@@ -977,12 +1061,7 @@ public final class BracketPage extends BasePage {
 			return null;
 		}
 
-		try {
-			return getValueInternal(contextDataOffset);
-		} catch (ExternalValueException e) {
-			// can not happen
-			throw new RuntimeException("Context data corrupted!");
-		}
+		return getValueInternal(contextDataOffset);
 	}
 
 	/**
@@ -998,19 +1077,12 @@ public final class BracketPage extends BasePage {
 			return null;
 		}
 
-		try {
+		byte[] value = getValueInternal(contextDataOffset);
 
-			byte[] value = getValueInternal(contextDataOffset);
+		// load DocID
+		DocID docID = DocID.fromBytes(page, BASE_PAGE_NO_OFFSET);
 
-			// load DocID
-			DocID docID = DocID.fromBytes(page, BASE_PAGE_NO_OFFSET);
-
-			return new XTCdeweyID(docID, value);
-
-		} catch (ExternalValueException e) {
-			// can not happen
-			throw new RuntimeException("Context data corrupted!");
-		}
+		return new XTCdeweyID(docID, value);
 	}
 
 	@Override
@@ -1076,13 +1148,7 @@ public final class BracketPage extends BasePage {
 
 		// load lowID record
 		XTCdeweyID lowID = getLowKey();
-		byte[] value = null;
-		try {
-			value = getValue(LOW_KEY_OFFSET);
-		} catch (ExternalValueException e) {
-			value = e.externalPageID.getBytes();
-		}
-		result[0] = new KeyValueTuple(lowID, value);
+		result[0] = new KeyValueTuple(lowID, getValueUnresolved(LOW_KEY_OFFSET).value);
 
 		// prepare DeweyID buffers
 		DeweyIDBuffer currentDeweyID = new DeweyIDBuffer(lowID);
@@ -1092,12 +1158,9 @@ public final class BracketPage extends BasePage {
 		for (int i = 1; i < recordCount; i++) {
 			navigateGeneric(currentDeweyID, navRes.keyOffset,
 					NavigationProfiles.NEXT_NODE, false);
-			try {
-				value = getValue(navRes.keyOffset);
-			} catch (ExternalValueException e) {
-				value = e.externalPageID.getBytes();
-			}
-			result[i] = new KeyValueTuple(currentDeweyID.getDeweyID(), value);
+
+			result[i] = new KeyValueTuple(currentDeweyID.getDeweyID(),
+					getValueUnresolved(navRes.keyOffset).value);
 		}
 
 		return result;
@@ -2013,8 +2076,8 @@ public final class BracketPage extends BasePage {
 	 */
 	public NavigationResult navigateNextAttribute(int currentOffset,
 			DeweyIDBuffer currentDeweyID, BracketKey.Type currentKeyType) {
-//		return navigateGeneric(currentDeweyID, currentOffset,
-//				NavigationProfiles.NEXT_ATTRIBUTE, false);
+		// return navigateGeneric(currentDeweyID, currentOffset,
+		// NavigationProfiles.NEXT_ATTRIBUTE, false);
 
 		int keyAreaEndOffset = getKeyAreaEndOffset();
 		BracketKey currentKey = new BracketKey();
@@ -2033,12 +2096,12 @@ public final class BracketPage extends BasePage {
 
 		navRes.reset();
 		if (currentOffset < keyAreaEndOffset) {
-			
+
 			currentKey.load(page, currentOffset);
 			currentKeyType = currentKey.type;
 
 			currentDeweyID.update(currentKey, false);
-			
+
 			if (currentKeyType == BracketKey.Type.ATTRIBUTE) {
 				navRes.status = NavigationStatus.FOUND;
 				navRes.keyOffset = currentOffset;
@@ -2070,7 +2133,8 @@ public final class BracketPage extends BasePage {
 
 		if (refNode.status == NavigationStatus.FOUND) {
 			// invoke navigation method
-			navigateNextAttribute(refNode.keyOffset, currentDeweyID, refNode.keyType);
+			navigateNextAttribute(refNode.keyOffset, currentDeweyID,
+					refNode.keyType);
 		} else if (refNode.status == NavigationStatus.BEFORE_FIRST) {
 			// continue navigation
 
@@ -2928,9 +2992,6 @@ public final class BracketPage extends BasePage {
 																										// keys
 					+ delPrep.dataRecordSize // deleted records
 					- newLowID.length; // new lowID
-			if (releasedSpace < 0) {
-				throw new RuntimeException();
-			}
 
 			freeSpace(releasedSpace);
 
@@ -2998,10 +3059,10 @@ public final class BracketPage extends BasePage {
 				// fetch next value
 				byte[] value = null;
 				try {
-					value = getValue(delPrep.startDeleteOffset);
+					value = getValue(delPrep.startDeleteOffset,
+							externalValueLoader);
 				} catch (ExternalValueException e) {
-					value = externalValueLoader
-							.loadExternalValue(e.externalPageID);
+					throw new BracketPageException(e);
 				}
 
 				placeholder = placeHolderHelper.createPlaceHolderValue(value);
@@ -3385,7 +3446,8 @@ public final class BracketPage extends BasePage {
 		// reservedSpace for the highKey
 		int reservedSpace = 0;
 		if (afterKeys == null) {
-			reservedSpace = lastNodeDeweyID.toBytes().length * ((getContextDataOffset() == 0) ? 2 : 1);
+			reservedSpace = lastNodeDeweyID.toBytes().length
+					* ((getContextDataOffset() == 0) ? 2 : 1);
 		}
 		// allocate required space
 		if (!allocateRequiredSpace(requiredSpace, reservedSpace)) {

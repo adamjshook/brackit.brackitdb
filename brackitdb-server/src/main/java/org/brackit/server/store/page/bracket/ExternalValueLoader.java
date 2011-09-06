@@ -43,6 +43,6 @@ public interface ExternalValueLoader {
 	 * @return the external value
 	 * @throws BracketPageException
 	 */
-	public byte[] loadExternalValue(PageID externalPageID) throws BracketPageException;
+	public byte[] loadExternalValue(PageID externalPageID) throws ExternalValueException;
 	
 }

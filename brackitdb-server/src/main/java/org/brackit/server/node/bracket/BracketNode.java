@@ -616,9 +616,6 @@ public class BracketNode extends TXNode<BracketNode> {
 		StringBuilder text = new StringBuilder();
 
 		try {
-			
-			Stream<BracketNode> subtree = r.index.openSubtreeStream(locator, deweyID,
-					hintPageInfo);
 
 			XTCdeweyID openDeweyID = (type == Kind.DOCUMENT.ID) ? XTCdeweyID
 					.newRootID(locator.docID) : deweyID;
