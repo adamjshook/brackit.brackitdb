@@ -48,6 +48,7 @@ import org.brackit.server.store.page.BasePage;
 import org.brackit.server.store.page.bracket.BracketKey;
 import org.brackit.server.store.page.bracket.BracketNodeSequence;
 import org.brackit.server.store.page.bracket.BracketPage;
+import org.brackit.server.store.page.bracket.BracketPage.UnresolvedValue;
 import org.brackit.server.store.page.bracket.BracketPageException;
 import org.brackit.server.store.page.bracket.DeletePreparation;
 import org.brackit.server.store.page.bracket.DeletePrepareListener;
@@ -131,11 +132,11 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		@Override
 		public byte[] loadExternalValue(PageID externalPageID)
-				throws BracketPageException {
+				throws ExternalValueException {
 			try {
 				return read(tx, externalPageID);
 			} catch (BlobStoreAccessException e) {
-				throw new BracketPageException(
+				throw new ExternalValueException(
 						e,
 						"Error reading externalized value at offset %s from blob %s",
 						currentOffset, externalPageID);
@@ -153,11 +154,14 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	private BracketKey.Type bufferedKeyType;
 
 	private BracketNodeSequence insertSequence;
+	
+	private final ExternalValueLoader extValueLoader;
 
 	public LeafBPContext(BufferMgr bufferMgr, Tx tx, BracketPage page) {
 		super(bufferMgr, tx, page);
 		this.page = page;
-		currentOffset = BracketPage.BEFORE_LOW_KEY_OFFSET;
+		this.currentOffset = BracketPage.BEFORE_LOW_KEY_OFFSET;
+		this.extValueLoader = new ExternalValueLoaderImpl();
 	}
 
 	private void initBuffer() {
@@ -276,19 +280,10 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		byte[] value = null;
 		try {
 
-			value = page.getValue(currentOffset);
+			value = page.getValue(currentOffset, extValueLoader);
 
 		} catch (ExternalValueException e) {
-
-			// value needs to be loaded from a Blob page
-			try {
-				value = read(tx, e.externalPageID);
-			} catch (BlobStoreAccessException ex) {
-				throw new IndexOperationException(
-						ex,
-						"Error reading externalized value at offset %s from blob %s",
-						currentOffset, e.externalPageID);
-			}
+			throw new IndexOperationException(e);
 		}
 
 		bufferedValue = value;
@@ -348,15 +343,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		if (CHECK_OFFSET_INTEGRITY) {
 			declareContextSensitive();
 		}
-
-		PageID oldExternalPageID = null;
-		byte[] oldValue = null;
-		try {
-			oldValue = page.getValue(currentOffset);
-		} catch (ExternalValueException e) {
-			oldExternalPageID = e.externalPageID;
-			oldValue = oldExternalPageID.getBytes();
-		}
+		
+		UnresolvedValue oldValue = page.getValueUnresolved(currentOffset);
 
 		boolean externalize = externalizeValue(value);
 
@@ -371,14 +359,14 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		// log update
 		if (logged) {
 			LogOperation operation = new LeafUpdateLogOperation(getPageID(),
-					getRootPageID(), getKey(), oldValue, value);
+					getRootPageID(), getKey(), oldValue.value, value);
 			log(tx, operation, undoNextLSN);
 		} else {
 			page.getHandle().setAssignedTo(tx);
 		}
 
-		if (oldExternalPageID != null) {
-			deleteExternalized(oldExternalPageID);
+		if (oldValue.externalized) {
+			deleteExternalized(PageID.fromBytes(oldValue.value));
 		}
 
 		return true;
@@ -830,7 +818,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			BracketNodeSequence nodes = page.getBracketNodeSequence(delPrep);
 
 			// delete
-			page.delete(delPrep, new ExternalValueLoaderImpl());
+			page.delete(delPrep, extValueLoader);
 
 			// log delete
 			if (logged) {
@@ -1032,7 +1020,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 				// delete
 				page.delete(delPrep.deletePreparation,
-						new ExternalValueLoaderImpl());
+						extValueLoader);
 
 				// log delete
 				if (logged) {
@@ -1159,7 +1147,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			BracketNodeSequence nodes = page.getBracketNodeSequence(delPrep);
 
 			// delete nodes from page
-			page.delete(delPrep, new ExternalValueLoaderImpl());
+			page.delete(delPrep, extValueLoader);
 
 			// log delete
 			if (logged) {

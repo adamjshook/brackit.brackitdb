@@ -27,27 +27,31 @@
  */
 package org.brackit.server.store.page.bracket;
 
-import org.brackit.server.io.buffer.PageID;
+import org.brackit.server.ServerException;
 
 /**
- * This exception is thrown while loading a value, and indicates that the
- * current value is an external PageID.
+ * This exception can occur while loading an external value.
  * 
  * @author Martin Hiller
  * 
  */
-public class ExternalValueException extends Exception {
+public class ExternalValueException extends ServerException {
+	private static final long serialVersionUID = 1L;
 	
-	public final PageID externalPageID;
-
-	/**
-	 * Constructs an ExternalValueException with the given PageID as external
-	 * Blob page.
-	 * 
-	 * @param pageID the external PageID
-	 */
-	public ExternalValueException(PageID pageID) {
-		this.externalPageID = pageID;
+	public ExternalValueException() {
+		super();
 	}
 
+	public ExternalValueException(String message, Object... args) {
+		super(message, args);
+	}
+
+	public ExternalValueException(Throwable cause, String message,
+			Object... args) {
+		super(cause, message, args);
+	}
+
+	public ExternalValueException(Throwable cause) {
+		super(cause);
+	}
 }
