@@ -183,7 +183,7 @@ public class PathSynopsisNode implements PSNode {
 			node = node.getParent();
 		}
 
-		Path<String> p = new Path<String>();
+		Path<QNm> p = new Path<QNm>();
 		for (PathSynopsisNode n : path) {
 			if (n.getKind() == Kind.ELEMENT.ID) {
 				p.child(n.getName());
