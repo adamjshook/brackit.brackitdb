@@ -28,6 +28,7 @@
 package org.brackit.server.metadata.pathSynopsis.manager;
 
 import org.brackit.server.metadata.pathSynopsis.PSNode;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.Kind;
 
@@ -50,7 +51,7 @@ public class PathSynopsisNode implements PSNode {
 
 	protected final int level;
 
-	protected final String name;
+	protected final QNm name;
 
 	protected final PathSynopsisNode parent;
 
@@ -63,7 +64,7 @@ public class PathSynopsisNode implements PSNode {
 
 	protected PathSynopsisNode[] children;
 
-	public PathSynopsisNode(int vocId, int pcr, String name, byte kind,
+	public PathSynopsisNode(int vocId, int pcr, QNm name, byte kind,
 			PathSynopsisNode parent, PathSynopsis ps) {
 		this.vocId = vocId;
 		this.pcr = pcr;
@@ -146,7 +147,7 @@ public class PathSynopsisNode implements PSNode {
 		return pcr;
 	}
 
-	public String getName() {
+	public QNm getName() {
 		return name;
 	}
 
@@ -174,7 +175,7 @@ public class PathSynopsisNode implements PSNode {
 		this.visible = visible;
 	}
 
-	public Path<String> getPath() {
+	public Path<QNm> getPath() {
 		PathSynopsisNode node = this;
 		PathSynopsisNode[] path = new PathSynopsisNode[level];
 		for (int i = level - 1; i >= 0; i--) {

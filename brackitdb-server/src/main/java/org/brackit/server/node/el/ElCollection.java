@@ -38,6 +38,7 @@ import org.brackit.server.store.index.Index;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.aries.visitor.IndexStatisticsVisitor;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.SubtreeParser;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
@@ -49,7 +50,7 @@ import org.brackit.xquery.xdm.Node;
  * 
  */
 public class ElCollection extends TXCollection<ElNode> {
-	public static final String PATHSYNOPSIS_ID_ATTRIBUTE = "pathSynopsis";
+	public static final QNm PATHSYNOPSIS_ID_ATTRIBUTE = new QNm("pathSynopsis");
 
 	protected PathSynopsisMgr pathSynopsis;
 
