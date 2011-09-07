@@ -38,8 +38,10 @@ import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.locking.LockClass;
 import org.brackit.server.tx.locking.services.MetaLockService;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.AbstractNode;
-import org.brackit.xquery.node.linked.LNodeFactory;
+import org.brackit.xquery.node.d2linked.D2NodeFactory;
 import org.brackit.xquery.node.parser.NavigationalSubtreeParser;
 import org.brackit.xquery.node.parser.StreamSubtreeParser;
 import org.brackit.xquery.node.parser.SubtreeParser;
@@ -103,7 +105,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	protected abstract E getNodeInternal(XTCdeweyID deweyID)
 			throws DocumentException;
 
-	protected abstract String getNameInternal() throws DocumentException;
+	protected abstract QNm getNameInternal() throws DocumentException;
 
 	protected abstract void setNameInternal(String name)
 			throws OperationNotSupportedException, DocumentException;
@@ -488,9 +490,9 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	}
 
 	@Override
-	public String getName() throws DocumentException {
+	public QNm getName() throws DocumentException {
 		if ((type != Kind.ELEMENT.ID) && (type != Kind.ATTRIBUTE.ID)) {
-			return "";
+			return null;
 		}
 		return getNameInternal();
 		// TODO extremely fine-grained and expensive!
@@ -1524,7 +1526,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	}
 
 	@Override
-	public E replaceWith(Kind kind, String value)
+	public E replaceWith(Kind kind, QNm name, Atomic value)
 			throws OperationNotSupportedException, DocumentException {
 		if (this.type == Kind.DOCUMENT.ID) {
 			throw new OperationNotSupportedException(
@@ -1601,7 +1603,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		}
 
 		;
-		Node<?> node = (new LNodeFactory()).build(parser);
+		Node<?> node = (new D2NodeFactory()).build(parser);
 		Kind kind = node.getKind();
 
 		if (this.type == Kind.ATTRIBUTE.ID) {

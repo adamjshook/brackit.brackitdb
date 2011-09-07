@@ -27,6 +27,8 @@
  */
 package org.brackit.server.metadata.pathSynopsis;
 
+import org.brackit.xquery.atomic.QNm;
+
 /**
  * @author Sebastian Baechle
  * 
@@ -36,7 +38,7 @@ public interface PSNode {
 
 	public int getVocID();
 
-	public String getName();
+	public QNm getName();
 
 	public int getLevel();
 

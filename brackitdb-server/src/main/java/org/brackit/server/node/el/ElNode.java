@@ -44,6 +44,7 @@ import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.IndexIterator;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.locking.services.MetaLockService;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.ListenMode;
 import org.brackit.xquery.node.parser.StreamSubtreeProcessor;
 import org.brackit.xquery.node.parser.SubtreeListener;
@@ -286,10 +287,8 @@ public class ElNode extends TXNode<ElNode> {
 	}
 
 	@Override
-	public String getNameInternal() throws DocumentException {
-		return ((type == Kind.ELEMENT.ID) || (type == Kind.ATTRIBUTE.ID)) ? psNode
-				.getName()
-				: "";
+	public QNm getNameInternal() throws DocumentException {
+		return psNode.getName();
 	}
 
 	@Override
