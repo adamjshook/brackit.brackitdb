@@ -34,7 +34,7 @@ import org.brackit.xquery.xdm.Kind;
 
 /**
  * This type of node represents a node of the pathsynopsis. Besides the node
- * type, its PCR value (path class reference), vocID (vocabulary ID), level,
+ * type, its PCR value (path class reference), vocIDs (vocabulary IDs), level,
  * XML-tag-"name", occurrences ( not up2date), and average content length
  * avgCntLength is represented.
  * 
@@ -47,7 +47,9 @@ public class PathSynopsisNode implements PSNode {
 
 	protected final int pcr;
 
-	protected final int vocId;
+	protected final int uriVocID;
+	protected final int prefixVocID;
+	protected final int localNameVocID;
 
 	protected final int level;
 
@@ -64,9 +66,12 @@ public class PathSynopsisNode implements PSNode {
 
 	protected PathSynopsisNode[] children;
 
-	public PathSynopsisNode(int vocId, int pcr, QNm name, byte kind,
-			PathSynopsisNode parent, PathSynopsis ps) {
-		this.vocId = vocId;
+	public PathSynopsisNode(int uriVocID, int prefixVocID, int localNameVocID,
+			int pcr, QNm name, byte kind, PathSynopsisNode parent,
+			PathSynopsis ps) {
+		this.uriVocID = uriVocID;
+		this.prefixVocID = prefixVocID;
+		this.localNameVocID = localNameVocID;
 		this.pcr = pcr;
 		this.name = name;
 		this.kind = kind;
@@ -151,10 +156,6 @@ public class PathSynopsisNode implements PSNode {
 		return name;
 	}
 
-	public int getVocID() {
-		return vocId;
-	}
-
 	public PathSynopsis getPathSynopsis() {
 		return this.ps;
 	}
@@ -202,7 +203,9 @@ public class PathSynopsisNode implements PSNode {
 		if (this.getParent() != null) {
 			parentPcr = this.getParent().getPCR();
 		}
-		sBuff.append("PSNode " + this.pcr + "; VocID: " + this.vocId + "; NT: "
+		sBuff.append("PSNode " + this.pcr + "; VocID (URI): " + this.uriVocID
+				+ "; VocID (Prefix): " + this.prefixVocID
+				+ "; VocID (LocalName): " + this.localNameVocID + "; NT: "
 				+ this.kind + "; ");
 		if (parentPcr > 0)
 			sBuff.append("Parent: " + parentPcr + "; ");
@@ -219,5 +222,20 @@ public class PathSynopsisNode implements PSNode {
 			}
 		}
 		return sBuff.toString();
+	}
+
+	@Override
+	public int getURIVocID() {
+		return uriVocID;
+	}
+
+	@Override
+	public int getPrefixVocID() {
+		return prefixVocID;
+	}
+
+	@Override
+	public int getLocalNameVocID() {
+		return localNameVocID;
 	}
 }

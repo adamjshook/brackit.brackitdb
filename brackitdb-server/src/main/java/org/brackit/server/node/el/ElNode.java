@@ -184,12 +184,6 @@ public class ElNode extends TXNode<ElNode> {
 		return (psNode != null) ? psNode.getPCR() : -1;
 	}
 
-	public int getVocID() {
-		return ((type == Kind.ELEMENT.ID) || (type == Kind.ATTRIBUTE.ID)) ? psNode
-				.getVocID()
-				: -1;
-	}
-
 	@Override
 	public ElNode getNodeInternal(XTCdeweyID deweyID) throws DocumentException {
 		ElStore r = locator.collection.store;

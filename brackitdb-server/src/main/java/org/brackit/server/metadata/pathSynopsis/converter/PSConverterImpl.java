@@ -105,11 +105,13 @@ public class PSConverterImpl implements PSConverter {
 							key, value);
 
 					if (log.isDebugEnabled()) {
-						log.debug(String.format(
-								"Read PCR %s VocID %s ParentPCR %s", node
-										.getPCR(), node.getVocID(), (node
-										.getParent() != null) ? node
-										.getParent().getPCR() : null));
+						log.debug(String
+								.format("Read PCR %s URIVocID %s PrefixVocID %s LocalNameVocID %s ParentPCR %s",
+										node.getPCR(), node.getURIVocID(), node
+												.getPrefixVocID(), node
+												.getLocalNameVocID(), (node
+												.getParent() != null) ? node
+												.getParent().getPCR() : null));
 					}
 
 					// check for maximum pcr
@@ -144,14 +146,13 @@ public class PSConverterImpl implements PSConverter {
 		byte[] key = builder.encodeKey(node);
 
 		if (log.isDebugEnabled()) {
-			log
-					.debug(String
-							.format(
-									"Appending PCR %s VocID %s ParentPCR %s to path synopsis %s.",
-									node.getPCR(), node.getVocID(), (node
-											.getParent() != null) ? node
-											.getParent().getPCR() : null,
-									psIdxNo));
+			log.debug(String
+					.format("Appending PCR %s URIVocID %s PrefixVocID %s LocalNameVocID %s ParentPCR %s to path synopsis %s.",
+							node.getPCR(), node.getURIVocID(), node
+									.getPrefixVocID(),
+							node.getLocalNameVocID(),
+							(node.getParent() != null) ? node.getParent()
+									.getPCR() : null, psIdxNo));
 		}
 
 		index.insertPersistent(tx, new PageID(psIdxNo), key, value);
@@ -195,15 +196,15 @@ public class PSConverterImpl implements PSConverter {
 				}
 
 				if (log.isDebugEnabled()) {
-					log
-							.debug(String
-									.format(
-											"Appending PCR %s VocID %s ParentPCR %s to path synopsis %s.",
-											currentNode.getPCR(),
-											currentNode.getVocID(),
-											(currentNode.getParent() != null) ? currentNode
-													.getParent().getPCR()
-													: null, psIdxNo));
+					log.debug(String
+							.format("Appending PCR %s URIVocID %s PrefixVocID %s LocalNameVocID %s ParentPCR %s to path synopsis %s.",
+									currentNode.getPCR(), currentNode
+											.getURIVocID(), currentNode
+											.getPrefixVocID(), currentNode
+											.getLocalNameVocID(), (currentNode
+											.getParent() != null) ? currentNode
+											.getParent().getPCR() : null,
+									psIdxNo));
 				}
 
 				iterator.insertPersistent(key, value);
@@ -237,15 +238,14 @@ public class PSConverterImpl implements PSConverter {
 
 				if (currentPCR < maxStoredPCR) {
 					if (log.isDebugEnabled()) {
-						log
-								.debug(String
-										.format(
-												"Inserting PCR %s VocID %s ParentPCR %s in path synopsis %s.",
-												node.getPCR(),
-												node.getVocID(),
-												(node.getParent() != null) ? node
-														.getParent().getPCR()
-														: null, psIdxNo));
+						log.debug(String
+								.format("Inserting PCR %s URIVocID %s PrefixVocID %s LocalNameVocID %s ParentPCR %s in path synopsis %s.",
+										node.getPCR(), node.getURIVocID(), node
+												.getPrefixVocID(), node
+												.getLocalNameVocID(), (node
+												.getParent() != null) ? node
+												.getParent().getPCR() : null,
+										psIdxNo));
 					}
 
 					index.insertPersistent(tx, new PageID(psIdxNo), key, value);
@@ -259,15 +259,14 @@ public class PSConverterImpl implements PSConverter {
 					}
 
 					if (log.isDebugEnabled()) {
-						log
-								.debug(String
-										.format(
-												"Appending PCR %s VocID %s ParentPCR %s to path synopsis %s.",
-												node.getPCR(),
-												node.getVocID(),
-												(node.getParent() != null) ? node
-														.getParent().getPCR()
-														: null, psIdxNo));
+						log.debug(String
+								.format("Appending PCR %s URIVocID %s PrefixVocID %s LocalNameVocID %s ParentPCR %s to path synopsis %s.",
+										node.getPCR(), node.getURIVocID(), node
+												.getPrefixVocID(), node
+												.getLocalNameVocID(), (node
+												.getParent() != null) ? node
+												.getParent().getPCR() : null,
+										psIdxNo));
 					}
 
 					indexIterator.insertPersistent(key, value);

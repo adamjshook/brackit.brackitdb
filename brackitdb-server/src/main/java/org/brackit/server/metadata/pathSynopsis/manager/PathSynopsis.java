@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.util.path.PathException;
 import org.brackit.xquery.xdm.DocumentException;
@@ -81,11 +82,12 @@ public class PathSynopsis {
 		this.pcrTable = new PathSynopsisNode[20];
 	}
 
-	public PathSynopsisNode getNewNode(int pcr, String name, int vocId,
-			byte kind, PathSynopsisNode parent) {
+	public PathSynopsisNode getNewNode(int pcr, QNm name, int uriVocID,
+			int prefixVocID, int localNameVocID, byte kind,
+			PathSynopsisNode parent) {
 		pathCache.clear();
-		PathSynopsisNode psN = new PathSynopsisNode(vocId, pcr, name, kind,
-				parent, this);
+		PathSynopsisNode psN = new PathSynopsisNode(uriVocID, prefixVocID,
+				localNameVocID, pcr, name, kind, parent, this);
 
 		if (pcr > this.pcr) {
 			this.pcr++;
@@ -116,9 +118,10 @@ public class PathSynopsis {
 		return psN;
 	}
 
-	public PathSynopsisNode getNewNode(String name, int vocId, byte kind,
-			PathSynopsisNode parent, int count) {
-		return getNewNode(++pcr, name, vocId, kind, parent);
+	public PathSynopsisNode getNewNode(QNm name, int uriVocID, int prefixVocID,
+			int localNameVocID, byte kind, PathSynopsisNode parent, int count) {
+		return getNewNode(++pcr, name, uriVocID, prefixVocID, localNameVocID,
+				kind, parent);
 	}
 
 	public PathSynopsisNode getNodeByPcr(int pcr) {
@@ -272,7 +275,7 @@ public class PathSynopsis {
 
 			pcrSet = new HashSet<Integer>();
 
-			Path<String> path = Path.parse(queryString);
+			Path<QNm> path = Path.parse(queryString);
 			boolean isAttributePattern = path.isAttribute();
 			int pathLength = path.getLength();
 
@@ -331,9 +334,14 @@ public class PathSynopsis {
 		}
 
 		StringBuffer buf = levelBuffers.get(node.getLevel() - 1);
-		String str = String.format("[%s:%s]  ", node.getPCR(),
-				(node.getKind() == Kind.ATTRIBUTE.ID) ? "@" + node.getVocID()
-						: node.getVocID());
+		String str = String
+				.format("[%s:%s]  ",
+						node.getPCR(),
+						((node.getKind() == Kind.ATTRIBUTE.ID) ? "@" : "")
+								+ String.format("(%s,%s,%s)",
+										node.getURIVocID(),
+										node.getPrefixVocID(),
+										node.getLocalNameVocID()));
 		buf.append(str);
 
 		if (levelBuffers.size() - 1 > node.getLevel()) // child level exists
