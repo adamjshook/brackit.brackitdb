@@ -36,7 +36,11 @@ import org.brackit.xquery.atomic.QNm;
 public interface PSNode {
 	public int getPCR();
 
-	public int getVocID();
+	public int getURIVocID();
+	
+	public int getPrefixVocID();
+	
+	public int getLocalNameVocID();
 
 	public QNm getName();
 

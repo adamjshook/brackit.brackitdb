@@ -33,6 +33,7 @@ import java.util.Set;
 import org.brackit.server.metadata.pathSynopsis.PSSnapshotBuilder;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.DocumentException;
 
@@ -52,10 +53,10 @@ public interface PathSynopsisMgr {
 	 */
 	public PathSynopsisMgr spawnBulkPsManager(Tx tx) throws DocumentException;
 
-	public Set<Integer> getPCRsForPaths(Tx tx, Collection<Path<String>> paths)
+	public Set<Integer> getPCRsForPaths(Tx tx, Collection<Path<QNm>> paths)
 			throws DocumentException;
 
-	public Set<Integer> match(Tx tx, Path<String> path)
+	public Set<Integer> match(Tx tx, Path<QNm> path)
 			throws DocumentException;
 
 	public PSNode get(Tx tx, int pcr) throws DocumentException;

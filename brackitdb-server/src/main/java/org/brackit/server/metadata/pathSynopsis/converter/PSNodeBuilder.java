@@ -32,6 +32,7 @@ import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisNode;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.util.Calc;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.xdm.DocumentException;
 
 /**
@@ -44,18 +45,28 @@ public class PSNodeBuilder extends PSNodeRecordAccess {
 	public PathSynopsisNode decode(Tx tx, DictionaryMgr dictionary,
 			PathSynopsis ps, byte[] key, byte[] value) throws DocumentException {
 		PathSynopsisNode parent = null;
-		int[] info = decode(value[0]);
 		int pcr = Calc.toUIntVar(key);
-		int type = info[0];
-		int vocID = Calc.toInt(value, 1, info[1]);
+		int type = value[0];
+		int[] info = decodeLengthByte(value[1]);
+		int offset = 2;
+		int uriVocID = Calc.toInt(value, offset, info[0]);
+		offset += info[0];
+		int prefixVocID = Calc.toInt(value, offset, info[1]);
+		offset += info[1];
+		int localNameVocID = Calc.toInt(value, offset, info[2]);
+		offset += info[2];
 
-		if (info[2] != 0) {
-			int parentPCR = Calc.toInt(value, 1 + info[1], info[2]);
+		if (info[3] != 0) {
+			int parentPCR = Calc.toInt(value, offset, info[3]);
 			parent = ps.getNodeByPcr(parentPCR);
 		}
 
-		String name = dictionary.resolve(tx, vocID);
-		PathSynopsisNode node = ps.getNewNode(pcr, name, vocID, (byte) type,
+		String URI = dictionary.resolve(tx, uriVocID);
+		String prefix = dictionary.resolve(tx, prefixVocID);
+		String localName = dictionary.resolve(tx, localNameVocID);
+
+		PathSynopsisNode node = ps.getNewNode(pcr, new QNm(URI, prefix,
+				localName), uriVocID, prefixVocID, localNameVocID, (byte) type,
 				parent);
 
 		return node;

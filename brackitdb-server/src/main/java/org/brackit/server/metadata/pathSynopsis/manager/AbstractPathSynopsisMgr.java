@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.metadata.pathSynopsis.PSSnapshotBuilder;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
@@ -63,15 +64,15 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 
 	protected final PathSynopsis ps;
 
-	protected final SimpleLockService<Path<String>> ls;
+	protected final SimpleLockService<Path<QNm>> ls;
 
 	public AbstractPathSynopsisMgr(PSConverter psc,
 			DictionaryMgr dictionaryMgr, PathSynopsis ps) {
 		this.dictionaryMgr = dictionaryMgr;
 		this.psc = psc;
 		this.ps = ps;
-		this.ls = new SimpleLockService<Path<String>>(PathSynopsis.class
-				.getSimpleName());
+		this.ls = new SimpleLockService<Path<QNm>>(
+				PathSynopsis.class.getSimpleName());
 	}
 
 	@Override
@@ -117,9 +118,9 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 		}
 
 		try {
-			Path<String> path = null;
+			Path<QNm> path = null;
 
-			for (Path<String> pattern : ls.getLockedResources()) {
+			for (Path<QNm> pattern : ls.getLockedResources()) {
 				if (path == null) {
 					path = node.getPath();
 				}
@@ -162,10 +163,10 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 	}
 
 	@Override
-	public Set<Integer> getPCRsForPaths(Tx tx,
-			Collection<Path<String>> expressions) throws DocumentException {
+	public Set<Integer> getPCRsForPaths(Tx tx, Collection<Path<QNm>> expressions)
+			throws DocumentException {
 		HashSet<Integer> pcrs = new HashSet<Integer>();
-		for (Path<String> path : expressions) {
+		for (Path<QNm> path : expressions) {
 			Set<Integer> pcrsForPath = match(tx, path);
 			pcrs.addAll(pcrsForPath);
 		}
@@ -173,8 +174,7 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 	}
 
 	@Override
-	public Set<Integer> match(Tx tx, Path<String> path)
-			throws DocumentException {
+	public Set<Integer> match(Tx tx, Path<QNm> path) throws DocumentException {
 		try {
 			try {
 				ls.lock(tx, path, LockClass.COMMIT_DURATION, true);
@@ -282,8 +282,12 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 
 	private void buildPathSynopsisSnapshot(PathSynopsisNode root, Tx tx,
 			PSSnapshotBuilder builder) throws DocumentException {
-		builder.startNode(root.getPCR(), root.getVocID(), dictionaryMgr
-				.resolve(tx, root.getVocID()), root.getKind());
+		builder.startNode(root.getPCR(), root.getURIVocID(), root
+				.getPrefixVocID(), root.getLocalNameVocID(),
+				new QNm(dictionaryMgr.resolve(tx, root.getURIVocID()),
+						dictionaryMgr.resolve(tx, root.getPrefixVocID()),
+						dictionaryMgr.resolve(tx, root.getLocalNameVocID())),
+				root.getKind());
 
 		for (PathSynopsisNode child : root.getChildren()) {
 			buildPathSynopsisSnapshot(child, tx, builder);

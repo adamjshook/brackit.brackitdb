@@ -45,70 +45,80 @@ public class PSNodeRecordAccess {
 	// TODO: encode root's parent pcr with 0 instead of "null" and skip length
 	// encoding zero-length!
 	public byte[] encodeValue(PathSynopsisNode node) {
-		byte[] vocID = Calc.fromUIntVar(node.getVocID());
+		byte[] uriVocID = Calc.fromUIntVar(node.getURIVocID());
+		byte[] prefixVocID = Calc.fromUIntVar(node.getPrefixVocID());
+		byte[] localNameVocID = Calc.fromUIntVar(node.getLocalNameVocID());
 		PathSynopsisNode parent = node.getParent();
 		byte[] parentPCR = (parent != null) ? Calc.fromUIntVar(parent.getPCR())
 				: null;
 
-		int vLength = vocID.length;
+		int vLength1 = uriVocID.length;
+		int vLength2 = prefixVocID.length;
+		int vLength3 = localNameVocID.length;
 		int pLength = (parentPCR != null) ? parentPCR.length : 0;
-		byte[] nodeBytes = new byte[1 + vLength + pLength];
+		byte[] nodeBytes = new byte[2 + vLength1 + vLength2 + vLength3 + pLength];
 
-		int pos = 1;
-		System.arraycopy(vocID, 0, nodeBytes, pos, vLength);
-		pos += vLength;
+		int pos = 2;
+		System.arraycopy(uriVocID, 0, nodeBytes, pos, vLength1);
+		pos += vLength1;
+		System.arraycopy(prefixVocID, 0, nodeBytes, pos, vLength2);
+		pos += vLength2;
+		System.arraycopy(localNameVocID, 0, nodeBytes, pos, vLength3);
+		pos += vLength3;
 
 		if (parentPCR != null) {
 			System.arraycopy(parentPCR, 0, nodeBytes, pos, pLength);
 			pos += pLength;
 		}
 
-		nodeBytes[0] = encode(node.getKind(), vLength, pLength);
+		nodeBytes[0] = node.getKind();
+		nodeBytes[1] = encodeLengthByte(vLength1, vLength2, vLength3, pLength);
 
 		return nodeBytes;
 	}
-
-	protected byte encode(byte nodeType, int vocIdLength, int parentPcrLength) {
-		// vocIDLength and countLength must be greater than 0 !! therefore shift
-		// the bit in the infoByte!
-		vocIdLength -= 1;
-
-		int infoByte = 0;
-		infoByte |= (nodeType << 4);
-		infoByte |= (vocIdLength << 2);
-		infoByte |= (parentPcrLength);
-		return (byte) infoByte;
+	
+	protected byte encodeLengthByte(int uriVocIdLength, int prefixVocIdLength, int localNameVocIdLength, int parentPcrLength) {
+		uriVocIdLength--;
+		prefixVocIdLength--;
+		localNameVocIdLength--;
+		
+		int lengthByte = 0;
+		lengthByte |= (uriVocIdLength << 6);
+		lengthByte |= (prefixVocIdLength << 4);
+		lengthByte |= (localNameVocIdLength << 2);
+		lengthByte |= (parentPcrLength);
+		return (byte) lengthByte;
 	}
-
-	protected static int[] decode(byte infoByte) {
-		int[] info = new int[4];
-		info[3] = ((infoByte >> 6) & 3);
-		info[0] = ((infoByte >> 4) & 3);
-		info[1] = ((infoByte >> 2) & 3);
-		info[2] = ((infoByte) & 3);
-
-		// vocIDLength and countLength must be greater than 0 !! therefore shift
-		// the bit in the infoByte!
-		info[3] += 1;
-		info[1] += 1;
-
-		return info;
+	
+	protected static int[] decodeLengthByte(byte lengthByte) {
+		return new int[] {
+				((lengthByte >> 6) & 3) + 1,
+				((lengthByte >> 4) & 3) + 1,
+				((lengthByte >> 2) & 3) + 1,
+				((lengthByte) & 3)
+		};
 	}
 
 	public static String valueToString(byte[] value) {
-		int[] info = decode(value[0]);
-		int type = info[0];
-		int vocID = Calc.toInt(value, 1, info[1]);
+		int type = value[0];
+		int[] info = decodeLengthByte(value[1]);
+		int offset = 2;
+		int uriVocID = Calc.toInt(value, offset, info[0]);
+		offset += info[0];
+		int prefixVocID = Calc.toInt(value, offset, info[1]);
+		offset += info[1];
+		int localNameVocID = Calc.toInt(value, offset, info[2]);
+		offset += info[2];
 		int parentPCR = -1;
 
-		if (info[2] != 0) {
-			parentPCR = Calc.toInt(value, 1 + info[1], info[2]);
+		if (info[3] != 0) {
+			parentPCR = Calc.toInt(value, offset, info[3]);
 		}
 
 		if (type == Kind.ELEMENT.ID) {
-			return String.format("%s(parent:%s)", vocID, parentPCR);
+			return String.format("(%s,%s,%s)(parent:%s)", uriVocID, prefixVocID, localNameVocID, parentPCR);
 		} else {
-			return String.format("@%s(parent:%s)", vocID, parentPCR);
+			return String.format("@(%s,%s,%s)(parent:%s)", uriVocID, prefixVocID, localNameVocID, parentPCR);
 		}
 	}
 }
