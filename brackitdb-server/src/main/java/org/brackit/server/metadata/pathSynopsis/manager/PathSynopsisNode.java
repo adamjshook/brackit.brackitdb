@@ -113,9 +113,12 @@ public class PathSynopsisNode implements PSNode {
 	 *            - type of node
 	 * @return found node
 	 */
-	public PathSynopsisNode hasChild(int vocId, byte nodeType) {
+	public PathSynopsisNode hasChild(int uriVocID, int prefixVocID,
+			int localNameVocID, byte nodeType) {
 		for (PathSynopsisNode child : children) {
-			if (child.getKind() == nodeType && child.getVocID() == vocId) {
+			if (child.getKind() == nodeType && child.getURIVocID() == uriVocID
+					&& child.getPrefixVocID() == prefixVocID
+					&& child.getLocalNameVocID() == localNameVocID) {
 				return child;
 			}
 		}

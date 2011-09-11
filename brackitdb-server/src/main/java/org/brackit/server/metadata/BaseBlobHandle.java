@@ -41,6 +41,8 @@ import org.brackit.server.node.txnode.Persistor;
 import org.brackit.server.store.blob.BlobStore;
 import org.brackit.server.store.blob.BlobStoreAccessException;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.node.parser.FragmentHelper;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Node;
@@ -56,9 +58,9 @@ import org.brackit.xquery.xdm.Stream;
 public class BaseBlobHandle implements BlobHandle, Materializable {
 	public static final String BLOB_TAG = "blob";
 
-	public static final String ID_ATTRIBUTE = "id";
+	public static final QNm ID_ATTRIBUTE = new QNm("id");
 
-	public static final String NAME_ATTRIBUTE = "name";
+	public static final QNm NAME_ATTRIBUTE = new QNm("name");
 
 	protected final BlobStore store;
 
@@ -206,9 +208,9 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 
 	@Override
 	public void init(Node<?> root) throws DocumentException {
-		name = root.getAttributeValue(NAME_ATTRIBUTE);
-		docID = new DocID(Integer
-				.parseInt(root.getAttributeValue(ID_ATTRIBUTE)));
+		name = root.getAttribute(NAME_ATTRIBUTE).getValue().stringValue();
+		docID = new DocID(Integer.parseInt(root.getAttribute(ID_ATTRIBUTE)
+				.getValue().stringValue()));
 
 		Stream<? extends Node<?>> children = root.getChildren();
 
@@ -228,8 +230,8 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	@Override
 	public Node<?> materialize() throws DocumentException {
 		FragmentHelper helper = new FragmentHelper();
-		helper.openElement(BLOB_TAG).attribute(ID_ATTRIBUTE, docID.toString())
-				.attribute(NAME_ATTRIBUTE, name);
+		helper.openElement(BLOB_TAG).attribute(ID_ATTRIBUTE,
+				new Una(docID.toString())).attribute(NAME_ATTRIBUTE, new Una(name));
 		if (materializables != null) {
 			for (Materializable materializable : materializables.values()) {
 				helper.insert(materializable.materialize());
