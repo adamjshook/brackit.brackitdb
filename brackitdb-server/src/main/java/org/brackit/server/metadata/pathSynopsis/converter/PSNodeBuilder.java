@@ -49,9 +49,9 @@ public class PSNodeBuilder extends PSNodeRecordAccess {
 		int type = value[0];
 		int[] info = decodeLengthByte(value[1]);
 		int offset = 2;
-		int uriVocID = Calc.toInt(value, offset, info[0]);
+		int uriVocID = (info[0] == 0 ? -1 : Calc.toInt(value, offset, info[0]));
 		offset += info[0];
-		int prefixVocID = Calc.toInt(value, offset, info[1]);
+		int prefixVocID = (info[1] == 0 ? -1 : Calc.toInt(value, offset, info[1]));
 		offset += info[1];
 		int localNameVocID = Calc.toInt(value, offset, info[2]);
 		offset += info[2];
@@ -61,8 +61,8 @@ public class PSNodeBuilder extends PSNodeRecordAccess {
 			parent = ps.getNodeByPcr(parentPCR);
 		}
 
-		String URI = dictionary.resolve(tx, uriVocID);
-		String prefix = dictionary.resolve(tx, prefixVocID);
+		String URI = (uriVocID != -1 ? dictionary.resolve(tx, uriVocID) : "");
+		String prefix = (prefixVocID != -1 ? dictionary.resolve(tx, prefixVocID) : null);
 		String localName = dictionary.resolve(tx, localNameVocID);
 
 		PathSynopsisNode node = ps.getNewNode(pcr, new QNm(URI, prefix,

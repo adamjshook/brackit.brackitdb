@@ -45,8 +45,8 @@ public class PSNodeRecordAccess {
 	// TODO: encode root's parent pcr with 0 instead of "null" and skip length
 	// encoding zero-length!
 	public byte[] encodeValue(PathSynopsisNode node) {
-		byte[] uriVocID = Calc.fromUIntVar(node.getURIVocID());
-		byte[] prefixVocID = Calc.fromUIntVar(node.getPrefixVocID());
+		byte[] uriVocID = (node.getURIVocID() != -1 ? Calc.fromUIntVar(node.getURIVocID()) : new byte[0]);
+		byte[] prefixVocID = (node.getPrefixVocID() != -1 ? Calc.fromUIntVar(node.getPrefixVocID()) : new byte[0]);
 		byte[] localNameVocID = Calc.fromUIntVar(node.getLocalNameVocID());
 		PathSynopsisNode parent = node.getParent();
 		byte[] parentPCR = (parent != null) ? Calc.fromUIntVar(parent.getPCR())
@@ -78,9 +78,11 @@ public class PSNodeRecordAccess {
 	}
 	
 	protected byte encodeLengthByte(int uriVocIdLength, int prefixVocIdLength, int localNameVocIdLength, int parentPcrLength) {
-		uriVocIdLength--;
-		prefixVocIdLength--;
 		localNameVocIdLength--;
+		
+		if (uriVocIdLength > 3 || prefixVocIdLength > 3 || localNameVocIdLength > 3 || parentPcrLength > 3) {
+			throw new RuntimeException("VocID Overflow!");
+		}
 		
 		int lengthByte = 0;
 		lengthByte |= (uriVocIdLength << 6);
@@ -92,8 +94,8 @@ public class PSNodeRecordAccess {
 	
 	protected static int[] decodeLengthByte(byte lengthByte) {
 		return new int[] {
-				((lengthByte >> 6) & 3) + 1,
-				((lengthByte >> 4) & 3) + 1,
+				((lengthByte >> 6) & 3),
+				((lengthByte >> 4) & 3),
 				((lengthByte >> 2) & 3) + 1,
 				((lengthByte) & 3)
 		};
@@ -103,9 +105,9 @@ public class PSNodeRecordAccess {
 		int type = value[0];
 		int[] info = decodeLengthByte(value[1]);
 		int offset = 2;
-		int uriVocID = Calc.toInt(value, offset, info[0]);
+		int uriVocID = (info[0] == 0 ? -1 : Calc.toInt(value, offset, info[0]));
 		offset += info[0];
-		int prefixVocID = Calc.toInt(value, offset, info[1]);
+		int prefixVocID = (info[1] == 0 ? -1 : Calc.toInt(value, offset, info[1]));
 		offset += info[1];
 		int localNameVocID = Calc.toInt(value, offset, info[2]);
 		offset += info[2];

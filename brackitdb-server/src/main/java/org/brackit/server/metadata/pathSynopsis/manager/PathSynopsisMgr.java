@@ -56,8 +56,7 @@ public interface PathSynopsisMgr {
 	public Set<Integer> getPCRsForPaths(Tx tx, Collection<Path<QNm>> paths)
 			throws DocumentException;
 
-	public Set<Integer> match(Tx tx, Path<QNm> path)
-			throws DocumentException;
+	public Set<Integer> match(Tx tx, Path<QNm> path) throws DocumentException;
 
 	public PSNode get(Tx tx, int pcr) throws DocumentException;
 
@@ -72,8 +71,8 @@ public interface PathSynopsisMgr {
 	 * <code>nodeType</code> of pcr <code>parentPcr</code>. If such a child does
 	 * not exist it is created and the new PCR is returned.
 	 */
-	public PSNode getChild(Tx tx, int parentPcr, int vocID, byte kind)
-			throws DocumentException;
+	public PSNode getChild(Tx tx, int parentPcr, int uriVocID, int prefixVocID,
+			int localNameVocID, byte kind) throws DocumentException;
 
 	/**
 	 * Allows to make a snapshot of the path synopsis containing relevant meta

@@ -86,8 +86,8 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 	}
 
 	@Override
-	public PSNode getChild(Tx tx, int parentPcr, int vocID, byte kind)
-			throws DocumentException {
+	public PSNode getChild(Tx tx, int parentPcr, int uriVocID, int prefixVocID,
+			int localNameVocID, byte kind) throws DocumentException {
 		PathSynopsisNode node;
 
 		synchronized (ps) {
@@ -97,7 +97,10 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 				parent = getNode(ps, parentPcr);
 
 				for (PathSynopsisNode child : parent.children) {
-					if ((child.vocId == vocID) && (child.kind == kind)) {
+					if ((child.uriVocID == uriVocID)
+							&& (child.prefixVocID == prefixVocID)
+							&& (child.localNameVocID == localNameVocID)
+							&& (child.kind == kind)) {
 						if (!child.isStored()) {
 							addNodeToTaList(tx, ps, child);
 						}
@@ -106,14 +109,22 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 				}
 			} else {
 				for (PathSynopsisNode root : ps.getRoots()) {
-					if ((root.vocId == vocID) && (root.kind == kind)) {
+					if ((root.uriVocID == uriVocID)
+							&& (root.prefixVocID == prefixVocID)
+							&& (root.localNameVocID == localNameVocID)
+							&& (root.kind == kind)) {
 						return root;
 					}
 				}
 			}
 
-			String name = dictionaryMgr.resolve(tx, vocID);
-			node = ps.getNewNode(name, vocID, kind, parent, 0);
+			String URI = (uriVocID != -1 ? dictionaryMgr.resolve(tx, uriVocID)
+					: "");
+			String prefix = (prefixVocID != -1 ? dictionaryMgr.resolve(tx,
+					prefixVocID) : null);
+			String localName = dictionaryMgr.resolve(tx, localNameVocID);
+			node = ps.getNewNode(new QNm(URI, prefix, localName), uriVocID,
+					prefixVocID, localNameVocID, kind, parent, 0);
 			addNodeToTaList(tx, ps, node);
 		}
 

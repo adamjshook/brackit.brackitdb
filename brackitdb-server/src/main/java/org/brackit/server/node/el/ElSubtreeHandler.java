@@ -64,8 +64,8 @@ public class ElSubtreeHandler extends SubtreeBuilder<ElNode> {
 	protected ElNode buildElement(ElNode parent, String name, XTCdeweyID deweyID)
 			throws DocumentException {
 		int vocID = dictionary.translate(tx, name);
-		PSNode psNode = psMgr.getChild(tx, parent.getPCR(), vocID,
-				Kind.ELEMENT.ID);
+		PSNode psNode = psMgr.getChild(tx, parent.getPCR(), XXX,
+				XXX, XXX, Kind.ELEMENT.ID);
 		return new ElNode(locator, deweyID, Kind.ELEMENT.ID, null, psNode);
 	}
 
@@ -79,8 +79,8 @@ public class ElSubtreeHandler extends SubtreeBuilder<ElNode> {
 	protected ElNode buildAttribute(ElNode parent, String name, String value,
 			XTCdeweyID deweyID) throws DocumentException {
 		int vocID = dictionary.translate(tx, name);
-		PSNode psNode = psMgr.getChild(tx, parent.getPCR(), vocID,
-				Kind.ATTRIBUTE.ID);
+		PSNode psNode = psMgr.getChild(tx, parent.getPCR(), XXX,
+				XXX, XXX, Kind.ATTRIBUTE.ID);
 		return new ElNode(locator, deweyID, Kind.ATTRIBUTE.ID, value, psNode);
 	}
 
