@@ -32,6 +32,7 @@ import java.util.List;
 import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.store.SearchMode;
 import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.stream.filter.Filter;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.DocumentException;
@@ -94,13 +95,13 @@ public interface IndexController<E extends Node<E>> {
 			boolean includeMin, boolean includeMax, SearchMode searchMode)
 			throws DocumentException;
 
-	public Filter<E> createPathFilter(List<Path<String>> paths)
+	public Filter<E> createPathFilter(List<Path<QNm>> paths)
 			throws DocumentException;
 
 	public Filter<E> createPathFilter(String... queryString)
 			throws DocumentException;
 
-	public Filter<E> createCASFilter(List<Path<String>> paths)
+	public Filter<E> createCASFilter(List<Path<QNm>> paths)
 			throws DocumentException;
 
 	public Filter<E> createCASFilter(String... queryString)

@@ -218,7 +218,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 			Node<?> child;
 			while ((child = children.next()) != null) {
 				Materializable materializable = MaterializableFactory
-						.getInstance().create(child.getName());
+						.getInstance().create(child.getName().stringValue());
 				materializable.init(child);
 				set(materializable);
 			}

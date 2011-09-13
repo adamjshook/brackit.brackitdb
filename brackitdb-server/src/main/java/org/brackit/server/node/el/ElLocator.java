@@ -72,7 +72,7 @@ public final class ElLocator {
 
 		if ((dist == 1)) {
 			return new ElNode(this, deweyID, ElRecordAccess.getType(record),
-					ElRecordAccess.getValue(record), psn);
+					ElRecordAccess.getTypedValue(record), psn);
 		} else if (dist <= 0) {
 			while (dist++ < 0) {
 				psn = psn.getParent();

@@ -46,6 +46,7 @@ import org.brackit.server.store.Field;
 import org.brackit.server.store.SearchMode;
 import org.brackit.server.tx.TxException;
 import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.ListenMode;
 import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.node.stream.filter.Filter;
@@ -139,9 +140,9 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 			// convert request for content index to generic cas index
 			idxDef.setType(IndexType.CAS);
 			if (idxDef.isElementContent())
-				idxDef.addPath((new Path<String>()).descendant("*"));
+				idxDef.addPath((new Path<QNm>()).descendant(new QNm("*")));
 			if (idxDef.isAttributeContent())
-				idxDef.addPath((new Path<String>()).descendantAttribute("*"));
+				idxDef.addPath((new Path<QNm>()).descendantAttribute(new QNm("*")));
 		case CAS:
 			encoder = (idxDef.getClustering() == Cluster.SPLID) ? new SplidClusterEncoder(
 					collection, idxDef.getContentType())
@@ -246,7 +247,7 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 	@Override
 	public Filter<ElNode> createCASFilter(String... queryString)
 			throws DocumentException {
-		List<Path<String>> paths = new ArrayList<Path<String>>(
+		List<Path<QNm>> paths = new ArrayList<Path<QNm>>(
 				queryString.length);
 		for (String path : queryString)
 			paths.add(Path.parse(path));
@@ -256,7 +257,7 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 	@Override
 	public Filter<ElNode> createPathFilter(String... queryString)
 			throws DocumentException {
-		List<Path<String>> paths = new ArrayList<Path<String>>(
+		List<Path<QNm>> paths = new ArrayList<Path<QNm>>(
 				queryString.length);
 		for (String path : queryString)
 			paths.add(Path.parse(path));
@@ -264,14 +265,14 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 	}
 
 	@Override
-	public Filter<ElNode> createCASFilter(List<Path<String>> paths)
+	public Filter<ElNode> createCASFilter(List<Path<QNm>> paths)
 			throws DocumentException {
-		return new ElPathFilter(new ArrayList<Path<String>>(paths), collection);
+		return new ElPathFilter(new ArrayList<Path<QNm>>(paths), collection);
 	}
 
 	@Override
-	public Filter<ElNode> createPathFilter(List<Path<String>> paths)
+	public Filter<ElNode> createPathFilter(List<Path<QNm>> paths)
 			throws DocumentException {
-		return new ElPathFilter(new ArrayList<Path<String>>(paths), collection);
+		return new ElPathFilter(new ArrayList<Path<QNm>>(paths), collection);
 	}
 }

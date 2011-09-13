@@ -159,7 +159,7 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 			Node<?> child;
 			while ((child = children.next()) != null) {
 				Materializable materializable = MaterializableFactory
-						.getInstance().create(child.getName());
+						.getInstance().create(child.getName().stringValue());
 				materializable.init(child);
 				set(materializable);
 			}

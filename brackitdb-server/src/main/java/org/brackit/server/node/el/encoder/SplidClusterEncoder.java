@@ -35,6 +35,7 @@ import org.brackit.server.node.el.ElNode;
 import org.brackit.server.node.index.AtomicUtil;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.store.Field;
+import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
 import org.brackit.xquery.xdm.Type;
@@ -75,7 +76,7 @@ public class SplidClusterEncoder implements IndexEncoder<ElNode> {
 			pcr = Field.DEWEYIDPCR.decodePCR(value);
 		}
 
-		String content = decodeContent(key, value);
+		Atomic content = decodeContent(key, value);
 		ElLocator locator = document.getLocator();
 		byte type = (deweyID.isAttribute()) ? Kind.ATTRIBUTE.ID : Kind.TEXT.ID;
 		PSNode psNode = locator.pathSynopsis.get(collection.getTX(), pcr);
@@ -85,7 +86,7 @@ public class SplidClusterEncoder implements IndexEncoder<ElNode> {
 
 	@Override
 	public byte[] encodeKey(ElNode node) throws DocumentException {
-		String content = node.getValue();
+		Atomic content = node.getValue();
 		return AtomicUtil.toBytes(content, type);
 	}
 
@@ -99,9 +100,9 @@ public class SplidClusterEncoder implements IndexEncoder<ElNode> {
 		}
 	}
 
-	private String decodeContent(byte[] key, byte[] value)
+	private Atomic decodeContent(byte[] key, byte[] value)
 			throws DocumentException {
-		return AtomicUtil.fromBytes(key, type).stringValue();
+		return AtomicUtil.fromBytes(key, type);
 	}
 
 	@Override
