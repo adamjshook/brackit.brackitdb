@@ -30,6 +30,9 @@ package org.brackit.server.node.el;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.el.index.ElPlaceHolderHelper;
 import org.brackit.server.util.Calc;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.Str;
+import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.xdm.Kind;
 
 /**
@@ -78,6 +81,18 @@ public class ElRecordAccess implements ElPlaceHolderHelper {
 		}
 
 		return value;
+	}
+	
+	public final static Atomic getTypedValue(byte[] physicalRecord) {
+		String untypedValue = getValue(physicalRecord);
+		byte type = getType(physicalRecord);
+		
+		// default type mapping
+		if (type == Kind.COMMENT.ID || type == Kind.PROCESSING_INSTRUCTION.ID) {
+			return new Str(untypedValue);
+		} else {
+			return new Una(untypedValue);
+		}
 	}
 
 	public static final byte[] createRecord(int PCR, byte type, String value) {

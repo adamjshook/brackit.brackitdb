@@ -60,6 +60,7 @@ import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxMgr;
 import org.brackit.server.tx.locking.services.MetaLockService;
 import org.brackit.server.tx.locking.services.UnifiedMetaLockService;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.node.parser.SubtreeParser;
@@ -172,7 +173,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			return collection;
 		}
 
-		Path<String> path = asPath(storedNamePath);
+		Path<QNm> path = asPath(storedNamePath);
 		Item<Directory> item = getItemByPath(tx, path, false);
 
 		if (!(item instanceof Document)) {
@@ -185,7 +186,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 	public DBItem<?> getItem(Tx tx, String storedNamePath)
 			throws ItemNotFoundException, DocumentException {
-		Path<String> path = asPath(storedNamePath);
+		Path<QNm> path = asPath(storedNamePath);
 		Item<Directory> item = getItemByPath(tx, path, true); // pick item on DB
 
 		if (item instanceof Document) {
@@ -206,7 +207,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 
 		// store persistent document
-		Path<String> path = asPath(name);
+		Path<QNm> path = asPath(name);
 		name = path.toString();
 		Item<Directory> item = getItemByPath(tx, path.leading(), false);
 
@@ -242,7 +243,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 
 		// store persistent document
-		Path<String> path = asPath(name);
+		Path<QNm> path = asPath(name);
 		name = path.toString();
 		Item<Directory> item = getItemByPath(tx, path.leading(), false);
 
@@ -273,7 +274,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		return collection;
 	}
 
-	private void assertInsertion(Tx tx, Path<String> path, Directory parent)
+	private void assertInsertion(Tx tx, Path<QNm> path, Directory parent)
 			throws MetaDataException, DocumentException {
 		Node<?> parentNode = parent.getMasterDocNode();
 
@@ -299,7 +300,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 
 		// Check if persisted object exists
-		String name = path.tail();
+		QNm name = path.tail();
 		IndexController<ElNode> indexController = mdCollection.copyFor(tx)
 				.getIndexController();
 		Stream<? extends Node<?>> stream = indexController.openCASIndex(
@@ -358,9 +359,9 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		return collection;
 	}
 
-	private Path<String> asPath(String path) throws MetaDataException {
+	private Path<QNm> asPath(String path) throws MetaDataException {
 		try {
-			Path<String> p = Path.parse(path);
+			Path<QNm> p = Path.parse(path);
 
 			if (p.isRelative()) {
 				p = p.trailing();
@@ -372,7 +373,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 	}
 
-	private Item<Directory> getItemByPath(Tx tx, Path<String> path,
+	private Item<Directory> getItemByPath(Tx tx, Path<QNm> path,
 			boolean forUpdate) throws ItemNotFoundException, MetaDataException,
 			DocumentException {
 		if (!path.isAbsolute() || path.isAttribute()) {
@@ -386,7 +387,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			item = itemCache.get(tx, path.toString());
 
 			if (item == null) {
-				for (Path<String> currentPath : path.explode()) {
+				for (Path<QNm> currentPath : path.explode()) {
 					if ((parent != null) && (!(parent instanceof Directory))) {
 						throw new MetaDataException(
 								"%s is not a directory.: %s", parent.getName(),
@@ -446,11 +447,11 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			throw new ItemNotFoundException("ID %s does not exist.", id);
 		}
 
-		Path<String> path = asPath(name);
+		Path<QNm> path = asPath(name);
 		return getItemByPath(tx, path, forUpdate);
 	}
 
-	private Item<Directory> loadItem(Tx tx, Directory parent, Path<String> path)
+	private Item<Directory> loadItem(Tx tx, Directory parent, Path<QNm> path)
 			throws ItemNotFoundException, MetaDataException, DocumentException {
 		Item<Directory> item = null;
 		TXNode<?> itemRoot = null;
@@ -530,7 +531,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			log.debug(String.format("Creating directory %s.", name));
 		}
 
-		Path<String> path = asPath(name);
+		Path<QNm> path = asPath(name);
 		Item<Directory> item = getItemByPath(tx, path.leading(), false);
 
 		if (!(item instanceof Directory)) {
@@ -549,7 +550,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 	@Override
 	public void drop(Tx tx, String storedNamePath) throws DocumentException {
-		Path<String> path = asPath(storedNamePath);
+		Path<QNm> path = asPath(storedNamePath);
 		Item<Directory> item = getItemByPath(tx, path, true);
 		deleteItem(tx, item);
 	}
@@ -664,7 +665,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	@Override
 	public BlobHandle getBlob(Tx tx, String storedBlobPath)
 			throws DocumentException {
-		Path<String> path = asPath(storedBlobPath);
+		Path<QNm> path = asPath(storedBlobPath);
 		Item<Directory> item = getItemByPath(tx, path, false);
 
 		if (!(item instanceof Blob)) {
@@ -708,7 +709,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	@Override
 	public boolean isDirectory(Tx tx, String storedNamePath)
 			throws DocumentException {
-		Path<String> path = asPath(storedNamePath);
+		Path<QNm> path = asPath(storedNamePath);
 		Item<Directory> item;
 		try {
 			item = getItemByPath(tx, path, false);
@@ -731,7 +732,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 
 		// store persistent blob
-		Path<String> path = asPath(storedNamePath);
+		Path<QNm> path = asPath(storedNamePath);
 		String name = path.toString();
 		Item<Directory> item = getItemByPath(tx, path.leading(), false);
 

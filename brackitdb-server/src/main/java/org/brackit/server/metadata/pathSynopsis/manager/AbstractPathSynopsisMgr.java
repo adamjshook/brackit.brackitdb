@@ -199,7 +199,7 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 		}
 
 		synchronized (ps) {
-			Set<Integer> pcrsForPath = ps.getPCRsForPath(tx, path.toString());
+			Set<Integer> pcrsForPath = ps.getPCRsForPath(tx, path);
 			return pcrsForPath;
 		}
 	}

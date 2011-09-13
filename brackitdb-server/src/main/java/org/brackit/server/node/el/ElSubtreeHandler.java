@@ -33,6 +33,8 @@ import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.txnode.SubtreeBuilder;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
@@ -61,38 +63,46 @@ public class ElSubtreeHandler extends SubtreeBuilder<ElNode> {
 	}
 
 	@Override
-	protected ElNode buildElement(ElNode parent, String name, XTCdeweyID deweyID)
+	protected ElNode buildElement(ElNode parent, QNm name, XTCdeweyID deweyID)
 			throws DocumentException {
-		int vocID = dictionary.translate(tx, name);
-		PSNode psNode = psMgr.getChild(tx, parent.getPCR(), XXX,
-				XXX, XXX, Kind.ELEMENT.ID);
+		int uriVocID = (name.nsURI.isEmpty() ? -1 : dictionary.translate(tx,
+				name.nsURI));
+		int prefixVocID = (name.prefix == null ? -1 : dictionary.translate(tx,
+				name.prefix));
+		int localNameVocID = dictionary.translate(tx, name.localName);
+		PSNode psNode = psMgr.getChild(tx, parent.getPCR(), uriVocID,
+				prefixVocID, localNameVocID, Kind.ELEMENT.ID);
 		return new ElNode(locator, deweyID, Kind.ELEMENT.ID, null, psNode);
 	}
 
 	@Override
-	protected ElNode buildText(ElNode parent, String text, XTCdeweyID deweyID)
+	protected ElNode buildText(ElNode parent, Atomic text, XTCdeweyID deweyID)
 			throws DocumentException {
 		return new ElNode(locator, deweyID, Kind.TEXT.ID, text, parent.psNode);
 	}
 
 	@Override
-	protected ElNode buildAttribute(ElNode parent, String name, String value,
+	protected ElNode buildAttribute(ElNode parent, QNm name, Atomic value,
 			XTCdeweyID deweyID) throws DocumentException {
-		int vocID = dictionary.translate(tx, name);
-		PSNode psNode = psMgr.getChild(tx, parent.getPCR(), XXX,
-				XXX, XXX, Kind.ATTRIBUTE.ID);
+		int uriVocID = (name.nsURI.isEmpty() ? -1 : dictionary.translate(tx,
+				name.nsURI));
+		int prefixVocID = (name.prefix == null ? -1 : dictionary.translate(tx,
+				name.prefix));
+		int localNameVocID = dictionary.translate(tx, name.localName);
+		PSNode psNode = psMgr.getChild(tx, parent.getPCR(), uriVocID,
+				prefixVocID, localNameVocID, Kind.ATTRIBUTE.ID);
 		return new ElNode(locator, deweyID, Kind.ATTRIBUTE.ID, value, psNode);
 	}
 
 	@Override
-	protected ElNode buildComment(ElNode parent, String text, XTCdeweyID deweyID)
+	protected ElNode buildComment(ElNode parent, Atomic text, XTCdeweyID deweyID)
 			throws DocumentException {
 		return new ElNode(locator, deweyID, Kind.COMMENT.ID, text,
 				parent.psNode);
 	}
 
 	@Override
-	protected ElNode buildProcessingInstruction(ElNode parent, String text,
+	protected ElNode buildProcessingInstruction(ElNode parent, Atomic text,
 			XTCdeweyID deweyID) throws DocumentException {
 		return new ElNode(locator, deweyID, Kind.PROCESSING_INSTRUCTION.ID,
 				text, parent.psNode);
