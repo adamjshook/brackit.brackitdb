@@ -42,6 +42,7 @@ import org.brackit.server.tx.Tx;
 import org.brackit.server.util.sort.MergeSort;
 import org.brackit.server.util.sort.Sort;
 import org.brackit.server.util.sort.SortItem;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.DefaultListener;
 import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.node.stream.filter.Filter;
@@ -87,7 +88,7 @@ class CASIndexBuilder<E extends Node<E>> extends DefaultListener<E> implements
 
 	@Override
 	public <T extends E> void attribute(T node) throws DocumentException {
-		String value = node.getValue();
+		String value = node.getValue().stringValue();
 
 		if (value.length() > 0) {
 			content(node);
@@ -184,7 +185,7 @@ class CASIndexBuilder<E extends Node<E>> extends DefaultListener<E> implements
 	@Override
 	public String toString() {
 		String result = "create cas index paths ";
-		List<Path<String>> pathExprs = indexDef.getPaths();
+		List<Path<QNm>> pathExprs = indexDef.getPaths();
 		for (int i = 0; i < pathExprs.size(); i++) {
 			result += pathExprs.get(i);
 			if (i < pathExprs.size() - 1)

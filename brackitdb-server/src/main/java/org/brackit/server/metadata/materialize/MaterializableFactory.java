@@ -41,15 +41,16 @@ import org.brackit.xquery.xdm.DocumentException;
  * 
  */
 public final class MaterializableFactory {
-	private Map<String, Class<? extends Materializable>> mapping = new ConcurrentHashMap<String, Class<? extends Materializable>>();
+	private Map<String, Class<? extends Materializable>> mapping 
+		= new ConcurrentHashMap<String, Class<? extends Materializable>>();
 
 	private static MaterializableFactory instance = new MaterializableFactory();
 
 	static {
-		instance.register(Indexes.INDEXES_TAG, Indexes.class);
-		instance.register(IndexDef.INDEX_TAG, IndexDef.class);
-		instance
-				.register(IndexStatistics.STATISTICS_TAG, IndexStatistics.class);
+		instance.register(Indexes.INDEXES_TAG.stringValue(), Indexes.class);
+		instance.register(IndexDef.INDEX_TAG.stringValue(), IndexDef.class);
+		instance.register(IndexStatistics.STATISTICS_TAG.stringValue(), 
+				IndexStatistics.class);
 	}
 
 	private MaterializableFactory() {

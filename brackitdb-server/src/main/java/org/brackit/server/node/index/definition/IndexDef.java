@@ -89,8 +89,8 @@ public class IndexDef implements Materializable, Serializable {
 	private final List<Path<QNm>> paths = new ArrayList<Path<QNm>>();
 
 	// only for element indexes
-	private final Set<String> excluded = new HashSet<String>();
-	private final Map<String, Cluster> included = new HashMap<String, Cluster>();
+	private final Set<QNm> excluded = new HashSet<QNm>();
+	private final Map<QNm, Cluster> included = new HashMap<QNm, Cluster>();
 
 	// unique flag (for CAS and content indexes)
 	private boolean unique = false;
@@ -114,8 +114,8 @@ public class IndexDef implements Materializable, Serializable {
 	/*
 	 * Element index
 	 */
-	public IndexDef(Cluster cluster, Map<String, Cluster> included,
-			Set<String> excluded) {
+	public IndexDef(Cluster cluster, Map<QNm, Cluster> included,
+			Set<QNm> excluded) {
 		this.type = IndexType.ELEMENT;
 		this.included.putAll(included);
 		this.excluded.addAll(excluded);
@@ -222,13 +222,13 @@ public class IndexDef implements Materializable, Serializable {
 							if (s.length() > 0) {
 								String includeString = s;
 								String[] tmp = includeString.split("@");
-								included.put(tmp[0], Cluster.valueOf(tmp[1]));
+								included.put(new QNm(tmp[0]), Cluster.valueOf(tmp[1]));
 							}
 						}
 					} else if (childName.equals(EXCLUDING_TAG)) {
 						for (String s : child.getValue().stringValue().split(",")) {
 							if (s.length() > 0)
-								excluded.add(s);
+								excluded.add(new QNm(s));
 						}
 					}
 				}
@@ -273,7 +273,7 @@ public class IndexDef implements Materializable, Serializable {
 			tmp.openElement(EXCLUDING_TAG);
 
 			StringBuilder buf = new StringBuilder();
-			for (String s : excluded) {
+			for (QNm s : excluded) {
 				buf.append(s + ",");
 			}
 			// remove trailing ","
@@ -286,7 +286,7 @@ public class IndexDef implements Materializable, Serializable {
 			tmp.openElement(INCLUDING_TAG);
 
 			StringBuilder buf = new StringBuilder();
-			for (Entry<String, Cluster> e : included.entrySet()) {
+			for (Entry<QNm, Cluster> e : included.entrySet()) {
 				buf.append(e.getKey() + "@" + e.getValue() + ",");
 			}
 			// remove trailing ","
@@ -350,11 +350,11 @@ public class IndexDef implements Materializable, Serializable {
 		return this.cluster;
 	}
 
-	public Map<String, Cluster> getIncluded() {
+	public Map<QNm, Cluster> getIncluded() {
 		return Collections.unmodifiableMap(included);
 	}
 
-	public Set<String> getExcluded() {
+	public Set<QNm> getExcluded() {
 		return Collections.unmodifiableSet(excluded);
 	}
 

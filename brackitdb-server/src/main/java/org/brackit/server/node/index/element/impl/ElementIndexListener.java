@@ -41,6 +41,7 @@ import org.brackit.server.node.txnode.TXNode;
 import org.brackit.server.store.index.Index;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.DefaultListener;
 import org.brackit.xquery.node.parser.ListenMode;
 import org.brackit.xquery.node.parser.SubtreeListener;
@@ -64,11 +65,11 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 
 	private final boolean hasIncludes;
 
-	private final Map<String, Cluster> includes;
+	private final Map<QNm, Cluster> includes;
 
 	private final boolean hasExcludes;
 
-	private final Set<String> excludes;
+	private final Set<QNm> excludes;
 
 	public ElementIndexListener(Tx tx, Index index,
 			IndexEncoderHelper<E> helper, IndexDef indexDef, ListenMode mode) {
@@ -101,7 +102,7 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 	}
 
 	protected <T extends E> void insertElement(T node) throws DocumentException {
-		String name = node.getName();
+		QNm name = node.getName();
 		boolean included = (!hasIncludes) || includes.containsKey(name);
 		boolean excluded = (!hasExcludes) || !excludes.contains(name);
 		if ((!included) || (excluded)) {
@@ -150,7 +151,7 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 	}
 
 	protected <T extends E> void deleteElement(T node) throws DocumentException {
-		String name = node.getName();
+		QNm name = node.getName();
 		boolean included = (!hasIncludes) || includes.containsKey(name);
 		boolean excluded = (!hasExcludes) || !excludes.contains(name);
 		if ((!included) || (excluded)) {

@@ -32,6 +32,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.Type;
 
@@ -51,7 +52,7 @@ public class IndexDefBuilder {
 		return new IndexDef(type, onElementContent, onAttributeContent, false);
 	}
 
-	IndexDef createCASIndexDefinition(List<Path<String>> paths,
+	IndexDef createCASIndexDefinition(List<Path<QNm>> paths,
 			Cluster cluster, boolean unique, Type type) {
 
 		if (cluster == null)
@@ -59,7 +60,7 @@ public class IndexDefBuilder {
 		return new IndexDef(type, cluster, paths, unique);
 	}
 
-	IndexDef createPathIndexDefinition(List<Path<String>> paths, Cluster cluster) {
+	IndexDef createPathIndexDefinition(List<Path<QNm>> paths, Cluster cluster) {
 
 		if (cluster == null)
 			cluster = DEFAULT_CLUSTER;
@@ -67,10 +68,10 @@ public class IndexDefBuilder {
 	}
 
 	IndexDef createFilteredElementIndexDefinition(Cluster cluster,
-			List<String> filter) {
+			List<QNm> filter) {
 
-		HashSet<String> excluded = new HashSet<String>(filter);
-		HashMap<String, Cluster> included = new HashMap<String, Cluster>();
+		HashSet<QNm> excluded = new HashSet<QNm>(filter);
+		HashMap<QNm, Cluster> included = new HashMap<QNm, Cluster>();
 
 		if (cluster == null)
 			cluster = DEFAULT_CLUSTER;
@@ -78,9 +79,9 @@ public class IndexDefBuilder {
 	}
 
 	IndexDef createSelectiveElementIndexDefinition(
-			Map<String, Cluster> included, Cluster cluster) {
+			Map<QNm, Cluster> included, Cluster cluster) {
 
-		HashSet<String> excluded = new HashSet<String>();
+		HashSet<QNm> excluded = new HashSet<QNm>();
 
 		if (cluster == null)
 			cluster = DEFAULT_CLUSTER;
