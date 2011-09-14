@@ -33,7 +33,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.index.definition.Cluster;
@@ -52,8 +51,10 @@ import org.brackit.server.tx.Tx;
 import org.brackit.server.util.sort.MergeSort;
 import org.brackit.server.util.sort.Sort;
 import org.brackit.server.util.sort.SortItem;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.DefaultListener;
 import org.brackit.xquery.node.parser.SubtreeListener;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Stream;
 
@@ -83,11 +84,11 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 
 	private final boolean hasIncludes;
 
-	private final Map<String, Cluster> includes;
+	private final Map<QNm, Cluster> includes;
 
 	private final boolean hasExcludes;
 
-	private final Set<String> excludes;
+	private final Set<QNm> excludes;
 
 	private final class NodeReferenceIndex {
 		int vocID;
@@ -129,7 +130,7 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 
 	@Override
 	public <T extends E> void startElement(T node) throws DocumentException {
-		String name = node.getName();
+		QNm name = node.getName();
 		boolean included = (!hasIncludes) || includes.containsKey(name);
 		boolean excluded = (!hasExcludes) || !excludes.contains(name);
 		if ((!included) || (excluded)) {

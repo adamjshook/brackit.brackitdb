@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.xdm.DocumentException;
 
 /**
@@ -56,7 +57,7 @@ public class IndexDefHelper extends IndexDefBuilder {
 	}
 
 	public IndexDef createElementIndexDefinition(
-			Map<String, Cluster> selection, List<String> filter, Cluster cluster) {
+			Map<QNm, Cluster> selection, List<QNm> filter, Cluster cluster) {
 		if (selection != null && selection.size() > 0) {
 			if (filter != null) {
 				throw new RuntimeException("Ambiguous element index definition");
@@ -70,7 +71,7 @@ public class IndexDefHelper extends IndexDefBuilder {
 			// replace non-specified clusterings in each selection entry
 			// with the command-specified
 			if (selection != null) {
-				for (Map.Entry<String, Cluster> e : selection.entrySet()) {
+				for (Map.Entry<QNm, Cluster> e : selection.entrySet()) {
 					if (e.getValue() == null) {
 						e.setValue(cluster);
 					}
@@ -81,7 +82,7 @@ public class IndexDefHelper extends IndexDefBuilder {
 
 		// if selection not provided, create filtered index
 		if (filter == null) {
-			filter = new ArrayList<String>();
+			filter = new ArrayList<QNm>();
 		}
 
 		return createFilteredElementIndexDefinition(cluster, filter);

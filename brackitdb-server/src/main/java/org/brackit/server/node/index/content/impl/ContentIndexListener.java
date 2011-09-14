@@ -27,7 +27,6 @@
  */
 package org.brackit.server.node.index.content.impl;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.txnode.IndexEncoder;
@@ -37,6 +36,7 @@ import org.brackit.server.tx.Tx;
 import org.brackit.xquery.node.parser.DefaultListener;
 import org.brackit.xquery.node.parser.ListenMode;
 import org.brackit.xquery.node.parser.SubtreeListener;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Node;
 
@@ -69,7 +69,7 @@ public class ContentIndexListener<E extends Node<E>> extends DefaultListener<E>
 
 	@Override
 	public <T extends E> void attribute(T node) throws DocumentException {
-		String value = node.getValue();
+		String value = node.getValue().stringValue();
 
 		if ((!indexDef.isAllContent() && !indexDef.isAttributeContent())
 				|| value.length() == 0) {

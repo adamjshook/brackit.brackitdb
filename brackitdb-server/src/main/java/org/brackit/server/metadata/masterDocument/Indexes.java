@@ -32,6 +32,7 @@ import java.util.List;
 
 import org.brackit.server.metadata.materialize.Materializable;
 import org.brackit.server.node.index.definition.IndexDef;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.FragmentHelper;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.util.path.PathException;
@@ -45,7 +46,7 @@ import org.brackit.xquery.xdm.Stream;
  * 
  */
 public class Indexes implements Materializable {
-	public static final String INDEXES_TAG = "indexes";
+	public static final QNm INDEXES_TAG = new QNm("indexes");
 
 	private ArrayList<IndexDef> indexes = null;
 
@@ -68,8 +69,7 @@ public class Indexes implements Materializable {
 
 	@Override
 	public synchronized void init(Node<?> root) throws DocumentException {
-		String name = root.getName();
-
+		QNm name = root.getName();
 		if (!name.equals(INDEXES_TAG)) {
 			throw new DocumentException("Expected tag '%s' but found '%s'",
 					INDEXES_TAG, name);
@@ -80,7 +80,7 @@ public class Indexes implements Materializable {
 		try {
 			Node<?> child;
 			while ((child = children.next()) != null) {
-				String childName = child.getName();
+				QNm childName = child.getName();
 
 				if (!childName.equals(IndexDef.INDEX_TAG)) {
 					throw new DocumentException(
@@ -123,13 +123,13 @@ public class Indexes implements Materializable {
 		}
 	}
 
-	public IndexDef findPathIndex(Path<String> path) throws DocumentException {
+	public IndexDef findPathIndex(Path<QNm> path) throws DocumentException {
 		try {
 			List<IndexDef> candidates = new ArrayList<IndexDef>(indexes.size());
 
 			for (IndexDef index : indexes) {
 				if (index.isPathIndex()) {
-					for (Path<String> indexedPath : index.getPaths()) {
+					for (Path<QNm> indexedPath : index.getPaths()) {
 						if (indexedPath.matches(path)) {
 							candidates.add(index);
 						}
@@ -143,13 +143,13 @@ public class Indexes implements Materializable {
 		}
 	}
 
-	public IndexDef findCASIndex(Path<String> path) throws DocumentException {
+	public IndexDef findCASIndex(Path<QNm> path) throws DocumentException {
 		try {
 			List<IndexDef> candidates = new ArrayList<IndexDef>(indexes.size());
 
 			for (IndexDef index : indexes) {
 				if (index.isCasIndex()) {
-					for (Path<String> indexedPath : index.getPaths()) {
+					for (Path<QNm> indexedPath : index.getPaths()) {
 						if (indexedPath.matches(path)) {
 							candidates.add(index);
 						}

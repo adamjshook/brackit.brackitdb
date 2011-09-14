@@ -79,11 +79,11 @@ import org.brackit.xquery.xdm.Stream;
 public class MetaDataMgrImpl implements MetaDataMgr {
 	private static final Logger log = Logger.getLogger(MetaDataMgrImpl.class);
 
-	public static final String DIR_TAG = "dir";
+	public static final QNm DIR_TAG = new QNm("dir");
 
-	public static final String NAME_ATTRIBUTE = "name";
+	public static final QNm NAME_ATTR = new QNm("name");
 
-	public static final String ID_ATTRIBUTE = "id";
+	public static final QNm ID_ATTR = new QNm("id");
 
 	private static final int DEFAULT_DICTIONARY_ID = 1;
 
@@ -434,9 +434,10 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		try {
 			Node<?> attribute;
 			if ((attribute = stream.next()) != null) {
-				if (Integer.toString(id).equals(attribute.getValue())) {
-					name = attribute.getParent().getAttributeValue(
-							NAME_ATTRIBUTE);
+				if (Integer.toString(id).equals(attribute.getValue()
+						.stringValue())) {
+					name = attribute.getParent().getAttribute(NAME_ATTR)
+							.getValue().stringValue();
 				}
 			}
 		} finally {
@@ -492,13 +493,14 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			TXNode<?> itemRoot, boolean loadChildren) throws DocumentException,
 			MetaDataException {
 		Item<Directory> item;
-		String itemRootTag = itemRoot.getName();
-		String name = itemRoot.getAttributeValue(NAME_ATTRIBUTE);
+		QNm itemRootTag = itemRoot.getName();
+		String name = itemRoot.getAttribute(NAME_ATTR).getValue().stringValue();
 
 		if (BaseCollection.DOCUMENT_TAG.equals(itemRootTag)) {
 			// SubtreePrinter.print(transaction, itemRoot, System.out);
 			DocID docID = new DocID(Integer.parseInt(itemRoot
-					.getAttributeValue(BaseCollection.ID_ATTRIBUTE)));
+					.getAttribute(BaseCollection.ID_ATTRIBUTE)
+					.getValue().stringValue()));
 			item = new Document(docID, name, parent, itemRoot);
 		} else if (DIR_TAG.equals(itemRootTag)) {
 			Directory directory = new Directory(name, parent, itemRoot);
@@ -516,7 +518,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			item = directory;
 		} else if (BaseBlobHandle.BLOB_TAG.equals(itemRootTag)) {
 			DocID docID = new DocID(Integer.parseInt(itemRoot
-					.getAttributeValue(BaseBlobHandle.ID_ATTRIBUTE)));
+					.getAttribute(BaseBlobHandle.ID_ATTRIBUTE)
+					.getValue().stringValue()));
 			item = new Blob(docID, name, parent, itemRoot);
 		} else {
 			throw new MetaDataException("Unknown item tag: %s.", itemRootTag);
@@ -591,8 +594,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		TXNode<?> childRoot;
 		while ((childRoot = children.next()) != null) {
 			// TODO synchronization (load / add interleaving)
-			if (!directory
-					.hasChild(childRoot.getAttributeValue(NAME_ATTRIBUTE))) {
+			if (!directory.hasChild(childRoot.getAttribute(NAME_ATTR)
+					.getValue().stringValue())) {
 				Item<Directory> child = createItem(tx, directory, childRoot,
 						false);
 				directory.addChild(child);
