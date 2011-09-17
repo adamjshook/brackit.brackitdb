@@ -29,6 +29,7 @@ package org.brackit.server.node.sax;
 
 import java.util.Stack;
 
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.node.txnode.TXNode;
 import org.brackit.xquery.QueryContext;
@@ -77,7 +78,7 @@ public class SaxParser {
 							&& (!elementStack.peek().isParentOf(node))) {
 						Node<?> element = elementStack.pop();
 						String elementName = decorate(element, element
-								.getName());
+								.getName().stringValue());
 
 						if (attributes != null) {
 							try {
@@ -101,8 +102,9 @@ public class SaxParser {
 
 					if (attributes != null) {
 						try {
-							contentHandler.startElement("", "", elementStack
-									.peek().getName(), attributes);
+							contentHandler.startElement("", "", 
+								elementStack.peek().getName().stringValue(),
+								attributes);
 							attributes = null;
 						} catch (SAXException e) {
 							scanner.close();
@@ -121,13 +123,14 @@ public class SaxParser {
 						attributes = new AttributesImpl();
 					}
 
-					attributes.addAttribute("", "", decorate(node, node
-							.getName()), "", node.getValue());
+					attributes.addAttribute("", "", decorate(node, 
+							node.getName().stringValue()), "", 
+							node.getValue().stringValue());
 				} // attribute
 				else if (node.getKind() == Kind.TEXT) {
 					try {
-						char[] ch = decorate(node, node.getValue())
-								.toCharArray();
+						char[] ch = decorate(node, 
+								node.getValue().stringValue()).toCharArray();
 						contentHandler.characters(ch, 0, ch.length);
 					} catch (SAXException e) {
 						scanner.close();
@@ -139,7 +142,7 @@ public class SaxParser {
 
 			while (!elementStack.empty()) {
 				Node<?> element = elementStack.pop();
-				String lastElementName = element.getName();
+				String lastElementName = element.getName().stringValue();
 
 				if (attributes != null) {
 					try {

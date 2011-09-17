@@ -42,6 +42,7 @@ import org.brackit.server.procedure.ProcedureUtil;
 import org.brackit.server.store.SearchMode;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.xdm.DocumentException;
@@ -65,7 +66,8 @@ public class InsertSubtrees implements Procedure {
 
 		int elementIdxNo = getElementIndex(ctx, coll);
 		Stream<? extends Node<?>> elements = coll.getIndexController()
-				.openElementIndex(elementIdxNo, "asia", SearchMode.FIRST);
+				.openElementIndex(elementIdxNo, new QNm("asia"), 
+						SearchMode.FIRST);
 
 		Node<?> refNode = null;
 		if ((refNode = elements.next()) == null) {

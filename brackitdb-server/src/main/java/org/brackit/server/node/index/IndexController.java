@@ -75,7 +75,7 @@ public interface IndexController<E extends Node<E>> {
 	 * Opens a stream for the given element index positioned for the given
 	 * search key.
 	 */
-	public Stream<? extends E> openElementIndex(int indexNo, String name,
+	public Stream<? extends E> openElementIndex(int indexNo, QNm name,
 			SearchMode searchMode) throws DocumentException;
 
 	/**
