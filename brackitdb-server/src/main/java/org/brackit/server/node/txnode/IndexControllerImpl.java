@@ -42,6 +42,7 @@ import org.brackit.server.node.index.element.ElementIndex;
 import org.brackit.server.node.index.path.PathIndex;
 import org.brackit.server.store.SearchMode;
 import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.ListenMode;
 import org.brackit.xquery.node.parser.StreamSubtreeProcessor;
 import org.brackit.xquery.node.parser.SubtreeListener;
@@ -257,7 +258,7 @@ public abstract class IndexControllerImpl<E extends TXNode<E>> implements
 	}
 
 	@Override
-	public Stream<? extends E> openElementIndex(int indexNo, String name,
+	public Stream<? extends E> openElementIndex(int indexNo, QNm name,
 			SearchMode searchMode) throws DocumentException {
 		if (elementIndex == null) {
 			throw new DocumentException(

@@ -353,7 +353,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 					tx.getIsolationLevel().lockClass(false), false);
 		}
 		if (tx.getIsolationLevel().useReadLocks()) {
-			nls.lockEdgeShared(tx, deweyID, name);
+			nls.lockEdgeShared(tx, deweyID, name.stringValue());
 		}
 
 		E attribute = getAttributeInternal(name);
@@ -366,7 +366,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		}
 
 		if (tx.getIsolationLevel().shortReadLocks()) {
-			nls.unlockEdge(tx, deweyID, name);
+			nls.unlockEdge(tx, deweyID, name.stringValue());
 			nls.unlockNode(tx, deweyID);
 		}
 		return attribute;
@@ -697,8 +697,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 						.lockClass(false), false);
 		}
 
-		nls.lockEdgeUpdate(tx, deweyID, name);
-		nls.lockEdgeExclusive(tx, deweyID, name);
+		nls.lockEdgeUpdate(tx, deweyID, name.stringValue());
+		nls.lockEdgeExclusive(tx, deweyID, name.stringValue());
 
 		return deleteAttributeInternal(name);
 	}
@@ -722,8 +722,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 						.lockClass(false), false);
 		}
 
-		nls.lockEdgeUpdate(tx, deweyID, name);
-		nls.lockEdgeExclusive(tx, deweyID, name);
+		nls.lockEdgeUpdate(tx, deweyID, name.stringValue());
+		nls.lockEdgeExclusive(tx, deweyID, name.stringValue());
 
 		E attribute = getAttributeInternal(name);
 

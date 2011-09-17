@@ -129,7 +129,7 @@ public class ProcedureUtil {
 					Node<?> node = (Node<?>) item;
 					Kind kind = node.getKind();
 
-					if ((kind == Kind.ATTRIBUTE) || (kind == Kind.NAMESPACE)) {
+					if (kind == Kind.ATTRIBUTE) {
 						throw new QueryException(
 								ErrorCode.ERR_SERIALIZE_ATTRIBUTE_OR_NAMESPACE_NODE);
 					}

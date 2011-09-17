@@ -232,11 +232,11 @@ public class XMarkQuery1 implements Procedure {
 		IndexController<?> indexController = doc.getCollection()
 				.getIndexController();
 		Cursor in1 = new StreamOperator(indexController.openElementIndex(
-				elementIndexNo, "site", SearchMode.FIRST));
+				elementIndexNo, new QNm("site"), SearchMode.FIRST));
 		Cursor in2 = new StreamOperator(indexController.openElementIndex(
-				elementIndexNo, "people", SearchMode.FIRST));
+				elementIndexNo, new QNm("people"), SearchMode.FIRST));
 		Cursor in3 = new StreamOperator(indexController.openElementIndex(
-				elementIndexNo, "person", SearchMode.FIRST));
+				elementIndexNo, new QNm("person"), SearchMode.FIRST));
 
 		Cursor join;
 		join = new MergeJoin(in1, in2, new AxisPredicate(Axis.PARENT,
