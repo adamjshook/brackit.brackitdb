@@ -29,6 +29,7 @@ package org.brackit.server.node.index.element;
 
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.index.definition.IndexDef;
+import org.brackit.server.node.index.element.impl.NameDirectoyEncoderImpl.QVocID;
 import org.brackit.server.node.txnode.IndexEncoderHelper;
 import org.brackit.server.store.SearchMode;
 import org.brackit.server.tx.Tx;
@@ -48,7 +49,7 @@ public interface ElementIndex<E extends Node<E>> {
 			throws DocumentException;
 
 	public Stream<? extends E> open(Tx tx, IndexEncoderHelper<E> helper,
-			int elementIndexNo, int vocID, SearchMode searchMode,
+			int elementIndexNo, QVocID qVocID, SearchMode searchMode,
 			XTCdeweyID deweyID) throws DocumentException;
 
 	public SubtreeListener<? super E> createListener(Tx tx,

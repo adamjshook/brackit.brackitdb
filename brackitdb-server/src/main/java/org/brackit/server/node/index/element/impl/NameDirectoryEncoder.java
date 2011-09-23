@@ -28,6 +28,7 @@
 package org.brackit.server.node.index.element.impl;
 
 import org.brackit.server.io.buffer.PageID;
+import org.brackit.server.node.index.element.impl.NameDirectoyEncoderImpl.QVocID;
 import org.brackit.server.store.Field;
 
 /**
@@ -35,11 +36,9 @@ import org.brackit.server.store.Field;
  * 
  */
 public interface NameDirectoryEncoder {
-	public byte[] encodeKey(int vocID);
+	public byte[] encodeKey(QVocID qVocID);
 
 	public byte[] encodeValue(PageID pageID);
-
-	public int decodeVocID(byte[] key);
 
 	public PageID decodePageID(byte[] value);
 

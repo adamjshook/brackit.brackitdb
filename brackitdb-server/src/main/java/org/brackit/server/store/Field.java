@@ -35,6 +35,7 @@ import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.el.ElRecordAccess;
 import org.brackit.server.util.Calc;
+import org.brackit.xquery.atomic.QNm;
 
 /**
  * Various standard field types used in the system.
@@ -64,6 +65,8 @@ public class Field {
 
 	public static final StringField STRING = new StringField();
 
+	public static final QVocIDField QVOCID = new QVocIDField();
+	
 	/**
 	 * Standard byte array
 	 */
@@ -252,6 +255,14 @@ public class Field {
 		public int compareAsPrefix(byte[] v1, byte[] v2) {
 			return Calc.compareAsPrefix(v1, v2);
 		}
+	}
+	
+	/**
+	 * {@link QNm}
+	 *
+	 */
+	public static class QVocIDField extends Field {
+		// TODO Need customized compare methods?
 	}
 
 	public static final class ByteArrayField extends Field {

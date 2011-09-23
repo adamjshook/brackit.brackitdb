@@ -35,6 +35,7 @@ import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.index.cas.impl.CASIndexListener;
 import org.brackit.server.node.index.definition.Cluster;
 import org.brackit.server.node.index.definition.IndexDef;
+import org.brackit.server.node.index.element.impl.NameDirectoyEncoderImpl.QVocID;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.node.txnode.IndexEncoderHelper;
 import org.brackit.server.node.txnode.TXNode;
@@ -103,26 +104,24 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 
 	protected <T extends E> void insertElement(T node) throws DocumentException {
 		QNm name = node.getName();
-		boolean included = (!hasIncludes) || includes.containsKey(name);
-		boolean excluded = (!hasExcludes) || !excludes.contains(name);
-		if ((!included) || (excluded)) {
+		boolean included = (!hasIncludes || includes.containsKey(name));
+		boolean excluded = (hasExcludes && excludes.contains(name));
+		if (!included || excluded) {
 			return;
 		}
-		int vocID = helper.getDictionary().translate(tx, name);
+		
+		QVocID qVocID = QVocID.fromQNm(tx, helper.getDictionary(), name);
 		try {
 			PageID nodePageID;
 			IndexEncoder<E> encoder = helper.getElementIndexEncoder();
-			byte[] nameDirectoryKey = nameDirectoryEncoder.encodeKey(vocID);
+			byte[] nameDirectoryKey = nameDirectoryEncoder.encodeKey(qVocID);
 			byte[] nameDirectoryValue = index.read(tx, indexNo,
 					nameDirectoryKey);
 
 			if (nameDirectoryValue == null) {
 				if (log.isDebugEnabled()) {
-					log
-							.debug(String
-									.format(
-											"Creating new node reference index for vocID %s in index %s.",
-											vocID, indexNo));
+					log.debug(String.format("Creating new node reference " +
+						"index for qVocID %s in index %s.", qVocID, indexNo));
 				}
 
 				nodePageID = index.createIndex(tx, indexNo.getContainerNo(),
@@ -137,9 +136,8 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 			}
 
 			if (log.isDebugEnabled()) {
-				log.debug(String.format(
-						"Inserting (%s, %s) in element index %s.", vocID, node
-								.getDeweyID(), indexNo));
+				log.debug(String.format("Inserting (%s, %s) in element " +
+						"index %s.", qVocID, node.getDeweyID(), indexNo));
 			}
 
 			byte[] key = encoder.encodeKey(node);
@@ -152,34 +150,31 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 
 	protected <T extends E> void deleteElement(T node) throws DocumentException {
 		QNm name = node.getName();
-		boolean included = (!hasIncludes) || includes.containsKey(name);
-		boolean excluded = (!hasExcludes) || !excludes.contains(name);
-		if ((!included) || (excluded)) {
+		boolean included = (!hasIncludes || includes.containsKey(name));
+		boolean excluded = (hasExcludes && excludes.contains(name));
+		if (!included || excluded) {
 			return;
 		}
-		int vocID = helper.getDictionary().translate(tx, name);
-
+		
+		QVocID qVocID = QVocID.fromQNm(tx, helper.getDictionary(), name);
 		try {
 			PageID nodePageID;
 			IndexEncoder<E> encoder = helper.getElementIndexEncoder();
-			byte[] nameDirectoryKey = nameDirectoryEncoder.encodeKey(vocID);
+			byte[] nameDirectoryKey = nameDirectoryEncoder.encodeKey(qVocID);
 			byte[] nameDirectoryValue = index.read(tx, indexNo,
 					nameDirectoryKey);
 
 			if (nameDirectoryValue == null) {
 				if (log.isInfoEnabled()) {
-					log.warn(String
-							.format("No valid node reference index "
-									+ "for vocID %s in index %s found.", vocID,
-									indexNo));
+					log.warn(String.format("No valid node reference index " +
+						"for qVocID %s in index %s found.", qVocID, indexNo));
 				}
 			} else {
 				nodePageID = nameDirectoryEncoder
 						.decodePageID(nameDirectoryValue);
 				if (log.isDebugEnabled()) {
-					log.debug(String.format(
-							"Deleting (%s, %s) from element index %s.", vocID,
-							node.getDeweyID(), indexNo));
+					log.debug(String.format("Deleting (%s, %s) from element " +
+							"index %s.", qVocID, node.getDeweyID(), indexNo));
 				}
 				byte[] key = encoder.encodeKey(node);
 				byte[] value = encoder.encodeValue(node);

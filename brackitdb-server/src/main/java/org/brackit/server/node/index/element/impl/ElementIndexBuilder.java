@@ -30,6 +30,7 @@ package org.brackit.server.node.index.element.impl;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,6 +38,7 @@ import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.index.definition.Cluster;
 import org.brackit.server.node.index.definition.IndexDef;
+import org.brackit.server.node.index.element.impl.NameDirectoyEncoderImpl.QVocID;
 import org.brackit.server.node.index.external.IndexStatistics;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.node.txnode.IndexEncoderHelper;
@@ -80,7 +82,7 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 
 	private final NameDirectoyEncoderImpl nameDirectoryEncoder;
 
-	private final HashMap<Integer, NodeReferenceIndex> nodeRefIndexes;
+	private final HashMap<QVocID, NodeReferenceIndex> nodeRefIndexes;
 
 	private final boolean hasIncludes;
 
@@ -91,15 +93,15 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 	private final Set<QNm> excludes;
 
 	private final class NodeReferenceIndex {
-		int vocID;
+		QVocID qVocID;
 		IndexEncoder<E> encoder;
 		byte[] linkValue;
 		Sort sorter;
 
-		private NodeReferenceIndex(int vocID, IndexEncoder<E> encoder,
+		private NodeReferenceIndex(QVocID qVocID, IndexEncoder<E> encoder,
 				Sort sorter) {
 			super();
-			this.vocID = vocID;
+			this.qVocID = qVocID;
 			this.encoder = encoder;
 			this.sorter = sorter;
 		}
@@ -114,7 +116,7 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 		this.nameDirectoryEncoder = new NameDirectoyEncoderImpl();
 		this.helper = helper;
 
-		this.nodeRefIndexes = new HashMap<Integer, NodeReferenceIndex>();
+		this.nodeRefIndexes = new HashMap<QVocID, NodeReferenceIndex>();
 		this.includes = indexDef.getIncluded();
 		this.excludes = indexDef.getExcluded();
 		hasIncludes = includes.size() > 0;
@@ -131,13 +133,14 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 	@Override
 	public <T extends E> void startElement(T node) throws DocumentException {
 		QNm name = node.getName();
-		boolean included = (!hasIncludes) || includes.containsKey(name);
-		boolean excluded = (!hasExcludes) || !excludes.contains(name);
-		if ((!included) || (excluded)) {
+		boolean included = (!hasIncludes || includes.containsKey(name));
+		boolean excluded = (hasExcludes && excludes.contains(name));
+		if (!included || excluded) {
 			return;
 		}
-		int vocID = helper.getDictionary().translate(tx, name);
-		NodeReferenceIndex index = nodeRefIndexes.get(vocID);
+		
+		QVocID qVocID = QVocID.fromQNm(tx, helper.getDictionary(), name);
+		NodeReferenceIndex index = nodeRefIndexes.get(qVocID);
 
 		if (index == null) {
 			IndexEncoder<E> encoder = helper.getElementIndexEncoder();
@@ -145,9 +148,10 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 
 			// TODO: each sort stream allocates the full index size (here a
 			// path synopsis look up may help to correct estimations)
-			sorter = new MergeSort(encoder.getKeyType(), encoder.getValueType());
-			index = new NodeReferenceIndex(vocID, encoder, sorter);
-			nodeRefIndexes.put(vocID, index);
+			sorter = new MergeSort(encoder.getKeyType(), 
+					encoder.getValueType());
+			index = new NodeReferenceIndex(qVocID, encoder, sorter);
+			nodeRefIndexes.put(qVocID, index);
 		}
 
 		try {
@@ -197,7 +201,7 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 
 				if (log.isDebugEnabled()) {
 					log.debug("Building node reference index for vocID "
-							+ nodeReferenceIndex.vocID + " with " + i
+							+ nodeReferenceIndex.qVocID + " with " + i
 							+ " items took " + ((end - start) / 1000000)
 							+ " ms");
 				}
@@ -214,9 +218,9 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 		}
 
 		try {
-			ArrayList<Integer> vocIDs = new ArrayList<Integer>(nodeRefIndexes
-					.keySet());
-			Collections.sort(vocIDs);
+			List<QVocID> qVocIDs = 
+				new ArrayList<QVocID>(nodeRefIndexes.keySet());
+			Collections.sort(qVocIDs);
 
 			long start = System.nanoTime();
 
@@ -229,9 +233,9 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 					SearchMode.FIRST, null, null, OpenMode.LOAD);
 
 			iterator.triggerStatistics();
-			for (Integer vocID : vocIDs) {
-				byte[] key = nameDirectoryEncoder.encodeKey(vocID);
-				byte[] value = nodeRefIndexes.get(vocID).linkValue;
+			for (QVocID qVocID : qVocIDs) {
+				byte[] key = nameDirectoryEncoder.encodeKey(qVocID);
+				byte[] value = nodeRefIndexes.get(qVocID).linkValue;
 				iterator.insert(key, value);
 				iterator.next();
 			}
@@ -247,7 +251,7 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 			long end = System.nanoTime();
 
 			if (log.isDebugEnabled()) {
-				log.debug("Building name directory index with " + vocIDs.size()
+				log.debug("Building name directory index with " + qVocIDs.size()
 						+ " items took " + ((end - start) / 1000000) + " ms");
 			}
 
