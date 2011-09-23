@@ -39,6 +39,7 @@ import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.index.definition.IndexDefHelper;
 import org.brackit.server.node.index.definition.IndexType;
 import org.brackit.server.node.index.element.ElementIndex;
+import org.brackit.server.node.index.element.impl.NameDirectoyEncoderImpl.QVocID;
 import org.brackit.server.node.index.path.PathIndex;
 import org.brackit.server.store.SearchMode;
 import org.brackit.xquery.atomic.Atomic;
@@ -264,8 +265,9 @@ public abstract class IndexControllerImpl<E extends TXNode<E>> implements
 			throw new DocumentException(
 					"This document does not support element indexes.");
 		}
-		int vocID = coll.getDictionary().translate(coll.getTX(), name);
-		return elementIndex.open(coll.getTX(), this, indexNo, vocID,
+		QVocID qVocID = QVocID.fromQNm(coll.getTX(), coll.getDictionary(), 
+				name);
+		return elementIndex.open(coll.getTX(), this, indexNo, qVocID,
 				searchMode, null);
 	}
 

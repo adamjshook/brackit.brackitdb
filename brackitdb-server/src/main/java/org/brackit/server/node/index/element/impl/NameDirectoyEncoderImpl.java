@@ -28,8 +28,12 @@
 package org.brackit.server.node.index.element.impl;
 
 import org.brackit.server.io.buffer.PageID;
+import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.store.Field;
+import org.brackit.server.tx.Tx;
 import org.brackit.server.util.Calc;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.xdm.DocumentException;
 
 /**
  * 
@@ -37,19 +41,61 @@ import org.brackit.server.util.Calc;
  * 
  */
 public class NameDirectoyEncoderImpl implements NameDirectoryEncoder {
+	
+	/**
+	 * Represents the qualified name of a node as a pair of namespace uri and 
+	 * local name, translated from strings to vocIds
+	 * 
+	 * @author Max Bechtold
+	 *
+	 */
+	public static class QVocID implements Comparable<QVocID> {
+		public final int uriVocID;
+		public final int nameVocID;
+
+		private QVocID(int uriVocID, int nameVocID) {
+			this.uriVocID = uriVocID;
+			this.nameVocID = nameVocID;
+		}
+		
+		public static QVocID fromQNm(Tx tx, DictionaryMgr dictionary, 
+				QNm name) throws DocumentException {
+			return new QVocID(dictionary.translate(tx, name.nsURI),
+					dictionary.translate(tx, name.localName));
+		}
+		
+		@Override
+		public int compareTo(QVocID o) {
+			if (uriVocID < o.uriVocID) {
+				return -1;
+			}
+			if (uriVocID > o.uriVocID) {
+				return 1;
+			}
+			if (nameVocID < o.nameVocID) {
+				return -1;
+			}
+			if (nameVocID > o.nameVocID) {
+				return 1;
+			}
+			return 0;
+		}
+		
+		@Override
+		public String toString() {
+			return String.format("%s (%d, %d)", getClass().getSimpleName(),
+					uriVocID, nameVocID);
+		}
+	}
+	
 	@Override
 	public PageID decodePageID(byte[] value) {
 		return new PageID(Calc.toInt(value, 1, value.length - 1));
 	}
 
 	@Override
-	public int decodeVocID(byte[] key) {
-		return Calc.toInt(key);
-	}
-
-	@Override
-	public byte[] encodeKey(int vocID) {
-		return Calc.fromInt(vocID);
+	public byte[] encodeKey(QVocID qVocID) {
+		return Calc.fromQVocID(qVocID);
 	}
 
 	@Override
@@ -60,7 +106,7 @@ public class NameDirectoyEncoderImpl implements NameDirectoryEncoder {
 
 	@Override
 	public Field getKeyType() {
-		return Field.INTEGER;
+		return Field.QVOCID;
 	}
 
 	@Override

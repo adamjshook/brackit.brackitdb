@@ -32,6 +32,7 @@ import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.index.element.ElementIndex;
+import org.brackit.server.node.index.element.impl.NameDirectoyEncoderImpl.QVocID;
 import org.brackit.server.node.index.external.IndexStatistics;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.node.txnode.IndexEncoderHelper;
@@ -122,12 +123,12 @@ public class ElementIndexImpl<E extends TXNode<E>> implements ElementIndex<E> {
 	}
 
 	public Stream<? extends E> open(Tx tx, IndexEncoderHelper<E> helper,
-			int inverseIdxNo, int vocID, SearchMode searchMode,
+			int inverseIdxNo, QVocID qVocID, SearchMode searchMode,
 			XTCdeweyID deweyID) throws DocumentException {
 		IndexIterator iterator = null;
 		try {
 			byte[] value = index.read(tx, new PageID(inverseIdxNo),
-					nameDirectoryEncoder.encodeKey(vocID));
+					nameDirectoryEncoder.encodeKey(qVocID));
 
 			if (value != null) {
 				IndexEncoder<E> nodeReferenceEncoder = helper
