@@ -31,13 +31,16 @@ import java.io.PrintStream;
 
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.node.bracket.BracketAttributeTuple;
 import org.brackit.server.node.bracket.BracketLocator;
 import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.OpenMode;
 import org.brackit.server.store.SearchMode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.IndexIterator;
+import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Stream;
 
 /**
@@ -155,8 +158,26 @@ public interface BracketIndex {
 
 	public String printLeafScannerStats(NavigationMode navMode)
 			throws IndexAccessException;
-	
-	public Stream<BracketNode> openChildStream(BracketLocator locator, XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo);
-	
-	public Stream<BracketNode> openSubtreeStream(BracketLocator locator, XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo);
+
+	public Stream<BracketNode> openChildStream(BracketLocator locator,
+			XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo,
+			BracketFilter filter);
+
+	public Stream<BracketNode> openSubtreeStream(BracketLocator locator,
+			XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo,
+			BracketFilter filter, boolean self, boolean skipAttributes);
+
+	/**
+	 * Opens the index for a (bulk) insert operation.
+	 */
+	public InsertController openForInsert(BracketLocator locator,
+			OpenMode openMode, XTCdeweyID startInsertKey)
+			throws IndexAccessException;
+
+	/**
+	 * Sets an attribute. Returns the new attribute node and (if it is the case)
+	 * the old overwritten attribute.
+	 */
+	public BracketAttributeTuple setAttribute(BracketNode element, String name,
+			String value) throws IndexAccessException, DocumentException;
 }

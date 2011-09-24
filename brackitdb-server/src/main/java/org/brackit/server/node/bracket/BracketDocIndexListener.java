@@ -32,8 +32,7 @@ import org.brackit.server.node.el.ElRecordAccess;
 import org.brackit.server.store.OpenMode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.BracketIndex;
-import org.brackit.server.store.index.bracket.BracketIter;
-import org.brackit.server.store.index.bracket.NavigationMode;
+import org.brackit.server.store.index.bracket.InsertController;
 import org.brackit.xquery.node.parser.DefaultListener;
 import org.brackit.xquery.node.parser.ListenMode;
 import org.brackit.xquery.node.parser.SubtreeListener;
@@ -46,8 +45,6 @@ import org.brackit.xquery.xdm.Kind;
  */
 public class BracketDocIndexListener extends DefaultListener<BracketNode>
 		implements SubtreeListener<BracketNode> {
-	
-	private static final boolean BULK = false;
 
 	private final ListenMode listenMode;
 
@@ -57,7 +54,7 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 
 	private final BracketLocator locator;
 
-	private BracketIter iterator;
+	private InsertController insertCtrl;
 
 	private BracketNode pendingElement;
 
@@ -75,7 +72,7 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 
 	@Override
 	public void end() throws DocumentException {
-		if (iterator != null) {
+		if (insertCtrl != null) {
 			throw new DocumentException("End before endFragment");
 		}
 	}
@@ -106,9 +103,9 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 
 	@Override
 	public void fail() throws DocumentException {
-		if (iterator != null) {
+		if (insertCtrl != null) {
 			try {
-				iterator.close();
+				insertCtrl.close();
 			} catch (IndexAccessException e) {
 				throw new DocumentException(e);
 			}
@@ -162,16 +159,11 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 		try {
 			XTCdeweyID deweyID = node.getDeweyID();
 
-			if (iterator == null) {
-				iterator = index.open(locator.collection.getTX(),
-						node.locator.rootPageID, NavigationMode.TO_INSERT_POS,
-						deweyID, openMode);
-				if (BULK) {
-					iterator.startBulkInsert();
-				}
+			if (insertCtrl == null) {
+				insertCtrl = index.openForInsert(locator, openMode, deweyID);
 			}
 
-			iterator.insert(deweyID, record, ancestorsToInsert);
+			insertCtrl.insert(deweyID, record, ancestorsToInsert);
 			ancestorsToInsert = 0;
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
@@ -220,17 +212,14 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 			writeEmptyElement();
 		}
 
-		if (iterator != null) {
+		if (insertCtrl != null) {
 			try {
-				if (BULK) {
-					iterator.endBulkInsert();
-				}
-				iterator.close();
+				insertCtrl.close();
 			} catch (IndexAccessException e) {
 				throw new DocumentException(e);
 			}
 
-			iterator = null;
+			insertCtrl = null;
 		}
 	}
 }

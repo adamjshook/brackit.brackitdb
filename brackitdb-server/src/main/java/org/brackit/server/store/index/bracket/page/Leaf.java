@@ -31,13 +31,16 @@ import java.util.List;
 
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.index.bracket.HintPageInformation;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.SubtreeDeleteListener;
+import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.page.bracket.BracketNodeSequence;
 import org.brackit.server.store.page.bracket.DeleteSequenceInfo;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
+import org.brackit.server.store.page.bracket.RecordInterpreter;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 
 /**
@@ -124,7 +127,7 @@ public interface Leaf extends BPContext {
 	public boolean insertSequence(BracketNodeSequence nodes, boolean SMO,
 			boolean logged, long undoNextLSN) throws IndexOperationException;
 
-	public XTCdeweyID getKey();
+	public XTCdeweyID getKey() throws IndexOperationException;
 
 	public PageID getNextPageID() throws IndexOperationException;
 
@@ -276,4 +279,34 @@ public interface Leaf extends BPContext {
 	 *         are considered to be on the same level like their element)
 	 */
 	public int getLevel();
+
+	/**
+	 * Loads the BracketNode this context points to.
+	 */
+	public BracketNode load(BracketNodeLoader loader)
+			throws IndexOperationException;
+
+	/**
+	 * Loads the BracketNode this context points to, unless it does not pass the
+	 * filter. If rejected by the filter, null is returned.
+	 */
+	public BracketNode load(BracketNodeLoader loader, BracketFilter filter)
+			throws IndexOperationException;
+
+	/**
+	 * Returns a record (interpreter) for the current context.
+	 */
+	public RecordInterpreter getRecord() throws IndexOperationException;
+
+	/**
+	 * Moves to the next non-attribute node.
+	 */
+	public boolean moveNextNonAttr();
+
+	/**
+	 * Moves to the next attribute (of the current element node). Can return
+	 * FOUND, NOT_EXISTENT (if the next element is reached) or AFTER_LAST (if
+	 * there may be another attribute in the next page)
+	 */
+	public NavigationStatus moveNextAttribute();
 }

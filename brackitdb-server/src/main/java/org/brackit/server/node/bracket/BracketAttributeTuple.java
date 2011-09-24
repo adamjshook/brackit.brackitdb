@@ -25,49 +25,19 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.store.index.bracket;
-
-import org.brackit.server.node.XTCdeweyID;
-import org.brackit.server.node.bracket.BracketNode;
-import org.brackit.server.store.index.IndexAccessException;
-import org.brackit.server.store.index.bracket.page.BracketNodeLoader;
-import org.brackit.server.store.page.bracket.RecordInterpreter;
+package org.brackit.server.node.bracket;
 
 /**
  * @author Martin Hiller
- * 
+ *
  */
-public interface BracketIter {
+public class BracketAttributeTuple {
 
-	public boolean navigate(NavigationMode navMode) throws IndexAccessException;
-
-	public XTCdeweyID getKey() throws IndexAccessException;
+	public final BracketNode oldAttribute;
+	public final BracketNode newAttribute;
 	
-	public RecordInterpreter getRecord() throws IndexAccessException;
-
-	public BracketNode load(BracketNodeLoader loader) throws IndexAccessException;
-
-	public void deleteSubtree(SubtreeDeleteListener deleteListener)
-			throws IndexAccessException;
-
-	public void update(byte[] newValue) throws IndexAccessException;
-
-	public void close() throws IndexAccessException;
-
-	/**
-	 * Moves the pointer to the next index entry
-	 * 
-	 * @return <code>TRUE</code>, iff the iterator has found another entry
-	 * @throws IndexAccessException
-	 *             if there was an error moving the pointer to the next record
-	 */
-	public boolean next() throws IndexAccessException;
-
-	/**
-	 * Returns information (PageID, LSN, Offset) of the current page.
-	 * 
-	 * @return information (PageID, LSN, Offset) of the current page
-	 * @throws IndexAccessException
-	 */
-	public HintPageInformation getPageInformation() throws IndexAccessException;
+	public BracketAttributeTuple(BracketNode oldAttribute, BracketNode newAttribute) {
+		this.oldAttribute = oldAttribute;
+		this.newAttribute = newAttribute;
+	}
 }

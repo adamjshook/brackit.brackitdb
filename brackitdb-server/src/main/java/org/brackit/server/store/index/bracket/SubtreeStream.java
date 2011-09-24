@@ -29,27 +29,31 @@ package org.brackit.server.store.index.bracket;
 
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.BracketLocator;
+import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.index.IndexAccessException;
+import org.brackit.server.store.index.bracket.filter.BracketFilter;
 
 /**
  * @author Martin Hiller
- *
+ * 
  */
 public final class SubtreeStream extends StreamIterator {
-	
+
 	private int subtreeRootLevel = -1;
-	
+	private final boolean self;
+
 	public SubtreeStream(BracketLocator locator, BracketTree tree,
-			XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo) {
-		super(locator, tree, subtreeRoot, hintPageInfo, subtreeRoot.isDocument());
+			XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo,
+			BracketFilter filter, boolean self) {
+		super(locator, tree, subtreeRoot, hintPageInfo, filter);
+		this.self = self;
 	}
 
 	/**
 	 * @see org.brackit.server.store.index.bracket.StreamIterator#first()
 	 */
 	@Override
-	protected void first() throws IndexOperationException,
-			IndexAccessException {
+	protected void first() throws IndexOperationException, IndexAccessException {
 
 		if (startDeweyID.isDocument()) {
 			page = tree.openInternal(tx, locator.rootPageID,
@@ -58,12 +62,19 @@ public final class SubtreeStream extends StreamIterator {
 					null, deweyIDBuffer);
 			subtreeRootLevel = 1;
 		} else {
-			
+
 			if (page == null) {
 				// hint page could not be loaded
-				page = tree.navigateViaIndexAccess(tx, locator.rootPageID, NavigationMode.TO_KEY, startDeweyID, OPEN_MODE, deweyIDBuffer);
+				page = tree.navigateViaIndexAccess(tx, locator.rootPageID,
+						NavigationMode.TO_KEY, startDeweyID, OPEN_MODE,
+						deweyIDBuffer);
 			}
 			subtreeRootLevel = page.getLevel();
+			
+			if (!self) {
+				// move to next node
+				nextInternal();
+			}
 		}
 	}
 
@@ -76,19 +87,28 @@ public final class SubtreeStream extends StreamIterator {
 
 		if (!page.moveNext()) {
 			// use BracketTree to load next page
-			page = tree.moveNextPage(tx, locator.rootPageID, page, OPEN_MODE);
+			page = tree.getNextPage(tx, locator.rootPageID, page, OPEN_MODE, true);
+			if (page != null && !page.moveFirst()) {
+				page.cleanup();
+				page = null;
+			}
 		}
-		
-		if (page != null && page.getLevel() <= subtreeRootLevel && !page.isAttribute()) {
+
+		if (page != null && page.getLevel() <= subtreeRootLevel
+				&& !page.isAttribute()) {
 			// reached end of subtree
 			page.cleanup();
 			page = null;
 		}
-		
-		if (page != null) {
-			if (!startDeweyID.isPrefixOf(page.getKey())) {
-				throw new RuntimeException("ERROR");
-			}
+	}
+
+	@Override
+	protected BracketNode preFirst() throws IndexOperationException,
+			IndexAccessException {
+		if (self && startDeweyID.isDocument()) {
+			return new BracketNode(locator);
+		} else {
+			return null;
 		}
 	}
 
