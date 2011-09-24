@@ -642,6 +642,15 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 			bufferedKey = null;
 		}
 	}
+	
+	/**
+	 * If this buffer contains an attribute DeweyID, it will be set to the
+	 * related element DeweyID.
+	 */
+	public void removeTwoDivisions() {
+		removeLastDivisions(2);
+		bufferedKey = null;
+	}
 
 	/**
 	 * Buffers the current value of the DeweyIDBuffer, so that it can be

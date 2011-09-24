@@ -82,6 +82,8 @@ public interface Branch extends BPContext {
 	public void format(int unitID, PageID rootPageID, int height,
 			boolean compressed, boolean logged, long undoNextLSN)
 			throws IndexOperationException;
+	
+	public byte[] getValue() throws IndexOperationException;
 
 	public boolean setValue(byte[] value, boolean logged, long undoNextLSN)
 			throws IndexOperationException;

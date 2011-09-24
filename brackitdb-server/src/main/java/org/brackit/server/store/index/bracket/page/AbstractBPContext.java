@@ -293,9 +293,6 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 	}
 
 	@Override
-	public abstract byte[] getValue() throws IndexOperationException;
-
-	@Override
 	public abstract boolean hasNext();
 
 	@Override

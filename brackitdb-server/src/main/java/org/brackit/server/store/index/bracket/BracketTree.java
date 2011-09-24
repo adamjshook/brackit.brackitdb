@@ -1014,34 +1014,32 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-	protected Leaf moveNextPage(Tx tx, PageID rootPageID, Leaf page,
-			OpenMode openMode) throws IndexAccessException {
+	protected Leaf getNextPage(Tx tx, PageID rootPageID, Leaf page,
+			OpenMode openMode, boolean cleanupPage) throws IndexAccessException {
+
+		Leaf next = null;
 
 		try {
 			PageID nextPageID = page.getNextPageID();
 
 			if (nextPageID == null) {
-				page.cleanup();
+				if (cleanupPage) {
+					page.cleanup();
+				}
 				return null;
 			}
 
-			Leaf next = (Leaf) getPage(tx, nextPageID,
-					openMode.forUpdate(), false);
+			next = (Leaf) getPage(tx, nextPageID, openMode.forUpdate(), false);
 
-			page.cleanup();
-			next.assignDeweyIDBuffer(page);
-			
-			try {
-				next.moveFirst();
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			if (cleanupPage) {
+				page.cleanup();
+				next.assignDeweyIDBuffer(page);
 			}
 
 			return next;
 		} catch (IndexOperationException e) {
 			page.cleanup();
-			throw new IndexAccessException(e, "Could not move to next entry");
+			throw new IndexAccessException(e, "Could not load the next page.");
 		}
 	}
 
@@ -1298,22 +1296,24 @@ public final class BracketTree extends PageContextFactory {
 					hintLeaf.assignDeweyIDBuffer(deweyIDBuffer);
 
 					if (navMode == NavigationMode.TO_KEY) {
-						
-						// assumption: hintPageInfo already contains the correct position
+
+						// assumption: hintPageInfo already contains the correct
+						// position
 						hintLeaf.setContext(key, hintPageInfo.currentOffset);
-						
+
 					} else if (navMode == NavigationMode.PARENT) {
-						
+
 						XTCdeweyID parentDeweyID = key.getParent();
 						if (parentDeweyID.isAttributeRoot()) {
 							parentDeweyID = parentDeweyID.getParent();
 						}
-						
+
 						// check current page
 						boolean useHintPage = false;
 						XTCdeweyID hintLeafHighKey = hintLeaf.getHighKey();
 						if (hintLeafHighKey == null
-								|| parentDeweyID.compareDivisions(hintLeaf.getHighKey()) < 0) {
+								|| parentDeweyID.compareDivisions(hintLeaf
+										.getHighKey()) < 0) {
 							NavigationStatus navStatus = hintLeaf
 									.navigateContextFree(parentDeweyID,
 											NavigationMode.TO_KEY);
@@ -1325,7 +1325,7 @@ public final class BracketTree extends PageContextFactory {
 							hintLeaf.cleanup();
 							hintLeaf = null;
 						}
-						
+
 					} else {
 						hintLeaf.setContext(key, hintPageInfo.currentOffset);
 					}
@@ -1377,7 +1377,8 @@ public final class BracketTree extends PageContextFactory {
 		}
 
 		if (hintLeaf != null) {
-			if (navMode == NavigationMode.TO_KEY || navMode == NavigationMode.PARENT) {
+			if (navMode == NavigationMode.TO_KEY
+					|| navMode == NavigationMode.PARENT) {
 				// target node already found
 				return hintLeaf;
 			}
@@ -2626,11 +2627,11 @@ public final class BracketTree extends PageContextFactory {
 				root.setLowPageID(rightBranch.getLowPageID(), logged, -1);
 
 				// move content of right page to root
-				right.moveFirst();
+				rightBranch.moveFirst();
 				while (!rightBranch.isAfterLast()) {
 					root.moveNext();
-					root.insert(rightBranch.getKey(), right.getValue(), logged,
-							-1);
+					root.insert(rightBranch.getKey(), rightBranch.getValue(),
+							logged, -1);
 					rightBranch.delete(logged, 1);
 				}
 
@@ -3411,7 +3412,7 @@ public final class BracketTree extends PageContextFactory {
 				} else {
 					externalPageIDs.addAll(localExternalPageIDs);
 					delayedListener.flush();
-					
+
 					if (!finished && leaf.isLastInLevel()) {
 						// subtree deletion finished anyway
 						finished = true;

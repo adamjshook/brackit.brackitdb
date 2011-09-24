@@ -29,16 +29,27 @@ package org.brackit.server.store.index.bracket;
 
 import java.io.PrintStream;
 
+import org.brackit.xquery.node.parser.ListenMode;
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
+import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.node.bracket.BracketAttributeTuple;
 import org.brackit.server.node.bracket.BracketLocator;
 import org.brackit.server.node.bracket.BracketNode;
+import org.brackit.server.node.bracket.BracketStore;
+import org.brackit.server.node.el.ElRecordAccess;
 import org.brackit.server.store.OpenMode;
 import org.brackit.server.store.index.IndexAccessException;
+import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.index.bracket.page.Leaf;
+import org.brackit.server.store.page.bracket.RecordInterpreter;
+import org.brackit.server.store.page.bracket.navigation.NavigationResult;
+import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.xdm.DocumentException;
+import org.brackit.xquery.xdm.Kind;
 import org.brackit.xquery.xdm.Stream;
 
 /**
@@ -81,6 +92,13 @@ public class BracketIndexImpl implements BracketIndex {
 	}
 
 	@Override
+	public InsertController openForInsert(BracketLocator locator,
+			OpenMode openMode, XTCdeweyID startInsertKey)
+			throws IndexAccessException {
+		return new InsertController(locator, tree, openMode, startInsertKey);
+	}
+
+	@Override
 	public BracketIter open(Tx tx, PageID rootPageID, NavigationMode navMode,
 			XTCdeweyID key, OpenMode openMode) throws IndexAccessException {
 		return open(tx, rootPageID, navMode, key, openMode, null);
@@ -110,13 +128,13 @@ public class BracketIndexImpl implements BracketIndex {
 		Leaf leaf = tree.openInternal(tx, rootPageID, navMode, key, openMode,
 				hintPageInfo, null);
 		if (leaf != null) {
-			return new BracketIterImpl(tx, tree, rootPageID, leaf, openMode,
-					navMode == NavigationMode.TO_INSERT_POS ? key : null);
+			return new BracketIterImpl(tx, tree, rootPageID, leaf, openMode);
 		} else {
 			return null;
 		}
 	}
 
+	@Override
 	public String printLeafScannerStats(NavigationMode navMode)
 			throws IndexAccessException {
 		return tree.printLeafScannerStats(navMode);
@@ -124,12 +142,150 @@ public class BracketIndexImpl implements BracketIndex {
 
 	@Override
 	public Stream<BracketNode> openChildStream(BracketLocator locator,
-			XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo) {
-		return new ChildStream(locator, tree, parentDeweyID, hintPageInfo);
+			XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo,
+			BracketFilter filter) {
+		return new ChildStream(locator, tree, parentDeweyID, hintPageInfo,
+				filter);
 	}
 
+	@Override
 	public Stream<BracketNode> openSubtreeStream(BracketLocator locator,
-			XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo) {
-		return new SubtreeStream(locator, tree, subtreeRoot, hintPageInfo);
+			XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo,
+			BracketFilter filter, boolean self, boolean skipAttributes) {
+		if (skipAttributes) {
+			return new SubtreeStreamSkipAttr(locator, tree, subtreeRoot,
+					hintPageInfo, filter, self);
+		} else {
+			return new SubtreeStream(locator, tree, subtreeRoot, hintPageInfo,
+					filter, self);
+		}
+	}
+
+	@Override
+	public BracketAttributeTuple setAttribute(BracketNode element, String name,
+			String value) throws IndexAccessException, DocumentException {
+
+		BracketLocator locator = element.getLocator();
+		XTCdeweyID attributeDeweyID = null;
+
+		Tx tx = locator.collection.getTX();
+
+		int vocID = locator.collection.getDictionary().translate(tx, name);
+		PSNode attributePsNode = locator.pathSynopsis.getChild(tx,
+				element.getPCR(), vocID, Kind.ATTRIBUTE.ID);
+		byte[] physicalRecord = ElRecordAccess.createRecord(
+				attributePsNode.getPCR(), Kind.ATTRIBUTE.ID, value);
+
+		Leaf page = null;
+		Leaf next = null;
+		try {
+
+			page = tree.openInternal(tx, locator.rootPageID,
+					NavigationMode.TO_KEY, element.getDeweyID(),
+					OpenMode.UPDATE, element.hintPageInfo, null);
+			if (page == null) {
+				throw new IndexAccessException("Element node not found.");
+			}
+
+			// Scan all attributes of this element and check if attribute with
+			// specified name is already available
+			NavigationStatus navStatus = null;
+			BracketNode oldAttribute = null;
+			while (true) {
+				while ((navStatus = page.moveNextAttribute()) == NavigationStatus.FOUND) {
+
+					RecordInterpreter oldRecord = page.getRecord();
+					if (oldRecord.getPCR() == attributePsNode.getPCR()) {
+						// create old attribute node
+						oldAttribute = page.load(locator.bracketNodeLoader);
+
+						// we will reuse current deweyID and only update current
+						// record
+						break;
+					}
+				}
+				// reached end of attributes (NOT_EXISTENT) or end of page
+				// (AFTER_LAST)
+				if (oldAttribute != null
+						|| navStatus == NavigationStatus.NOT_EXISTENT) {
+					break;
+				} else {
+					// load next page
+					next = tree.getNextPage(tx, locator.rootPageID, page,
+							OpenMode.UPDATE, false);
+					if (next == null) {
+						// no next page available
+						break;
+					} else {
+						// check whether next page contains further attributes
+						XTCdeweyID nextLowKey = next.getLowKey();
+						if (nextLowKey == null || !nextLowKey.isAttribute()) {
+							// no further attributes -> decide in which page to
+							// insert
+							XTCdeweyID lastKey = page.getKey();
+							attributeDeweyID = (lastKey.isAttribute() ? XTCdeweyID
+									.newBetween(lastKey, null) : lastKey
+									.getNewAttributeID());
+							if (attributeDeweyID.compareDivisions(page
+									.getHighKey()) >= 0) {
+								// insert in next page
+								page.cleanup();
+								next.assignDeweyIDBuffer(page);
+								page = next;
+								next = null;
+							} else {
+								next.cleanup();
+								next = null;
+							}
+							break;
+						} else {
+							// next page contains attributes
+							page.cleanup();
+							next.assignDeweyIDBuffer(page);
+							page = next;
+							next = null;
+							continue;
+						}
+					}
+				}
+			}
+
+			// at this point, the context either points to the old attribute
+			// with the same name or to the last attribute of this element
+			if (oldAttribute != null) {
+				// update attribute
+				page = tree.updateInLeaf(tx, locator.rootPageID, page,
+						physicalRecord, -1);
+				attributeDeweyID = oldAttribute.getDeweyID();
+			} else {
+				// insert new attribute
+				if (attributeDeweyID == null) {
+					XTCdeweyID lastKey = page.getKey();
+					attributeDeweyID = (lastKey.isAttribute() ? XTCdeweyID
+							.newBetween(lastKey, null) : lastKey
+							.getNewAttributeID());
+				}
+				page = tree.insertIntoLeaf(tx, locator.rootPageID, page,
+						attributeDeweyID, physicalRecord, 0, true, -1);
+			}
+			
+			BracketNode newAttribute = new BracketNode(locator, attributeDeweyID,
+					Kind.ATTRIBUTE.ID, value, attributePsNode);
+			newAttribute.hintPageInfo = page.getHintPageInformation();
+			
+			page.cleanup();
+			page = null;
+			
+			return new BracketAttributeTuple(oldAttribute, newAttribute);
+
+		} catch (IndexOperationException e) {
+			if (page != null) {
+				page.cleanup();
+			}
+			if (next != null) {
+				next.cleanup();
+			}
+			throw new IndexAccessException(e);
+		}
 	}
 }

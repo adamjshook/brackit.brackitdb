@@ -32,18 +32,21 @@ import org.brackit.server.node.bracket.BracketLocator;
 import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
-import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 
 /**
  * @author Martin Hiller
- * 
+ *
  */
-public final class ChildStream extends StreamIterator {
+public final class SubtreeStreamSkipAttr extends StreamIterator {
+	
+	private int subtreeRootLevel = -1;
+	private final boolean self;
 
-	public ChildStream(BracketLocator locator, BracketTree tree,
-			XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo,
-			BracketFilter filter) {
-		super(locator, tree, parentDeweyID, hintPageInfo, filter);
+	public SubtreeStreamSkipAttr(BracketLocator locator, BracketTree tree,
+			XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo,
+			BracketFilter filter, boolean self) {
+		super(locator, tree, subtreeRoot, hintPageInfo, filter);
+		this.self = self;
 	}
 
 	/**
@@ -57,27 +60,21 @@ public final class ChildStream extends StreamIterator {
 					NavigationMode.TO_KEY,
 					XTCdeweyID.newRootID(startDeweyID.getDocID()), OPEN_MODE,
 					null, deweyIDBuffer);
+			subtreeRootLevel = 1;
 		} else {
 
-			if (page != null) {
-				// hint page was already loaded
-				NavigationStatus navStatus = page.navigateFirstChild();
-				if (navStatus == NavigationStatus.FOUND) {
-					return;
-				} else if ((navStatus == NavigationStatus.NOT_EXISTENT)) {
-					page.cleanup();
-					page = null;
-					return;
-				}
-				page = tree.navigateAfterHintPageFail(tx, locator.rootPageID,
-						NavigationMode.FIRST_CHILD, startDeweyID, OPEN_MODE,
-						page, deweyIDBuffer, navStatus);
-				return;
+			if (page == null) {
+				// hint page could not be loaded
+				page = tree.navigateViaIndexAccess(tx, locator.rootPageID,
+						NavigationMode.TO_KEY, startDeweyID, OPEN_MODE,
+						deweyIDBuffer);
 			}
-
-			page = tree.navigateViaIndexAccess(tx, locator.rootPageID,
-					NavigationMode.FIRST_CHILD, startDeweyID, OPEN_MODE,
-					deweyIDBuffer);
+			subtreeRootLevel = page.getLevel();
+			
+			if (!self) {
+				// move to next node
+				nextInternal();
+			}
 		}
 	}
 
@@ -87,25 +84,30 @@ public final class ChildStream extends StreamIterator {
 	@Override
 	protected void nextInternal() throws IndexOperationException,
 			IndexAccessException {
-		// try to find node without BracketTree
-		NavigationStatus navStatus = page.navigateNextSibling();
-		if (navStatus == NavigationStatus.FOUND) {
-			return;
-		} else if ((navStatus == NavigationStatus.NOT_EXISTENT)) {
-			page.cleanup();
-			page = null;
-			return;
+
+		if (!page.moveNextNonAttr()) {
+			// use BracketTree to load next page
+			page = tree.getNextPage(tx, locator.rootPageID, page, OPEN_MODE, true);
+			if (page != null && !page.moveNextNonAttr()) {
+				page.cleanup();
+				page = null;
+			}
 		}
 
-		// use BracketTree to continue the scan
-		page = tree.navigateAfterHintPageFail(tx, locator.rootPageID,
-				NavigationMode.NEXT_SIBLING, currentKey, OPEN_MODE, page,
-				deweyIDBuffer, navStatus);
+		if (page != null && page.getLevel() <= subtreeRootLevel) {
+			// reached end of subtree
+			page.cleanup();
+			page = null;
+		}
 	}
 
 	@Override
 	protected BracketNode preFirst() throws IndexOperationException,
 			IndexAccessException {
-		return null;
+		if (self && startDeweyID.isDocument()) {
+			return new BracketNode(locator);
+		} else {
+			return null;
+		}
 	}
 }

@@ -29,6 +29,7 @@ package org.brackit.server.node.el;
 
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.el.index.ElPlaceHolderHelper;
+import org.brackit.server.store.page.bracket.RecordInterpreter;
 import org.brackit.server.util.Calc;
 import org.brackit.xquery.xdm.Kind;
 
@@ -58,9 +59,18 @@ public class ElRecordAccess implements ElPlaceHolderHelper {
 		int pcrSize = ((physicalRecord[0] & PCR_SIZE_MASK) + 1);
 		return (pcrSize > 0) ? Calc.toInt(physicalRecord, 1, pcrSize) : 0;
 	}
+	
+	public final static int getPCR(byte[] buf, int offset, int len) {
+		int pcrSize = ((buf[offset] & PCR_SIZE_MASK) + 1);
+		return (pcrSize > 0) ? Calc.toInt(buf, offset + 1, pcrSize) : 0;
+	}
 
 	public final static byte getType(byte[] physicalRecord) {
 		return (byte) ((physicalRecord[0] >> 2) & TYPE_MASK);
+	}
+	
+	public final static byte getType(byte[] buf, int offset, int len) {
+		return (byte) ((buf[offset] >> 2) & TYPE_MASK);
 	}
 
 	public final static void setType(byte[] physicalRecord, byte type) {
@@ -75,6 +85,26 @@ public class ElRecordAccess implements ElPlaceHolderHelper {
 
 		if (valueLength > 0) {
 			value = Calc.toString(physicalRecord, valueOffset, valueLength);
+		}
+
+		return value;
+	}
+	
+	public final static String getValue(byte[] buf, int offset, int len) {
+		int pcrSize = ((buf[offset] & PCR_SIZE_MASK) + 1);
+		int valueOffset = 1 + pcrSize;
+		int valueLength = len - valueOffset;
+		String value = "";
+
+		if (valueLength > 0) {
+			if (offset == 0 && buf.length == len) {
+				// probably an external value -> do not use an arraycopy again
+				value = Calc.toString(buf, valueOffset, valueLength);
+			} else {
+				byte[] stringBytes = new byte[valueLength];
+				System.arraycopy(buf, offset + valueOffset, stringBytes, 0, valueLength);
+				value = Calc.toString(stringBytes);
+			}
 		}
 
 		return value;

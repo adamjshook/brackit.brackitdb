@@ -25,49 +25,25 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.store.index.bracket;
+package org.brackit.server.store.index.bracket.filter;
 
-import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.BracketNode;
-import org.brackit.server.store.index.IndexAccessException;
-import org.brackit.server.store.index.bracket.page.BracketNodeLoader;
+import org.brackit.server.store.page.bracket.DeweyIDBuffer;
 import org.brackit.server.store.page.bracket.RecordInterpreter;
+import org.brackit.xquery.xdm.Kind;
 
 /**
  * @author Martin Hiller
- * 
+ *
  */
-public interface BracketIter {
-
-	public boolean navigate(NavigationMode navMode) throws IndexAccessException;
-
-	public XTCdeweyID getKey() throws IndexAccessException;
+public abstract class BracketFilter {
 	
-	public RecordInterpreter getRecord() throws IndexAccessException;
+	public abstract boolean accept(DeweyIDBuffer deweyID, boolean hasRecord, RecordInterpreter value);
+	
+	public abstract boolean accept(BracketNode node);
+	
+	protected final byte kind(boolean hasRecord, RecordInterpreter value) {
+		return (hasRecord) ? value.getType() : Kind.ELEMENT.ID;
+	}
 
-	public BracketNode load(BracketNodeLoader loader) throws IndexAccessException;
-
-	public void deleteSubtree(SubtreeDeleteListener deleteListener)
-			throws IndexAccessException;
-
-	public void update(byte[] newValue) throws IndexAccessException;
-
-	public void close() throws IndexAccessException;
-
-	/**
-	 * Moves the pointer to the next index entry
-	 * 
-	 * @return <code>TRUE</code>, iff the iterator has found another entry
-	 * @throws IndexAccessException
-	 *             if there was an error moving the pointer to the next record
-	 */
-	public boolean next() throws IndexAccessException;
-
-	/**
-	 * Returns information (PageID, LSN, Offset) of the current page.
-	 * 
-	 * @return information (PageID, LSN, Offset) of the current page
-	 * @throws IndexAccessException
-	 */
-	public HintPageInformation getPageInformation() throws IndexAccessException;
 }

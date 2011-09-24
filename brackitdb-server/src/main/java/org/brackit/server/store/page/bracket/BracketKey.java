@@ -76,7 +76,7 @@ public final class BracketKey {
 		}
 		final byte physicalValue;
 		final int dataReferenceLength;
-		final boolean hasDataReference;
+		public final boolean hasDataReference;
 		final boolean opensNewSubtree;
 
 		private Type(byte b) {

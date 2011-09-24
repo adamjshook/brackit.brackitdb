@@ -27,74 +27,18 @@
  */
 package org.brackit.server.store.index.bracket.page;
 
-import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.store.index.bracket.IndexOperationException;
-import org.brackit.server.store.page.BasePage;
-import org.brackit.server.tx.thread.Latch;
+import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.node.bracket.BracketNode;
+import org.brackit.server.store.page.bracket.RecordInterpreter;
+import org.brackit.xquery.xdm.DocumentException;
 
 /**
  * @author Martin Hiller
  * 
  */
-public interface BPContext extends Latch {
+public interface BracketNodeLoader {
 
-	public PageID getPageID();
-
-	public long getLSN();
-
-	public int getSize();
-
-	public int getFreeSpace();
-
-	public int getUsedSpace();
-
-	public PageID getRootPageID();
-
-	public int getEntryCount();
-
-	public PageID getPrevPageID() throws IndexOperationException;
-
-	public void setPrevPageID(PageID lowPageID, boolean logged, long undoNextLSN)
-			throws IndexOperationException;
-
-	public boolean moveFirst() throws IndexOperationException;
-
-	public boolean hasNext() throws IndexOperationException;
-
-	public boolean moveNext() throws IndexOperationException;
-
-	public boolean hasPrevious() throws IndexOperationException;
-
-	public boolean moveLast() throws IndexOperationException;
-
-	public String dump(String pageTitle) throws IndexOperationException;
-
-	public BPContext format(boolean leaf, int unitID, PageID rootPageID,
-			int height, boolean compressed, boolean logged, long undoNextLSN)
-			throws IndexOperationException;
-
-	public void deletePage() throws IndexOperationException;
-
-	public void cleanup();
-
-	public BPContext createClone() throws IndexOperationException;
-
-	public int getUnitID();
-
-	public int getHeight();
-	
-	public boolean isCompressed();
-
-	boolean isLastInLevel();
-
-	public boolean isLast();
-
-	public boolean isLeaf();
-
-	public BasePage getPage();
-	
-	public boolean externalizeValue(byte[] value);
-	
-	public byte[] externalize(byte[] value) throws IndexOperationException;
+	public BracketNode load(XTCdeweyID deweyID, RecordInterpreter record)
+			throws DocumentException;
 
 }

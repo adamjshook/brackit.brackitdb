@@ -25,49 +25,54 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.store.index.bracket;
+package org.brackit.server.store.page.bracket;
 
-import org.brackit.server.node.XTCdeweyID;
-import org.brackit.server.node.bracket.BracketNode;
-import org.brackit.server.store.index.IndexAccessException;
-import org.brackit.server.store.index.bracket.page.BracketNodeLoader;
-import org.brackit.server.store.page.bracket.RecordInterpreter;
+import org.brackit.server.node.el.ElRecordAccess;
 
 /**
  * @author Martin Hiller
- * 
+ *
  */
-public interface BracketIter {
-
-	public boolean navigate(NavigationMode navMode) throws IndexAccessException;
-
-	public XTCdeweyID getKey() throws IndexAccessException;
+public class RecordInterpreter {
 	
-	public RecordInterpreter getRecord() throws IndexAccessException;
-
-	public BracketNode load(BracketNodeLoader loader) throws IndexAccessException;
-
-	public void deleteSubtree(SubtreeDeleteListener deleteListener)
-			throws IndexAccessException;
-
-	public void update(byte[] newValue) throws IndexAccessException;
-
-	public void close() throws IndexAccessException;
-
-	/**
-	 * Moves the pointer to the next index entry
-	 * 
-	 * @return <code>TRUE</code>, iff the iterator has found another entry
-	 * @throws IndexAccessException
-	 *             if there was an error moving the pointer to the next record
-	 */
-	public boolean next() throws IndexAccessException;
-
-	/**
-	 * Returns information (PageID, LSN, Offset) of the current page.
-	 * 
-	 * @return information (PageID, LSN, Offset) of the current page
-	 * @throws IndexAccessException
-	 */
-	public HintPageInformation getPageInformation() throws IndexAccessException;
+	private final byte[] buf;
+	private final int offset;
+	private final int len;
+	
+	private int pcr = -1;
+	private byte type = -1;
+	private String value = null;
+	
+	public RecordInterpreter(byte[] buf, int offset, int len) {
+		this.buf = buf;
+		this.offset = offset;
+		this.len = len;
+	}
+	
+	public RecordInterpreter(byte[] value) {
+		this.buf = value;
+		this.offset = 0;
+		this.len = value.length;
+	}
+	
+	public int getPCR() {
+		if (pcr == -1) {
+			pcr = ElRecordAccess.getPCR(buf, offset, len);
+		}
+		return pcr;
+	}
+	
+	public byte getType() {
+		if (type == -1) {
+			type = ElRecordAccess.getType(buf, offset, len);
+		}
+		return type;
+	}
+	
+	public String getValue() {
+		if (value == null) {
+			value = ElRecordAccess.getValue(buf, offset, len);
+		}
+		return value;
+	}
 }
