@@ -64,10 +64,9 @@ public class InsertSubtrees implements Procedure {
 				params[0]);
 		String fragmentFile = params[1];
 
-		int elementIdxNo = getElementIndex(ctx, coll);
+		int nameIdxNo = getNameIndex(ctx, coll);
 		Stream<? extends Node<?>> elements = coll.getIndexController()
-				.openElementIndex(elementIdxNo, new QNm("asia"), 
-						SearchMode.FIRST);
+				.openNameIndex(nameIdxNo, new QNm("asia"), SearchMode.FIRST);
 
 		Node<?> refNode = null;
 		if ((refNode = elements.next()) == null) {
@@ -94,12 +93,12 @@ public class InsertSubtrees implements Procedure {
 		}
 	}
 
-	private int getElementIndex(QueryContext ctx, DBCollection<?> coll)
+	private int getNameIndex(QueryContext ctx, DBCollection<?> coll)
 			throws DocumentException {
 		Indexes indexes = coll.get(Indexes.class);
-		IndexDef elementIndex = indexes.findElementIndex();
-		if (elementIndex != null) {
-			return elementIndex.getID();
+		IndexDef nameIndex = indexes.findNameIndex();
+		if (nameIndex != null) {
+			return nameIndex.getID();
 		}
 		throw new DocumentException("No element index found for document %s.",
 				coll.getID());

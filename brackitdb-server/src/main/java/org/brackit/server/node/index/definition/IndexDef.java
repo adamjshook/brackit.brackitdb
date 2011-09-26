@@ -112,11 +112,11 @@ public class IndexDef implements Materializable, Serializable {
 	}
 
 	/*
-	 * Element index
+	 * Name index
 	 */
 	public IndexDef(Cluster cluster, Map<QNm, Cluster> included,
 			Set<QNm> excluded) {
-		this.type = IndexType.ELEMENT;
+		this.type = IndexType.NAME;
 		this.included.putAll(included);
 		this.excluded.addAll(excluded);
 	}
@@ -314,8 +314,8 @@ public class IndexDef implements Materializable, Serializable {
 		throw new DocumentException("Unknown content type type: '%s'", name);
 	}
 
-	public boolean isElementIndex() {
-		return type == IndexType.ELEMENT;
+	public boolean isNameIndex() {
+		return type == IndexType.NAME;
 	}
 
 	public boolean isContentIndex() {

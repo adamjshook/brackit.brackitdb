@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.index.element.impl;
+package org.brackit.server.node.index.name.impl;
 
 import java.util.Map;
 import java.util.Set;
@@ -35,7 +35,7 @@ import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.index.cas.impl.CASIndexListener;
 import org.brackit.server.node.index.definition.Cluster;
 import org.brackit.server.node.index.definition.IndexDef;
-import org.brackit.server.node.index.element.impl.NameDirectoryEncoderImpl.QVocID;
+import org.brackit.server.node.index.name.impl.NameDirectoryEncoderImpl.QVocID;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.node.txnode.IndexEncoderHelper;
 import org.brackit.server.node.txnode.TXNode;
@@ -52,7 +52,7 @@ import org.brackit.xquery.xdm.DocumentException;
  * @author Sebastian Baechle
  * 
  */
-public class ElementIndexListener<E extends TXNode<E>> extends
+public class NameIndexListener<E extends TXNode<E>> extends
 		DefaultListener<E> implements SubtreeListener<E> {
 	private static final Logger log = Logger.getLogger(CASIndexListener.class);
 
@@ -68,7 +68,7 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 
 	private final Set<QNm> excludes;
 
-	public ElementIndexListener(Tx tx, Index index,
+	public NameIndexListener(Tx tx, Index index,
 			IndexEncoderHelper<E> helper, IndexDef indexDef, ListenMode mode) {
 		this.tx = tx;
 		this.index = index;
@@ -96,6 +96,10 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 		}
 	}
 
+	public <T extends E> void attribute(T node) throws DocumentException {
+		// TODO Listen for attributes and handle them appropriately
+	}
+	
 	protected <T extends E> void insertElement(T node) throws DocumentException {
 		QNm name = node.getName();
 		boolean included = (includes.isEmpty()|| includes.containsKey(name));
@@ -130,7 +134,7 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 			}
 
 			if (log.isDebugEnabled()) {
-				log.debug(String.format("Inserting (%s, %s) in element " +
+				log.debug(String.format("Inserting (%s, %s) in name " +
 						"index %s.", qVocID, node.getDeweyID(), indexNo));
 			}
 
@@ -167,7 +171,7 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 				nodePageID = nameDirectoryEncoder
 						.decodePageID(nameDirectoryValue);
 				if (log.isDebugEnabled()) {
-					log.debug(String.format("Deleting (%s, %s) from element " +
+					log.debug(String.format("Deleting (%s, %s) from name " +
 							"index %s.", qVocID, node.getDeweyID(), indexNo));
 				}
 				byte[] key = encoder.encodeKey(node);

@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.index.element.impl;
+package org.brackit.server.node.index.name.impl;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,8 +60,8 @@ import org.junit.Test;
  * @author Sebastian Baechle
  * 
  */
-public class ElementIndexTest {
-	private static final Logger log = Logger.getLogger(ElementIndexTest.class
+public class NameIndexTest {
+	private static final Logger log = Logger.getLogger(NameIndexTest.class
 			.getName());
 
 	private static final String DOCUMENT = "<?xml version = '1.0' encoding = 'UTF-8'?>"
@@ -96,20 +96,20 @@ public class ElementIndexTest {
 	private SysMockup sm;
 
 	@Test
-	public void testCreateSimpleElementIndex() throws DocumentException {
+	public void testCreateSimpleNameIndex() throws DocumentException {
 		ElCollection locator = createDocument(t1, 
 				new DocumentParser(DOCUMENT));
 		locator.getIndexController().createIndexes(createNameIdxDef(null));
 	}
 
 	@Test
-	public void testGetFromElementIndex() throws IndexAccessException, 
+	public void testGetFromNameIndex() throws IndexAccessException, 
 	DocumentException {
 		ElCollection locator = createDocument(t1, new DocumentParser(DOCUMENT));
 		IndexDef idxDef = createNameIdxDef(null);
 		locator.getIndexController().createIndexes(idxDef);
 		Stream<? extends ElNode> iterator = locator.getIndexController()
-				.openElementIndex(idxDef.getID(), new QNm("Member"), 
+				.openNameIndex(idxDef.getID(), new QNm("Member"), 
 						SearchMode.FIRST);
 
 		ElNode n;
@@ -120,12 +120,12 @@ public class ElementIndexTest {
 	}
 
 	@Test
-	public void testOpenElementIndex() throws Exception {
+	public void testOpenNameIndex() throws Exception {
 		ElCollection locator = createDocument(t1, new DocumentParser(DOCUMENT));
 		IndexDef idxDef = createNameIdxDef(null);
 		locator.getIndexController().createIndexes(idxDef);
 		Stream<? extends ElNode> elements = locator.getIndexController()
-				.openElementIndex(idxDef.getID(), new QNm("Member2"), 
+				.openNameIndex(idxDef.getID(), new QNm("Member2"), 
 						SearchMode.FIRST);
 
 		ElNode n;

@@ -28,5 +28,5 @@
 package org.brackit.server.node.index.definition;
 
 public enum IndexType {
-	PATH, CAS, ELEMENT, CONTENT
+	PATH, CAS, NAME, CONTENT
 }

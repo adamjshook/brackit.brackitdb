@@ -64,7 +64,7 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 	private final ElCollection collection;
 
 	public ElIndexController(ElCollection collection) {
-		super(collection, collection.store.elementIndex, null,
+		super(collection, collection.store.nameIndex, null,
 				collection.store.pathIndex, collection.store.casIndex);
 		this.collection = collection;
 	}
@@ -118,8 +118,8 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 		IndexEncoder<ElNode> encoder;
 
 		switch (idxDef.getType()) {
-		case ELEMENT:
-			return elementIndex.createBuilder(collection.getTX(), this,
+		case NAME:
+			return nameIndex.createBuilder(collection.getTX(), this,
 					containerNo, idxDef);
 		case CONTENT:
 			// convert request for content index to generic cas index
@@ -154,8 +154,8 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 		IndexEncoder<ElNode> encoder;
 
 		switch (idxDef.getType()) {
-		case ELEMENT:
-			return elementIndex.createListener(collection.getTX(), this, mode,
+		case NAME:
+			return nameIndex.createListener(collection.getTX(), this, mode,
 					idxDef);
 		case CAS:
 			encoder = (idxDef.getClustering() == Cluster.SPLID) ? new SplidClusterEncoder(
