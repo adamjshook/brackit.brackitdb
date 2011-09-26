@@ -41,6 +41,8 @@ import javax.xml.parsers.SAXParserFactory;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsis;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisNode;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.Kind;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -76,30 +78,17 @@ public class PathSynopsisTest {
 		List<Float> msr = new ArrayList<Float>();
 
 		for (String query : queries) {
+			Path<QNm> path = Path.parse(query);
 			Set<Integer> result = null;
 			System.out.println("Testing query #" + (msr.size() + 1) + ": '"
-					+ query + "'");
-			startMillis = System.currentTimeMillis();
-			System.out.println("getPCRsForPathMax invoked at "
-					+ sdf.format(new Date(startMillis)) + "...");
-
-			for (int i = 0; i < ITERATIONS; i++) {
-				ps.clearCache();
-				result = ps.getPCRsForPathMax(null, query);
-			}
-
-			endMillis = System.currentTimeMillis();
-			long optTime = endMillis - startMillis;
-			System.out.println("Finished in " + optTime + " ms.");
-			System.out.println("Returned PCRs: " + result);
-
+					+ path + "'");
 			startMillis = System.currentTimeMillis();
 			System.out.println("getPCRsForPathSebastian invoked at "
 					+ sdf.format(new Date(startMillis)) + "...");
 
 			for (int i = 0; i < ITERATIONS; i++) {
 				ps.clearCache();
-				result = ps.getPCRsForPath(null, query);
+				result = ps.getPCRsForPath(null, path);
 			}
 
 			endMillis = System.currentTimeMillis();

@@ -29,7 +29,7 @@ package org.brackit.server.node.index.element;
 
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.index.definition.IndexDef;
-import org.brackit.server.node.index.element.impl.NameDirectoyEncoderImpl.QVocID;
+import org.brackit.server.node.index.element.impl.NameDirectoryEncoderImpl.QVocID;
 import org.brackit.server.node.txnode.IndexEncoderHelper;
 import org.brackit.server.store.SearchMode;
 import org.brackit.server.tx.Tx;

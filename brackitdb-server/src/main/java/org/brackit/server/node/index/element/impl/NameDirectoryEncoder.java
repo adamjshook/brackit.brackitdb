@@ -28,7 +28,7 @@
 package org.brackit.server.node.index.element.impl;
 
 import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.node.index.element.impl.NameDirectoyEncoderImpl.QVocID;
+import org.brackit.server.node.index.element.impl.NameDirectoryEncoderImpl.QVocID;
 import org.brackit.server.store.Field;
 
 /**

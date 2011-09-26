@@ -35,7 +35,7 @@ import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.index.cas.impl.CASIndexListener;
 import org.brackit.server.node.index.definition.Cluster;
 import org.brackit.server.node.index.definition.IndexDef;
-import org.brackit.server.node.index.element.impl.NameDirectoyEncoderImpl.QVocID;
+import org.brackit.server.node.index.element.impl.NameDirectoryEncoderImpl.QVocID;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.node.txnode.IndexEncoderHelper;
 import org.brackit.server.node.txnode.TXNode;
@@ -64,11 +64,7 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 	private final NameDirectoryEncoder nameDirectoryEncoder;
 	protected final IndexEncoderHelper<E> helper;
 
-	private final boolean hasIncludes;
-
 	private final Map<QNm, Cluster> includes;
-
-	private final boolean hasExcludes;
 
 	private final Set<QNm> excludes;
 
@@ -81,11 +77,9 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 		this.helper = helper;
 
 		this.indexNo = new PageID(indexDef.getID());
-		this.nameDirectoryEncoder = new NameDirectoyEncoderImpl();
+		this.nameDirectoryEncoder = new NameDirectoryEncoderImpl();
 		this.includes = indexDef.getIncluded();
 		this.excludes = indexDef.getExcluded();
-		hasIncludes = includes.size() > 0;
-		hasExcludes = excludes.size() > 0;
 	}
 
 	@Override
@@ -104,8 +98,8 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 
 	protected <T extends E> void insertElement(T node) throws DocumentException {
 		QNm name = node.getName();
-		boolean included = (!hasIncludes || includes.containsKey(name));
-		boolean excluded = (hasExcludes && excludes.contains(name));
+		boolean included = (includes.isEmpty()|| includes.containsKey(name));
+		boolean excluded = (!excludes.isEmpty() && excludes.contains(name));
 		if (!included || excluded) {
 			return;
 		}
@@ -113,7 +107,7 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 		QVocID qVocID = QVocID.fromQNm(tx, helper.getDictionary(), name);
 		try {
 			PageID nodePageID;
-			IndexEncoder<E> encoder = helper.getElementIndexEncoder();
+			IndexEncoder<E> encoder = helper.getNameIndexEncoder();
 			byte[] nameDirectoryKey = nameDirectoryEncoder.encodeKey(qVocID);
 			byte[] nameDirectoryValue = index.read(tx, indexNo,
 					nameDirectoryKey);
@@ -150,8 +144,8 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 
 	protected <T extends E> void deleteElement(T node) throws DocumentException {
 		QNm name = node.getName();
-		boolean included = (!hasIncludes || includes.containsKey(name));
-		boolean excluded = (hasExcludes && excludes.contains(name));
+		boolean included = (includes.isEmpty() || includes.containsKey(name));
+		boolean excluded = (!excludes.isEmpty() && excludes.contains(name));
 		if (!included || excluded) {
 			return;
 		}
@@ -159,7 +153,7 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 		QVocID qVocID = QVocID.fromQNm(tx, helper.getDictionary(), name);
 		try {
 			PageID nodePageID;
-			IndexEncoder<E> encoder = helper.getElementIndexEncoder();
+			IndexEncoder<E> encoder = helper.getNameIndexEncoder();
 			byte[] nameDirectoryKey = nameDirectoryEncoder.encodeKey(qVocID);
 			byte[] nameDirectoryValue = index.read(tx, indexNo,
 					nameDirectoryKey);
