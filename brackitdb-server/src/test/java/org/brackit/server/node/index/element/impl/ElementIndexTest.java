@@ -31,6 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 
+import static org.brackit.server.node.index.definition.IndexDefBuilder.*;
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.SysMockup;
 import org.brackit.server.io.buffer.BufferException;
@@ -39,6 +40,7 @@ import org.brackit.server.metadata.materialize.Materializable;
 import org.brackit.server.node.el.ElCollection;
 import org.brackit.server.node.el.ElNode;
 import org.brackit.server.node.el.ElStore;
+import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.txnode.Persistor;
 import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.store.SearchMode;
@@ -46,15 +48,13 @@ import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.aries.BPlusIndex;
 import org.brackit.server.store.index.aries.display.DisplayVisitor;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Stream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import antlr.RecognitionException;
-import antlr.TokenStreamException;
 
 /**
  * @author Sebastian Baechle
@@ -89,8 +89,6 @@ public class ElementIndexTest {
 			+ "<Budget>7000</Budget>"
 			+ "<Abstract></Abstract>" + "</Project>" + "</Organization>";
 
-	private static final String SIMPLE_ELEMENT_INDEX_DEFINITION = "create element index";
-
 	private BPlusIndex index;
 
 	private Tx t1;
@@ -98,21 +96,21 @@ public class ElementIndexTest {
 	private SysMockup sm;
 
 	@Test
-	public void testCreateSimpleElementIndex() throws RecognitionException,
-			TokenStreamException, DocumentException {
-		ElCollection locator = createDocument(t1, new DocumentParser(DOCUMENT));
-		locator.getIndexController().createIndex(
-				SIMPLE_ELEMENT_INDEX_DEFINITION);
+	public void testCreateSimpleElementIndex() throws DocumentException {
+		ElCollection locator = createDocument(t1, 
+				new DocumentParser(DOCUMENT));
+		locator.getIndexController().createIndexes(createNameIdxDef(null));
 	}
 
 	@Test
-	public void testGetFromElementIndex() throws RecognitionException,
-			TokenStreamException, IndexAccessException, DocumentException {
+	public void testGetFromElementIndex() throws IndexAccessException, 
+	DocumentException {
 		ElCollection locator = createDocument(t1, new DocumentParser(DOCUMENT));
-		int idxNo = locator.getIndexController().createIndex(
-				SIMPLE_ELEMENT_INDEX_DEFINITION).getID();
+		IndexDef idxDef = createNameIdxDef(null);
+		locator.getIndexController().createIndexes(idxDef);
 		Stream<? extends ElNode> iterator = locator.getIndexController()
-				.openElementIndex(idxNo, "Member", SearchMode.FIRST);
+				.openElementIndex(idxDef.getID(), new QNm("Member"), 
+						SearchMode.FIRST);
 
 		ElNode n;
 		while ((n = iterator.next()) != null) {
@@ -124,10 +122,11 @@ public class ElementIndexTest {
 	@Test
 	public void testOpenElementIndex() throws Exception {
 		ElCollection locator = createDocument(t1, new DocumentParser(DOCUMENT));
-		int idxNo = locator.getIndexController().createIndex(
-				SIMPLE_ELEMENT_INDEX_DEFINITION).getID();
+		IndexDef idxDef = createNameIdxDef(null);
+		locator.getIndexController().createIndexes(idxDef);
 		Stream<? extends ElNode> elements = locator.getIndexController()
-				.openElementIndex(idxNo, "Member2", SearchMode.FIRST);
+				.openElementIndex(idxDef.getID(), new QNm("Member2"), 
+						SearchMode.FIRST);
 
 		ElNode n;
 		while ((n = elements.next()) != null) {

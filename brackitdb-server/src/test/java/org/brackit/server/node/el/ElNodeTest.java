@@ -40,6 +40,8 @@ import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.node.txnode.TXCollection;
 import org.brackit.server.node.txnode.TXNodeTest;
 import org.brackit.server.tx.TxException;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.node.SubtreePrinter;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.node.parser.FragmentHelper;
@@ -77,7 +79,8 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		check(firstnameT, deweyID4, Kind.TEXT, "", "Kurt");
 	}
 	
-	private void check(ElNode node, XTCdeweyID deweyID, Kind kind, String name, String value) throws DocumentException {
+	private void check(ElNode node, XTCdeweyID deweyID, Kind kind, 
+			String name, String value) throws DocumentException {
 		assertEquals("DeweyID is correct", deweyID, node.getDeweyID());
 		assertEquals("Kind is correct", kind, node.getKind());
 		assertEquals("Name is correct", name, node.getName());
@@ -98,13 +101,13 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		printIndex(tx, "/media/ramdisk/testEmptyElementUnderRollback1_1.dot",
 				locator.getID(), true);
 
-		root.setAttribute("att", "test");
+		root.setAttribute(new QNm("att"), new Una("test"));
 
 		printIndex(tx, "/media/ramdisk/testEmptyElementUnderRollback1_2.dot",
 				locator.getID(), true);
 
 		root.insertRecord(root.getDeweyID().getNewChildID(), Kind.ELEMENT,
-				"child");
+				new QNm("child"), null);
 
 		printIndex(tx, "/media/ramdisk/testEmptyElementUnderRollback1_3.dot",
 				locator.getID(), true);
@@ -239,7 +242,7 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 
 		tx.checkPrevLSN();
 
-		ElNode attribute = root.getAttribute("test");
+		ElNode attribute = root.getAttribute(new QNm("test"));
 		attribute.delete();
 		ElNode checkRoot = locator.getDocument().getFirstChild().getNode(
 				root.getDeweyID());

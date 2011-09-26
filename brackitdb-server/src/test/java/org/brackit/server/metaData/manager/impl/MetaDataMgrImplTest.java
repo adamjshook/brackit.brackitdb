@@ -50,6 +50,8 @@ import org.brackit.server.metadata.DBCollection;
 import org.brackit.server.metadata.DBItem;
 import org.brackit.server.metadata.manager.impl.MetaDataMgrImpl;
 import org.brackit.server.metadata.masterDocument.Indexes;
+import org.brackit.server.node.index.definition.IndexDef;
+import org.brackit.server.node.index.definition.IndexDefBuilder;
 import org.brackit.server.store.index.aries.BPlusIndex;
 import org.brackit.server.tx.Tx;
 import org.brackit.xquery.node.parser.DocumentParser;
@@ -291,7 +293,8 @@ public class MetaDataMgrImplTest {
 		mdm.start(tx, true);
 		DBCollection<?> original = mdm.create(tx, "/test.xml",
 				new DocumentParser(DOCUMENT));
-		original.getIndexController().createIndex("create element index");
+		IndexDef idxDef = IndexDefBuilder.createNameIdxDef(null);
+		original.getIndexController().createIndexes(idxDef);
 		tx.commit();
 		mdm.shutdown();
 		mdm.start(tx2, false);

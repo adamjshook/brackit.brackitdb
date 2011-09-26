@@ -47,7 +47,7 @@ public interface IndexEncoderHelper<E extends Node<E>> {
 	public IndexEncoder<E> getPathIndexEncoder(Field keyType, Field valueType)
 			throws DocumentException;
 
-	public IndexEncoder<E> getElementIndexEncoder() throws DocumentException;
+	public IndexEncoder<E> getNameIndexEncoder() throws DocumentException;
 
 	public DictionaryMgr getDictionary();
 }

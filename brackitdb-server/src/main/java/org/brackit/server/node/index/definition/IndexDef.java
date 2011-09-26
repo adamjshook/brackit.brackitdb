@@ -88,7 +88,7 @@ public class IndexDef implements Materializable, Serializable {
 	// paths for path and CAS indexes
 	private final List<Path<QNm>> paths = new ArrayList<Path<QNm>>();
 
-	// only for element indexes
+	// only for name indexes
 	private final Set<QNm> excluded = new HashSet<QNm>();
 	private final Map<QNm, Cluster> included = new HashMap<QNm, Cluster>();
 

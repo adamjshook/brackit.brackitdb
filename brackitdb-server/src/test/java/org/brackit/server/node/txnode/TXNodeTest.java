@@ -52,6 +52,37 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 	protected static final Logger log = Logger.getLogger(TXNodeTest.class
 			.getName());
 
+	protected static final String DOCUMENT = "<?xml version = '1.0' encoding = 'UTF-8'?>"
+	+ "<Organization>"
+	+ "<Department>"
+	+ "<Member key=\"12\" employee=\"true\">"
+	+ "<Firstname>Kurt</Firstname>"
+	+ "<Lastname>Mayer</Lastname>"
+	+ "<DateOfBirth>1.4.1963</DateOfBirth>"
+	+ "<Title>Dr.-Ing.</Title>"
+	+ "</Member>"
+	+ "<Member key=\"40\"  employe=\"false\">"
+	+ "<Firstname>Hans</Firstname>"
+	+ "<Lastname>Mettmann</Lastname>"
+	+ "<DateOfBirth>12.9.1974</DateOfBirth>"
+	+ "<Title>Dipl.-Inf</Title>"
+	+ "</Member>"
+	+ "<Member>"
+	+ "</Member>"
+	+ "<Member>"
+	+ "</Member>"
+	+ "</Department>"
+	+ "<Project id=\"4711\" priority=\"high\">"
+	+ "<Title>XML-DB</Title>"
+	+ "<Budget>10000</Budget>"
+	+ "</Project>"
+	+ "<Project id=\"666\" priority=\"evenhigher\">"
+	+ "<Title>DISS</Title>"
+	+ "<Budget>7000</Budget>"
+	+ "<Abstract>Native<b>XML</b>-Databases</Abstract>"
+	+ "</Project>"
+	+ "</Organization>";
+
 	protected BPlusIndex index;
 
 	protected Tx tx;

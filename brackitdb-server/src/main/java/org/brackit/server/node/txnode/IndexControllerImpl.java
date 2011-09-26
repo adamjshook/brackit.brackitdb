@@ -36,10 +36,9 @@ import org.brackit.server.node.index.IndexController;
 import org.brackit.server.node.index.cas.CASIndex;
 import org.brackit.server.node.index.content.ContentIndex;
 import org.brackit.server.node.index.definition.IndexDef;
-import org.brackit.server.node.index.definition.IndexDefHelper;
 import org.brackit.server.node.index.definition.IndexType;
 import org.brackit.server.node.index.element.ElementIndex;
-import org.brackit.server.node.index.element.impl.NameDirectoyEncoderImpl.QVocID;
+import org.brackit.server.node.index.element.impl.NameDirectoryEncoderImpl.QVocID;
 import org.brackit.server.node.index.path.PathIndex;
 import org.brackit.server.store.SearchMode;
 import org.brackit.xquery.atomic.Atomic;
@@ -129,13 +128,6 @@ public abstract class IndexControllerImpl<E extends TXNode<E>> implements
 						idxDefinition.getType());
 			}
 		}
-	}
-
-	@Override
-	public IndexDef createIndex(String statement) throws DocumentException {
-		IndexDef indexDefinition = new IndexDefHelper().parse(statement);
-		this.createIndexesInternal(indexDefinition);
-		return indexDefinition;
 	}
 
 	@Override

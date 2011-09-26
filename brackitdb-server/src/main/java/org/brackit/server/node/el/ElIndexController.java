@@ -70,21 +70,6 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 	}
 
 	@Override
-	public IndexDef createIndex(String statement) throws DocumentException {
-		IndexDef indexDefinition = null;
-
-		try {
-			long undoNextLSN = collection.getTX().checkPrevLSN();
-			indexDefinition = super.createIndex(statement);
-			collection.persist();
-			collection.getTX().logDummyCLR(undoNextLSN);
-			return indexDefinition;
-		} catch (TxException e) {
-			throw new DocumentException(e);
-		}
-	}
-
-	@Override
 	public void createIndexes(IndexDef... indexDefinitions)
 			throws DocumentException {
 		try {
@@ -226,7 +211,7 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 	}
 
 	@Override
-	public IndexEncoder<ElNode> getElementIndexEncoder()
+	public IndexEncoder<ElNode> getNameIndexEncoder()
 			throws DocumentException {
 		return new SplidClusterPathEncoder(collection);
 	}

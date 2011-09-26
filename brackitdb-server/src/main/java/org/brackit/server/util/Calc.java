@@ -32,7 +32,7 @@ import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
-import org.brackit.server.node.index.element.impl.NameDirectoyEncoderImpl.QVocID;
+import org.brackit.server.node.index.element.impl.NameDirectoryEncoderImpl.QVocID;
 
 /**
  * Swiss army knife for encoding/decoding of basic data types.

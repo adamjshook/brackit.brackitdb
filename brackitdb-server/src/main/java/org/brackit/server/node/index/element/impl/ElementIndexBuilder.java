@@ -38,7 +38,7 @@ import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.index.definition.Cluster;
 import org.brackit.server.node.index.definition.IndexDef;
-import org.brackit.server.node.index.element.impl.NameDirectoyEncoderImpl.QVocID;
+import org.brackit.server.node.index.element.impl.NameDirectoryEncoderImpl.QVocID;
 import org.brackit.server.node.index.external.IndexStatistics;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.node.txnode.IndexEncoderHelper;
@@ -80,15 +80,11 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 
 	private final IndexEncoderHelper<E> helper;
 
-	private final NameDirectoyEncoderImpl nameDirectoryEncoder;
+	private final NameDirectoryEncoderImpl nameDirEncoder;
 
 	private final HashMap<QVocID, NodeReferenceIndex> nodeRefIndexes;
 
-	private final boolean hasIncludes;
-
 	private final Map<QNm, Cluster> includes;
-
-	private final boolean hasExcludes;
 
 	private final Set<QNm> excludes;
 
@@ -113,14 +109,12 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 		this.index = index;
 		this.containerNo = containerNo;
 		this.idxDefinition = indexDef;
-		this.nameDirectoryEncoder = new NameDirectoyEncoderImpl();
+		this.nameDirEncoder = new NameDirectoryEncoderImpl();
 		this.helper = helper;
 
 		this.nodeRefIndexes = new HashMap<QVocID, NodeReferenceIndex>();
 		this.includes = indexDef.getIncluded();
 		this.excludes = indexDef.getExcluded();
-		hasIncludes = includes.size() > 0;
-		hasExcludes = excludes.size() > 0;
 	}
 
 	@Override
@@ -133,8 +127,8 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 	@Override
 	public <T extends E> void startElement(T node) throws DocumentException {
 		QNm name = node.getName();
-		boolean included = (!hasIncludes || includes.containsKey(name));
-		boolean excluded = (hasExcludes && excludes.contains(name));
+		boolean included = (includes.isEmpty() || includes.containsKey(name));
+		boolean excluded = (!excludes.isEmpty() && excludes.contains(name));
 		if (!included || excluded) {
 			return;
 		}
@@ -143,7 +137,7 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 		NodeReferenceIndex index = nodeRefIndexes.get(qVocID);
 
 		if (index == null) {
-			IndexEncoder<E> encoder = helper.getElementIndexEncoder();
+			IndexEncoder<E> encoder = helper.getNameIndexEncoder();
 			Sort sorter;
 
 			// TODO: each sort stream allocates the full index size (here a
@@ -168,16 +162,16 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 	public void end() throws DocumentException {
 		IndexStatistics indexStatistics = null;
 
-		for (NodeReferenceIndex nodeReferenceIndex : nodeRefIndexes.values()) {
+		for (NodeReferenceIndex nodeRefIndex : nodeRefIndexes.values()) {
 			Stream<? extends SortItem> sorted = null;
 
 			try {
-				sorted = nodeReferenceIndex.sorter.sort();
+				sorted = nodeRefIndex.sorter.sort();
 				long start = System.nanoTime();
 				PageID rootPageID = index.createIndex(tx, containerNo,
-						nodeReferenceIndex.encoder.getKeyType(),
-						nodeReferenceIndex.encoder.getValueType(), true, true,
-						nodeReferenceIndex.encoder.getUnitID());
+						nodeRefIndex.encoder.getKeyType(),
+						nodeRefIndex.encoder.getValueType(), true, true,
+						nodeRefIndex.encoder.getUnitID());
 
 				IndexIterator iterator = index.open(tx, rootPageID,
 						SearchMode.FIRST, null, null, OpenMode.LOAD);
@@ -201,12 +195,12 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 
 				if (log.isDebugEnabled()) {
 					log.debug("Building node reference index for vocID "
-							+ nodeReferenceIndex.qVocID + " with " + i
+							+ nodeRefIndex.qVocID + " with " + i
 							+ " items took " + ((end - start) / 1000000)
 							+ " ms");
 				}
 
-				nodeReferenceIndex.linkValue = nameDirectoryEncoder
+				nodeRefIndex.linkValue = nameDirEncoder
 						.encodeValue(rootPageID);
 			} catch (ServerException e) {
 				throw new DocumentException(e);
@@ -224,17 +218,16 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 
 			long start = System.nanoTime();
 
-			Field keyType = nameDirectoryEncoder.getKeyType();
-			PageID nameDirectoryRootPageID = index.createIndex(tx, containerNo,
-					keyType, nameDirectoryEncoder.getValueType(), false, true,
-					-1);
+			Field keyType = nameDirEncoder.getKeyType();
+			PageID nameDirRootPageID = index.createIndex(tx, containerNo,
+					keyType, nameDirEncoder.getValueType(), false, true, -1);
 
-			IndexIterator iterator = index.open(tx, nameDirectoryRootPageID,
+			IndexIterator iterator = index.open(tx, nameDirRootPageID,
 					SearchMode.FIRST, null, null, OpenMode.LOAD);
 
 			iterator.triggerStatistics();
 			for (QVocID qVocID : qVocIDs) {
-				byte[] key = nameDirectoryEncoder.encodeKey(qVocID);
+				byte[] key = nameDirEncoder.encodeKey(qVocID);
 				byte[] value = nodeRefIndexes.get(qVocID).linkValue;
 				iterator.insert(key, value);
 				iterator.next();
@@ -255,7 +248,7 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 						+ " items took " + ((end - start) / 1000000) + " ms");
 			}
 
-			int id = nameDirectoryRootPageID.value();
+			int id = nameDirRootPageID.value();
 			idxDefinition.createdAs(containerNo, id);
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);

@@ -40,7 +40,7 @@ import org.brackit.xquery.xdm.DocumentException;
  * @author Sebastian Baechle
  * 
  */
-public class NameDirectoyEncoderImpl implements NameDirectoryEncoder {
+public class NameDirectoryEncoderImpl implements NameDirectoryEncoder {
 	
 	/**
 	 * Represents the qualified name of a node as a pair of namespace uri and 

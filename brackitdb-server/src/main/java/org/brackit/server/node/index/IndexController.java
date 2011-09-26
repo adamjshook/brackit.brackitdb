@@ -47,10 +47,6 @@ import org.brackit.xquery.xdm.Stream;
  * 
  */
 public interface IndexController<E extends Node<E>> {
-	/**
-	 * Creates a new index for the given document.
-	 */
-	public IndexDef createIndex(String statement) throws DocumentException;
 
 	/**
 	 * Creates new indexes for the given document.
