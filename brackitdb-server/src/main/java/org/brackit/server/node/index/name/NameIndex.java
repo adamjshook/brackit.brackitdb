@@ -25,26 +25,39 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.index.element.impl;
+package org.brackit.server.node.index.name;
 
-import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.node.index.element.impl.NameDirectoryEncoderImpl.QVocID;
-import org.brackit.server.store.Field;
+import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.node.index.definition.IndexDef;
+import org.brackit.server.node.index.name.impl.NameDirectoryEncoderImpl.QVocID;
+import org.brackit.server.node.txnode.IndexEncoderHelper;
+import org.brackit.server.store.SearchMode;
+import org.brackit.server.tx.Tx;
+import org.brackit.xquery.node.parser.ListenMode;
+import org.brackit.xquery.node.parser.SubtreeListener;
+import org.brackit.xquery.xdm.DocumentException;
+import org.brackit.xquery.xdm.Node;
+import org.brackit.xquery.xdm.Stream;
 
 /**
  * @author Sebastian Baechle
  * 
  */
-public interface NameDirectoryEncoder {
-	public byte[] encodeKey(QVocID qVocID);
+public interface NameIndex<E extends Node<E>> {
+	public SubtreeListener<? super E> createBuilder(Tx tx,
+			IndexEncoderHelper<E> helper, int containerNo, IndexDef idxDef)
+			throws DocumentException;
 
-	public byte[] encodeValue(PageID pageID);
+	public Stream<? extends E> open(Tx tx, IndexEncoderHelper<E> helper,
+			int nameIndexNo, QVocID qVocID, SearchMode searchMode,
+			XTCdeweyID deweyID) throws DocumentException;
 
-	public PageID decodePageID(byte[] value);
+	public SubtreeListener<? super E> createListener(Tx tx,
+			IndexEncoderHelper<E> helper, ListenMode mode, IndexDef idxDef)
+			throws DocumentException;
 
-	public Field getKeyType();
+	public void drop(Tx tx, int indexNo) throws DocumentException;
 
-	public Field getValueType();
-
-	public boolean sortRequired();
+	public void calculateStatistics(Tx tx, IndexDef idxDef)
+			throws DocumentException;
 }

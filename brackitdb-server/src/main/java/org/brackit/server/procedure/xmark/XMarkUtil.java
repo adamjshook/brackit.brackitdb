@@ -266,7 +266,7 @@ public class XMarkUtil {
 		QNm mb = new QNm("mailbox");
 		int indexNo = -1;
 		for (IndexDef indexDef : locator.get(Indexes.class).getIndexDefs()) {
-			if (indexDef.isElementIndex()) {
+			if (indexDef.isNameIndex()) {
 				if ((indexDef.getIncluded().containsKey(mb))
 						|| (!indexDef.getExcluded().contains(mb))) {
 					indexNo = indexDef.getID();
@@ -279,7 +279,7 @@ public class XMarkUtil {
 					"This method requires an element index containing =mailbox= elements.");
 		}
 		Stream<? extends TXNode<?>> mailBoxes = locator.getIndexController()
-				.openElementIndex(indexNo, mb, SearchMode.GREATER_OR_EQUAL);
+				.openNameIndex(indexNo, mb, SearchMode.GREATER_OR_EQUAL);
 
 		mailbox = mailBoxes.next();
 		mailBoxes.close();
@@ -639,7 +639,7 @@ public class XMarkUtil {
 		QNm qname = new QNm(name);
 		int indexNo = -1;
 		for (IndexDef indexDef : locator.get(Indexes.class).getIndexDefs()) {
-			if (indexDef.isElementIndex()) {
+			if (indexDef.isNameIndex()) {
 				if ((indexDef.getIncluded().containsKey(qname))
 						|| (!indexDef.getExcluded().contains(qname))) {
 					indexNo = indexDef.getID();
@@ -654,7 +654,7 @@ public class XMarkUtil {
 		}
 
 		Stream<? extends TXNode<?>> elementStream = locator
-				.getIndexController().openElementIndex(indexNo, qname,
+				.getIndexController().openNameIndex(indexNo, qname,
 						refNodeSearchMode);
 		TXNode<?> element = elementStream.next();
 		return element;

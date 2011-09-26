@@ -33,6 +33,8 @@ import java.util.HashMap;
 import org.brackit.server.metadata.vocabulary.ConcurrentVocIDMapping;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.el.ElRecordAccess;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
 
@@ -296,7 +298,7 @@ public class ElementlessRecordGenerator extends RecordGenerator {
 	}
 
 	@Override
-	public Record buildAttribute(XTCdeweyID deweyID, String name, String value)
+	public Record buildAttribute(XTCdeweyID deweyID, QNm name, Atomic value)
 			throws DocumentException {
 		int vocID = dictionary.translate(name);
 		int pcr = (stackSize == 0) ? psMgr.getChild(-1, vocID,
@@ -307,13 +309,13 @@ public class ElementlessRecordGenerator extends RecordGenerator {
 	}
 
 	@Override
-	public void endElement(String name) throws DocumentException {
+	public void endElement(QNm name) throws DocumentException {
 		super.endElement(name);
 		stackSize--;
 	}
 
 	@Override
-	public Record buildElement(XTCdeweyID deweyID, String name)
+	public Record buildElement(XTCdeweyID deweyID, QNm name)
 			throws DocumentException {
 		int vocID = dictionary.translate(name);
 		int pcr = (stackSize == 0) ? psMgr
@@ -333,22 +335,22 @@ public class ElementlessRecordGenerator extends RecordGenerator {
 	}
 
 	@Override
-	public Record buildText(XTCdeweyID deweyID, String value)
+	public Record buildText(XTCdeweyID deweyID, Atomic value)
 			throws DocumentException {
 		return insertRecord(deweyID, ElRecordAccess.createRecord(
 				stack[stackSize - 1], Kind.TEXT.ID, value));
 	}
 
 	@Override
-	public Record buildComment(XTCdeweyID deweyID, String value)
+	public Record buildComment(XTCdeweyID deweyID, Atomic value)
 			throws DocumentException {
 		return insertRecord(deweyID, ElRecordAccess.createRecord(
 				stack[stackSize - 1], Kind.COMMENT.ID, value));
 	}
 
 	@Override
-	public Record buildProcessingInstruction(XTCdeweyID deweyID, String value)
-			throws DocumentException {
+	public Record buildProcessingInstruction(XTCdeweyID deweyID, QNm name, 
+			Atomic value) throws DocumentException {
 		return insertRecord(deweyID, ElRecordAccess.createRecord(
 				stack[stackSize - 1], Kind.PROCESSING_INSTRUCTION.ID, value));
 	}

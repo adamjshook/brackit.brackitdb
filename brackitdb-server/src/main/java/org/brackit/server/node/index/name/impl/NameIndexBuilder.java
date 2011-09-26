@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.index.element.impl;
+package org.brackit.server.node.index.name.impl;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,8 +38,8 @@ import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.index.definition.Cluster;
 import org.brackit.server.node.index.definition.IndexDef;
-import org.brackit.server.node.index.element.impl.NameDirectoryEncoderImpl.QVocID;
 import org.brackit.server.node.index.external.IndexStatistics;
+import org.brackit.server.node.index.name.impl.NameDirectoryEncoderImpl.QVocID;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.node.txnode.IndexEncoderHelper;
 import org.brackit.server.node.txnode.TXNode;
@@ -65,10 +65,10 @@ import org.brackit.xquery.xdm.Stream;
  * @author Sebastian Baechle
  * 
  */
-class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
+class NameIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 		implements SubtreeListener<E> {
 	private static final Logger log = Logger
-			.getLogger(ElementIndexBuilder.class);
+			.getLogger(NameIndexBuilder.class);
 
 	private final Tx tx;
 
@@ -103,7 +103,7 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 		}
 	}
 
-	public ElementIndexBuilder(Tx tx, Index index,
+	public NameIndexBuilder(Tx tx, Index index,
 			IndexEncoderHelper<E> helper, int containerNo, IndexDef indexDef) {
 		this.tx = tx;
 		this.index = index;
@@ -156,6 +156,11 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 		} catch (ServerException e) {
 			throw new DocumentException(e);
 		}
+	}
+	
+	@Override
+	public <T extends E> void attribute(T node) throws DocumentException {
+		// TODO Listen for attributes and handle them appropriately
 	}
 
 	@Override

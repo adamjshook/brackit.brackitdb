@@ -25,16 +25,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.index.element;
+package org.brackit.server.node.index.name.impl;
 
-import org.brackit.server.node.XTCdeweyID;
-import org.brackit.server.node.index.definition.IndexDef;
-import org.brackit.server.node.index.element.impl.NameDirectoryEncoderImpl.QVocID;
-import org.brackit.server.node.txnode.IndexEncoderHelper;
-import org.brackit.server.store.SearchMode;
-import org.brackit.server.tx.Tx;
-import org.brackit.xquery.node.parser.ListenMode;
-import org.brackit.xquery.node.parser.SubtreeListener;
+import org.brackit.xquery.util.log.Logger;
+import org.brackit.server.node.txnode.IndexEncoder;
+import org.brackit.server.store.index.IndexAccessException;
+import org.brackit.server.store.index.IndexIterator;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Node;
 import org.brackit.xquery.xdm.Stream;
@@ -43,21 +39,56 @@ import org.brackit.xquery.xdm.Stream;
  * @author Sebastian Baechle
  * 
  */
-public interface ElementIndex<E extends Node<E>> {
-	public SubtreeListener<? super E> createBuilder(Tx tx,
-			IndexEncoderHelper<E> helper, int containerNo, IndexDef idxDef)
-			throws DocumentException;
+public class NameIndexIteratorImpl<E extends Node<E>> implements Stream<E> {
+	private static final Logger log = Logger
+			.getLogger(NameIndexIteratorImpl.class);
 
-	public Stream<? extends E> open(Tx tx, IndexEncoderHelper<E> helper,
-			int elementIndexNo, QVocID qVocID, SearchMode searchMode,
-			XTCdeweyID deweyID) throws DocumentException;
+	private IndexIterator iterator;
 
-	public SubtreeListener<? super E> createListener(Tx tx,
-			IndexEncoderHelper<E> helper, ListenMode mode, IndexDef idxDef)
-			throws DocumentException;
+	private final IndexEncoder<E> encoder;
 
-	public void drop(Tx tx, int indexNo) throws DocumentException;
+	private boolean first = true;
 
-	public void calculateStatistics(Tx tx, IndexDef idxDef)
-			throws DocumentException;
+	public NameIndexIteratorImpl(IndexIterator iterator,
+			IndexEncoder<E> encoder) {
+		this.iterator = iterator;
+		this.encoder = encoder;
+	}
+
+	@Override
+	public E next() throws DocumentException {
+		if (iterator == null) {
+			return null;
+		}
+
+		try {
+			if (!first) {
+				iterator.next();
+			} else {
+				first = false;
+			}
+
+			byte[] key = iterator.getKey();
+			if (key == null) {
+				return null;
+			}
+
+			byte[] value = iterator.getValue();
+
+			return encoder.decode(key, value);
+		} catch (DocumentException e) {
+			close();
+			throw e;
+		} catch (IndexAccessException e) {
+			throw new DocumentException(e);
+		}
+	}
+
+	@Override
+	public void close() {
+		if (iterator != null) {
+			iterator.close();
+			iterator = null;
+		}
+	}
 }

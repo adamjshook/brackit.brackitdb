@@ -29,6 +29,8 @@ package org.brackit.server.metadata.manager.impl;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
@@ -49,6 +51,8 @@ import org.brackit.server.node.el.ElCollection;
 import org.brackit.server.node.el.ElNode;
 import org.brackit.server.node.el.ElStore;
 import org.brackit.server.node.index.IndexController;
+import org.brackit.server.node.index.definition.IndexDef;
+import org.brackit.server.node.index.definition.IndexDefBuilder;
 import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.node.txnode.TXCollection;
 import org.brackit.server.node.txnode.TXNode;
@@ -897,10 +901,20 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		collectionCache.putIfAbsent(tx, mdCollection.getID(), mdCollection,
 				true);
 
-		mdNameCasIndexNo = mdCollection.getIndexController().createIndex(
-				"create cas index paths //@name").getID();
-		mdIDCasIndexNo = mdCollection.getIndexController().createIndex(
-				"create cas index paths //@id").getID();
+		List<Path<QNm>> paths = new LinkedList<Path<QNm>>();
+		paths.add(Path.parse("//@name"));
+		
+		IndexDef idxDef = 
+			IndexDefBuilder.createCASIdxDef(null, false, null, paths);
+		mdCollection.getIndexController().createIndexes(idxDef);
+		mdNameCasIndexNo = idxDef.getID();
+		
+		paths.clear();
+		paths.add(Path.parse("//@id"));
+		idxDef = IndexDefBuilder.createCASIdxDef(null, false, null, paths);
+		mdCollection.getIndexController().createIndexes(idxDef);
+		mdIDCasIndexNo = idxDef.getID();
+		
 		mdCollection.calculateStatistics();
 		mdCollection.persist();
 	}

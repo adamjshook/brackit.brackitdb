@@ -37,8 +37,8 @@ import org.brackit.server.node.index.cas.CASIndex;
 import org.brackit.server.node.index.content.ContentIndex;
 import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.index.definition.IndexType;
-import org.brackit.server.node.index.element.ElementIndex;
-import org.brackit.server.node.index.element.impl.NameDirectoryEncoderImpl.QVocID;
+import org.brackit.server.node.index.name.NameIndex;
+import org.brackit.server.node.index.name.impl.NameDirectoryEncoderImpl.QVocID;
 import org.brackit.server.node.index.path.PathIndex;
 import org.brackit.server.store.SearchMode;
 import org.brackit.xquery.atomic.Atomic;
@@ -64,7 +64,7 @@ public abstract class IndexControllerImpl<E extends TXNode<E>> implements
 		IndexController<E>, IndexEncoderHelper<E> {
 	protected final TXCollection<E> coll;
 
-	protected final ElementIndex<E> elementIndex;
+	protected final NameIndex<E> nameIndex;
 
 	protected final ContentIndex<E> contentIndex;
 
@@ -73,11 +73,11 @@ public abstract class IndexControllerImpl<E extends TXNode<E>> implements
 	protected final CASIndex<E> casIndex;
 
 	public IndexControllerImpl(TXCollection<E> collection,
-			ElementIndex<E> elementIndex, ContentIndex<E> contentIndex,
+			NameIndex<E> nameIndex, ContentIndex<E> contentIndex,
 			PathIndex<E> pathIndex, CASIndex<E> casIndex) {
 		super();
 		this.coll = collection;
-		this.elementIndex = elementIndex;
+		this.nameIndex = nameIndex;
 		this.contentIndex = contentIndex;
 		this.pathIndex = pathIndex;
 		this.casIndex = casIndex;
@@ -95,12 +95,12 @@ public abstract class IndexControllerImpl<E extends TXNode<E>> implements
 	protected void calculateStatisticsInternal() throws DocumentException {
 		for (IndexDef idxDefinition : coll.get(Indexes.class).getIndexDefs()) {
 			switch (idxDefinition.getType()) {
-			case ELEMENT:
-				if (elementIndex == null) {
+			case NAME:
+				if (nameIndex == null) {
 					throw new DocumentException(
-							"This document does not support element indexes.");
+							"This document does not support name indexes.");
 				}
-				elementIndex.calculateStatistics(coll.getTX(), idxDefinition);
+				nameIndex.calculateStatistics(coll.getTX(), idxDefinition);
 				break;
 			case CONTENT:
 				if (contentIndex == null) {
@@ -196,12 +196,12 @@ public abstract class IndexControllerImpl<E extends TXNode<E>> implements
 	protected void dropIndexInternal(IndexDef idxDefinition)
 			throws DocumentException {
 		switch (idxDefinition.getType()) {
-		case ELEMENT:
-			if (elementIndex == null) {
+		case NAME:
+			if (nameIndex == null) {
 				throw new DocumentException(
-						"This document does not support element indexes.");
+						"This document does not support name indexes.");
 			}
-			elementIndex.drop(coll.getTX(), idxDefinition.getID());
+			nameIndex.drop(coll.getTX(), idxDefinition.getID());
 			break;
 		case CONTENT:
 			if (contentIndex == null) {
@@ -251,15 +251,15 @@ public abstract class IndexControllerImpl<E extends TXNode<E>> implements
 	}
 
 	@Override
-	public Stream<? extends E> openElementIndex(int indexNo, QNm name,
+	public Stream<? extends E> openNameIndex(int indexNo, QNm name,
 			SearchMode searchMode) throws DocumentException {
-		if (elementIndex == null) {
+		if (nameIndex == null) {
 			throw new DocumentException(
-					"This document does not support element indexes.");
+					"This document does not support name indexes.");
 		}
 		QVocID qVocID = QVocID.fromQNm(coll.getTX(), coll.getDictionary(), 
 				name);
-		return elementIndex.open(coll.getTX(), this, indexNo, qVocID,
+		return nameIndex.open(coll.getTX(), this, indexNo, qVocID,
 				searchMode, null);
 	}
 

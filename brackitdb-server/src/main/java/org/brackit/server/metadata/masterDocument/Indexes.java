@@ -163,14 +163,14 @@ public class Indexes implements Materializable {
 		}
 	}
 
-	public IndexDef findElementIndex() throws DocumentException {
+	public IndexDef findNameIndex() throws DocumentException {
 		for (IndexDef index : indexes) {
-			if (index.isElementIndex()) {
+			if (index.isNameIndex()) {
 				return index;
 			}
 		}
 
-		throw new DocumentException("No element index found.");
+		throw new DocumentException("No name index found.");
 	}
 
 	public IndexDef findContentIndex() throws DocumentException {
