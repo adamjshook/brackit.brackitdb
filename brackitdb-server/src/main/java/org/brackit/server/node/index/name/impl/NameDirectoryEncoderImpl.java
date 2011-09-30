@@ -86,6 +86,19 @@ public class NameDirectoryEncoderImpl implements NameDirectoryEncoder {
 			return String.format("%s (%d, %d)", getClass().getSimpleName(),
 					uriVocID, nameVocID);
 		}
+		
+		@Override
+		public int hashCode() {
+			return uriVocID ^ nameVocID;
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (obj instanceof QVocID) {
+				return (compareTo((QVocID) obj) == 0);
+			}
+			return false;
+		}
 	}
 	
 	@Override

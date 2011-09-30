@@ -65,8 +65,6 @@ public class IndexDef implements Materializable, Serializable {
 
 	private static final QNm PATH_TAG = new QNm("path");
 
-	private static final QNm CONTENT_ATTRIBUTE = new QNm("content");
-
 	private static final QNm UNIQUE_ATTRIBUTE = new QNm("unique");
 
 	private static final QNm CLUSTER_ATTRIBUTE = new QNm("cluster");
@@ -92,14 +90,10 @@ public class IndexDef implements Materializable, Serializable {
 	private final Set<QNm> excluded = new HashSet<QNm>();
 	private final Map<QNm, Cluster> included = new HashMap<QNm, Cluster>();
 
-	// unique flag (for CAS and content indexes)
+	// unique flag (for CAS indexes)
 	private boolean unique = false;
 
-	// only for content indexes
-	private boolean elementContent = false;
-	private boolean attributeContent = false;
-
-	// for content and cas indexes
+	// for CAS indexes
 	private Type contentType;
 
 	// populated when index is built
@@ -142,18 +136,6 @@ public class IndexDef implements Materializable, Serializable {
 		this.unique = unique;
 	}
 
-	/*
-	 * Content index
-	 */
-	public IndexDef(Type contentType, boolean elementContent,
-			boolean attributeContent, boolean unique) {
-		this.type = IndexType.CONTENT;
-		this.contentType = contentType;
-		this.elementContent = elementContent;
-		this.attributeContent = attributeContent;
-		this.unique = unique;
-	}
-
 	@Override
 	public void init(Node<?> root) throws DocumentException {
 		QNm name = root.getName();
@@ -190,19 +172,6 @@ public class IndexDef implements Materializable, Serializable {
 			unique = (Boolean.valueOf(attribute.getValue().stringValue()));
 		}
 
-		attribute = root.getAttribute(CONTENT_ATTRIBUTE);
-		if (attribute != null) {
-			String contentMode = attribute.getValue().stringValue();
-			if (contentMode.equals("all")) {
-				attributeContent = true;
-				elementContent = true;
-			} else if (contentMode.equals("element")) {
-				elementContent = true;
-			} else if (contentMode.equals("attribute")) {
-				attributeContent = true;
-			}
-		}
-
 		Stream<? extends Node<?>> children = root.getChildren();
 
 		try {
@@ -213,20 +182,22 @@ public class IndexDef implements Materializable, Serializable {
 					indexStatistics.init(child);
 				} else {
 					QNm childName = child.getName();
+					String value = child.getValue().stringValue();
 
 					if (childName.equals(PATH_TAG)) {
-						String path = child.getValue().stringValue();
+						String path = value;
 						paths.add(Path.parse(path));
 					} else if (childName.equals(INCLUDING_TAG)) {
-						for (String s : child.getValue().stringValue().split(",")) {
+						for (String s : value.split(",")) {
 							if (s.length() > 0) {
 								String includeString = s;
 								String[] tmp = includeString.split("@");
-								included.put(new QNm(tmp[0]), Cluster.valueOf(tmp[1]));
+								included.put(new QNm(tmp[0]), 
+										Cluster.valueOf(tmp[1]));
 							}
 						}
 					} else if (childName.equals(EXCLUDING_TAG)) {
-						for (String s : child.getValue().stringValue().split(",")) {
+						for (String s : value.split(",")) {
 							if (s.length() > 0)
 								excluded.add(new QNm(s));
 						}
@@ -253,13 +224,6 @@ public class IndexDef implements Materializable, Serializable {
 
 		if (isUnique()) {
 			tmp.attribute(UNIQUE_ATTRIBUTE, new Una(Boolean.toString(isUnique())));
-		}
-
-		// for content indexes: content mode (element, attribute, all)
-		if (isContentIndex()) {
-			String contentMode = (isAllContent()) ? "all"
-					: (isElementContent()) ? "element" : "attribute";
-			tmp.attribute(CONTENT_ATTRIBUTE, new Una(contentMode));
 		}
 
 		if (paths != null && !paths.isEmpty()) {
@@ -318,10 +282,6 @@ public class IndexDef implements Materializable, Serializable {
 		return type == IndexType.NAME;
 	}
 
-	public boolean isContentIndex() {
-		return type == IndexType.CONTENT;
-	}
-
 	public boolean isCasIndex() {
 		return type == IndexType.CAS;
 	}
@@ -367,18 +327,6 @@ public class IndexDef implements Materializable, Serializable {
 		} catch (DocumentException e) {
 			return e.getMessage();
 		}
-	}
-
-	public boolean isElementContent() {
-		return elementContent;
-	}
-
-	public boolean isAttributeContent() {
-		return attributeContent;
-	}
-
-	public boolean isAllContent() {
-		return isElementContent() && isAttributeContent();
 	}
 
 	public Type getContentType() {

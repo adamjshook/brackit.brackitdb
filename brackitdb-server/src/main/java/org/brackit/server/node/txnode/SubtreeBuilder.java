@@ -80,8 +80,8 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 			throws DocumentException;
 
 	// TODO check params for PI's
-	protected abstract E buildProcessingInstruction(E parent, Atomic text,
-			XTCdeweyID deweyID) throws DocumentException;
+	protected abstract E buildProcessingInstruction(E parent, QNm name, 
+			Atomic text, XTCdeweyID deweyID) throws DocumentException;
 
 	public E getSubtreeRoot() throws DocumentException {
 		if (subtreeRoot == null) {
@@ -186,16 +186,17 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 	}
 
 	@Override
-	public void processingInstruction(Atomic content) throws DocumentException {
+	public void processingInstruction(QNm name, Atomic content) 
+			throws DocumentException {
 		try {
 			// processing instructions not working yet
-			if (true) {
-				return;
-			}
+//			if (true) {
+//				return;
+//			}
 
 			level++;
 			lastAttributeDeweyID = null;
-			E node = pushNode(Kind.PROCESSING_INSTRUCTION, null, content);
+			E node = pushNode(Kind.PROCESSING_INSTRUCTION, name, content);
 			notifyProcessingInstruction(node);
 
 			if (level < (stackSize - 1)) {
@@ -275,7 +276,7 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 		} else if (kind == Kind.COMMENT) {
 			node = buildComment(parent, text, deweyID);
 		} else if (kind == Kind.PROCESSING_INSTRUCTION) {
-			node = buildProcessingInstruction(parent, text, deweyID);
+			node = buildProcessingInstruction(parent, name, text, deweyID);
 		}
 
 		if (stackSize == 0) {

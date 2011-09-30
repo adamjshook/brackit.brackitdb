@@ -102,7 +102,7 @@ public class NameIndexListener<E extends TXNode<E>> extends
 	
 	protected <T extends E> void insertElement(T node) throws DocumentException {
 		QNm name = node.getName();
-		boolean included = (includes.isEmpty()|| includes.containsKey(name));
+		boolean included = (includes.isEmpty() || includes.containsKey(name));
 		boolean excluded = (!excludes.isEmpty() && excludes.contains(name));
 		if (!included || excluded) {
 			return;

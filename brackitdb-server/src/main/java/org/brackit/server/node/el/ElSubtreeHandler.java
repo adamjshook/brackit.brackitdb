@@ -102,9 +102,29 @@ public class ElSubtreeHandler extends SubtreeBuilder<ElNode> {
 	}
 
 	@Override
-	protected ElNode buildProcessingInstruction(ElNode parent, Atomic text,
-			XTCdeweyID deweyID) throws DocumentException {
+	protected ElNode buildProcessingInstruction(ElNode parent, QNm name, 
+			Atomic text, XTCdeweyID deweyID) throws DocumentException {
+		int uriVocID = (name.nsURI.isEmpty() ? -1 : dictionary.translate(tx,
+				name.nsURI));
+		int prefixVocID = (name.prefix == null ? -1 : dictionary.translate(tx,
+				name.prefix));
+		int localNameVocID = dictionary.translate(tx, name.localName);
+		PSNode psNode = psMgr.getChild(tx, parent.getPCR(), uriVocID,
+				prefixVocID, localNameVocID, Kind.PROCESSING_INSTRUCTION.ID);
 		return new ElNode(locator, deweyID, Kind.PROCESSING_INSTRUCTION.ID,
-				text, parent.psNode);
+				text, psNode);
+	}
+
+	@Override
+	public void startMapping(String prefix, String uri)
+			throws DocumentException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void endMapping(String prefix) throws DocumentException {
+		// TODO Auto-generated method stub
+		
 	}
 }

@@ -127,10 +127,10 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		// Logger.getLogger(BPlusIndex.class.getName()).setLevel(org.apache.log4j.Level.TRACE);
 		ElNode root = locator.getDocument().getFirstChild().getNode(
 				XTCdeweyID.newRootID(locator.getID()));
-		Node domRoot = createDomTree(ctx, new InputSource(new FileReader(
+		Node domRoot = createDomTree(new InputSource(new FileReader(
 				"/home/sbaechl/projects/xtc/docs/xmark8.xml")));
 		long start = System.currentTimeMillis();
-		checkSubtreePreOrder(ctx, root, domRoot); // check document index
+		checkSubtreePreOrder(root, domRoot); // check document index
 		long end = System.currentTimeMillis();
 		System.out.println(end - start);
 	}
@@ -186,10 +186,10 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		// Logger.getLogger(BPlusIndex.class.getName()).setLevel(Level.TRACE);
 		ElNode root = locator.getDocument().getFirstChild().getNode(
 				XTCdeweyID.newRootID(locator.getID()));
-		Node domRoot = createDomTree(ctx, new InputSource(new FileReader(
+		Node domRoot = createDomTree(new InputSource(new FileReader(
 				"/docs/xmark8.xml")));
 
-		checkSubtreePostOrder(ctx, root, domRoot); // check document index
+		checkSubtreePostOrder(root, domRoot); // check document index
 	}
 
 	@Test
@@ -198,7 +198,7 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 				DOCUMENT));
 		ElNode root = locator.getDocument().getFirstChild().getNode(
 				XTCdeweyID.newRootID(locator.getID()));
-		Node domRoot = createDomTree(ctx, new InputSource(new StringReader(
+		Node domRoot = createDomTree(new InputSource(new StringReader(
 				DOCUMENT)));
 
 		ElNode department = root.getFirstChild();
@@ -222,7 +222,7 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 
 		tx.undo(savepointLSN);
 
-		checkSubtreePreOrder(ctx, root, domRoot); // check document index
+		checkSubtreePreOrder(root, domRoot); // check document index
 	}
 
 	@Test

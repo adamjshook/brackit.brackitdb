@@ -32,6 +32,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 
 import static org.brackit.server.node.index.definition.IndexDefBuilder.*;
+import static org.junit.Assert.assertEquals;
+
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.SysMockup;
 import org.brackit.server.io.buffer.BufferException;
@@ -108,15 +110,18 @@ public class NameIndexTest {
 		ElCollection locator = createDocument(t1, new DocumentParser(DOCUMENT));
 		IndexDef idxDef = createNameIdxDef(null);
 		locator.getIndexController().createIndexes(idxDef);
-		Stream<? extends ElNode> iterator = locator.getIndexController()
+		Stream<? extends ElNode> elements = locator.getIndexController()
 				.openNameIndex(idxDef.getID(), new QNm("Member"), 
 						SearchMode.FIRST);
 
 		ElNode n;
-		while ((n = iterator.next()) != null) {
-			System.out.println(n);
+		int c = 0;
+		while ((n = elements.next()) != null) {
+//			System.out.println(n);
+			c++;
 		}
-		iterator.close();
+		elements.close();
+		assertEquals(2, c);
 	}
 
 	@Test
@@ -129,9 +134,13 @@ public class NameIndexTest {
 						SearchMode.FIRST);
 
 		ElNode n;
+		int c = 0;
 		while ((n = elements.next()) != null) {
-			System.out.println(n);
+//			System.out.println(n);
+			c++;
 		}
+		elements.close();
+		assertEquals(0, c);
 	}
 
 	void printIndex(Tx transaction, String filename, int rootPageNo,

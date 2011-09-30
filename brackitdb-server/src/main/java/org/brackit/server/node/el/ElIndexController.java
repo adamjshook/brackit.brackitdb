@@ -33,13 +33,12 @@ import java.util.List;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.el.encoder.ElCASFilter;
 import org.brackit.server.node.el.encoder.ElPathFilter;
-import org.brackit.server.node.el.encoder.PCRClusterPathEncoder;
 import org.brackit.server.node.el.encoder.PCRClusterEncoder;
-import org.brackit.server.node.el.encoder.SplidClusterPathEncoder;
+import org.brackit.server.node.el.encoder.PCRClusterPathEncoder;
 import org.brackit.server.node.el.encoder.SplidClusterEncoder;
+import org.brackit.server.node.el.encoder.SplidClusterPathEncoder;
 import org.brackit.server.node.index.definition.Cluster;
 import org.brackit.server.node.index.definition.IndexDef;
-import org.brackit.server.node.index.definition.IndexType;
 import org.brackit.server.node.txnode.IndexControllerImpl;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.store.Field;
@@ -64,7 +63,7 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 	private final ElCollection collection;
 
 	public ElIndexController(ElCollection collection) {
-		super(collection, collection.store.nameIndex, null,
+		super(collection, collection.store.nameIndex,
 				collection.store.pathIndex, collection.store.casIndex);
 		this.collection = collection;
 	}
@@ -121,13 +120,6 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 		case NAME:
 			return nameIndex.createBuilder(collection.getTX(), this,
 					containerNo, idxDef);
-		case CONTENT:
-			// convert request for content index to generic cas index
-			idxDef.setType(IndexType.CAS);
-			if (idxDef.isElementContent())
-				idxDef.addPath((new Path<QNm>()).descendant(new QNm("*")));
-			if (idxDef.isAttributeContent())
-				idxDef.addPath((new Path<QNm>()).descendantAttribute(new QNm("*")));
 		case CAS:
 			encoder = (idxDef.getClustering() == Cluster.SPLID) ? new SplidClusterEncoder(
 					collection, idxDef.getContentType())
@@ -180,15 +172,6 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 	}
 
 	@Override
-	public Stream<? extends ElNode> openContentIndex(int indexNo,
-			Atomic minSearchKey, Atomic maxSearchKey, boolean includeMin,
-			boolean includeMax, SearchMode searchMode) throws DocumentException {
-		Filter<ElNode> filter = createCASFilter("//*", "//@*");
-		return openCASIndex(indexNo, filter, minSearchKey, maxSearchKey,
-				includeMin, includeMax, searchMode);
-	}
-
-	@Override
 	public IndexEncoder<ElNode> getCasIndexEncoder(Type contentType,
 			Field keyType, Field valueType) throws DocumentException {
 		if ((valueType == Field.DEWEYIDPCR)
@@ -201,13 +184,6 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 		}
 		throw new DocumentException("Unsupported case index value type: %s",
 				valueType);
-	}
-
-	@Override
-	public IndexEncoder<ElNode> getContentIndexEncoder(Type contentType,
-			Field keyType, Field valueType) throws DocumentException {
-		throw new DocumentException(
-				"Plain content indexes are not supported in elementless storage");
 	}
 
 	@Override

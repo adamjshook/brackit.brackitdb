@@ -172,14 +172,4 @@ public class Indexes implements Materializable {
 
 		throw new DocumentException("No name index found.");
 	}
-
-	public IndexDef findContentIndex() throws DocumentException {
-		for (IndexDef index : indexes) {
-			if (index.isContentIndex()) {
-				return index;
-			}
-		}
-
-		throw new DocumentException("No content index found.");
-	}
 }

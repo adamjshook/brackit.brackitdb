@@ -51,11 +51,6 @@ public class IndexDefBuilder {
 	private IndexDefBuilder() {
 	}
 
-	public static IndexDef createContentIndexDefinition(boolean onElementContent,
-			boolean onAttributeContent, Type type) {
-		return new IndexDef(type, onElementContent, onAttributeContent, false);
-	}
-
 	public static IndexDef createCASIdxDef(Cluster cluster, boolean unique, 
 			Type type, List<Path<QNm>> paths) {
 		if (cluster == null) {

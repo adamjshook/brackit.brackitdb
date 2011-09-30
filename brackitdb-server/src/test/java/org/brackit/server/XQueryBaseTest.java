@@ -82,12 +82,13 @@ public class XQueryBaseTest {
 		Item item;
 		try {
 			while ((item = it.next()) != null) {
-				System.out.println(item);
+//				System.out.println(item);
 				if ((item instanceof Node<?>)
 						&& (((Node<?>) item).getKind() != Kind.ATTRIBUTE)) {
 					try {
 						new SubtreePrinter(System.out, false, false)
 								.print((Node<?>) item);
+						System.out.println();
 					} catch (DocumentException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();

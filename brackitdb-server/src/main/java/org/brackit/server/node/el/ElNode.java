@@ -48,6 +48,7 @@ import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.node.parser.ListenMode;
+import org.brackit.xquery.node.parser.NavigationalSubtreeParser;
 import org.brackit.xquery.node.parser.StreamSubtreeProcessor;
 import org.brackit.xquery.node.parser.SubtreeHandler;
 import org.brackit.xquery.node.parser.SubtreeListener;
@@ -809,6 +810,18 @@ public class ElNode extends TXNode<ElNode> {
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}
+	}
+	
+	@Override
+	public void parse(SubtreeHandler handler) throws DocumentException {
+		SubtreeParser parser = new NavigationalSubtreeParser(this);
+		parser.parse(handler);		
+	}
+
+	@Override
+	public Scope getScope() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	@Override

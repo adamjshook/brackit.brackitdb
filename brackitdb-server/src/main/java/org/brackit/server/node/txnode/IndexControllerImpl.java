@@ -34,7 +34,6 @@ import org.brackit.server.metadata.masterDocument.Indexes;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.node.index.IndexController;
 import org.brackit.server.node.index.cas.CASIndex;
-import org.brackit.server.node.index.content.ContentIndex;
 import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.index.definition.IndexType;
 import org.brackit.server.node.index.name.NameIndex;
@@ -66,19 +65,15 @@ public abstract class IndexControllerImpl<E extends TXNode<E>> implements
 
 	protected final NameIndex<E> nameIndex;
 
-	protected final ContentIndex<E> contentIndex;
-
 	protected final PathIndex<E> pathIndex;
 
 	protected final CASIndex<E> casIndex;
 
-	public IndexControllerImpl(TXCollection<E> collection,
-			NameIndex<E> nameIndex, ContentIndex<E> contentIndex,
-			PathIndex<E> pathIndex, CASIndex<E> casIndex) {
+	public IndexControllerImpl(TXCollection<E> collection, NameIndex<E> 
+		nameIndex, PathIndex<E> pathIndex, CASIndex<E> casIndex) {
 		super();
 		this.coll = collection;
 		this.nameIndex = nameIndex;
-		this.contentIndex = contentIndex;
 		this.pathIndex = pathIndex;
 		this.casIndex = casIndex;
 	}
@@ -101,13 +96,6 @@ public abstract class IndexControllerImpl<E extends TXNode<E>> implements
 							"This document does not support name indexes.");
 				}
 				nameIndex.calculateStatistics(coll.getTX(), idxDefinition);
-				break;
-			case CONTENT:
-				if (contentIndex == null) {
-					throw new DocumentException(
-							"This document does not support content indexes.");
-				}
-				contentIndex.calculateStatistics(coll.getTX(), idxDefinition);
 				break;
 			case PATH:
 				if (pathIndex == null) {
@@ -203,13 +191,6 @@ public abstract class IndexControllerImpl<E extends TXNode<E>> implements
 			}
 			nameIndex.drop(coll.getTX(), idxDefinition.getID());
 			break;
-		case CONTENT:
-			if (contentIndex == null) {
-				throw new DocumentException(
-						"This document does not support content indexes.");
-			}
-			contentIndex.drop(coll.getTX(), idxDefinition.getID());
-			break;
 		case PATH:
 			if (pathIndex == null) {
 				throw new DocumentException(
@@ -230,24 +211,6 @@ public abstract class IndexControllerImpl<E extends TXNode<E>> implements
 		}
 		Indexes indexes = coll.get(Indexes.class);
 		indexes.removeIndex(idxDefinition.getID());
-	}
-
-	@Override
-	public Stream<? extends E> openContentIndex(int indexNo,
-			Atomic minSearchKey, Atomic maxSearchKey, boolean includeMin,
-			boolean includeMax, SearchMode searchMode) throws DocumentException {
-		if (contentIndex == null) {
-			throw new DocumentException(
-					"This document does not support content indexes.");
-		}
-		IndexDef indexDef = coll.get(Indexes.class).getIndexDef(indexNo);
-		if ((indexDef == null) || (indexDef.getType() != IndexType.CONTENT)) {
-			throw new DocumentException("Content index %s not defined for %s",
-					indexNo, coll);
-		}
-		Type type = indexDef.getContentType();
-		return contentIndex.open(coll.getTX(), this, indexNo, type, searchMode,
-				minSearchKey, maxSearchKey, includeMin, includeMax);
 	}
 
 	@Override

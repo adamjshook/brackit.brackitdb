@@ -60,14 +60,6 @@ public interface IndexController<E extends Node<E>> {
 	public void dropIndex(IndexDef indexDefinition) throws DocumentException;
 
 	/**
-	 * Opens a stream for the given content index positioned for the given
-	 * search key.
-	 */
-	public Stream<? extends E> openContentIndex(int indexNo,
-			Atomic minSearchKey, Atomic maxSearchKey, boolean includeMin,
-			boolean includeMax, SearchMode searchMode) throws DocumentException;
-
-	/**
 	 * Opens a stream for the given name index positioned for the given
 	 * search key.
 	 */
