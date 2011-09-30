@@ -45,6 +45,8 @@ public interface DictionaryMgr extends PreCommitHook {
 	public String resolve(Tx tx, int vocID) throws DocumentException;
 
 	public int translate(Tx tx, String s) throws DocumentException;
+	
+	public int translateIfExists(String s) throws DocumentException;
 
 	public String list(Tx tx) throws DocumentException;
 
