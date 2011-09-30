@@ -191,4 +191,9 @@ public class DictionaryMgr03 implements DictionaryMgr, PreCommitHook {
 	public void prepare(Tx transaction) throws ServerException {
 		storeVocabulary(transaction);
 	}
+
+	@Override
+	public int translateIfExists(String s) throws DocumentException {
+		return vocabulary.translate(s);
+	}
 }
