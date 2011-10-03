@@ -87,7 +87,7 @@ public class PathSynopsis {
 			PathSynopsisNode parent) {
 		pathCache.clear();
 		PathSynopsisNode psN = new PathSynopsisNode(uriVocID, prefixVocID,
-				localNameVocID, pcr, name, kind, parent, this);
+				localNameVocID, pcr, name, kind, XXX, parent, this);
 
 		if (pcr > this.pcr) {
 			this.pcr++;

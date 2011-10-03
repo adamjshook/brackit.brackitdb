@@ -27,6 +27,9 @@
  */
 package org.brackit.server.metadata.pathSynopsis.manager;
 
+import java.util.Map;
+
+import org.brackit.server.metadata.pathSynopsis.NsMapping;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.util.path.Path;
@@ -50,6 +53,8 @@ public class PathSynopsisNode implements PSNode {
 	protected final int uriVocID;
 	protected final int prefixVocID;
 	protected final int localNameVocID;
+	
+	protected final NsMapping nsMapping;
 
 	protected final int level;
 
@@ -67,14 +72,16 @@ public class PathSynopsisNode implements PSNode {
 	protected PathSynopsisNode[] children;
 
 	public PathSynopsisNode(int uriVocID, int prefixVocID, int localNameVocID,
-			int pcr, QNm name, byte kind, PathSynopsisNode parent,
-			PathSynopsis ps) {
+			int pcr, QNm name, byte kind, NsMapping nsMapping,
+			PathSynopsisNode parent, PathSynopsis ps) {
 		this.uriVocID = uriVocID;
 		this.prefixVocID = prefixVocID;
 		this.localNameVocID = localNameVocID;
 		this.pcr = pcr;
 		this.name = name;
 		this.kind = kind;
+		nsMapping.finalize();
+		this.nsMapping = nsMapping;
 		this.parent = parent;
 		this.ps = ps;
 		this.children = new PathSynopsisNode[0];
