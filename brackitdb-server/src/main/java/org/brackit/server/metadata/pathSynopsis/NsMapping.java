@@ -28,6 +28,7 @@
 package org.brackit.server.metadata.pathSynopsis;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -54,8 +55,15 @@ public class NsMapping {
 		if (finalized) {
 			throw new RuntimeException("This namespace mapping is already final!");
 		}
-		
 		nsMap.put(prefixVocID, uriVocID);
+	}
+	
+	public Set<Integer> getPrefixSet() {
+		return nsMap.keySet();
+	}
+	
+	public Set<Map.Entry<Integer, Integer>> getEntrySet() {
+		return nsMap.entrySet();
 	}
 	
 	public Integer resolve(int prefixVocID) {

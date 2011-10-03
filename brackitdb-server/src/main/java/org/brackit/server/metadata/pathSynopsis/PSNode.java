@@ -47,4 +47,6 @@ public interface PSNode {
 	public int getLevel();
 
 	public PSNode getParent();
+
+	public NsMapping getNsMapping();
 }
