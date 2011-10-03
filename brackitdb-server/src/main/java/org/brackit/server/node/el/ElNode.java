@@ -64,7 +64,7 @@ import org.brackit.xquery.xdm.Stream;
  * @author Sebastian Baechle
  * 
  */
-public class ElNode extends TXNode<ElNode> {
+public class ElNode extends TXNode<ElNode> implements Scope {
 
 	private class AttributeStream implements Stream<ElNode> {
 		private IndexIterator it;
@@ -118,6 +118,8 @@ public class ElNode extends TXNode<ElNode> {
 	protected Atomic value;
 
 	protected PSNode psNode;
+	
+	private ElScope scope;
 
 	protected PageID hintPageID;
 
@@ -819,12 +821,6 @@ public class ElNode extends TXNode<ElNode> {
 	}
 
 	@Override
-	public Scope getScope() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public String toString() {
 		QNm name = ((type == Kind.ATTRIBUTE.ID) || (type == Kind.ELEMENT.ID)) ? psNode
 				.getName() : null;
@@ -833,5 +829,15 @@ public class ElNode extends TXNode<ElNode> {
 				.format("%s(doc='%s', docID='%s', type='%s', name='%s', value='%s', pcr='%s')",
 						deweyID, locator.collection.getName(),
 						deweyID.getDocID(), getKind(), name, value, pcr);
+	}
+
+	@Override
+	public Scope getScope() {
+		
+		if (scope == null && type == Kind.ELEMENT.ID) {
+			scope = new ElScope(this);
+		}
+		
+		return scope;
 	}
 }
