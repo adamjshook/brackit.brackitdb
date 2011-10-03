@@ -27,6 +27,12 @@
  */
 package org.brackit.server.node.el;
 
+import java.util.Collection;
+import java.util.Iterator;
+
+import org.brackit.server.metadata.pathSynopsis.NsMapping;
+import org.brackit.server.metadata.vocabulary.DictionaryMgr;
+import org.brackit.xquery.node.stream.EmptyStream;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Scope;
 import org.brackit.xquery.xdm.Stream;
@@ -40,15 +46,44 @@ import org.brackit.xquery.xdm.Stream;
 public class ElScope implements Scope {
 	
 	private final ElNode element;
+	private final NsMapping nsMapping;
+	private final DictionaryMgr dictionary;
+	
+	private class LookupStream implements Stream<String> {
+		
+		private Iterator<Integer> iter;
+		
+		public LookupStream(Collection<Integer> vocIDs) {
+			this.iter = vocIDs.iterator();
+		}
+
+		@Override
+		public void close() {
+			iter = null;
+		}
+
+		@Override
+		public String next() throws DocumentException {
+			if (iter == null || !iter.hasNext()) {
+				close();
+				return null;
+			}
+			return dictionary.resolve(null, iter.next());
+		}
+	}
 	
 	public ElScope(ElNode element) {
 		this.element = element;
+		this.nsMapping = element.psNode.getNsMapping();
+		this.dictionary = element.locator.collection.getDictionary();
 	}
 
 	@Override
 	public Stream<String> localPrefixes() throws DocumentException {
-		// TODO Auto-generated method stub
-		return null;
+		if (nsMapping == null) {
+			return new EmptyStream<String>();
+		}
+		return new LookupStream(nsMapping.getPrefixSet());
 	}
 
 	@Override

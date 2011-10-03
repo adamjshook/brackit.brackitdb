@@ -124,7 +124,7 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 					prefixVocID) : null);
 			String localName = dictionaryMgr.resolve(tx, localNameVocID);
 			node = ps.getNewNode(new QNm(URI, prefix, localName), uriVocID,
-					prefixVocID, localNameVocID, kind, parent, 0);
+					prefixVocID, localNameVocID, kind, XXX, parent, 0);
 			addNodeToTaList(tx, ps, node);
 		}
 

@@ -27,10 +27,12 @@
  */
 package org.brackit.server.metadata.pathSynopsis.converter;
 
+import org.brackit.server.metadata.pathSynopsis.NsMapping;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsis;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisNode;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.tx.Tx;
+import org.brackit.server.tx.log.SizeConstants;
 import org.brackit.server.util.Calc;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.xdm.DocumentException;
@@ -59,6 +61,21 @@ public class PSNodeBuilder extends PSNodeRecordAccess {
 		if (info[3] != 0) {
 			int parentPCR = Calc.toInt(value, offset, info[3]);
 			parent = ps.getNodeByPcr(parentPCR);
+			offset += info[3];
+		}
+		
+		NsMapping nsMapping = null;
+		if (offset < value.length) {
+			// restore namespace mapping
+			nsMapping = new NsMapping();
+			while (offset < value.length) {
+				int prefixVocIDMap = Calc.toInt(value, offset);
+				offset += SizeConstants.INT_SIZE;
+				int uriVocIDMap = Calc.toInt(value, offset);
+				offset += SizeConstants.INT_SIZE;
+				nsMapping.addPrefix(prefixVocIDMap, uriVocIDMap);
+			}
+			nsMapping.finalize();
 		}
 
 		String URI = (uriVocID != -1 ? dictionary.resolve(tx, uriVocID) : "");
@@ -67,7 +84,7 @@ public class PSNodeBuilder extends PSNodeRecordAccess {
 
 		PathSynopsisNode node = ps.getNewNode(pcr, new QNm(URI, prefix,
 				localName), uriVocID, prefixVocID, localNameVocID, (byte) type,
-				parent);
+				nsMapping, parent);
 
 		return node;
 	}

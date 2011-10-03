@@ -248,4 +248,9 @@ public class PathSynopsisNode implements PSNode {
 	public int getLocalNameVocID() {
 		return localNameVocID;
 	}
+	
+	@Override
+	public NsMapping getNsMapping() {
+		return nsMapping;
+	}
 }

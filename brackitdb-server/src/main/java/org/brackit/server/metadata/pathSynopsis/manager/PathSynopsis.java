@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.brackit.server.metadata.pathSynopsis.NsMapping;
 import org.brackit.server.tx.Tx;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.util.path.Path;
@@ -84,10 +85,10 @@ public class PathSynopsis {
 
 	public PathSynopsisNode getNewNode(int pcr, QNm name, int uriVocID,
 			int prefixVocID, int localNameVocID, byte kind,
-			PathSynopsisNode parent) {
+			NsMapping nsMapping, PathSynopsisNode parent) {
 		pathCache.clear();
 		PathSynopsisNode psN = new PathSynopsisNode(uriVocID, prefixVocID,
-				localNameVocID, pcr, name, kind, XXX, parent, this);
+				localNameVocID, pcr, name, kind, nsMapping, parent, this);
 
 		if (pcr > this.pcr) {
 			this.pcr++;
@@ -119,9 +120,10 @@ public class PathSynopsis {
 	}
 
 	public PathSynopsisNode getNewNode(QNm name, int uriVocID, int prefixVocID,
-			int localNameVocID, byte kind, PathSynopsisNode parent, int count) {
+			int localNameVocID, byte kind, NsMapping nsMapping,
+			PathSynopsisNode parent, int count) {
 		return getNewNode(++pcr, name, uriVocID, prefixVocID, localNameVocID,
-				kind, parent);
+				kind, nsMapping, parent);
 	}
 
 	public PathSynopsisNode getNodeByPcr(int pcr) {
@@ -197,14 +199,10 @@ public class PathSynopsis {
 		}
 
 		StringBuffer buf = levelBuffers.get(node.getLevel() - 1);
-		String str = String
-				.format("[%s:%s]  ",
-						node.getPCR(),
-						((node.getKind() == Kind.ATTRIBUTE.ID) ? "@" : "")
-								+ String.format("(%s,%s,%s)",
-										node.getURIVocID(),
-										node.getPrefixVocID(),
-										node.getLocalNameVocID()));
+		String str = String.format("[%s:%s]  ", node.getPCR(),
+				((node.getKind() == Kind.ATTRIBUTE.ID) ? "@" : "")
+						+ String.format("(%s,%s,%s)", node.getURIVocID(), node
+								.getPrefixVocID(), node.getLocalNameVocID()));
 		buf.append(str);
 
 		if (levelBuffers.size() - 1 > node.getLevel()) // child level exists
