@@ -33,6 +33,7 @@ import java.util.Set;
 
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.util.log.Logger;
+import org.brackit.server.metadata.pathSynopsis.NsMapping;
 import org.brackit.server.metadata.pathSynopsis.PSSnapshotBuilder;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.metadata.pathSynopsis.converter.PSConverter;
@@ -87,7 +88,7 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 
 	@Override
 	public PSNode getChild(Tx tx, int parentPcr, int uriVocID, int prefixVocID,
-			int localNameVocID, byte kind) throws DocumentException {
+			int localNameVocID, byte kind, NsMapping nsMapping) throws DocumentException {
 		PathSynopsisNode node;
 
 		synchronized (ps) {
@@ -100,7 +101,8 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 					if ((child.uriVocID == uriVocID)
 							&& (child.prefixVocID == prefixVocID)
 							&& (child.localNameVocID == localNameVocID)
-							&& (child.kind == kind)) {
+							&& (child.kind == kind)
+							&& (child.hasNsMapping(nsMapping))) {
 						if (!child.isStored()) {
 							addNodeToTaList(tx, ps, child);
 						}
@@ -112,7 +114,8 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 					if ((root.uriVocID == uriVocID)
 							&& (root.prefixVocID == prefixVocID)
 							&& (root.localNameVocID == localNameVocID)
-							&& (root.kind == kind)) {
+							&& (root.kind == kind)
+							&& (root.hasNsMapping(nsMapping))) {
 						return root;
 					}
 				}
@@ -124,7 +127,7 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 					prefixVocID) : null);
 			String localName = dictionaryMgr.resolve(tx, localNameVocID);
 			node = ps.getNewNode(new QNm(URI, prefix, localName), uriVocID,
-					prefixVocID, localNameVocID, kind, XXX, parent, 0);
+					prefixVocID, localNameVocID, kind, nsMapping, parent, 0);
 			addNodeToTaList(tx, ps, node);
 		}
 
