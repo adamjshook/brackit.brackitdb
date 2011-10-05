@@ -30,6 +30,7 @@ package org.brackit.server.metadata.pathSynopsis.manager;
 import java.util.Collection;
 import java.util.Set;
 
+import org.brackit.server.metadata.pathSynopsis.NsMapping;
 import org.brackit.server.metadata.pathSynopsis.PSSnapshotBuilder;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.tx.Tx;
@@ -67,12 +68,12 @@ public interface PathSynopsisMgr {
 			throws DocumentException;
 
 	/**
-	 * Returns the pcr of a child node with label <code>vocID</code> and type
-	 * <code>nodeType</code> of pcr <code>parentPcr</code>. If such a child does
-	 * not exist it is created and the new PCR is returned.
+	 * Returns the requested child PSNode. If such a child does not exist it is
+	 * created and returned.
 	 */
 	public PSNode getChild(Tx tx, int parentPcr, int uriVocID, int prefixVocID,
-			int localNameVocID, byte kind) throws DocumentException;
+			int localNameVocID, byte kind, NsMapping nsMapping)
+			throws DocumentException;
 
 	/**
 	 * Allows to make a snapshot of the path synopsis containing relevant meta

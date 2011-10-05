@@ -65,16 +65,19 @@ public class PSNodeBuilder extends PSNodeRecordAccess {
 		}
 		
 		NsMapping nsMapping = null;
-		if (offset < value.length) {
+		while (offset < value.length) {
 			// restore namespace mapping
-			nsMapping = new NsMapping();
-			while (offset < value.length) {
-				int prefixVocIDMap = Calc.toInt(value, offset);
-				offset += SizeConstants.INT_SIZE;
-				int uriVocIDMap = Calc.toInt(value, offset);
-				offset += SizeConstants.INT_SIZE;
+			int prefixVocIDMap = Calc.toInt(value, offset);
+			offset += SizeConstants.INT_SIZE;
+			int uriVocIDMap = Calc.toInt(value, offset);
+			offset += SizeConstants.INT_SIZE;
+			if (nsMapping == null) {
+				nsMapping = new NsMapping(prefixVocIDMap, uriVocIDMap);
+			} else {
 				nsMapping.addPrefix(prefixVocIDMap, uriVocIDMap);
 			}
+		}
+		if (nsMapping != null) {
 			nsMapping.finalize();
 		}
 

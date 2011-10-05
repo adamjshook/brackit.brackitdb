@@ -43,8 +43,9 @@ public class NsMapping {
 	private final Map<Integer, Integer> nsMap;
 	private boolean finalized = false;
 	
-	public NsMapping() {
+	public NsMapping(int intialPrefixVocID, int intialUriVocID) {
 		this.nsMap = new TreeMap<Integer, Integer>();
+		this.nsMap.put(intialPrefixVocID, intialUriVocID);
 	}
 	
 	public void finalize() {
@@ -69,4 +70,23 @@ public class NsMapping {
 	public Integer resolve(int prefixVocID) {
 		return nsMap.get(prefixVocID);
 	}
+
+	@Override
+	public int hashCode() {
+		return nsMap.hashCode();
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		NsMapping other = (NsMapping) obj;
+		return nsMap.equals(other.nsMap);
+	}
+	
+	
 }

@@ -254,7 +254,7 @@ public class ElNode extends TXNode<ElNode> implements Scope {
 					name.localName);
 			PSNode childPsNode = pathSynopsisMgr.getChild(getTX(),
 					psNode.getPCR(), uriVocID, prefixVocID, localNameVocID,
-					Kind.ELEMENT.ID);
+					Kind.ELEMENT.ID, XXX);
 			record = ElRecordAccess.createRecord(childPsNode.getPCR(),
 					Kind.ELEMENT.ID, null);
 			node = new ElNode(locator, childDeweyID, kind.ID, null, childPsNode);
@@ -376,7 +376,7 @@ public class ElNode extends TXNode<ElNode> implements Scope {
 		int localNameVocID = coll.getDictionary().translate(getTX(),
 				name.localName);
 		PSNode attributePsNode = locator.pathSynopsis.getChild(getTX(),
-				elementPsNode.getPCR(), uriVocID, prefixVocID, localNameVocID, Kind.ATTRIBUTE.ID);
+				elementPsNode.getPCR(), uriVocID, prefixVocID, localNameVocID, Kind.ATTRIBUTE.ID, XXX);
 		byte[] record = ElRecordAccess.createRecord(attributePsNode.getPCR(),
 				Kind.ATTRIBUTE.ID, value.stringValue());
 

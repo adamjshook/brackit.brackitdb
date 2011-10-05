@@ -121,11 +121,12 @@ public class PathSynopsisNode implements PSNode {
 	 * @return found node
 	 */
 	public PathSynopsisNode hasChild(int uriVocID, int prefixVocID,
-			int localNameVocID, byte nodeType) {
+			int localNameVocID, byte nodeType, NsMapping nsMapping) {
 		for (PathSynopsisNode child : children) {
 			if (child.getKind() == nodeType && child.getURIVocID() == uriVocID
 					&& child.getPrefixVocID() == prefixVocID
-					&& child.getLocalNameVocID() == localNameVocID) {
+					&& child.getLocalNameVocID() == localNameVocID
+					&& child.hasNsMapping(nsMapping)) {
 				return child;
 			}
 		}
@@ -252,5 +253,15 @@ public class PathSynopsisNode implements PSNode {
 	@Override
 	public NsMapping getNsMapping() {
 		return nsMapping;
+	}
+
+	@Override
+	public boolean hasNsMapping(NsMapping nsMapping) {
+		if (this.nsMapping == null) {
+			return (nsMapping == null);
+		} else if (nsMapping == null) {
+			return false;
+		}
+		return this.nsMapping.equals(nsMapping);
 	}
 }
