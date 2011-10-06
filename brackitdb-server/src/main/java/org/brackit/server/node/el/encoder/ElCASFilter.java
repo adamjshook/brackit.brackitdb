@@ -69,7 +69,7 @@ public final class ElCASFilter implements Filter<ElNode> {
 	@Override
 	public boolean filter(ElNode node) throws DocumentException {
 		if (genericCas) {
-			return true;
+			return false;
 		}
 
 		int pcr = node.getPCR();

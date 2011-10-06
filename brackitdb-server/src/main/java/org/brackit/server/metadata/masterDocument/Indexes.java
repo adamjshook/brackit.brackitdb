@@ -29,8 +29,11 @@ package org.brackit.server.metadata.masterDocument;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.brackit.server.metadata.materialize.Materializable;
+import org.brackit.server.node.index.definition.Cluster;
 import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.FragmentHelper;
@@ -125,19 +128,20 @@ public class Indexes implements Materializable {
 
 	public IndexDef findPathIndex(Path<QNm> path) throws DocumentException {
 		try {
-			List<IndexDef> candidates = new ArrayList<IndexDef>(indexes.size());
-
 			for (IndexDef index : indexes) {
 				if (index.isPathIndex()) {
+					if (index.getPaths().isEmpty()) {
+						return index;
+					}
+					
 					for (Path<QNm> indexedPath : index.getPaths()) {
 						if (indexedPath.matches(path)) {
-							candidates.add(index);
+							return index;
 						}
 					}
 				}
 			}
-
-			return (candidates.size() > 0) ? candidates.get(0) : null;
+			return null;
 		} catch (PathException e) {
 			throw new DocumentException(e);
 		}
@@ -145,31 +149,44 @@ public class Indexes implements Materializable {
 
 	public IndexDef findCASIndex(Path<QNm> path) throws DocumentException {
 		try {
-			List<IndexDef> candidates = new ArrayList<IndexDef>(indexes.size());
-
 			for (IndexDef index : indexes) {
 				if (index.isCasIndex()) {
+					if (index.getPaths().isEmpty()) {
+						return index;
+					}
+					
 					for (Path<QNm> indexedPath : index.getPaths()) {
 						if (indexedPath.matches(path)) {
-							candidates.add(index);
+							return index;
 						}
 					}
 				}
 			}
-
-			return (candidates.size() > 0) ? candidates.get(0) : null;
+			return null;
 		} catch (PathException e) {
 			throw new DocumentException(e);
 		}
 	}
 
-	public IndexDef findNameIndex() throws DocumentException {
-		for (IndexDef index : indexes) {
+	public IndexDef findNameIndex(QNm... names) throws DocumentException {
+		out: for (IndexDef index : indexes) {
 			if (index.isNameIndex()) {
+				Map<QNm, Cluster> incl = index.getIncluded();
+				Set<QNm> excl = index.getExcluded();
+				if (names.length == 0 && incl.isEmpty() && excl.isEmpty()) {
+					// Require generic name index
+					return index;
+				}
+				
+				for (QNm name : names) {
+					if (!incl.isEmpty() && !incl.containsKey(name) 
+							|| !excl.isEmpty() && excl.contains(name)) {
+						continue out;
+					}
+				}
 				return index;
 			}
 		}
-
-		throw new DocumentException("No name index found.");
+		return null;
 	}
 }

@@ -90,7 +90,7 @@ public class CASIndexListener<E extends Node<E>> extends DefaultListener<E>
 	}
 
 	private void delete(E node) throws DocumentException {
-		if (filter.filter(node)) {
+		if (!filter.filter(node)) {
 			if (log.isDebugEnabled()) {
 				log.debug(String.format("Deleting (%s, %s) from cas index %s.",
 						node.getValue(), node, indexNo));
@@ -108,7 +108,7 @@ public class CASIndexListener<E extends Node<E>> extends DefaultListener<E>
 	}
 
 	private void insert(E node) throws DocumentException {
-		if (filter.filter(node)) {
+		if (!filter.filter(node)) {
 			if (log.isDebugEnabled()) {
 				log.debug(String.format("Inserting (%s, %s) in cas index %s.",
 						node.getValue(), node, indexNo));

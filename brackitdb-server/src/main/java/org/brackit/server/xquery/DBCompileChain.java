@@ -27,9 +27,16 @@
  */
 package org.brackit.server.xquery;
 
+import static org.brackit.server.xquery.function.bdb.CreatePathIndex.*;
+import static org.brackit.server.xquery.function.bdb.CreateNameIndex.*;
+import static org.brackit.server.xquery.function.bdb.CreateCASIndex.*;
+
 import org.brackit.server.metadata.manager.MetaDataMgr;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.xquery.compiler.DBCompiler;
+import org.brackit.server.xquery.function.bdb.CreateCASIndex;
+import org.brackit.server.xquery.function.bdb.CreateNameIndex;
+import org.brackit.server.xquery.function.bdb.CreatePathIndex;
 import org.brackit.server.xquery.function.bdb.SetIsolation;
 import org.brackit.server.xquery.function.bdb.SetLockdepth;
 import org.brackit.server.xquery.optimizer.DBOptimizer;
@@ -38,6 +45,10 @@ import org.brackit.xquery.compiler.optimizer.Optimizer;
 import org.brackit.xquery.compiler.translator.Translator;
 import org.brackit.xquery.module.Functions;
 import org.brackit.xquery.module.Namespaces;
+import org.brackit.xquery.xdm.Signature;
+import org.brackit.xquery.xdm.type.AtomicType;
+import org.brackit.xquery.xdm.type.Cardinality;
+import org.brackit.xquery.xdm.type.SequenceType;
 
 /**
  * @author Sebastian Baechle
@@ -53,6 +64,36 @@ public class DBCompileChain extends CompileChain {
 		Namespaces.predefine(BDB_PREFIX, BDB_NSURI);
 		Functions.predefine(new SetIsolation());
 		Functions.predefine(new SetLockdepth());
+		
+		Functions.predefine(new CreatePathIndex(CREATE_PATH_INDEX, 
+				new Signature(SequenceType.NODE, 
+					new SequenceType(AtomicType.STR, Cardinality.One),
+					new SequenceType(AtomicType.STR, Cardinality.ZeroOrMany))));
+		Functions.predefine(new CreatePathIndex(CREATE_PATH_INDEX, 
+				new Signature(SequenceType.NODE, 
+					new SequenceType(AtomicType.STR, Cardinality.One))));
+		
+		Functions.predefine(new CreateNameIndex(CREATE_NAME_INDEX, 
+				new Signature(SequenceType.NODE, 
+					new SequenceType(AtomicType.STR, Cardinality.One),
+					new SequenceType(AtomicType.QNM, Cardinality.ZeroOrMany))));
+		Functions.predefine(new CreateNameIndex(CREATE_NAME_INDEX, 
+				new Signature(SequenceType.NODE, 
+					new SequenceType(AtomicType.STR, Cardinality.One))));
+		
+		Functions.predefine(new CreateCASIndex(CREATE_CAS_INDEX, 
+				new Signature(SequenceType.NODE, 
+					new SequenceType(AtomicType.STR, Cardinality.One),
+					new SequenceType(AtomicType.STR, Cardinality.ZeroOrOne),
+					new SequenceType(AtomicType.STR, Cardinality.ZeroOrMany))));
+		Functions.predefine(new CreateCASIndex(CREATE_CAS_INDEX, 
+				new Signature(SequenceType.NODE, 
+					new SequenceType(AtomicType.STR, Cardinality.One),
+					new SequenceType(AtomicType.STR, Cardinality.ZeroOrOne))));
+		Functions.predefine(new CreateCASIndex(CREATE_CAS_INDEX, 
+				new Signature(SequenceType.NODE, 
+					new SequenceType(AtomicType.STR, Cardinality.One))));
+		
 	}
 
 	private final MetaDataMgr mdm;

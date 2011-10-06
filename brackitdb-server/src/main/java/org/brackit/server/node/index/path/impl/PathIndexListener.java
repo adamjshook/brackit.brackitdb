@@ -94,7 +94,7 @@ public class PathIndexListener<E extends Node<E>> extends DefaultListener<E>
 	}
 
 	private void insert(E node) throws DocumentException {
-		if ((filter != null) && (filter.filter(node))) {
+		if (filter != null && !filter.filter(node)) {
 			if (log.isDebugEnabled()) {
 				log.debug(String.format("Inserting (%s) in path index %s.",
 						node, indexNo));
@@ -112,7 +112,7 @@ public class PathIndexListener<E extends Node<E>> extends DefaultListener<E>
 	}
 
 	private void delete(E node) throws DocumentException {
-		if ((filter != null) && (filter.filter(node))) {
+		if (filter != null && !filter.filter(node)) {
 			if (log.isDebugEnabled()) {
 				log.debug(String.format("Deleting (%s) from path index %s.",
 						node, indexNo));

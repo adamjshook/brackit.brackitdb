@@ -42,16 +42,13 @@ import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.txnode.IndexControllerImpl;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.store.Field;
-import org.brackit.server.store.SearchMode;
 import org.brackit.server.tx.TxException;
-import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.ListenMode;
 import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.node.stream.filter.Filter;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.DocumentException;
-import org.brackit.xquery.xdm.Stream;
 import org.brackit.xquery.xdm.Type;
 
 /**
@@ -128,9 +125,9 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 					new ElCASFilter(idxDef.getPaths(), collection),
 					containerNo, idxDef);
 		case PATH:
-			encoder = (idxDef.getClustering() == Cluster.SPLID) ? new SplidClusterPathEncoder(
-					collection)
-					: new PCRClusterPathEncoder(collection);
+			encoder = (idxDef.getClustering() == Cluster.SPLID) 
+						? new SplidClusterPathEncoder(collection)
+						: new PCRClusterPathEncoder(collection);
 			return pathIndex.createBuilder(collection.getTX(), encoder,
 					new ElPathFilter(idxDef.getPaths(), collection),
 					containerNo, idxDef);

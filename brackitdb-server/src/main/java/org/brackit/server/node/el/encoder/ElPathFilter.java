@@ -69,7 +69,7 @@ public final class ElPathFilter implements Filter<ElNode> {
 	@Override
 	public boolean filter(ElNode node) throws DocumentException {
 		if (genericPath) {
-			return true;
+			return false;
 		}
 
 		int pcr = node.getPCR();

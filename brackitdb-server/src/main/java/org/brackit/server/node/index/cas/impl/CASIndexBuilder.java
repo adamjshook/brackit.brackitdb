@@ -170,7 +170,7 @@ class CASIndexBuilder<E extends Node<E>> extends DefaultListener<E> implements
 	}
 
 	private void content(E node) throws DocumentException {
-		if (filter.filter(node)) {
+		if (!filter.filter(node)) {
 			try {
 				byte[] key = encoder.encodeKey(node);
 				byte[] value = encoder.encodeValue(node);

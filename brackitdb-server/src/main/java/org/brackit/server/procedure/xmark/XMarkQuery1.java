@@ -221,22 +221,26 @@ public class XMarkQuery1 implements Procedure {
 
 	private void evaluateWithNameIndex(TXQueryContext ctx, TXNode<?> doc,
 			StringBuilder out) throws QueryException, DocumentException {
+		QNm site = new QNm("site");
+		QNm people = new QNm("people");
+		QNm person = new QNm("person");
 		IndexDef nameIndex = doc.getCollection().get(Indexes.class)
-				.findNameIndex();
+				.findNameIndex(site, people, person);
 
 		if (nameIndex == null) {
-			throw new DocumentException("No element index found");
+			throw new DocumentException("No name index found");
 		}
 
 		int nameIndexNo = nameIndex.getID();
 		IndexController<?> indexController = doc.getCollection()
 				.getIndexController();
 		Cursor in1 = new StreamOperator(indexController.openNameIndex(
-				nameIndexNo, new QNm("site"), SearchMode.FIRST));
+				nameIndexNo, site, SearchMode.FIRST));
 		Cursor in2 = new StreamOperator(indexController.openNameIndex(
-				nameIndexNo, new QNm("people"), SearchMode.FIRST));
+				nameIndexNo, people, SearchMode.FIRST));
+		
 		Cursor in3 = new StreamOperator(indexController.openNameIndex(
-				nameIndexNo, new QNm("person"), SearchMode.FIRST));
+				nameIndexNo, person, SearchMode.FIRST));
 
 		Cursor join;
 		join = new MergeJoin(in1, in2, new AxisPredicate(Axis.PARENT,
