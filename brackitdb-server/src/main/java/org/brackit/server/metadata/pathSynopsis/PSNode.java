@@ -37,9 +37,9 @@ public interface PSNode {
 	public int getPCR();
 
 	public int getURIVocID();
-	
+
 	public int getPrefixVocID();
-	
+
 	public int getLocalNameVocID();
 
 	public QNm getName();
@@ -47,4 +47,11 @@ public interface PSNode {
 	public int getLevel();
 
 	public PSNode getParent();
+
+	/**
+	 * Returns local prefix declarations. If there are none, null is returned.
+	 */
+	public NsMapping getNsMapping();
+	
+	public boolean hasNsMapping(NsMapping nsMapping);
 }

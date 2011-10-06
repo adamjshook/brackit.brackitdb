@@ -27,7 +27,12 @@
  */
 package org.brackit.server.metadata.pathSynopsis.converter;
 
+import java.util.Collection;
+import java.util.Map;
+
+import org.brackit.server.metadata.pathSynopsis.NsMapping;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisNode;
+import org.brackit.server.tx.log.SizeConstants;
 import org.brackit.server.util.Calc;
 import org.brackit.xquery.xdm.Kind;
 
@@ -51,12 +56,21 @@ public class PSNodeRecordAccess {
 		PathSynopsisNode parent = node.getParent();
 		byte[] parentPCR = (parent != null) ? Calc.fromUIntVar(parent.getPCR())
 				: null;
+		
+		// encode namespace mapping
+		int nsMappingLength = 0;
+		NsMapping nsMapping = node.getNsMapping();
+		Collection<Map.Entry<Integer, Integer>> entrySet = null;
+		if (nsMapping != null) {
+			entrySet = nsMapping.getEntrySet();
+			nsMappingLength = 2 * entrySet.size() * SizeConstants.INT_SIZE;
+		}
 
 		int vLength1 = uriVocID.length;
 		int vLength2 = prefixVocID.length;
 		int vLength3 = localNameVocID.length;
 		int pLength = (parentPCR != null) ? parentPCR.length : 0;
-		byte[] nodeBytes = new byte[2 + vLength1 + vLength2 + vLength3 + pLength];
+		byte[] nodeBytes = new byte[2 + vLength1 + vLength2 + vLength3 + pLength + nsMappingLength];
 
 		int pos = 2;
 		System.arraycopy(uriVocID, 0, nodeBytes, pos, vLength1);
@@ -69,6 +83,16 @@ public class PSNodeRecordAccess {
 		if (parentPCR != null) {
 			System.arraycopy(parentPCR, 0, nodeBytes, pos, pLength);
 			pos += pLength;
+		}
+		
+		if (nsMappingLength > 0) {
+			// store vocID mapping
+			for (Map.Entry<Integer, Integer> entry : entrySet) {
+				Calc.fromInt(entry.getKey(), nodeBytes, pos);
+				pos += SizeConstants.INT_SIZE;
+				Calc.fromInt(entry.getValue(), nodeBytes, pos);
+				pos += SizeConstants.INT_SIZE;
+			}
 		}
 
 		nodeBytes[0] = node.getKind();
