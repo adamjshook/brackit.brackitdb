@@ -31,9 +31,12 @@ import java.util.Collection;
 import java.util.Iterator;
 
 import org.brackit.server.metadata.pathSynopsis.NsMapping;
+import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;
+import org.brackit.server.tx.Tx;
 import org.brackit.xquery.node.stream.EmptyStream;
 import org.brackit.xquery.xdm.DocumentException;
+import org.brackit.xquery.xdm.Kind;
 import org.brackit.xquery.xdm.Scope;
 import org.brackit.xquery.xdm.Stream;
 
@@ -41,18 +44,19 @@ import org.brackit.xquery.xdm.Stream;
  * Scope implementation for EL element scopes.
  * 
  * @author Martin Hiller
- *
+ * 
  */
 public class ElScope implements Scope {
-	
+
 	private final ElNode element;
-	private final NsMapping nsMapping;
+	private NsMapping nsMapping;
 	private final DictionaryMgr dictionary;
-	
+	private final Tx tx;
+
 	private class LookupStream implements Stream<String> {
-		
+
 		private Iterator<Integer> iter;
-		
+
 		public LookupStream(Collection<Integer> vocIDs) {
 			this.iter = vocIDs.iterator();
 		}
@@ -71,11 +75,12 @@ public class ElScope implements Scope {
 			return dictionary.resolve(null, iter.next());
 		}
 	}
-	
+
 	public ElScope(ElNode element) {
 		this.element = element;
 		this.nsMapping = element.psNode.getNsMapping();
 		this.dictionary = element.locator.collection.getDictionary();
+		this.tx = element.getTX();
 	}
 
 	@Override
@@ -93,8 +98,46 @@ public class ElScope implements Scope {
 
 	@Override
 	public void addPrefix(String prefix, String uri) throws DocumentException {
-		// TODO Auto-generated method stub
 
+		// translates strings to VocIDs
+		int prefixVocID = dictionary.translate(tx, prefix);
+		int uriVocID = dictionary.translate(tx, uri);
+
+		if (nsMapping != null) {
+			if (nsMapping.contains(prefixVocID, uriVocID)) {
+				// exactly the same mapping already exists
+				return;
+			}
+
+			// copy current NsMapping
+			nsMapping = nsMapping.copy();
+
+			// add new prefix
+			nsMapping.addPrefix(prefixVocID, uriVocID);
+
+		} else {
+			nsMapping = new NsMapping(prefixVocID, uriVocID);
+		}
+		nsMapping.finalize();
+
+		// create new PSNode with new NsMapping
+		PSNode parent = element.psNode.getParent();
+		int parentPCR = (parent == null) ? -1 : parent.getPCR();
+		int newUriVocID = element.psNode.getURIVocID();
+		if (prefixVocID == element.psNode.getPrefixVocID()) {
+			// current prefix was overwritten -> change uriVocID
+			newUriVocID = uriVocID;
+		}
+
+		PSNode newPSNode = element.locator.pathSynopsis.getChild(tx, parentPCR,
+				newUriVocID, prefixVocID, element.psNode.getLocalNameVocID(),
+				Kind.ELEMENT.ID, nsMapping);
+		
+		// assign new PSNode
+		element.psNode = newPSNode;
+		
+		// iterate over subtree, change PCRs of decendants
+		// TODO
 	}
 
 	@Override

@@ -27,8 +27,14 @@
  */
 package org.brackit.server.metadata.pathSynopsis.manager;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 
 import org.brackit.xquery.atomic.QNm;
@@ -72,8 +78,8 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 		this.dictionaryMgr = dictionaryMgr;
 		this.psc = psc;
 		this.ps = ps;
-		this.ls = new SimpleLockService<Path<QNm>>(
-				PathSynopsis.class.getSimpleName());
+		this.ls = new SimpleLockService<Path<QNm>>(PathSynopsis.class
+				.getSimpleName());
 	}
 
 	@Override
@@ -87,8 +93,103 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 	}
 
 	@Override
+	public Map<Integer, Integer> changeNsMapping(Tx tx, int originalPCR,
+			NsMapping newNsMapping) throws DocumentException {
+		
+		// for changing the NsMapping, the whole subtree in the path synopsis has to be copied
+		// this map contains the PCR mapping from the PCRs in the old subtree to the PCRs in the new subtree
+		Map<Integer, Integer> pcrMap = new HashMap<Integer, Integer>();
+		// to traverse the path synopsis, this queue is used to indicate which nodes are still left to be copied
+		Queue<PathSynopsisNode> nodesToCopy = new LinkedList<PathSynopsisNode>();
+
+		synchronized (ps) {
+			PathSynopsisNode newNode;
+			PathSynopsisNode oldNode;
+			
+			// start with the original node
+			nodesToCopy.add(getNode(ps, originalPCR));
+			
+			boolean firstRun = true;
+
+			while ((oldNode = nodesToCopy.poll()) != null) {
+				
+				int newUriVocID = oldNode.getURIVocID();
+				int prefixVocID = oldNode.getPrefixVocID();
+				int localNameVocID = oldNode.getLocalNameVocID();
+				
+				// due to the new mapping, the uriVocID may have been changed
+				Integer changedUriVocID = newNsMapping.resolve(prefixVocID);
+				if (changedUriVocID != null) {
+					newUriVocID = changedUriVocID;
+				}
+				
+				// determine parent of new node
+				PathSynopsisNode oldParent = oldNode.getParent();
+				int newParentPCR = -1;
+				if (oldParent != null) {
+					// map old parent to new parent
+					Integer mappedParentPCR = pcrMap.get(oldParent.getPCR());
+					if (mappedParentPCR == null) {
+						// first loop -> new node has the same parent
+						newParentPCR = oldParent.getPCR();
+					} else {
+						newParentPCR = mappedParentPCR;
+					}
+				}
+				// load parent
+				PathSynopsisNode newParent = getNode(ps, newParentPCR);
+				
+				// determine new NsMapping
+				NsMapping nsMapping = firstRun ? newNsMapping : oldNode.getNsMapping().copy();
+				nsMapping.finalize();				
+				
+				// determine new QName
+				String URI = (newUriVocID != -1 ? dictionaryMgr.resolve(tx,
+						newUriVocID) : "");
+				String prefix = oldNode.getName().getPrefix();
+				String localName = oldNode.getName().getLocalName();
+				newNode = ps.getNewNode(new QNm(URI, prefix, localName),
+						newUriVocID, prefixVocID, localNameVocID, oldNode
+								.getKind(), nsMapping, newParent, 0);
+				addNodeToTaList(tx, ps, newNode);
+				
+				// put new PCR mapping
+				pcrMap.put(oldNode.getPCR(), newNode.getPCR());
+				
+				// add children into the queue
+				for (PathSynopsisNode child : oldNode.getChildren()) {
+					nodesToCopy.add(child);
+				}
+				
+				firstRun = false;
+			}
+		}
+		
+		return pcrMap;
+
+//		try {
+//			Path<QNm> path = null;
+//
+//			for (Path<QNm> pattern : ls.getLockedResources()) {
+//				if (path == null) {
+//					path = node.getPath();
+//				}
+//
+//				if (pattern.matches(path)) {
+//					ls.lock(tx, pattern, LockClass.INSTANT_DURATION, false);
+//				}
+//			}
+//
+//			return node;
+//		} catch (Exception e) {
+//			throw new DocumentException(e);
+//		}
+	}
+
+	@Override
 	public PSNode getChild(Tx tx, int parentPcr, int uriVocID, int prefixVocID,
-			int localNameVocID, byte kind, NsMapping nsMapping) throws DocumentException {
+			int localNameVocID, byte kind, NsMapping nsMapping)
+			throws DocumentException {
 		PathSynopsisNode node;
 
 		synchronized (ps) {
@@ -296,12 +397,13 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 
 	private void buildPathSynopsisSnapshot(PathSynopsisNode root, Tx tx,
 			PSSnapshotBuilder builder) throws DocumentException {
-		builder.startNode(root.getPCR(), root.getURIVocID(), root
-				.getPrefixVocID(), root.getLocalNameVocID(),
-				new QNm(dictionaryMgr.resolve(tx, root.getURIVocID()),
+		builder
+				.startNode(root.getPCR(), root.getURIVocID(), root
+						.getPrefixVocID(), root.getLocalNameVocID(), new QNm(
+						dictionaryMgr.resolve(tx, root.getURIVocID()),
 						dictionaryMgr.resolve(tx, root.getPrefixVocID()),
 						dictionaryMgr.resolve(tx, root.getLocalNameVocID())),
-				root.getKind());
+						root.getKind());
 
 		for (PathSynopsisNode child : root.getChildren()) {
 			buildPathSynopsisSnapshot(child, tx, builder);

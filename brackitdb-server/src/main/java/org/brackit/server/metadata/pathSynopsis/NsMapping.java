@@ -43,6 +43,10 @@ public class NsMapping {
 	private final Map<Integer, Integer> nsMap;
 	private boolean finalized = false;
 	
+	private NsMapping(Map<Integer, Integer> nsMap) {
+		this.nsMap = nsMap;
+	}
+	
 	public NsMapping(int intialPrefixVocID, int intialUriVocID) {
 		this.nsMap = new TreeMap<Integer, Integer>();
 		this.nsMap.put(intialPrefixVocID, intialUriVocID);
@@ -88,5 +92,15 @@ public class NsMapping {
 		return nsMap.equals(other.nsMap);
 	}
 	
+	/**
+	 * Copies this NsMapping, but the returned mapping will not be finalized.
+	 */
+	public NsMapping copy() {
+		return new NsMapping(new TreeMap<Integer, Integer>(nsMap));
+	}
 	
+	public boolean contains(int prefixVocID, int uriVocID) {
+		Integer storedUri = nsMap.get(prefixVocID);
+		return storedUri != null && storedUri.intValue() == uriVocID;
+	}
 }
