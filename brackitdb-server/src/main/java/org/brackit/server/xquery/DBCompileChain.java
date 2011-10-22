@@ -107,7 +107,7 @@ public class DBCompileChain extends CompileChain {
 
 	@Override
 	protected Translator getTranslator() {
-		return new DBCompiler(getModuleResolver());
+		return new DBCompiler();
 	}
 
 	@Override

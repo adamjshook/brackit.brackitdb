@@ -166,7 +166,7 @@ public class FunctionTest extends XQueryBaseTest {
 		};
 		stream = metaDataMgr.lookup(tx, "test.xml")
 				.getIndexController().openCASIndex(index.getID(), f, key,
-						null, true, false, SearchMode.FIRST);
+						null, true, false, SearchMode.GREATER_OR_EQUAL);
 		o = stream.next();
 		c = 0;
 		while (o != null) {

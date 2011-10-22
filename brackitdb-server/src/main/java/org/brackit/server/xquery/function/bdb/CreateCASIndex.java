@@ -41,7 +41,7 @@ import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.function.AbstractFunction;
 import org.brackit.xquery.module.Namespaces;
-import org.brackit.xquery.module.Types;
+import org.brackit.xquery.module.StaticContext;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.Item;
 import org.brackit.xquery.xdm.Iter;
@@ -76,8 +76,8 @@ public class CreateCASIndex extends AbstractFunction {
 	}
 
 	@Override
-	public Sequence execute(QueryContext ctx, Sequence[] args)
-			throws QueryException {
+	public Sequence execute(StaticContext sctx, QueryContext ctx, 
+			Sequence[] args) throws QueryException {
 		TXQueryContext txCtx = (TXQueryContext) ctx;
 		DBCollection<?> col = (DBCollection<?>) txCtx.getStore().lookup(
 				((Str) args[0]).str);
@@ -85,7 +85,7 @@ public class CreateCASIndex extends AbstractFunction {
 		Type type = null;
 		if (args.length > 1 && args[1] != null) {
 			QNm name = new QNm(Namespaces.XS_NSURI, ((Str) args[1]).str);
-			type = new Types().resolveAtomicType(name);
+			type = sctx.getTypes().resolveAtomicType(name);
 		}
 		
 		List<Path<QNm>> paths = new LinkedList<Path<QNm>>();

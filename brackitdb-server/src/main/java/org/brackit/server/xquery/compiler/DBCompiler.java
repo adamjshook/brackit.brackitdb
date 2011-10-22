@@ -29,7 +29,6 @@ package org.brackit.server.xquery.compiler;
 
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.compiler.AST;
-import org.brackit.xquery.compiler.ModuleResolver;
 import org.brackit.xquery.compiler.translator.PipelineCompiler;
 import org.brackit.xquery.xdm.Expr;
 
@@ -39,8 +38,8 @@ import org.brackit.xquery.xdm.Expr;
  */
 public class DBCompiler extends PipelineCompiler {
 
-	public DBCompiler(ModuleResolver resolver) {
-		super(resolver);
+	public DBCompiler() {
+		super();
 	}
 
 	protected Expr anyExpr(AST node) throws QueryException {
