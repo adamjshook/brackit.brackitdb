@@ -79,6 +79,6 @@ public final class ElPathFilter implements Filter<ElNode> {
 			pcrFilter = pathSynopsis.getPCRsForPaths(tx, paths);
 		}
 
-		return (pcrFilter.contains(pcr));
+		return (!pcrFilter.contains(pcr));
 	}
 }
