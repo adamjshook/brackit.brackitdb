@@ -28,6 +28,10 @@
 package org.brackit.server.metadata.pathSynopsis.manager;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 
 import org.brackit.server.metadata.pathSynopsis.NsMapping;
@@ -90,4 +94,13 @@ public interface PathSynopsisMgr {
 	public boolean isLeaf(Tx transaction, int pcr);
 
 	public int getMaxPCR();
+
+	/**
+	 * Changes the NsMapping of the PSNode with PCR 'originalPCR'. This
+	 * operation does not only create one new node in the path synopsis, but a
+	 * whole new subtree. The mapping between the PCRs of the old and the new
+	 * subtree is described by the returned Map.
+	 */
+	public Map<Integer, Integer> changeNsMapping(Tx tx, int originalPCR,
+			NsMapping newNsMapping) throws DocumentException;
 }
