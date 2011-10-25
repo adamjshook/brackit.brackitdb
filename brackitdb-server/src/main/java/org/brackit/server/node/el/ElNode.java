@@ -31,8 +31,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.brackit.server.io.buffer.PageID;
+import org.brackit.server.metadata.pathSynopsis.NsMapping;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
+import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr.SubtreeCopyResult;
 import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.txnode.DebugListener;
@@ -64,7 +66,7 @@ import org.brackit.xquery.xdm.Stream;
  * @author Sebastian Baechle
  * 
  */
-public class ElNode extends TXNode<ElNode> implements Scope {
+public class ElNode extends TXNode<ElNode> {
 
 	private class AttributeStream implements Stream<ElNode> {
 		private IndexIterator it;
@@ -118,7 +120,7 @@ public class ElNode extends TXNode<ElNode> implements Scope {
 	protected Atomic value;
 
 	protected PSNode psNode;
-	
+
 	private ElScope scope;
 
 	protected PageID hintPageID;
@@ -246,15 +248,8 @@ public class ElNode extends TXNode<ElNode> implements Scope {
 		ElNode node;
 
 		if (kind == Kind.ELEMENT) {
-			int uriVocID = (name.nsURI.isEmpty() ? -1 : coll.getDictionary()
-					.translate(getTX(), name.nsURI));
-			int prefixVocID = (name.prefix == null ? -1 : coll.getDictionary()
-					.translate(getTX(), name.prefix));
-			int localNameVocID = coll.getDictionary().translate(getTX(),
-					name.localName);
-			PSNode childPsNode = pathSynopsisMgr.getChild(getTX(),
-					psNode.getPCR(), uriVocID, prefixVocID, localNameVocID,
-					Kind.ELEMENT.ID, XXX);
+			PSNode childPsNode = pathSynopsisMgr.getChild(psNode.getPCR(),
+					name, Kind.ELEMENT.ID, null);
 			record = ElRecordAccess.createRecord(childPsNode.getPCR(),
 					Kind.ELEMENT.ID, null);
 			node = new ElNode(locator, childDeweyID, kind.ID, null, childPsNode);
@@ -271,8 +266,8 @@ public class ElNode extends TXNode<ElNode> implements Scope {
 			ElIndexIterator iterator = r.index.open(getTX(),
 					locator.rootPageID, SearchMode.GREATER_OR_EQUAL,
 					childDeweyID.toBytes(), null, OpenMode.UPDATE);
-			iterator.insertPrefixAware(childDeweyID.toBytes(), record,
-					deweyID.getLevel());
+			iterator.insertPrefixAware(childDeweyID.toBytes(), record, deweyID
+					.getLevel());
 			iterator.close();
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
@@ -305,9 +300,9 @@ public class ElNode extends TXNode<ElNode> implements Scope {
 	}
 
 	@Override
-	public void setNameInternal(QNm name)
-			throws OperationNotSupportedException, DocumentException {
-		throw new OperationNotSupportedException();
+	public void setNameInternal(QNm name) throws DocumentException {
+		// change name, leave mapping unchanged
+		setNsMappingAndName(psNode.getNsMapping(), name);
 	}
 
 	@Override
@@ -327,7 +322,8 @@ public class ElNode extends TXNode<ElNode> implements Scope {
 					OpenMode.UPDATE);
 			byte[] oldRecord = iterator.getValue();
 			int PCR = ElRecordAccess.getPCR(oldRecord);
-			byte[] record = ElRecordAccess.createRecord(PCR, type, value.stringValue());
+			byte[] record = ElRecordAccess.createRecord(PCR, type, value
+					.stringValue());
 
 			// delete old entry from all indexes
 			notifyUpdate(locator, ListenMode.DELETE, this);
@@ -368,15 +364,9 @@ public class ElNode extends TXNode<ElNode> implements Scope {
 		boolean update = false;
 
 		PSNode elementPsNode = psNode;
-		
-		int uriVocID = (name.nsURI.isEmpty() ? -1 : coll.getDictionary()
-				.translate(getTX(), name.nsURI));
-		int prefixVocID = (name.prefix == null ? -1 : coll.getDictionary()
-				.translate(getTX(), name.prefix));
-		int localNameVocID = coll.getDictionary().translate(getTX(),
-				name.localName);
-		PSNode attributePsNode = locator.pathSynopsis.getChild(getTX(),
-				elementPsNode.getPCR(), uriVocID, prefixVocID, localNameVocID, Kind.ATTRIBUTE.ID, XXX);
+
+		PSNode attributePsNode = locator.pathSynopsis.getChild(elementPsNode
+				.getPCR(), name, Kind.ATTRIBUTE.ID, null);
 		byte[] record = ElRecordAccess.createRecord(attributePsNode.getPCR(),
 				Kind.ATTRIBUTE.ID, value.stringValue());
 
@@ -390,8 +380,8 @@ public class ElNode extends TXNode<ElNode> implements Scope {
 
 			if (iterator.getKey() != null) {
 				do {
-					XTCdeweyID currentDeweyID = new XTCdeweyID(
-							elementDeweyID.getDocID(), iterator.getKey());
+					XTCdeweyID currentDeweyID = new XTCdeweyID(elementDeweyID
+							.getDocID(), iterator.getKey());
 					byte[] oldRecord = iterator.getValue();
 
 					if (currentDeweyID.isAttributeOf(elementDeweyID)) {
@@ -445,8 +435,8 @@ public class ElNode extends TXNode<ElNode> implements Scope {
 				ListenMode.DELETE, locator);
 		Stream<ElNode> scanner = createScanner(locator, deweyID, deweyID, true);
 		StreamSubtreeProcessor<ElNode> parser = new StreamSubtreeProcessor<ElNode>(
-				scanner,
-				listeners.toArray(new SubtreeListener[listeners.size()]));
+				scanner, listeners
+						.toArray(new SubtreeListener[listeners.size()]));
 		parser.process();
 	}
 
@@ -788,8 +778,8 @@ public class ElNode extends TXNode<ElNode> implements Scope {
 
 			if (iterator.getKey() != null) {
 				do {
-					XTCdeweyID currentDeweyID = new XTCdeweyID(
-							deweyID.getDocID(), iterator.getKey());
+					XTCdeweyID currentDeweyID = new XTCdeweyID(deweyID
+							.getDocID(), iterator.getKey());
 
 					if (currentDeweyID.isDescendantOf(deweyID)) {
 						if (!currentDeweyID.isAttribute()) {
@@ -813,31 +803,45 @@ public class ElNode extends TXNode<ElNode> implements Scope {
 			throw new DocumentException(e);
 		}
 	}
-	
+
 	@Override
 	public void parse(SubtreeHandler handler) throws DocumentException {
 		SubtreeParser parser = new NavigationalSubtreeParser(this);
-		parser.parse(handler);		
+		parser.parse(handler);
 	}
 
 	@Override
 	public String toString() {
 		QNm name = ((type == Kind.ATTRIBUTE.ID) || (type == Kind.ELEMENT.ID)) ? psNode
-				.getName() : null;
+				.getName()
+				: null;
 		int pcr = (psNode != null) ? psNode.getPCR() : -1;
 		return String
-				.format("%s(doc='%s', docID='%s', type='%s', name='%s', value='%s', pcr='%s')",
-						deweyID, locator.collection.getName(),
-						deweyID.getDocID(), getKind(), name, value, pcr);
+				.format(
+						"%s(doc='%s', docID='%s', type='%s', name='%s', value='%s', pcr='%s')",
+						deweyID, locator.collection.getName(), deweyID
+								.getDocID(), getKind(), name, value, pcr);
 	}
 
 	@Override
 	public Scope getScope() {
-		
+
 		if (scope == null && type == Kind.ELEMENT.ID) {
 			scope = new ElScope(this);
 		}
-		
+
 		return scope;
+	}
+
+	protected void setNsMappingAndName(NsMapping nsMapping, QNm name)
+			throws DocumentException {
+
+		SubtreeCopyResult res = locator.collection.pathSynopsis.copySubtree(
+				psNode.getPCR(), nsMapping, name);
+
+		// iterate over subtree, change PCRs of decendants
+		// TODO
+		throw new OperationNotSupportedException();
+
 	}
 }

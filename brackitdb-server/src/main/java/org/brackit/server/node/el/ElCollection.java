@@ -68,7 +68,7 @@ public class ElCollection extends TXCollection<ElNode> {
 	protected ElCollection(ElCollection collection, Tx tx) {
 		super(collection, tx);
 		this.store = collection.store;
-		this.pathSynopsis = collection.pathSynopsis;
+		this.pathSynopsis = collection.pathSynopsis.copyFor(tx);
 		this.indexController = new ElIndexController(this);
 	}
 

@@ -52,9 +52,9 @@ public class BulkPathSynopsisMgr extends AbstractPathSynopsisMgr implements
 
 	private int maxPCR;
 
-	public BulkPathSynopsisMgr(PSConverter psc, DictionaryMgr dictionaryMgr,
-			PathSynopsis ps) {
-		super(psc, dictionaryMgr, ps);
+	public BulkPathSynopsisMgr(Tx tx, PSConverter psc,
+			DictionaryMgr dictionaryMgr, PathSynopsis ps) {
+		super(tx, psc, dictionaryMgr, ps);
 		this.ps = ps;
 		this.maxPCR = -1;
 	}
@@ -75,10 +75,9 @@ public class BulkPathSynopsisMgr extends AbstractPathSynopsisMgr implements
 	}
 
 	@Override
-	protected void addNodeToTaList(Tx transaction, PathSynopsis pathSynopsis,
-			PathSynopsisNode node) {
+	protected void addNodeToTaList(PathSynopsis pathSynopsis, PathSynopsisNode node) {
 		if (maxPCR == -1) {
-			transaction.addPreCommitHook(this);
+			tx.addPreCommitHook(this);
 		}
 		int b = node.getPCR();
 
@@ -94,5 +93,13 @@ public class BulkPathSynopsisMgr extends AbstractPathSynopsisMgr implements
 
 	@Override
 	public void abort(Tx transaction) {
+	}
+
+	@Override
+	public PathSynopsisMgr copyFor(Tx tx) {
+		if (tx.equals(tx)) {
+			return this;
+		}
+		return new BulkPathSynopsisMgr(tx, psc, dictionaryMgr, ps);
 	}
 }

@@ -40,7 +40,6 @@ import org.brackit.xquery.xdm.Expr;
 public class DBCompiler extends PipelineCompiler {
 
 	public DBCompiler(ModuleResolver resolver) {
-		super(resolver);
 	}
 
 	protected Expr anyExpr(AST node) throws QueryException {

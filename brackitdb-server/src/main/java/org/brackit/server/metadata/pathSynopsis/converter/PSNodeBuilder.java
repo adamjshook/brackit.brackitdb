@@ -77,9 +77,6 @@ public class PSNodeBuilder extends PSNodeRecordAccess {
 				nsMapping.addPrefix(prefixVocIDMap, uriVocIDMap);
 			}
 		}
-		if (nsMapping != null) {
-			nsMapping.finalize();
-		}
 
 		String URI = (uriVocID != -1 ? dictionary.resolve(tx, uriVocID) : "");
 		String prefix = (prefixVocID != -1 ? dictionary.resolve(tx, prefixVocID) : null);

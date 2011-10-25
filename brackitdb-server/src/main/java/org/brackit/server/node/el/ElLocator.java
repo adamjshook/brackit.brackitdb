@@ -67,7 +67,7 @@ public final class ElLocator {
 	public ElNode fromBytes(XTCdeweyID deweyID, byte[] record)
 			throws DocumentException {
 		int pcr = ElRecordAccess.getPCR(record);
-		PSNode psn = pathSynopsis.get(collection.getTX(), pcr);
+		PSNode psn = pathSynopsis.get(pcr);
 		int dist = deweyID.getLevel() - psn.getLevel();
 
 		if ((dist == 1)) {

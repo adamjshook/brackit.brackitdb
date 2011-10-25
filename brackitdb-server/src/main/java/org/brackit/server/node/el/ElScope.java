@@ -31,12 +31,10 @@ import java.util.Collection;
 import java.util.Iterator;
 
 import org.brackit.server.metadata.pathSynopsis.NsMapping;
-import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.tx.Tx;
 import org.brackit.xquery.node.stream.EmptyStream;
 import org.brackit.xquery.xdm.DocumentException;
-import org.brackit.xquery.xdm.Kind;
 import org.brackit.xquery.xdm.Scope;
 import org.brackit.xquery.xdm.Stream;
 
@@ -103,6 +101,7 @@ public class ElScope implements Scope {
 		int prefixVocID = dictionary.translate(tx, prefix);
 		int uriVocID = dictionary.translate(tx, uri);
 
+		NsMapping newMapping = null;
 		if (nsMapping != null) {
 			if (nsMapping.contains(prefixVocID, uriVocID)) {
 				// exactly the same mapping already exists
@@ -110,34 +109,20 @@ public class ElScope implements Scope {
 			}
 
 			// copy current NsMapping
-			nsMapping = nsMapping.copy();
+			newMapping = nsMapping.copy();
 
 			// add new prefix
-			nsMapping.addPrefix(prefixVocID, uriVocID);
+			newMapping.addPrefix(prefixVocID, uriVocID);
 
 		} else {
-			nsMapping = new NsMapping(prefixVocID, uriVocID);
-		}
-		nsMapping.finalize();
-
-		// create new PSNode with new NsMapping
-		PSNode parent = element.psNode.getParent();
-		int parentPCR = (parent == null) ? -1 : parent.getPCR();
-		int newUriVocID = element.psNode.getURIVocID();
-		if (prefixVocID == element.psNode.getPrefixVocID()) {
-			// current prefix was overwritten -> change uriVocID
-			newUriVocID = uriVocID;
+			newMapping = new NsMapping(prefixVocID, uriVocID);
 		}
 
-		PSNode newPSNode = element.locator.pathSynopsis.getChild(tx, parentPCR,
-				newUriVocID, prefixVocID, element.psNode.getLocalNameVocID(),
-				Kind.ELEMENT.ID, nsMapping);
-		
-		// assign new PSNode
-		element.psNode = newPSNode;
-		
-		// iterate over subtree, change PCRs of decendants
-		// TODO
+		// change mapping, leave name unchanged (unless current prefix is
+		// overwritten in the new mapping)
+		element.setNsMappingAndName(newMapping, element.getName());
+
+		nsMapping = newMapping;
 	}
 
 	@Override

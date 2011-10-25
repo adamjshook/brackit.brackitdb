@@ -69,7 +69,7 @@ public class SplidClusterPathEncoder implements IndexEncoder<ElNode> {
 		}
 
 		ElLocator locator = document.getLocator();
-		PSNode psNode = locator.pathSynopsis.get(collection.getTX(), pcr);
+		PSNode psNode = locator.pathSynopsis.get(pcr);
 		byte type = (deweyID.level == psNode.getLevel() ? Kind.ELEMENT.ID
 				: Kind.TEXT.ID);
 		return new ElNode(locator, deweyID, type, null, psNode);
