@@ -79,7 +79,7 @@ public class SplidClusterEncoder implements IndexEncoder<ElNode> {
 		Atomic content = decodeContent(key, value);
 		ElLocator locator = document.getLocator();
 		byte type = (deweyID.isAttribute()) ? Kind.ATTRIBUTE.ID : Kind.TEXT.ID;
-		PSNode psNode = locator.pathSynopsis.get(collection.getTX(), pcr);
+		PSNode psNode = locator.pathSynopsis.get(pcr);
 
 		return new ElNode(locator, deweyID, type, content, psNode);
 	}

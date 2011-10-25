@@ -62,25 +62,17 @@ public class ElSubtreeHandler extends SubtreeBuilder<ElNode> {
 		this.locator = locator;
 		this.tx = locator.collection.getTX();
 		this.dictionary = locator.collection.getDictionary();
-		this.psMgr = locator.pathSynopsis.spawnBulkPsManager(tx);
+		this.psMgr = locator.pathSynopsis.spawnBulkPsManager();
 	}
 
 	@Override
 	protected ElNode buildElement(ElNode parent, QNm name, XTCdeweyID deweyID)
 			throws DocumentException {
-		int uriVocID = (name.nsURI.isEmpty() ? -1 : dictionary.translate(tx,
-				name.nsURI));
-		int prefixVocID = (name.prefix == null ? -1 : dictionary.translate(tx,
-				name.prefix));
-		int localNameVocID = dictionary.translate(tx, name.localName);
-		
-		if (nsMapping != null) {
-			nsMapping.finalize();
-		}		
-		PSNode psNode = psMgr.getChild(tx, parent.getPCR(), uriVocID,
-				prefixVocID, localNameVocID, Kind.ELEMENT.ID, nsMapping);
+
+		PSNode psNode = psMgr.getChild(parent.getPCR(), name, Kind.ELEMENT.ID,
+				nsMapping);
 		nsMapping = null;
-		
+
 		return new ElNode(locator, deweyID, Kind.ELEMENT.ID, null, psNode);
 	}
 
@@ -93,18 +85,13 @@ public class ElSubtreeHandler extends SubtreeBuilder<ElNode> {
 	@Override
 	protected ElNode buildAttribute(ElNode parent, QNm name, Atomic value,
 			XTCdeweyID deweyID) throws DocumentException {
-		int uriVocID = (name.nsURI.isEmpty() ? -1 : dictionary.translate(tx,
-				name.nsURI));
-		int prefixVocID = (name.prefix == null ? -1 : dictionary.translate(tx,
-				name.prefix));
-		int localNameVocID = dictionary.translate(tx, name.localName);
-		
+
 		if (nsMapping != null) {
 			throw new RuntimeException();
-		}	
-		PSNode psNode = psMgr.getChild(tx, parent.getPCR(), uriVocID,
-				prefixVocID, localNameVocID, Kind.ATTRIBUTE.ID, null);
-		
+		}
+		PSNode psNode = psMgr.getChild(parent.getPCR(), name,
+				Kind.ATTRIBUTE.ID, null);
+
 		return new ElNode(locator, deweyID, Kind.ATTRIBUTE.ID, value, psNode);
 	}
 
@@ -118,19 +105,13 @@ public class ElSubtreeHandler extends SubtreeBuilder<ElNode> {
 	@Override
 	protected ElNode buildProcessingInstruction(ElNode parent, QNm name,
 			Atomic text, XTCdeweyID deweyID) throws DocumentException {
-		int uriVocID = (name.nsURI.isEmpty() ? -1 : dictionary.translate(tx,
-				name.nsURI));
-		int prefixVocID = (name.prefix == null ? -1 : dictionary.translate(tx,
-				name.prefix));
-		int localNameVocID = dictionary.translate(tx, name.localName);
-		
+
 		if (nsMapping != null) {
 			throw new RuntimeException();
 		}
-		PSNode psNode = psMgr.getChild(tx, parent.getPCR(), uriVocID,
-				prefixVocID, localNameVocID, Kind.PROCESSING_INSTRUCTION.ID,
-				null);
-		
+		PSNode psNode = psMgr.getChild(parent.getPCR(), name,
+				Kind.PROCESSING_INSTRUCTION.ID, null);
+
 		return new ElNode(locator, deweyID, Kind.PROCESSING_INSTRUCTION.ID,
 				text, psNode);
 	}
@@ -138,12 +119,11 @@ public class ElSubtreeHandler extends SubtreeBuilder<ElNode> {
 	@Override
 	public void startMapping(String prefix, String uri)
 			throws DocumentException {
-		
+
 		int prefixVocID = (prefix == null ? -1 : dictionary.translate(tx,
 				prefix));
-		int uriVocID = (uri.isEmpty() ? -1 : dictionary.translate(tx,
-				uri));
-		
+		int uriVocID = (uri.isEmpty() ? -1 : dictionary.translate(tx, uri));
+
 		if (nsMapping == null) {
 			nsMapping = new NsMapping(prefixVocID, uriVocID);
 		} else {

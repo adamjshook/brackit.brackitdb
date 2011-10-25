@@ -79,7 +79,7 @@ public class PCRClusterEncoder implements IndexEncoder<ElNode> {
 				: Kind.ELEMENT.ID;
 
 		ElLocator locator = document.getLocator();
-		PSNode psNode = locator.pathSynopsis.get(collection.getTX(), pcr);
+		PSNode psNode = locator.pathSynopsis.get(pcr);
 		return new ElNode(locator, deweyID, type, content, psNode);
 	}
 
