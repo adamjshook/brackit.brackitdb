@@ -198,7 +198,7 @@ public class AtomicUtil {
 			throws DocumentException {
 
 		try {
-			return Cast.cast(atomic, type);
+			return Cast.cast(null, atomic, type);
 		} catch (QueryException e) {
 			throw new DocumentException(e);
 		}

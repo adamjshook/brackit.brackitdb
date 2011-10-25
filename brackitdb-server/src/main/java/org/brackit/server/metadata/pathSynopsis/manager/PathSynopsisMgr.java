@@ -28,16 +28,13 @@
 package org.brackit.server.metadata.pathSynopsis.manager;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 
+import org.brackit.server.metadata.TXObject;
 import org.brackit.server.metadata.pathSynopsis.NsMapping;
-import org.brackit.server.metadata.pathSynopsis.PSSnapshotBuilder;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
-import org.brackit.server.tx.Tx;
+import org.brackit.server.metadata.pathSynopsis.PSSnapshotBuilder;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.DocumentException;
@@ -50,40 +47,51 @@ import org.brackit.xquery.xdm.DocumentException;
  * @author Karsten Schmidt
  * @author Sebastian Baechle
  */
-public interface PathSynopsisMgr {
+public interface PathSynopsisMgr extends TXObject<PathSynopsisMgr> {
+	
+	public static class SubtreeCopyResult {
+		public final PSNode newRoot;
+		public final Map<Integer, Integer> pcrMap;
+		
+		public SubtreeCopyResult(PSNode newRoot, Map<Integer, Integer> pcrMap) {
+			super();
+			this.newRoot = newRoot;
+			this.pcrMap = pcrMap;
+		}
+	}
+	
 	/**
 	 * Spawns a private path synopsis manager for the specified document,
 	 * optimized for transaction-local bulk use (e.g. store,restore). Access to
 	 * a different document or by a different transaction will cause an error.
 	 */
-	public PathSynopsisMgr spawnBulkPsManager(Tx tx) throws DocumentException;
+	public PathSynopsisMgr spawnBulkPsManager() throws DocumentException;
 
-	public Set<Integer> getPCRsForPaths(Tx tx, Collection<Path<QNm>> paths)
+	public Set<Integer> getPCRsForPaths(Collection<Path<QNm>> paths)
 			throws DocumentException;
 
-	public Set<Integer> match(Tx tx, Path<QNm> path) throws DocumentException;
+	public Set<Integer> match(Path<QNm> path) throws DocumentException;
 
-	public PSNode get(Tx tx, int pcr) throws DocumentException;
+	public PSNode get(int pcr) throws DocumentException;
 
-	public PSNode getAncestor(Tx tx, int pcr, int level)
+	public PSNode getAncestor(int pcr, int level)
 			throws DocumentException;
 
-	public PSNode getAncestorOrParent(Tx tx, int pcr, int level)
+	public PSNode getAncestorOrParent(int pcr, int level)
 			throws DocumentException;
 
 	/**
 	 * Returns the requested child PSNode. If such a child does not exist it is
 	 * created and returned.
 	 */
-	public PSNode getChild(Tx tx, int parentPcr, int uriVocID, int prefixVocID,
-			int localNameVocID, byte kind, NsMapping nsMapping)
+	public PSNode getChild(int parentPcr, QNm name, byte kind, NsMapping nsMapping)
 			throws DocumentException;
 
 	/**
 	 * Allows to make a snapshot of the path synopsis containing relevant meta
 	 * data
 	 */
-	public void snapshot(Tx tx, PSSnapshotBuilder builder)
+	public void snapshot(PSSnapshotBuilder builder)
 			throws DocumentException;
 
 	public int getPathSynopsisNo() throws DocumentException;
@@ -91,7 +99,7 @@ public interface PathSynopsisMgr {
 	/**
 	 * Attribute children are allowed but no element child nodes/PCRs
 	 */
-	public boolean isLeaf(Tx transaction, int pcr);
+	public boolean isLeaf(int pcr);
 
 	public int getMaxPCR();
 
@@ -101,6 +109,5 @@ public interface PathSynopsisMgr {
 	 * whole new subtree. The mapping between the PCRs of the old and the new
 	 * subtree is described by the returned Map.
 	 */
-	public Map<Integer, Integer> changeNsMapping(Tx tx, int originalPCR,
-			NsMapping newNsMapping) throws DocumentException;
+	public SubtreeCopyResult copySubtree(int originalPCR, NsMapping newNsMapping, QNm newName) throws DocumentException;
 }
