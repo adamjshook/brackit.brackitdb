@@ -76,7 +76,7 @@ public final class ElCASFilter implements Filter<ElNode> {
 
 		if (pcr > maxKnownPCR) {
 			maxKnownPCR = pathSynopsis.getMaxPCR();
-			pcrFilter = pathSynopsis.getPCRsForPaths(tx, paths);
+			pcrFilter = pathSynopsis.getPCRsForPaths(paths);
 		}
 
 		return (pcrFilter.contains(pcr));

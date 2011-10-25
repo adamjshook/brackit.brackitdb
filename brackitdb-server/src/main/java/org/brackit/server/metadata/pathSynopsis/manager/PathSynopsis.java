@@ -87,6 +87,10 @@ public class PathSynopsis {
 			int prefixVocID, int localNameVocID, byte kind,
 			NsMapping nsMapping, PathSynopsisNode parent) {
 		pathCache.clear();
+		
+		if (nsMapping != null) {
+			nsMapping.finalize();
+		}
 		PathSynopsisNode psN = new PathSynopsisNode(uriVocID, prefixVocID,
 				localNameVocID, pcr, name, kind, nsMapping, parent, this);
 

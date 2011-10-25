@@ -80,7 +80,6 @@ public class PathSynopsisNode implements PSNode {
 		this.pcr = pcr;
 		this.name = name;
 		this.kind = kind;
-		nsMapping.finalize();
 		this.nsMapping = nsMapping;
 		this.parent = parent;
 		this.ps = ps;
