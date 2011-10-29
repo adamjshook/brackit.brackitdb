@@ -102,8 +102,7 @@ public class PathSynopsisTest {
 		for (Float f : msr) {
 			sum += f;
 		}
-		System.out
-				.println("Average speedup: " + (sum / queries.length));
+		System.out.println("Average speedup: " + (sum / queries.length));
 
 	}
 
@@ -131,14 +130,16 @@ class PathSynopsisHandler extends org.xml.sax.helpers.DefaultHandler {
 	@Override
 	public void startElement(String uri, String localName, String name,
 			Attributes attributes) throws SAXException {
-		PathSynopsisNode newNode = ps.getNewNode(name.substring(1), Integer
-				.parseInt(name.substring(1)), Kind.ELEMENT.ID, contextNode, 0);
+		PathSynopsisNode newNode = ps.getNewNode(new QNm(name.substring(1)),
+				-1, -1, Integer.parseInt(name.substring(1)), Kind.ELEMENT.ID,
+				null, contextNode, 0);
 		contextNode = newNode;
 
 		for (int i = 0; i < attributes.getLength(); i++) {
 			String aName = attributes.getQName(i);
-			ps.getNewNode(aName.substring(1), Integer.parseInt(aName
-					.substring(1)), Kind.ATTRIBUTE.ID, contextNode, 0);
+			ps.getNewNode(new QNm(aName.substring(1)), -1, -1, Integer
+					.parseInt(aName.substring(1)), Kind.ATTRIBUTE.ID, null,
+					contextNode, 0);
 		}
 	}
 

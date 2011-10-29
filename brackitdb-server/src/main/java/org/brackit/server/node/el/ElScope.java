@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.Iterator;
 
 import org.brackit.server.metadata.pathSynopsis.NsMapping;
+import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.tx.Tx;
 import org.brackit.xquery.node.stream.EmptyStream;
@@ -98,8 +99,9 @@ public class ElScope implements Scope {
 	public void addPrefix(String prefix, String uri) throws DocumentException {
 
 		// translates strings to VocIDs
-		int prefixVocID = dictionary.translate(tx, prefix);
-		int uriVocID = dictionary.translate(tx, uri);
+		int prefixVocID = (prefix == null || prefix.isEmpty()) ? -1
+				: dictionary.translate(tx, prefix);
+		int uriVocID = uri.isEmpty() ? -1 : dictionary.translate(tx, uri);
 
 		NsMapping newMapping = null;
 		if (nsMapping != null) {
@@ -127,8 +129,30 @@ public class ElScope implements Scope {
 
 	@Override
 	public String resolvePrefix(String prefix) throws DocumentException {
-		// TODO Auto-generated method stub
-		return null;
+
+		int prefixVocID = (prefix == null || prefix.isEmpty()) ? -1
+				: dictionary.translate(tx, prefix);
+		
+		PSNode n = element.psNode;
+		while (true) {
+			NsMapping nsMapping = n.getNsMapping();
+			if (nsMapping != null) {
+				Integer uriVocID = nsMapping.resolve(prefixVocID);
+				if (uriVocID != null) {
+					// translate back to string
+					return dictionary.resolve(tx, uriVocID);
+				}
+			}
+			PSNode parent = n.getParent();
+			if (parent == null) {
+				break;
+			}
+			n = parent;
+		}
+		if (prefix.equals("xml")) {
+			return "http://www.w3.org/XML/1998/namespace";
+		}
+		return (prefixVocID == -1) ? "" : null;
 	}
 
 	@Override

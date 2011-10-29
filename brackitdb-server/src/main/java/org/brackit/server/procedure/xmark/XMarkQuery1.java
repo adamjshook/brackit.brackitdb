@@ -69,6 +69,7 @@ import org.brackit.xquery.util.path.PathException;
 import org.brackit.xquery.xdm.Axis;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
+import org.brackit.xquery.xdm.OperationNotSupportedException;
 import org.brackit.xquery.xdm.Sequence;
 
 /**
@@ -276,8 +277,11 @@ public class XMarkQuery1 implements Procedure {
 			TXNode<?> doc, StringBuilder out) throws QueryException {
 		IndexDef pathIndex = doc.getCollection().get(Indexes.class)
 				.findPathIndex(Path.parse("/site/people/person"));
-		IndexDef contentIndex = doc.getCollection().get(Indexes.class)
-				.findContentIndex();
+
+		// IndexDef contentIndex = doc.getCollection().get(Indexes.class)
+		// .findContentIndex();
+		// TODO
+		IndexDef contentIndex = null;
 
 		if (pathIndex == null) {
 			throw new DocumentException("No path index found");
@@ -296,9 +300,12 @@ public class XMarkQuery1 implements Procedure {
 		Filter filter = indexController.createPathFilter("/site/people/person");
 		Cursor in1 = new StreamOperator(indexController.openPathIndex(
 				pathIndexNo, filter, SearchMode.FIRST));
-		Cursor in2 = new StreamOperator(indexController.openContentIndex(
-				contentIndexNo, new Str("person0"), new Str("person0"), true,
-				true, SearchMode.GREATER_OR_EQUAL));
+		
+//		Cursor in2 = new StreamOperator(indexController.openContentIndex(
+//				contentIndexNo, new Str("person0"), new Str("person0"), true,
+//				true, SearchMode.GREATER_OR_EQUAL));
+		// TODO
+		Cursor in2 = null;
 
 		MergeJoin join = new MergeJoin(in1, in2, new AxisPredicate(
 				Axis.ANCESTOR, new BoundVariable(new QNm("l"), 0),
