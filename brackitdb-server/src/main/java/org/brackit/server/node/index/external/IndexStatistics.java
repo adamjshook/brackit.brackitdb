@@ -101,8 +101,11 @@ public class IndexStatistics implements Materializable {
 				.getValue().stringValue());
 		indexPointers = Long.parseLong(root.getAttribute(POINTERS_ATTR)
 				.getValue().stringValue());
-		minKey = root.getAttribute(MINKEY_ATTR).getValue().stringValue();
-		maxKey = root.getAttribute(MAXKEY_ATTR).getValue().stringValue();
+		
+		Node<?> attr = root.getAttribute(MINKEY_ATTR);
+		minKey = (attr != null) ? attr.getValue().stringValue() : null;
+		attr = root.getAttribute(MAXKEY_ATTR);
+		maxKey = (attr != null) ? attr.getValue().stringValue() : null;
 	}
 
 	@Override
