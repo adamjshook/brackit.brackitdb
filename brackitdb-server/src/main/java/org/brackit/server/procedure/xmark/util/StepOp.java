@@ -137,7 +137,7 @@ public class StepOp implements Cursor {
 				foundRelative = false;
 			}
 		} catch (ClassCastException e) {
-			throw new QueryException(e, ErrorCode.ERR_TYPE_NOT_A_NODE);
+			throw new QueryException(e, ErrorCode.ERR_TYPE_INAPPROPRIATE_TYPE);
 		}
 	}
 
