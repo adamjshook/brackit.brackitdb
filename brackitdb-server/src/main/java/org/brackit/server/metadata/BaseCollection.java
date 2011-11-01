@@ -53,7 +53,7 @@ import org.brackit.xquery.xdm.Stream;
  */
 public abstract class BaseCollection<E extends TXNode<E>> extends
 		AbstractCollection<E> implements DBCollection<E> {
-	public static final String DOCUMENT_TAG = "doc";
+	public static final QNm DOCUMENT_TAG = new QNm("doc");
 
 	public static final QNm ID_ATTRIBUTE = new QNm("id");
 

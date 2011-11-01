@@ -168,6 +168,73 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 					domNode.getClass());
 		}
 	}
+	
+	protected void checkSubtreePostOrderReduced(final E node, org.w3c.dom.Node domNode) throws Exception {
+		E child = null;
+		String nodeString = node.toString();
+
+		if (domNode instanceof Element) {
+			Element element = (Element) domNode;
+			assertEquals(nodeString + " is of type element", Kind.ELEMENT,
+					node.getKind());
+
+			// System.out.println("Checking name of element " +
+			// node.getDeweyID() + " level " + node.getDeweyID().getLevel() +
+			// " is " + element.getNodeName());
+
+			assertEquals(String.format("Name of node %s", nodeString),
+					element.getNodeName(), node.getName().toString());
+			compareAttributes(node, element);
+
+			NodeList domChildNodes = element.getChildNodes();
+			ArrayList<E> children = new ArrayList<E>();
+
+			for (E c = node.getLastChild(); c != null; c = c
+					.getPreviousSibling()) {
+				// System.out.println(String.format("-> Found child of %s : %s",
+				// node, c));
+				children.add(c);
+			}
+
+			for (int i = domChildNodes.getLength() - 1; i >= 0; i--) {
+				org.w3c.dom.Node domChild = domChildNodes.item(i);
+				// System.out.println("Checking if child  " + ((domChild
+				// instanceof Element) ? domChild.getNodeName() :
+				// domChild.getNodeValue()) + " exists under " + node);
+
+				if (child == null) {
+					child = node.getLastChild();
+					// System.out.println(String.format("First child of %s is %s",
+					// node, child));
+				} else {
+					child = child.getPreviousSibling();
+					// System.out.println(String.format("Next sibling of %s is %s",
+					// oldChild, child));
+				}
+
+				assertNotNull(String.format("child node %s of node %s", i,
+						nodeString), child);
+
+				checkSubtreePostOrderReduced(child, domChild);
+			}
+
+			assertEquals(
+					String.format("child count of element %s", nodeString),
+					domChildNodes.getLength(), children.size());
+
+		} else if (domNode instanceof Text) {
+			Text text = (Text) domNode;
+
+			assertEquals(
+					nodeString + " is of type text : \"" + text.getNodeValue()
+							+ "\"", Kind.TEXT, node.getKind());
+			assertEquals(String.format("Text of node %s", nodeString), text
+					.getNodeValue().trim(), node.getValue().stringValue());
+		} else {
+			throw new DocumentException("Unexpected dom node: %s",
+					domNode.getClass());
+		}
+	}
 
 	protected org.w3c.dom.Node createDomTree(InputSource source)
 			throws Exception {

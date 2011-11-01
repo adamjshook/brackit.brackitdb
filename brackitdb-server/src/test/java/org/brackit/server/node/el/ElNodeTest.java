@@ -86,7 +86,7 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		assertEquals("DeweyID is correct", deweyID, node.getDeweyID());
 		assertEquals("Kind is correct", kind, node.getKind());
 		assertEquals("Name is correct", name, node.getName());
-		assertEquals("Value is correct", value, node.getValue());
+		assertEquals("Value is correct", value, node.getValue().stringValue());
 	}
 	
 	
@@ -192,16 +192,28 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 	@Ignore
 	@Test
 	public void traverseBigDocumentInPostOrder() throws Exception {
-		TXCollection<ElNode> locator = createDocument(new DocumentParser(
-				new File("/docs/xmark8.xml")));
-		// Logger.getLogger(SlottedPageContext.class.getName()).setLevel(Level.TRACE);
-		// Logger.getLogger(BPlusIndex.class.getName()).setLevel(Level.TRACE);
-		ElNode root = locator.getDocument().getFirstChild().getNode(
-				XTCdeweyID.newRootID(locator.getID()));
-		Node domRoot = createDomTree(new InputSource(new FileReader(
-				"/docs/xmark8.xml")));
+		
+		long start = System.currentTimeMillis();
+		ElCollection coll = (ElCollection) createDocument(new DocumentParser(
+				bigDocument));
+		ElLocator locator = coll.getDocument().locator;
+		long end = System.currentTimeMillis();
+		System.out.println("Document created in: " + (end - start) / 1000f);
 
-		checkSubtreePostOrder(root, domRoot); // check document index
+		ElNode root = coll.getDocument().getNode(
+				XTCdeweyID.newRootID(locator.docID));
+		Node domRoot = null;
+
+		domRoot = createDomTree(new InputSource(
+				new FileReader(bigDocument)));
+		System.out.println("DOM-Tree created!");
+
+		start = System.currentTimeMillis();
+		checkSubtreePostOrderReduced(root, domRoot); // check document
+															// index
+		end = System.currentTimeMillis();
+		System.out.println("Postorder Traversal: " + (end - start) / 1000f);
+		
 	}
 
 	@Test
