@@ -66,7 +66,7 @@ public class TextTest implements Expr {
 			boolean res = (node.getKind() == Kind.TEXT);
 			return res ? Bool.TRUE : Bool.FALSE;
 		} catch (ClassCastException e) {
-			throw new QueryException(e, ErrorCode.ERR_TYPE_NOT_A_NODE);
+			throw new QueryException(e, ErrorCode.ERR_TYPE_INAPPROPRIATE_TYPE);
 		}
 	}
 
