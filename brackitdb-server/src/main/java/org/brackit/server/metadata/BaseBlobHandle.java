@@ -56,7 +56,7 @@ import org.brackit.xquery.xdm.Stream;
  * 
  */
 public class BaseBlobHandle implements BlobHandle, Materializable {
-	public static final String BLOB_TAG = "blob";
+	public static final QNm BLOB_TAG = new QNm("blob");
 
 	public static final QNm ID_ATTRIBUTE = new QNm("id");
 

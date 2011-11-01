@@ -314,7 +314,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		try {
 			Node<?> child;
 			if ((child = stream.next()) != null) {
-				if (name.equals(child.getValue())) {
+				// TODO what exactly has to be equal?
+				if (name.equals(child.getValue().stringValue())) {
 					// TODO downgrade lock
 					throw new MetaDataException("%s already exists.", path);
 				}
@@ -472,7 +473,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		try {
 			TXNode<?> attribute;
 			if ((attribute = stream.next()) != null) {
-				if (name.equals(attribute.getValue())) {
+				if (name.equals(attribute.getValue().stringValue())) {
 					itemRoot = attribute.getParent();
 				}
 			}

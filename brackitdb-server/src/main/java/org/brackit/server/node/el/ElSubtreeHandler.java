@@ -120,8 +120,8 @@ public class ElSubtreeHandler extends SubtreeBuilder<ElNode> {
 	public void startMapping(String prefix, String uri)
 			throws DocumentException {
 
-		int prefixVocID = (prefix == null ? -1 : dictionary.translate(tx,
-				prefix));
+		int prefixVocID = (prefix == null || prefix.isEmpty() ? -1 : dictionary
+				.translate(tx, prefix));
 		int uriVocID = (uri.isEmpty() ? -1 : dictionary.translate(tx, uri));
 
 		if (nsMapping == null) {
