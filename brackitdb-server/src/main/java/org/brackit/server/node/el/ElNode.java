@@ -201,7 +201,7 @@ public class ElNode extends TXNode<ElNode> {
 			return this;
 		}
 
-		if (deweyID.isRoot()) {
+		if (deweyID.isDocument()) {
 			return new ElNode(locator);
 		}
 
