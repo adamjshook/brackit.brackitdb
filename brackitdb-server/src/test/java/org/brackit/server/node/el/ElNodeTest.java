@@ -60,6 +60,8 @@ import org.xml.sax.InputSource;
  */
 public class ElNodeTest extends TXNodeTest<ElNode> {
 	protected ElStore elStore;
+	
+	private static final File bigDocument = new File("xmark100.xml");
 
 	@Test
 	public void testFromBytes() throws Exception {
@@ -122,17 +124,27 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 	@Test
 	public void traverseBigDocumentInPreOrder() throws Exception,
 			FileNotFoundException {
-		TXCollection<ElNode> locator = createDocument(new DocumentParser(
-				new File("/home/sbaechl/projects/xtc/docs/xmark8.xml")));
-		// Logger.getLogger(BPlusIndex.class.getName()).setLevel(org.apache.log4j.Level.TRACE);
-		ElNode root = locator.getDocument().getFirstChild().getNode(
-				XTCdeweyID.newRootID(locator.getID()));
-		Node domRoot = createDomTree(new InputSource(new FileReader(
-				"/home/sbaechl/projects/xtc/docs/xmark8.xml")));
+		
 		long start = System.currentTimeMillis();
-		checkSubtreePreOrder(root, domRoot); // check document index
+		ElCollection coll = (ElCollection) createDocument(new DocumentParser(
+				bigDocument));
+		ElLocator locator = coll.getDocument().locator;
 		long end = System.currentTimeMillis();
-		System.out.println(end - start);
+		System.out.println("Document created in: " + (end - start) / 1000f);
+
+		ElNode root = coll.getDocument().getNode(
+				XTCdeweyID.newRootID(locator.docID));
+		Node domRoot = null;
+
+		domRoot = createDomTree(new InputSource(
+				new FileReader(bigDocument)));
+		System.out.println("DOM-Tree created!");
+
+		start = System.currentTimeMillis();
+		checkSubtreePreOrderReduced(root, domRoot); // check document index
+		end = System.currentTimeMillis();
+		System.out.println("Preorder Traversal: " + (end - start) / 1000f);
+		
 	}
 
 	@Ignore
