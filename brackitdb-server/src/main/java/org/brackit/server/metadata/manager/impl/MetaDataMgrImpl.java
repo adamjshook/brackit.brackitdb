@@ -281,8 +281,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	private void assertInsertion(Tx tx, Path<QNm> path, Directory parent)
 			throws MetaDataException, DocumentException {
 		Node<?> parentNode = parent.getMasterDocNode();
-
-		itemCache.clear(); // TODO Remove when index lookup bug is fixed
+		
 		// Check if object is already in cache
 		while (true) {
 			Item<Directory> item = itemCache.get(tx, path.toString());
@@ -315,7 +314,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		try {
 			Node<?> child;
 			while ((child = stream.next()) != null) {
-				if (name.equals(child.getValue().stringValue())) {
+				if (name.equals(child.getValue())) {
 					// TODO downgrade lock
 					throw new MetaDataException("%s already exists.", path);
 				}
