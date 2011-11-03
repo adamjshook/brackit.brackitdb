@@ -313,7 +313,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 		try {
 			Node<?> child;
-			while ((child = stream.next()) != null) {
+			if ((child = stream.next()) != null) {
 				if (name.equals(child.getValue())) {
 					// TODO downgrade lock
 					throw new MetaDataException("%s already exists.", path);
