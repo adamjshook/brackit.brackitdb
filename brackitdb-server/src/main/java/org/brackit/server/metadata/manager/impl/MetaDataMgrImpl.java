@@ -66,6 +66,7 @@ import org.brackit.server.tx.locking.services.MetaLockService;
 import org.brackit.server.tx.locking.services.UnifiedMetaLockService;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
+import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.node.parser.SubtreeParser;
 import org.brackit.xquery.util.Cfg;
@@ -282,6 +283,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			throws MetaDataException, DocumentException {
 		Node<?> parentNode = parent.getMasterDocNode();
 
+		itemCache.clear();
 		// Check if object is already in cache
 		while (true) {
 			Item<Directory> item = itemCache.get(tx, path.toString());
@@ -304,16 +306,16 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 
 		// Check if persisted object exists
-		QNm name = path.tail();
 		IndexController<ElNode> indexController = mdCollection.copyFor(tx)
 				.getIndexController();
+		Str name = new Str(path.toString());
 		Stream<? extends Node<?>> stream = indexController.openCASIndex(
-				mdNameCasIndexNo, null, new Str(path.toString()), null, true,
+				mdNameCasIndexNo, null, name, null, true,
 				true, SearchMode.GREATER_OR_EQUAL);
 
 		try {
 			Node<?> child;
-			if ((child = stream.next()) != null) {
+			while ((child = stream.next()) != null) {
 				if (name.equals(child.getValue())) {
 					// TODO downgrade lock
 					throw new MetaDataException("%s already exists.", path);
