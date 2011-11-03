@@ -135,15 +135,9 @@ public class FunctionTest extends XQueryBaseTest {
 		IndexDef index = metaDataMgr.lookup(tx, "test.xml").get(Indexes.class)
 				.findCASIndex(Path.parse("//Title"));
 		Una key = new Una("XML-DB");
-		Filter<Node<?>> f = new Filter<Node<?>>() {
-			@Override
-			public boolean filter(Node<?> element) throws DocumentException {
-				return !element.getName().equals(new QNm("Title"));
-			}
-		};
 		Stream<?> stream = metaDataMgr.lookup(tx, "test.xml")
-				.getIndexController().openCASIndex(index.getID(), f, key,
-						null, true, false, SearchMode.FIRST);
+				.getIndexController().openCASIndex(index.getID(), null, key,
+						key, true, true, SearchMode.GREATER_OR_EQUAL);
 		Object o = stream.next();
 		int c = 0;
 		while (o != null) {
@@ -151,29 +145,6 @@ public class FunctionTest extends XQueryBaseTest {
 			c++;
 		}
 		assertEquals(1, c);
-		
-		f = new Filter<Node<?>>() {
-			@Override
-			public boolean filter(Node<?> element) throws DocumentException {
-				QNm qnm;
-				try {
-					qnm = new QNm("http://brackit.org", "Title");
-				} catch (QueryException e) {
-					qnm = null;
-				}
-				return !element.getName().equals(qnm);
-			}
-		};
-		stream = metaDataMgr.lookup(tx, "test.xml")
-				.getIndexController().openCASIndex(index.getID(), f, key,
-						null, true, false, SearchMode.GREATER_OR_EQUAL);
-		o = stream.next();
-		c = 0;
-		while (o != null) {
-			o = stream.next();
-			c++;
-		}
-		assertEquals(0, c);
 	}
 
 	protected void checkNameIndex() throws DocumentException,

@@ -32,7 +32,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
@@ -69,6 +68,7 @@ import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.node.parser.SubtreeParser;
 import org.brackit.xquery.util.Cfg;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.util.path.PathException;
 import org.brackit.xquery.xdm.DocumentException;
@@ -282,6 +282,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			throws MetaDataException, DocumentException {
 		Node<?> parentNode = parent.getMasterDocNode();
 
+		itemCache.clear(); // TODO Remove when index lookup bug is fixed
 		// Check if object is already in cache
 		while (true) {
 			Item<Directory> item = itemCache.get(tx, path.toString());
@@ -304,17 +305,16 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 
 		// Check if persisted object exists
-		QNm name = path.tail();
 		IndexController<ElNode> indexController = mdCollection.copyFor(tx)
 				.getIndexController();
+		Str name = new Str(path.toString());
 		Stream<? extends Node<?>> stream = indexController.openCASIndex(
-				mdNameCasIndexNo, null, new Str(path.toString()), null, true,
+				mdNameCasIndexNo, null, name, null, true,
 				true, SearchMode.GREATER_OR_EQUAL);
 
 		try {
 			Node<?> child;
-			if ((child = stream.next()) != null) {
-				// TODO what exactly has to be equal?
+			while ((child = stream.next()) != null) {
 				if (name.equals(child.getValue().stringValue())) {
 					// TODO downgrade lock
 					throw new MetaDataException("%s already exists.", path);
