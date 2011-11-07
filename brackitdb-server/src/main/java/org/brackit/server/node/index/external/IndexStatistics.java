@@ -28,6 +28,9 @@
 package org.brackit.server.node.index.external;
 
 import org.brackit.server.metadata.materialize.Materializable;
+import org.brackit.xquery.atomic.Int64;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.node.parser.FragmentHelper;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Node;
@@ -40,23 +43,23 @@ import org.brackit.xquery.xdm.Node;
  * 
  */
 public class IndexStatistics implements Materializable {
-	public static final String STATISTICS_TAG = "statistics";
+	public static final QNm STATISTICS_TAG = new QNm("statistics");
 
-	private static final String SIZE_ATTRIBUTE = "size";
+	private static final QNm SIZE_ATTR = new QNm("size");
 
-	private static final String CARD_ATTRIBUTE = "card";
+	private static final QNm CARD_ATTR = new QNm("card");
 
-	private static final String HEIGHT_ATTRIBUTE = "height";
+	private static final QNm HEIGHT_ATTR = new QNm("height");
 
-	private static final String LEAVES_ATTRIBUTE = "leaves";
+	private static final QNm LEAVES_ATTR = new QNm("leaves");
 
-	private static final String PAGES_ATTRIBUTE = "pages";
+	private static final QNm PAGES_ATTR = new QNm("pages");
 
-	private static final String POINTERS_ATTRIBUTE = "pointers";
+	private static final QNm POINTERS_ATTR = new QNm("pointers");
 
-	private static final String MINKEY_ATTRIBUTE = "minKey";
+	private static final QNm MINKEY_ATTR = new QNm("minKey");
 
-	private static final String MAXKEY_ATTRIBUTE = "maxKey";
+	private static final QNm MAXKEY_ATTR = new QNm("maxKey");
 
 	private long idxSize;
 
@@ -79,23 +82,30 @@ public class IndexStatistics implements Materializable {
 
 	@Override
 	public synchronized void init(Node<?> root) throws DocumentException {
-		String name = root.getName();
+		QNm name = root.getName();
 
 		if (!name.equals(STATISTICS_TAG)) {
 			throw new DocumentException("Expected tag '%s' but found '%s'",
 					STATISTICS_TAG, name);
 		}
 
-		idxSize = Long.parseLong(root.getAttributeValue(SIZE_ATTRIBUTE));
-		indexTuples = Long.parseLong(root.getAttributeValue(CARD_ATTRIBUTE));
-		indexHeight = Long.parseLong(root.getAttributeValue(HEIGHT_ATTRIBUTE));
-		indexLeaveCount = Long.parseLong(root
-				.getAttributeValue(LEAVES_ATTRIBUTE));
-		pageCount = Long.parseLong(root.getAttributeValue(PAGES_ATTRIBUTE));
-		indexPointers = Long.parseLong(root
-				.getAttributeValue(POINTERS_ATTRIBUTE));
-		minKey = root.getAttributeValue(MINKEY_ATTRIBUTE);
-		maxKey = root.getAttributeValue(MAXKEY_ATTRIBUTE);
+		idxSize = Long.parseLong(root.getAttribute(SIZE_ATTR)
+				.getValue().stringValue());
+		indexTuples = Long.parseLong(root.getAttribute(CARD_ATTR)
+				.getValue().stringValue());
+		indexHeight = Long.parseLong(root.getAttribute(HEIGHT_ATTR)
+				.getValue().stringValue());
+		indexLeaveCount = Long.parseLong(root.getAttribute(LEAVES_ATTR)
+				.getValue().stringValue());
+		pageCount = Long.parseLong(root.getAttribute(PAGES_ATTR)
+				.getValue().stringValue());
+		indexPointers = Long.parseLong(root.getAttribute(POINTERS_ATTR)
+				.getValue().stringValue());
+		
+		Node<?> attr = root.getAttribute(MINKEY_ATTR);
+		minKey = (attr != null) ? attr.getValue().stringValue() : null;
+		attr = root.getAttribute(MAXKEY_ATTR);
+		maxKey = (attr != null) ? attr.getValue().stringValue() : null;
 	}
 
 	@Override
@@ -103,16 +113,16 @@ public class IndexStatistics implements Materializable {
 		FragmentHelper helper = new FragmentHelper();
 
 		helper.openElement(STATISTICS_TAG);
-		helper.attribute(SIZE_ATTRIBUTE, Long.toString(idxSize));
-		helper.attribute(CARD_ATTRIBUTE, Long.toString(indexTuples));
-		helper.attribute(HEIGHT_ATTRIBUTE, Long.toString(indexHeight));
-		helper.attribute(LEAVES_ATTRIBUTE, Long.toString(indexLeaveCount));
-		helper.attribute(PAGES_ATTRIBUTE, Long.toString(pageCount));
-		helper.attribute(POINTERS_ATTRIBUTE, Long.toString(indexPointers));
+		helper.attribute(SIZE_ATTR, new Int64(idxSize));
+		helper.attribute(CARD_ATTR, new Int64(indexTuples));
+		helper.attribute(HEIGHT_ATTR, new Int64(indexHeight));
+		helper.attribute(LEAVES_ATTR, new Int64(indexLeaveCount));
+		helper.attribute(PAGES_ATTR, new Int64(pageCount));
+		helper.attribute(POINTERS_ATTR, new Int64(indexPointers));
 
 		if (minKey != null) {
-			helper.attribute(MINKEY_ATTRIBUTE, minKey);
-			helper.attribute(MAXKEY_ATTRIBUTE, maxKey);
+			helper.attribute(MINKEY_ATTR, new Str(minKey));
+			helper.attribute(MAXKEY_ATTR, new Str(maxKey));
 		}
 
 		helper.closeElement();

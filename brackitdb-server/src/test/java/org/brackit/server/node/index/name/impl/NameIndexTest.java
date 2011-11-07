@@ -25,11 +25,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.index.element.impl;
+package org.brackit.server.node.index.name.impl;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+
+import static org.brackit.server.node.index.definition.IndexDefBuilder.*;
+import static org.junit.Assert.assertEquals;
 
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.SysMockup;
@@ -39,6 +42,7 @@ import org.brackit.server.metadata.materialize.Materializable;
 import org.brackit.server.node.el.ElCollection;
 import org.brackit.server.node.el.ElNode;
 import org.brackit.server.node.el.ElStore;
+import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.txnode.Persistor;
 import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.store.SearchMode;
@@ -46,6 +50,7 @@ import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.aries.BPlusIndex;
 import org.brackit.server.store.index.aries.display.DisplayVisitor;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Stream;
@@ -53,15 +58,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import antlr.RecognitionException;
-import antlr.TokenStreamException;
-
 /**
  * @author Sebastian Baechle
  * 
  */
-public class ElementIndexTest {
-	private static final Logger log = Logger.getLogger(ElementIndexTest.class
+public class NameIndexTest {
+	private static final Logger log = Logger.getLogger(NameIndexTest.class
 			.getName());
 
 	private static final String DOCUMENT = "<?xml version = '1.0' encoding = 'UTF-8'?>"
@@ -89,8 +91,6 @@ public class ElementIndexTest {
 			+ "<Budget>7000</Budget>"
 			+ "<Abstract></Abstract>" + "</Project>" + "</Organization>";
 
-	private static final String SIMPLE_ELEMENT_INDEX_DEFINITION = "create element index";
-
 	private BPlusIndex index;
 
 	private Tx t1;
@@ -98,41 +98,49 @@ public class ElementIndexTest {
 	private SysMockup sm;
 
 	@Test
-	public void testCreateSimpleElementIndex() throws RecognitionException,
-			TokenStreamException, DocumentException {
-		ElCollection locator = createDocument(t1, new DocumentParser(DOCUMENT));
-		locator.getIndexController().createIndex(
-				SIMPLE_ELEMENT_INDEX_DEFINITION);
+	public void testCreateSimpleNameIndex() throws DocumentException {
+		ElCollection locator = createDocument(t1, 
+				new DocumentParser(DOCUMENT));
+		locator.getIndexController().createIndexes(createNameIdxDef(null));
 	}
 
 	@Test
-	public void testGetFromElementIndex() throws RecognitionException,
-			TokenStreamException, IndexAccessException, DocumentException {
+	public void testGetFromNameIndex() throws IndexAccessException, 
+	DocumentException {
 		ElCollection locator = createDocument(t1, new DocumentParser(DOCUMENT));
-		int idxNo = locator.getIndexController().createIndex(
-				SIMPLE_ELEMENT_INDEX_DEFINITION).getID();
-		Stream<? extends ElNode> iterator = locator.getIndexController()
-				.openElementIndex(idxNo, "Member", SearchMode.FIRST);
-
-		ElNode n;
-		while ((n = iterator.next()) != null) {
-			System.out.println(n);
-		}
-		iterator.close();
-	}
-
-	@Test
-	public void testOpenElementIndex() throws Exception {
-		ElCollection locator = createDocument(t1, new DocumentParser(DOCUMENT));
-		int idxNo = locator.getIndexController().createIndex(
-				SIMPLE_ELEMENT_INDEX_DEFINITION).getID();
+		IndexDef idxDef = createNameIdxDef(null);
+		locator.getIndexController().createIndexes(idxDef);
 		Stream<? extends ElNode> elements = locator.getIndexController()
-				.openElementIndex(idxNo, "Member2", SearchMode.FIRST);
+				.openNameIndex(idxDef.getID(), new QNm("Member"), 
+						SearchMode.FIRST);
 
 		ElNode n;
+		int c = 0;
 		while ((n = elements.next()) != null) {
-			System.out.println(n);
+//			System.out.println(n);
+			c++;
 		}
+		elements.close();
+		assertEquals(2, c);
+	}
+
+	@Test
+	public void testOpenNameIndex() throws Exception {
+		ElCollection locator = createDocument(t1, new DocumentParser(DOCUMENT));
+		IndexDef idxDef = createNameIdxDef(null);
+		locator.getIndexController().createIndexes(idxDef);
+		Stream<? extends ElNode> elements = locator.getIndexController()
+				.openNameIndex(idxDef.getID(), new QNm("Member2"), 
+						SearchMode.FIRST);
+
+		ElNode n;
+		int c = 0;
+		while ((n = elements.next()) != null) {
+//			System.out.println(n);
+			c++;
+		}
+		elements.close();
+		assertEquals(0, c);
 	}
 
 	void printIndex(Tx transaction, String filename, int rootPageNo,

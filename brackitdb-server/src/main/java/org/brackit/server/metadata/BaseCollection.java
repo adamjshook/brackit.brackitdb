@@ -37,6 +37,8 @@ import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.node.DocID;
 import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.txnode.TXNode;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.node.AbstractCollection;
 import org.brackit.xquery.node.parser.FragmentHelper;
 import org.brackit.xquery.xdm.DocumentException;
@@ -51,11 +53,11 @@ import org.brackit.xquery.xdm.Stream;
  */
 public abstract class BaseCollection<E extends TXNode<E>> extends
 		AbstractCollection<E> implements DBCollection<E> {
-	public static final String DOCUMENT_TAG = "doc";
+	public static final QNm DOCUMENT_TAG = new QNm("doc");
 
-	public static final String ID_ATTRIBUTE = "id";
+	public static final QNm ID_ATTRIBUTE = new QNm("id");
 
-	public static final String NAME_ATTRIBUTE = "name";
+	public static final QNm NAME_ATTRIBUTE = new QNm("name");
 
 	protected DictionaryMgr dictionary;
 
@@ -147,9 +149,9 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 
 	@Override
 	public void init(Node<?> root) throws DocumentException {
-		name = root.getAttributeValue(NAME_ATTRIBUTE);
-		docID = new DocID(Integer
-				.parseInt(root.getAttributeValue(ID_ATTRIBUTE)));
+		name = root.getAttribute(NAME_ATTRIBUTE).getValue().stringValue();
+		docID = new DocID(Integer.parseInt(root.getAttribute(ID_ATTRIBUTE)
+				.getValue().stringValue()));
 
 		Stream<? extends Node<?>> children = root.getChildren();
 
@@ -157,7 +159,7 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 			Node<?> child;
 			while ((child = children.next()) != null) {
 				Materializable materializable = MaterializableFactory
-						.getInstance().create(child.getName());
+						.getInstance().create(child.getName().stringValue());
 				materializable.init(child);
 				set(materializable);
 			}
@@ -170,7 +172,7 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 	public Node<?> materialize() throws DocumentException {
 		FragmentHelper helper = new FragmentHelper();
 		helper.openElement(DOCUMENT_TAG).attribute(ID_ATTRIBUTE,
-				docID.toString()).attribute(NAME_ATTRIBUTE, name);
+				new Una(docID.toString())).attribute(NAME_ATTRIBUTE, new Una(name));
 		if (materializables != null) {
 			for (Materializable materializable : materializables.values()) {
 				helper.insert(materializable.materialize());

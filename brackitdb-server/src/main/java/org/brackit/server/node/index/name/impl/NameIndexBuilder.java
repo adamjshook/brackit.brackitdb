@@ -25,20 +25,21 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.index.element.impl;
+package org.brackit.server.node.index.name.impl;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.index.definition.Cluster;
 import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.index.external.IndexStatistics;
+import org.brackit.server.node.index.name.impl.NameDirectoryEncoderImpl.QVocID;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.node.txnode.IndexEncoderHelper;
 import org.brackit.server.node.txnode.TXNode;
@@ -52,8 +53,10 @@ import org.brackit.server.tx.Tx;
 import org.brackit.server.util.sort.MergeSort;
 import org.brackit.server.util.sort.Sort;
 import org.brackit.server.util.sort.SortItem;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.DefaultListener;
 import org.brackit.xquery.node.parser.SubtreeListener;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Stream;
 
@@ -62,10 +65,10 @@ import org.brackit.xquery.xdm.Stream;
  * @author Sebastian Baechle
  * 
  */
-class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
+class NameIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 		implements SubtreeListener<E> {
 	private static final Logger log = Logger
-			.getLogger(ElementIndexBuilder.class);
+			.getLogger(NameIndexBuilder.class);
 
 	private final Tx tx;
 
@@ -77,47 +80,41 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 
 	private final IndexEncoderHelper<E> helper;
 
-	private final NameDirectoyEncoderImpl nameDirectoryEncoder;
+	private final NameDirectoryEncoderImpl nameDirEncoder;
 
-	private final HashMap<Integer, NodeReferenceIndex> nodeRefIndexes;
+	private final HashMap<QVocID, NodeReferenceIndex> nodeRefIndexes;
 
-	private final boolean hasIncludes;
+	private final Map<QNm, Cluster> includes;
 
-	private final Map<String, Cluster> includes;
-
-	private final boolean hasExcludes;
-
-	private final Set<String> excludes;
+	private final Set<QNm> excludes;
 
 	private final class NodeReferenceIndex {
-		int vocID;
+		QVocID qVocID;
 		IndexEncoder<E> encoder;
 		byte[] linkValue;
 		Sort sorter;
 
-		private NodeReferenceIndex(int vocID, IndexEncoder<E> encoder,
+		private NodeReferenceIndex(QVocID qVocID, IndexEncoder<E> encoder,
 				Sort sorter) {
 			super();
-			this.vocID = vocID;
+			this.qVocID = qVocID;
 			this.encoder = encoder;
 			this.sorter = sorter;
 		}
 	}
 
-	public ElementIndexBuilder(Tx tx, Index index,
+	public NameIndexBuilder(Tx tx, Index index,
 			IndexEncoderHelper<E> helper, int containerNo, IndexDef indexDef) {
 		this.tx = tx;
 		this.index = index;
 		this.containerNo = containerNo;
 		this.idxDefinition = indexDef;
-		this.nameDirectoryEncoder = new NameDirectoyEncoderImpl();
+		this.nameDirEncoder = new NameDirectoryEncoderImpl();
 		this.helper = helper;
 
-		this.nodeRefIndexes = new HashMap<Integer, NodeReferenceIndex>();
+		this.nodeRefIndexes = new HashMap<QVocID, NodeReferenceIndex>();
 		this.includes = indexDef.getIncluded();
 		this.excludes = indexDef.getExcluded();
-		hasIncludes = includes.size() > 0;
-		hasExcludes = excludes.size() > 0;
 	}
 
 	@Override
@@ -129,24 +126,26 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 
 	@Override
 	public <T extends E> void startElement(T node) throws DocumentException {
-		String name = node.getName();
-		boolean included = (!hasIncludes) || includes.containsKey(name);
-		boolean excluded = (!hasExcludes) || !excludes.contains(name);
-		if ((!included) || (excluded)) {
+		QNm name = node.getName();
+		boolean included = (includes.isEmpty() || includes.containsKey(name));
+		boolean excluded = (!excludes.isEmpty() && excludes.contains(name));
+		if (!included || excluded) {
 			return;
 		}
-		int vocID = helper.getDictionary().translate(tx, name);
-		NodeReferenceIndex index = nodeRefIndexes.get(vocID);
+		
+		QVocID qVocID = QVocID.fromQNm(tx, helper.getDictionary(), name);
+		NodeReferenceIndex index = nodeRefIndexes.get(qVocID);
 
 		if (index == null) {
-			IndexEncoder<E> encoder = helper.getElementIndexEncoder();
+			IndexEncoder<E> encoder = helper.getNameIndexEncoder();
 			Sort sorter;
 
 			// TODO: each sort stream allocates the full index size (here a
 			// path synopsis look up may help to correct estimations)
-			sorter = new MergeSort(encoder.getKeyType(), encoder.getValueType());
-			index = new NodeReferenceIndex(vocID, encoder, sorter);
-			nodeRefIndexes.put(vocID, index);
+			sorter = new MergeSort(encoder.getKeyType(), 
+					encoder.getValueType());
+			index = new NodeReferenceIndex(qVocID, encoder, sorter);
+			nodeRefIndexes.put(qVocID, index);
 		}
 
 		try {
@@ -158,21 +157,26 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 			throw new DocumentException(e);
 		}
 	}
+	
+	@Override
+	public <T extends E> void attribute(T node) throws DocumentException {
+		// TODO Listen for attributes and handle them appropriately
+	}
 
 	@Override
 	public void end() throws DocumentException {
 		IndexStatistics indexStatistics = null;
 
-		for (NodeReferenceIndex nodeReferenceIndex : nodeRefIndexes.values()) {
+		for (NodeReferenceIndex nodeRefIndex : nodeRefIndexes.values()) {
 			Stream<? extends SortItem> sorted = null;
 
 			try {
-				sorted = nodeReferenceIndex.sorter.sort();
+				sorted = nodeRefIndex.sorter.sort();
 				long start = System.nanoTime();
 				PageID rootPageID = index.createIndex(tx, containerNo,
-						nodeReferenceIndex.encoder.getKeyType(),
-						nodeReferenceIndex.encoder.getValueType(), true, true,
-						nodeReferenceIndex.encoder.getUnitID());
+						nodeRefIndex.encoder.getKeyType(),
+						nodeRefIndex.encoder.getValueType(), true, true,
+						nodeRefIndex.encoder.getUnitID());
 
 				IndexIterator iterator = index.open(tx, rootPageID,
 						SearchMode.FIRST, null, null, OpenMode.LOAD);
@@ -196,12 +200,12 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 
 				if (log.isDebugEnabled()) {
 					log.debug("Building node reference index for vocID "
-							+ nodeReferenceIndex.vocID + " with " + i
+							+ nodeRefIndex.qVocID + " with " + i
 							+ " items took " + ((end - start) / 1000000)
 							+ " ms");
 				}
 
-				nodeReferenceIndex.linkValue = nameDirectoryEncoder
+				nodeRefIndex.linkValue = nameDirEncoder
 						.encodeValue(rootPageID);
 			} catch (ServerException e) {
 				throw new DocumentException(e);
@@ -213,24 +217,23 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 		}
 
 		try {
-			ArrayList<Integer> vocIDs = new ArrayList<Integer>(nodeRefIndexes
-					.keySet());
-			Collections.sort(vocIDs);
+			List<QVocID> qVocIDs = 
+				new ArrayList<QVocID>(nodeRefIndexes.keySet());
+			Collections.sort(qVocIDs);
 
 			long start = System.nanoTime();
 
-			Field keyType = nameDirectoryEncoder.getKeyType();
-			PageID nameDirectoryRootPageID = index.createIndex(tx, containerNo,
-					keyType, nameDirectoryEncoder.getValueType(), false, true,
-					-1);
+			Field keyType = nameDirEncoder.getKeyType();
+			PageID nameDirRootPageID = index.createIndex(tx, containerNo,
+					keyType, nameDirEncoder.getValueType(), false, true, -1);
 
-			IndexIterator iterator = index.open(tx, nameDirectoryRootPageID,
+			IndexIterator iterator = index.open(tx, nameDirRootPageID,
 					SearchMode.FIRST, null, null, OpenMode.LOAD);
 
 			iterator.triggerStatistics();
-			for (Integer vocID : vocIDs) {
-				byte[] key = nameDirectoryEncoder.encodeKey(vocID);
-				byte[] value = nodeRefIndexes.get(vocID).linkValue;
+			for (QVocID qVocID : qVocIDs) {
+				byte[] key = nameDirEncoder.encodeKey(qVocID);
+				byte[] value = nodeRefIndexes.get(qVocID).linkValue;
 				iterator.insert(key, value);
 				iterator.next();
 			}
@@ -246,11 +249,11 @@ class ElementIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 			long end = System.nanoTime();
 
 			if (log.isDebugEnabled()) {
-				log.debug("Building name directory index with " + vocIDs.size()
+				log.debug("Building name directory index with " + qVocIDs.size()
 						+ " items took " + ((end - start) / 1000000) + " ms");
 			}
 
-			int id = nameDirectoryRootPageID.value();
+			int id = nameDirRootPageID.value();
 			idxDefinition.createdAs(containerNo, id);
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);

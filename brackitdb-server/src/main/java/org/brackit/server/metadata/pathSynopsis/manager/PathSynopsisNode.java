@@ -27,13 +27,17 @@
  */
 package org.brackit.server.metadata.pathSynopsis.manager;
 
+import java.util.Map;
+
+import org.brackit.server.metadata.pathSynopsis.NsMapping;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.Kind;
 
 /**
  * This type of node represents a node of the pathsynopsis. Besides the node
- * type, its PCR value (path class reference), vocID (vocabulary ID), level,
+ * type, its PCR value (path class reference), vocIDs (vocabulary IDs), level,
  * XML-tag-"name", occurrences ( not up2date), and average content length
  * avgCntLength is represented.
  * 
@@ -46,11 +50,15 @@ public class PathSynopsisNode implements PSNode {
 
 	protected final int pcr;
 
-	protected final int vocId;
+	protected final int uriVocID;
+	protected final int prefixVocID;
+	protected final int localNameVocID;
+	
+	protected final NsMapping nsMapping;
 
 	protected final int level;
 
-	protected final String name;
+	protected final QNm name;
 
 	protected final PathSynopsisNode parent;
 
@@ -63,12 +71,16 @@ public class PathSynopsisNode implements PSNode {
 
 	protected PathSynopsisNode[] children;
 
-	public PathSynopsisNode(int vocId, int pcr, String name, byte kind,
+	public PathSynopsisNode(int uriVocID, int prefixVocID, int localNameVocID,
+			int pcr, QNm name, byte kind, NsMapping nsMapping,
 			PathSynopsisNode parent, PathSynopsis ps) {
-		this.vocId = vocId;
+		this.uriVocID = uriVocID;
+		this.prefixVocID = prefixVocID;
+		this.localNameVocID = localNameVocID;
 		this.pcr = pcr;
 		this.name = name;
 		this.kind = kind;
+		this.nsMapping = nsMapping;
 		this.parent = parent;
 		this.ps = ps;
 		this.children = new PathSynopsisNode[0];
@@ -107,9 +119,13 @@ public class PathSynopsisNode implements PSNode {
 	 *            - type of node
 	 * @return found node
 	 */
-	public PathSynopsisNode hasChild(int vocId, byte nodeType) {
+	public PathSynopsisNode hasChild(int uriVocID, int prefixVocID,
+			int localNameVocID, byte nodeType, NsMapping nsMapping) {
 		for (PathSynopsisNode child : children) {
-			if (child.getKind() == nodeType && child.getVocID() == vocId) {
+			if (child.getKind() == nodeType && child.getURIVocID() == uriVocID
+					&& child.getPrefixVocID() == prefixVocID
+					&& child.getLocalNameVocID() == localNameVocID
+					&& child.hasNsMapping(nsMapping)) {
 				return child;
 			}
 		}
@@ -146,12 +162,8 @@ public class PathSynopsisNode implements PSNode {
 		return pcr;
 	}
 
-	public String getName() {
+	public QNm getName() {
 		return name;
-	}
-
-	public int getVocID() {
-		return vocId;
 	}
 
 	public PathSynopsis getPathSynopsis() {
@@ -174,7 +186,7 @@ public class PathSynopsisNode implements PSNode {
 		this.visible = visible;
 	}
 
-	public Path<String> getPath() {
+	public Path<QNm> getPath() {
 		PathSynopsisNode node = this;
 		PathSynopsisNode[] path = new PathSynopsisNode[level];
 		for (int i = level - 1; i >= 0; i--) {
@@ -182,7 +194,7 @@ public class PathSynopsisNode implements PSNode {
 			node = node.getParent();
 		}
 
-		Path<String> p = new Path<String>();
+		Path<QNm> p = new Path<QNm>();
 		for (PathSynopsisNode n : path) {
 			if (n.getKind() == Kind.ELEMENT.ID) {
 				p.child(n.getName());
@@ -201,7 +213,9 @@ public class PathSynopsisNode implements PSNode {
 		if (this.getParent() != null) {
 			parentPcr = this.getParent().getPCR();
 		}
-		sBuff.append("PSNode " + this.pcr + "; VocID: " + this.vocId + "; NT: "
+		sBuff.append("PSNode " + this.pcr + "; VocID (URI): " + this.uriVocID
+				+ "; VocID (Prefix): " + this.prefixVocID
+				+ "; VocID (LocalName): " + this.localNameVocID + "; NT: "
 				+ this.kind + "; ");
 		if (parentPcr > 0)
 			sBuff.append("Parent: " + parentPcr + "; ");
@@ -218,5 +232,35 @@ public class PathSynopsisNode implements PSNode {
 			}
 		}
 		return sBuff.toString();
+	}
+
+	@Override
+	public int getURIVocID() {
+		return uriVocID;
+	}
+
+	@Override
+	public int getPrefixVocID() {
+		return prefixVocID;
+	}
+
+	@Override
+	public int getLocalNameVocID() {
+		return localNameVocID;
+	}
+	
+	@Override
+	public NsMapping getNsMapping() {
+		return nsMapping;
+	}
+
+	@Override
+	public boolean hasNsMapping(NsMapping nsMapping) {
+		if (this.nsMapping == null) {
+			return (nsMapping == null);
+		} else if (nsMapping == null) {
+			return false;
+		}
+		return this.nsMapping.equals(nsMapping);
 	}
 }

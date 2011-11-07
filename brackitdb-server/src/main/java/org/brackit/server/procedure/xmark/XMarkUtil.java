@@ -39,6 +39,9 @@ import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.txnode.TXNode;
 import org.brackit.server.store.SearchMode;
 import org.brackit.server.tx.locking.services.EdgeLockService.Edge;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.Dbl;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.node.stream.StreamUtil;
@@ -144,8 +147,8 @@ public class XMarkUtil {
 			InputSource newPerson = createPerson(personID);
 			people.append(new DocumentParser(newPerson));
 		} else {
-			TXNode<?> attribute = prevPerson.getAttribute("id");
-			String prevPersonID = attribute.getValue();
+			TXNode<?> attribute = prevPerson.getAttribute(new QNm("id"));
+			String prevPersonID = attribute.getValue().stringValue();
 			int prevPersonIDNumber = Integer
 					.parseInt(prevPersonID.substring(6));
 			personID = "person" + (prevPersonIDNumber + 1);
@@ -227,9 +230,9 @@ public class XMarkUtil {
 		}
 		item = region.getLastChild();
 
-		TXNode<?> attribute = item.getAttribute("id");
-		int prevItemIDNumber = Integer.parseInt(attribute.getValue().substring(
-				4));
+		TXNode<?> attribute = item.getAttribute(new QNm("id"));
+		int prevItemIDNumber = 
+			Integer.parseInt(attribute.getValue().stringValue().substring(4));
 		String itemID = "item" + (prevItemIDNumber + 1);
 
 		// insert new mail
@@ -260,11 +263,12 @@ public class XMarkUtil {
 		item.getFirstChild();
 
 		// fetch the mail box
+		QNm mb = new QNm("mailbox");
 		int indexNo = -1;
 		for (IndexDef indexDef : locator.get(Indexes.class).getIndexDefs()) {
-			if (indexDef.isElementIndex()) {
-				if ((indexDef.getIncluded().containsKey("mailbox"))
-						|| (!indexDef.getExcluded().contains("mailbox"))) {
+			if (indexDef.isNameIndex()) {
+				if ((indexDef.getIncluded().containsKey(mb))
+						|| (!indexDef.getExcluded().contains(mb))) {
 					indexNo = indexDef.getID();
 					break;
 				}
@@ -275,8 +279,7 @@ public class XMarkUtil {
 					"This method requires an element index containing =mailbox= elements.");
 		}
 		Stream<? extends TXNode<?>> mailBoxes = locator.getIndexController()
-				.openElementIndex(indexNo, "mailbox",
-						SearchMode.GREATER_OR_EQUAL);
+				.openNameIndex(indexNo, mb, SearchMode.GREATER_OR_EQUAL);
 
 		mailbox = mailBoxes.next();
 		mailBoxes.close();
@@ -300,9 +303,9 @@ public class XMarkUtil {
 		TXNode<?> openAuction = selectRefNode(ctx, locator, "open_auction");
 		TXNode<?> person = selectRefNode(ctx, locator, "person");
 
-		TXNode<?> attribute = person.getAttribute("id");
+		TXNode<?> attribute = person.getAttribute(new QNm("id"));
 		if (attribute != null) {
-			String id = attribute.getValue();
+			Atomic id = attribute.getValue();
 
 			// find the seller entry
 			String sellerID = null;
@@ -310,10 +313,10 @@ public class XMarkUtil {
 			TXNode<?> currentValue = null;
 			for (TXNode<?> child = openAuction.getFirstChild(); child != null; child = child
 					.getNextSibling()) {
-				String name = child.getName();
+				QNm name = child.getName();
 
-				if ("seller".equals(name)) {
-					child.setAttribute("person", id);
+				if ("seller".equals(name.stringValue())) {
+					child.setAttribute(new QNm("person"), id);
 					break;
 				}
 			}
@@ -330,15 +333,15 @@ public class XMarkUtil {
 		TXNode<?> openAuction = selectRefNode(ctx, locator, "open_auction");
 
 		// find the seller entry
-		String sellerID = null;
+		Atomic sellerID = null;
 		TXNode<?> prevSibling = null;
 		TXNode<?> currentValue = null;
 		for (TXNode<?> child = openAuction.getFirstChild(); child != null; child = child
 				.getNextSibling()) {
-			String name = child.getName();
+			String name = child.getName().stringValue();
 
 			if ("seller".equals(name)) {
-				sellerID = child.getAttribute("person").getValue();
+				sellerID = child.getAttribute(new QNm("person")).getValue();
 				break;
 			}
 		}
@@ -347,7 +350,7 @@ public class XMarkUtil {
 		TXNode<?> people = selectRefNode(ctx, locator, "people");
 		for (TXNode<?> child = people.getFirstChild(); sellerID != null
 				&& child != null; child = child.getNextSibling()) {
-			TXNode<?> attribute = child.getAttribute("id");
+			TXNode<?> attribute = child.getAttribute(new QNm("id"));
 			if ((attribute != null) && (sellerID.equals(attribute.getValue()))) {
 				TXNode<?> name = null;
 				TXNode<?> email = null;
@@ -385,15 +388,15 @@ public class XMarkUtil {
 		TXNode<?> openAuction = selectRefNode(ctx, locator, "open_auction");
 
 		// find the seller entry
-		String sellerID = null;
+		Atomic sellerID = null;
 		TXNode<?> prevSibling = null;
 		TXNode<?> currentValue = null;
 		for (TXNode<?> child = openAuction.getFirstChild(); child != null; child = child
 				.getNextSibling()) {
-			String name = child.getName();
+			String name = child.getName().stringValue();
 
 			if ("seller".equals(name)) {
-				sellerID = child.getAttribute("person").getValue();
+				sellerID = child.getAttribute(new QNm("person")).getValue();
 				break;
 			}
 		}
@@ -412,7 +415,7 @@ public class XMarkUtil {
 		// find an description entry
 		for (TXNode<?> childOfItem = item.getFirstChild(); childOfItem != null; childOfItem = childOfItem
 				.getNextSibling()) {
-			String name = childOfItem.getName();
+			QNm name = childOfItem.getName();
 
 			if ("description".equals(name)) {
 				TXNode<?> childOfDesc = childOfItem.getFirstChild();
@@ -456,7 +459,7 @@ public class XMarkUtil {
 		// find an description entry
 		for (TXNode<?> child = item.getFirstChild(); child != null; child = child
 				.getNextSibling()) {
-			String name = child.getName();
+			String name = child.getName().stringValue();
 
 			prevSibling = child;
 
@@ -541,7 +544,7 @@ public class XMarkUtil {
 		TXNode<?> textNode = element.getLastChild();
 
 		if ((textNode != null) && (textNode.getKind() == Kind.TEXT)) {
-			textNode.setValue(value);
+			textNode.setValue(new QNm(value));
 			return true;
 		} else {
 			return false;
@@ -554,7 +557,7 @@ public class XMarkUtil {
 		TXNode<?> textNode = element.getFirstChild();
 
 		if ((textNode != null) && (textNode.getKind() == Kind.TEXT))
-			value = textNode.getValue();
+			value = textNode.getValue().stringValue();
 		return value;
 	}
 
@@ -564,10 +567,10 @@ public class XMarkUtil {
 
 		TXNode<?> person = selectRefNode(ctx, locator, "person");
 		// System.out.println("person : " + person);
-		TXNode<?> attribute = person.getAttribute("id");
+		TXNode<?> attribute = person.getAttribute(new QNm("id"));
 		// System.out.println(nodeMgr.getAttributes(ctx, person));
 		// System.out.println("attribute : " + attribute);
-		String personID = attribute.getValue();
+		String personID = attribute.getValue().stringValue();
 
 		// choose an offered item
 		TXNode<?> openAuction = selectRefNode(ctx, locator, "open_auction");
@@ -577,16 +580,18 @@ public class XMarkUtil {
 		TXNode<?> currentValue = null;
 		for (TXNode<?> child = openAuction.getFirstChild(); child != null; child = child
 				.getNextSibling()) {
-			String name = child.getName();
+			String name = child.getName().stringValue();
 
 			prevSibling = child;
 
 			if ("initial".equals(name)) {
 				TXNode<?> initialValue = child.getFirstChild();
-				price = Double.parseDouble(initialValue.getValue());
+				price = Double.parseDouble(initialValue.getValue()
+						.stringValue());
 			} else if ("current".equals(name)) {
 				currentValue = child.getFirstChild();
-				price = Double.parseDouble(currentValue.getValue()) + 12;
+				price = Double.parseDouble(currentValue.getValue().
+						stringValue()) + 12;
 			} else if ("itemref".equals(name)) {
 				break;
 			}
@@ -608,10 +613,11 @@ public class XMarkUtil {
 
 		// update current highest bid
 		if (currentValue != null) {
-			currentValue.setValue(Double.toString(price));
+			currentValue.setValue(new Dbl(price));
 		} else {
-			TXNode<?> current = bid.insertAfter(Kind.ELEMENT, "current");
-			currentValue = current.append(Kind.TEXT, Double.toString(price));
+			TXNode<?> current = bid.insertAfter(Kind.ELEMENT, 
+					new QNm("current"), null);
+			currentValue = current.append(Kind.TEXT, null, new Dbl(price));
 		}
 
 		return new Str("");
@@ -630,11 +636,12 @@ public class XMarkUtil {
 
 	private TXNode<?> selectRefNode(TXQueryContext ctx,
 			DBCollection<?> locator, String name) throws DocumentException {
+		QNm qname = new QNm(name);
 		int indexNo = -1;
 		for (IndexDef indexDef : locator.get(Indexes.class).getIndexDefs()) {
-			if (indexDef.isElementIndex()) {
-				if ((indexDef.getIncluded().containsKey(name))
-						|| (!indexDef.getExcluded().contains(name))) {
+			if (indexDef.isNameIndex()) {
+				if ((indexDef.getIncluded().containsKey(qname))
+						|| (!indexDef.getExcluded().contains(qname))) {
 					indexNo = indexDef.getID();
 					break;
 				}
@@ -642,12 +649,12 @@ public class XMarkUtil {
 		}
 		if (indexNo == -1) {
 			throw new DocumentException(
-					"This method requires an element index containing =" + name
+					"This method requires an element index containing =" + qname
 							+ "= elements.");
 		}
 
 		Stream<? extends TXNode<?>> elementStream = locator
-				.getIndexController().openElementIndex(indexNo, name,
+				.getIndexController().openNameIndex(indexNo, qname,
 						refNodeSearchMode);
 		TXNode<?> element = elementStream.next();
 		return element;

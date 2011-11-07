@@ -28,18 +28,24 @@
 package org.brackit.server.metadata.pathSynopsis.manager;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 
-import org.brackit.xquery.util.log.Logger;
-import org.brackit.server.metadata.pathSynopsis.PSSnapshotBuilder;
+import org.brackit.server.metadata.pathSynopsis.NsMapping;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
+import org.brackit.server.metadata.pathSynopsis.PSSnapshotBuilder;
 import org.brackit.server.metadata.pathSynopsis.converter.PSConverter;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.locking.LockClass;
 import org.brackit.server.tx.locking.services.SimpleLockService;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
@@ -54,8 +60,11 @@ import org.brackit.xquery.xdm.Kind;
  * 
  */
 public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
+
 	private static final Logger log = Logger
 			.getLogger(AbstractPathSynopsisMgr.class);
+
+	protected final Tx tx;
 
 	protected final DictionaryMgr dictionaryMgr;
 
@@ -63,20 +72,21 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 
 	protected final PathSynopsis ps;
 
-	protected final SimpleLockService<Path<String>> ls;
+	protected final SimpleLockService<Path<QNm>> ls;
 
-	public AbstractPathSynopsisMgr(PSConverter psc,
+	public AbstractPathSynopsisMgr(Tx tx, PSConverter psc,
 			DictionaryMgr dictionaryMgr, PathSynopsis ps) {
+		this.tx = tx;
 		this.dictionaryMgr = dictionaryMgr;
 		this.psc = psc;
 		this.ps = ps;
-		this.ls = new SimpleLockService<Path<String>>(PathSynopsis.class
+		this.ls = new SimpleLockService<Path<QNm>>(PathSynopsis.class
 				.getSimpleName());
 	}
 
 	@Override
-	public PathSynopsisMgr spawnBulkPsManager(Tx tx) throws DocumentException {
-		return new BulkPathSynopsisMgr(psc, dictionaryMgr, ps);
+	public PathSynopsisMgr spawnBulkPsManager() throws DocumentException {
+		return new BulkPathSynopsisMgr(tx, psc, dictionaryMgr, ps);
 	}
 
 	@Override
@@ -85,9 +95,125 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 	}
 
 	@Override
-	public PSNode getChild(Tx tx, int parentPcr, int vocID, byte kind)
-			throws DocumentException {
+	public SubtreeCopyResult copySubtree(int rootPCR,
+			NsMapping newNsMapping, QNm newName) throws DocumentException {
+
+		// for changing the NsMapping, the whole subtree in the path synopsis
+		// has to be copied
+		// this map contains the PCR mapping from the PCRs in the old subtree to
+		// the PCRs in the new subtree
+		Map<Integer, Integer> pcrMap = new HashMap<Integer, Integer>();
+		// to traverse the path synopsis, this queue is used to indicate which
+		// nodes are still left to be copied
+		Queue<PathSynopsisNode> nodesToCopy = new LinkedList<PathSynopsisNode>();
+		
+		PSNode newRoot = null;
+
+		synchronized (ps) {
+			PathSynopsisNode newNode;
+			PathSynopsisNode oldNode;
+
+			// start with the root node
+			nodesToCopy.add(getNode(ps, rootPCR));
+
+			boolean firstRun = true;
+
+			while ((oldNode = nodesToCopy.poll()) != null) {
+
+				int newUriVocID = oldNode.getURIVocID();
+				int prefixVocID = oldNode.getPrefixVocID();
+				int localNameVocID = oldNode.getLocalNameVocID();
+				
+				if (firstRun) {
+					// QNm of root node might be changed
+					newUriVocID = dictionaryMgr.translate(tx, newName.nsURI);
+					prefixVocID = dictionaryMgr.translate(tx, newName.prefix);
+					localNameVocID = dictionaryMgr.translate(tx, newName.localName);
+				}
+
+				// due to the new mapping, the uriVocID may have been changed
+				Integer changedUriVocID = newNsMapping.resolve(prefixVocID);
+				if (changedUriVocID != null) {
+					newUriVocID = changedUriVocID;
+				}
+
+				// determine parent of new node
+				PathSynopsisNode oldParent = oldNode.getParent();
+				int newParentPCR = -1;
+				if (oldParent != null) {
+					// map old parent to new parent
+					Integer mappedParentPCR = pcrMap.get(oldParent.getPCR());
+					if (mappedParentPCR == null) {
+						// first loop -> new node has the same parent
+						newParentPCR = oldParent.getPCR();
+					} else {
+						newParentPCR = mappedParentPCR;
+					}
+				}
+				// load parent
+				PathSynopsisNode newParent = getNode(ps, newParentPCR);
+
+				// determine new NsMapping
+				NsMapping nsMapping = firstRun ? newNsMapping : oldNode
+						.getNsMapping().copy();
+
+				// determine new QName
+				String URI = (newUriVocID != -1 ? dictionaryMgr.resolve(tx,
+						newUriVocID) : "");
+				String prefix = oldNode.getName().getPrefix();
+				String localName = oldNode.getName().getLocalName();
+				newNode = ps.getNewNode(new QNm(URI, prefix, localName),
+						newUriVocID, prefixVocID, localNameVocID, oldNode
+								.getKind(), nsMapping, newParent, 0);
+				addNodeToTaList(ps, newNode);
+				
+				if (firstRun) {
+					newRoot = newNode;
+				}
+
+				// put new PCR mapping
+				pcrMap.put(oldNode.getPCR(), newNode.getPCR());
+
+				// add children into the queue
+				for (PathSynopsisNode child : oldNode.getChildren()) {
+					nodesToCopy.add(child);
+				}
+
+				firstRun = false;
+			}
+		}
+
+		return new SubtreeCopyResult(newRoot, pcrMap);
+
+		// try {
+		// Path<QNm> path = null;
+		//
+		// for (Path<QNm> pattern : ls.getLockedResources()) {
+		// if (path == null) {
+		// path = node.getPath();
+		// }
+		//
+		// if (pattern.matches(path)) {
+		// ls.lock(tx, pattern, LockClass.INSTANT_DURATION, false);
+		// }
+		// }
+		//
+		// return node;
+		// } catch (Exception e) {
+		// throw new DocumentException(e);
+		// }
+	}
+
+	@Override
+	public PSNode getChild(int parentPcr, QNm name, byte kind,
+			NsMapping nsMapping) throws DocumentException {
 		PathSynopsisNode node;
+
+		int uriVocID = (name.nsURI.isEmpty() ? -1 : dictionaryMgr.translate(
+				getTX(), name.nsURI));
+		int prefixVocID = (name.prefix == null ? -1 : dictionaryMgr.translate(
+				getTX(), name.prefix));
+		int localNameVocID = dictionaryMgr.translate(getTX(), name.localName);
 
 		synchronized (ps) {
 			PathSynopsisNode parent = null;
@@ -96,30 +222,38 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 				parent = getNode(ps, parentPcr);
 
 				for (PathSynopsisNode child : parent.children) {
-					if ((child.vocId == vocID) && (child.kind == kind)) {
+					if ((child.uriVocID == uriVocID)
+							&& (child.prefixVocID == prefixVocID)
+							&& (child.localNameVocID == localNameVocID)
+							&& (child.kind == kind)
+							&& (child.hasNsMapping(nsMapping))) {
 						if (!child.isStored()) {
-							addNodeToTaList(tx, ps, child);
+							addNodeToTaList(ps, child);
 						}
 						return child;
 					}
 				}
 			} else {
 				for (PathSynopsisNode root : ps.getRoots()) {
-					if ((root.vocId == vocID) && (root.kind == kind)) {
+					if ((root.uriVocID == uriVocID)
+							&& (root.prefixVocID == prefixVocID)
+							&& (root.localNameVocID == localNameVocID)
+							&& (root.kind == kind)
+							&& (root.hasNsMapping(nsMapping))) {
 						return root;
 					}
 				}
 			}
 
-			String name = dictionaryMgr.resolve(tx, vocID);
-			node = ps.getNewNode(name, vocID, kind, parent, 0);
-			addNodeToTaList(tx, ps, node);
+			node = ps.getNewNode(name, uriVocID,
+					prefixVocID, localNameVocID, kind, nsMapping, parent, 0);
+			addNodeToTaList(ps, node);
 		}
 
 		try {
-			Path<String> path = null;
+			Path<QNm> path = null;
 
-			for (Path<String> pattern : ls.getLockedResources()) {
+			for (Path<QNm> pattern : ls.getLockedResources()) {
 				if (path == null) {
 					path = node.getPath();
 				}
@@ -139,7 +273,7 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 		return ps.getNodeByPcr(pcr);
 	}
 
-	public boolean isLeaf(Tx tx, int pcr) {
+	public boolean isLeaf(int pcr) {
 		synchronized (ps) {
 			PathSynopsisNode psN = getNode(ps, pcr);
 
@@ -151,7 +285,7 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 		return true;
 	}
 
-	protected abstract void addNodeToTaList(Tx tx, PathSynopsis pathSynopsis,
+	protected abstract void addNodeToTaList(PathSynopsis pathSynopsis,
 			PathSynopsisNode node) throws DocumentException;
 
 	@Override
@@ -162,19 +296,18 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 	}
 
 	@Override
-	public Set<Integer> getPCRsForPaths(Tx tx,
-			Collection<Path<String>> expressions) throws DocumentException {
+	public Set<Integer> getPCRsForPaths(Collection<Path<QNm>> expressions)
+			throws DocumentException {
 		HashSet<Integer> pcrs = new HashSet<Integer>();
-		for (Path<String> path : expressions) {
-			Set<Integer> pcrsForPath = match(tx, path);
+		for (Path<QNm> path : expressions) {
+			Set<Integer> pcrsForPath = match(path);
 			pcrs.addAll(pcrsForPath);
 		}
 		return pcrs;
 	}
 
 	@Override
-	public Set<Integer> match(Tx tx, Path<String> path)
-			throws DocumentException {
+	public Set<Integer> match(Path<QNm> path) throws DocumentException {
 		try {
 			try {
 				ls.lock(tx, path, LockClass.COMMIT_DURATION, true);
@@ -188,13 +321,13 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 		}
 
 		synchronized (ps) {
-			Set<Integer> pcrsForPath = ps.getPCRsForPath(tx, path.toString());
+			Set<Integer> pcrsForPath = ps.getPCRsForPath(tx, path);
 			return pcrsForPath;
 		}
 	}
 
 	@Override
-	public PSNode get(Tx tx, int pcr) throws DocumentException {
+	public PSNode get(int pcr) throws DocumentException {
 		synchronized (ps) {
 			PathSynopsisNode psN = ps.getNodeByPcr(pcr);
 
@@ -208,8 +341,7 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 	}
 
 	@Override
-	public PSNode getAncestor(Tx tx, int pcr, int level)
-			throws DocumentException {
+	public PSNode getAncestor(int pcr, int level) throws DocumentException {
 		synchronized (ps) {
 			PathSynopsisNode psN = getNode(ps, pcr);
 
@@ -233,7 +365,7 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 	}
 
 	@Override
-	public PSNode getAncestorOrParent(Tx tx, int pcr, int level)
+	public PSNode getAncestorOrParent(int pcr, int level)
 			throws DocumentException {
 		synchronized (ps) {
 			PathSynopsisNode psN = getNode(ps, pcr);
@@ -271,22 +403,26 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 	}
 
 	@Override
-	public void snapshot(Tx tx, PSSnapshotBuilder builder)
-			throws DocumentException {
+	public void snapshot(PSSnapshotBuilder builder) throws DocumentException {
 		synchronized (ps) {
 			for (PathSynopsisNode root : ps.getRoots()) {
-				buildPathSynopsisSnapshot(root, tx, builder);
+				buildPathSynopsisSnapshot(root, builder);
 			}
 		}
 	}
 
-	private void buildPathSynopsisSnapshot(PathSynopsisNode root, Tx tx,
+	private void buildPathSynopsisSnapshot(PathSynopsisNode root,
 			PSSnapshotBuilder builder) throws DocumentException {
-		builder.startNode(root.getPCR(), root.getVocID(), dictionaryMgr
-				.resolve(tx, root.getVocID()), root.getKind());
+		builder
+				.startNode(root.getPCR(), root.getURIVocID(), root
+						.getPrefixVocID(), root.getLocalNameVocID(), new QNm(
+						dictionaryMgr.resolve(tx, root.getURIVocID()),
+						dictionaryMgr.resolve(tx, root.getPrefixVocID()),
+						dictionaryMgr.resolve(tx, root.getLocalNameVocID())),
+						root.getKind());
 
 		for (PathSynopsisNode child : root.getChildren()) {
-			buildPathSynopsisSnapshot(child, tx, builder);
+			buildPathSynopsisSnapshot(child, builder);
 		}
 
 		builder.endNode();
@@ -297,5 +433,10 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 		synchronized (ps) {
 			return ps.getMaxPCR();
 		}
+	}
+
+	@Override
+	public Tx getTX() {
+		return tx;
 	}
 }

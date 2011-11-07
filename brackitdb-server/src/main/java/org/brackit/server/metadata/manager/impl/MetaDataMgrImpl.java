@@ -29,8 +29,9 @@ package org.brackit.server.metadata.manager.impl;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
@@ -45,10 +46,12 @@ import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr03;
 import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
-import org.brackit.server.node.bracket.BracketCollection;
-import org.brackit.server.node.bracket.BracketNode;
-import org.brackit.server.node.bracket.BracketStore;
+import org.brackit.server.node.el.ElCollection;
+import org.brackit.server.node.el.ElNode;
+import org.brackit.server.node.el.ElStore;
 import org.brackit.server.node.index.IndexController;
+import org.brackit.server.node.index.definition.IndexDef;
+import org.brackit.server.node.index.definition.IndexDefBuilder;
 import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.node.txnode.TXCollection;
 import org.brackit.server.node.txnode.TXNode;
@@ -60,10 +63,12 @@ import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxMgr;
 import org.brackit.server.tx.locking.services.MetaLockService;
 import org.brackit.server.tx.locking.services.UnifiedMetaLockService;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.node.parser.SubtreeParser;
 import org.brackit.xquery.util.Cfg;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.util.path.PathException;
 import org.brackit.xquery.xdm.DocumentException;
@@ -78,11 +83,11 @@ import org.brackit.xquery.xdm.Stream;
 public class MetaDataMgrImpl implements MetaDataMgr {
 	private static final Logger log = Logger.getLogger(MetaDataMgrImpl.class);
 
-	public static final String DIR_TAG = "dir";
+	public static final QNm DIR_TAG = new QNm("dir");
 
-	public static final String NAME_ATTRIBUTE = "name";
+	public static final QNm NAME_ATTR = new QNm("name");
 
-	public static final String ID_ATTRIBUTE = "id";
+	public static final QNm ID_ATTR = new QNm("id");
 
 	private static final int DEFAULT_DICTIONARY_ID = 1;
 
@@ -103,8 +108,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	private final HookedCache<DocID, DBCollection<?>> collectionCache;
 
 	private final HookedCache<DocID, BlobHandle> blobCache;
-	
-	private final BracketStore bracketStore;
+
+	private final ElStore elStore;
 
 	private final BlobStore blobStore;
 
@@ -112,7 +117,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 	private final DictionaryMgr defaultDictionary;
 
-	private BracketCollection mdCollection;
+	private ElCollection mdCollection;
 
 	private Directory mdRootDir;
 
@@ -130,7 +135,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		int maxLocks = Cfg.asInt(TxMgr.MAX_LOCKS, 200000);
 		mls = new UnifiedMetaLockService("DocumentLockService", maxLocks,
 				maxTransactions);
-		bracketStore = new BracketStore(bufferMgr, defaultDictionary, mls);
+		elStore = new ElStore(bufferMgr, defaultDictionary, mls);
 		blobStore = new IndexBlobStore(bufferMgr);
 	}
 
@@ -172,7 +177,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			return collection;
 		}
 
-		Path<String> path = asPath(storedNamePath);
+		Path<QNm> path = asPath(storedNamePath);
 		Item<Directory> item = getItemByPath(tx, path, false);
 
 		if (!(item instanceof Document)) {
@@ -185,7 +190,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 	public DBItem<?> getItem(Tx tx, String storedNamePath)
 			throws ItemNotFoundException, DocumentException {
-		Path<String> path = asPath(storedNamePath);
+		Path<QNm> path = asPath(storedNamePath);
 		Item<Directory> item = getItemByPath(tx, path, true); // pick item on DB
 
 		if (item instanceof Document) {
@@ -206,7 +211,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 
 		// store persistent document
-		Path<String> path = asPath(name);
+		Path<QNm> path = asPath(name);
 		name = path.toString();
 		Item<Directory> item = getItemByPath(tx, path.leading(), false);
 
@@ -219,10 +224,10 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		TXCollection<?> collection = null;
 
 		StorageSpec spec = new StorageSpec(name, defaultDictionary);
-		BracketCollection bracketCollection = new BracketCollection(tx, bracketStore);
-		bracketCollection.create(spec, parser);
+		ElCollection elCollection = new ElCollection(tx, elStore);
+		elCollection.create(spec, parser);
 
-		collection = bracketCollection;
+		collection = elCollection;
 		Document document = new Document(collection.getID(), name, directory,
 				null);
 		collection.setPersistor(document);
@@ -242,7 +247,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 
 		// store persistent document
-		Path<String> path = asPath(name);
+		Path<QNm> path = asPath(name);
 		name = path.toString();
 		Item<Directory> item = getItemByPath(tx, path.leading(), false);
 
@@ -255,10 +260,10 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		TXCollection<?> collection = null;
 
 		StorageSpec spec = new StorageSpec(name, defaultDictionary);
-		BracketCollection bracketCollection = new BracketCollection(tx, bracketStore);
-		bracketCollection.create(spec);
+		ElCollection elCollection = new ElCollection(tx, elStore);
+		elCollection.create(spec);
 
-		collection = bracketCollection;
+		collection = elCollection;
 		Document document = new Document(collection.getID(), name, directory,
 				null);
 		collection.setPersistor(document);
@@ -273,10 +278,10 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		return collection;
 	}
 
-	private void assertInsertion(Tx tx, Path<String> path, Directory parent)
+	private void assertInsertion(Tx tx, Path<QNm> path, Directory parent)
 			throws MetaDataException, DocumentException {
 		Node<?> parentNode = parent.getMasterDocNode();
-
+		
 		// Check if object is already in cache
 		while (true) {
 			Item<Directory> item = itemCache.get(tx, path.toString());
@@ -299,11 +304,11 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 
 		// Check if persisted object exists
-		String name = path.tail();
-		IndexController<BracketNode> indexController = mdCollection.copyFor(tx)
+		IndexController<ElNode> indexController = mdCollection.copyFor(tx)
 				.getIndexController();
+		Str name = new Str(path.toString());
 		Stream<? extends Node<?>> stream = indexController.openCASIndex(
-				mdNameCasIndexNo, null, new Str(path.toString()), null, true,
+				mdNameCasIndexNo, null, name, null, true,
 				true, SearchMode.GREATER_OR_EQUAL);
 
 		try {
@@ -345,16 +350,22 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	private DBCollection<?> buildCollection(Tx tx, Document document)
 			throws DocumentException {
 
-		TXCollection<?> collection = new BracketCollection(tx, bracketStore);
-		collection.init(document.getMasterDocNode());
+		TXCollection<?> collection = null;
+		Node<?> node = document.getMasterDocNode();
+		boolean elementless = (node
+				.getAttribute(ElCollection.PATHSYNOPSIS_ID_ATTRIBUTE) != null);
+		if (elementless) {
+			collection = new ElCollection(tx, elStore);
+		}
+		collection.init(node);
 		collection.setPersistor(document);
 
 		return collection;
 	}
 
-	private Path<String> asPath(String path) throws MetaDataException {
+	private Path<QNm> asPath(String path) throws MetaDataException {
 		try {
-			Path<String> p = Path.parse(path);
+			Path<QNm> p = Path.parse(path);
 
 			if (p.isRelative()) {
 				p = p.trailing();
@@ -366,7 +377,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 	}
 
-	private Item<Directory> getItemByPath(Tx tx, Path<String> path,
+	private Item<Directory> getItemByPath(Tx tx, Path<QNm> path,
 			boolean forUpdate) throws ItemNotFoundException, MetaDataException,
 			DocumentException {
 		if (!path.isAbsolute() || path.isAttribute()) {
@@ -380,7 +391,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			item = itemCache.get(tx, path.toString());
 
 			if (item == null) {
-				for (Path<String> currentPath : path.explode()) {
+				for (Path<QNm> currentPath : path.explode()) {
 					if ((parent != null) && (!(parent instanceof Directory))) {
 						throw new MetaDataException(
 								"%s is not a directory.: %s", parent.getName(),
@@ -417,7 +428,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 	private Item<Directory> getItemByID(Tx tx, int id, boolean forUpdate)
 			throws ItemNotFoundException, MetaDataException, DocumentException {
-		IndexController<BracketNode> indexController = mdCollection.copyFor(tx)
+		IndexController<ElNode> indexController = mdCollection.copyFor(tx)
 				.getIndexController();
 		Stream<? extends Node<?>> stream = indexController.openCASIndex(
 				mdIDCasIndexNo, null, new Str(Integer.toString(id)), null,
@@ -427,9 +438,10 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		try {
 			Node<?> attribute;
 			if ((attribute = stream.next()) != null) {
-				if (Integer.toString(id).equals(attribute.getValue())) {
-					name = attribute.getParent().getAttributeValue(
-							NAME_ATTRIBUTE);
+				if (Integer.toString(id).equals(attribute.getValue()
+						.stringValue())) {
+					name = attribute.getParent().getAttribute(NAME_ATTR)
+							.getValue().stringValue();
 				}
 			}
 		} finally {
@@ -440,18 +452,18 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			throw new ItemNotFoundException("ID %s does not exist.", id);
 		}
 
-		Path<String> path = asPath(name);
+		Path<QNm> path = asPath(name);
 		return getItemByPath(tx, path, forUpdate);
 	}
 
-	private Item<Directory> loadItem(Tx tx, Directory parent, Path<String> path)
+	private Item<Directory> loadItem(Tx tx, Directory parent, Path<QNm> path)
 			throws ItemNotFoundException, MetaDataException, DocumentException {
 		Item<Directory> item = null;
 		TXNode<?> itemRoot = null;
 		;
 		String name = path.toString();
 
-		IndexController<BracketNode> indexController = mdCollection.copyFor(tx)
+		IndexController<ElNode> indexController = mdCollection.copyFor(tx)
 				.getIndexController();
 		Stream<? extends TXNode<?>> stream = indexController.openCASIndex(
 				mdNameCasIndexNo, null, new Str(name), null, true, true,
@@ -460,7 +472,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		try {
 			TXNode<?> attribute;
 			if ((attribute = stream.next()) != null) {
-				if (name.equals(attribute.getValue())) {
+				if (name.equals(attribute.getValue().stringValue())) {
 					itemRoot = attribute.getParent();
 				}
 			}
@@ -485,13 +497,14 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			TXNode<?> itemRoot, boolean loadChildren) throws DocumentException,
 			MetaDataException {
 		Item<Directory> item;
-		String itemRootTag = itemRoot.getName();
-		String name = itemRoot.getAttributeValue(NAME_ATTRIBUTE);
+		QNm itemRootTag = itemRoot.getName();
+		String name = itemRoot.getAttribute(NAME_ATTR).getValue().stringValue();
 
 		if (BaseCollection.DOCUMENT_TAG.equals(itemRootTag)) {
 			// SubtreePrinter.print(transaction, itemRoot, System.out);
 			DocID docID = new DocID(Integer.parseInt(itemRoot
-					.getAttributeValue(BaseCollection.ID_ATTRIBUTE)));
+					.getAttribute(BaseCollection.ID_ATTRIBUTE)
+					.getValue().stringValue()));
 			item = new Document(docID, name, parent, itemRoot);
 		} else if (DIR_TAG.equals(itemRootTag)) {
 			Directory directory = new Directory(name, parent, itemRoot);
@@ -509,7 +522,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			item = directory;
 		} else if (BaseBlobHandle.BLOB_TAG.equals(itemRootTag)) {
 			DocID docID = new DocID(Integer.parseInt(itemRoot
-					.getAttributeValue(BaseBlobHandle.ID_ATTRIBUTE)));
+					.getAttribute(BaseBlobHandle.ID_ATTRIBUTE)
+					.getValue().stringValue()));
 			item = new Blob(docID, name, parent, itemRoot);
 		} else {
 			throw new MetaDataException("Unknown item tag: %s.", itemRootTag);
@@ -524,7 +538,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			log.debug(String.format("Creating directory %s.", name));
 		}
 
-		Path<String> path = asPath(name);
+		Path<QNm> path = asPath(name);
 		Item<Directory> item = getItemByPath(tx, path.leading(), false);
 
 		if (!(item instanceof Directory)) {
@@ -543,7 +557,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 	@Override
 	public void drop(Tx tx, String storedNamePath) throws DocumentException {
-		Path<String> path = asPath(storedNamePath);
+		Path<QNm> path = asPath(storedNamePath);
 		Item<Directory> item = getItemByPath(tx, path, true);
 		deleteItem(tx, item);
 	}
@@ -584,8 +598,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		TXNode<?> childRoot;
 		while ((childRoot = children.next()) != null) {
 			// TODO synchronization (load / add interleaving)
-			if (!directory
-					.hasChild(childRoot.getAttributeValue(NAME_ATTRIBUTE))) {
+			if (!directory.hasChild(childRoot.getAttribute(NAME_ATTR)
+					.getValue().stringValue())) {
 				Item<Directory> child = createItem(tx, directory, childRoot,
 						false);
 				directory.addChild(child);
@@ -658,7 +672,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	@Override
 	public BlobHandle getBlob(Tx tx, String storedBlobPath)
 			throws DocumentException {
-		Path<String> path = asPath(storedBlobPath);
+		Path<QNm> path = asPath(storedBlobPath);
 		Item<Directory> item = getItemByPath(tx, path, false);
 
 		if (!(item instanceof Blob)) {
@@ -702,7 +716,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	@Override
 	public boolean isDirectory(Tx tx, String storedNamePath)
 			throws DocumentException {
-		Path<String> path = asPath(storedNamePath);
+		Path<QNm> path = asPath(storedNamePath);
 		Item<Directory> item;
 		try {
 			item = getItemByPath(tx, path, false);
@@ -725,7 +739,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 
 		// store persistent blob
-		Path<String> path = asPath(storedNamePath);
+		Path<QNm> path = asPath(storedNamePath);
 		String name = path.toString();
 		Item<Directory> item = getItemByPath(tx, path.leading(), false);
 
@@ -834,7 +848,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		// load metadata document and perform delayed init to load indexes
 		// of metadata document etc.
 		defaultDictionary.load(tx, DEFAULT_DICTIONARY_ID);
-		mdCollection = new BracketCollection(tx, bracketStore);
+		mdCollection = new ElCollection(tx, elStore);
 
 		mdCollection.init(MASTERDOC_NAME, MASTERDOC_PAGEID, MASTERDOC_PSPAGEID);
 		TXNode<?> mdRootNode = mdCollection.getDocument().getFirstChild();
@@ -866,12 +880,12 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 		// store metadata document
 		int dictionaryID = defaultDictionary.create(tx);
-		mdCollection = new BracketCollection(tx, bracketStore);
+		mdCollection = new ElCollection(tx, elStore);
 		mdCollection
 				.create(spec, new DocumentParser(MASTERDOC_DEFAULTDOCUMENT));
 
 		// create root directory for cache
-		BracketNode rootNode = mdCollection.getDocument().getFirstChild();
+		ElNode rootNode = mdCollection.getDocument().getFirstChild();
 		TXNode<?> dirRootNode = rootNode.getLastChild();
 		mdRootDir = new Directory("", null, dirRootNode);
 		Path<String> rootPath = new Path<String>();
@@ -887,10 +901,20 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		collectionCache.putIfAbsent(tx, mdCollection.getID(), mdCollection,
 				true);
 
-		mdNameCasIndexNo = mdCollection.getIndexController().createIndex(
-				"create cas index paths //@name").getID();
-		mdIDCasIndexNo = mdCollection.getIndexController().createIndex(
-				"create cas index paths //@id").getID();
+		List<Path<QNm>> paths = new LinkedList<Path<QNm>>();
+		paths.add(Path.parse("//@name"));
+		
+		IndexDef idxDef = 
+			IndexDefBuilder.createCASIdxDef(null, false, null, paths);
+		mdCollection.getIndexController().createIndexes(idxDef);
+		mdNameCasIndexNo = idxDef.getID();
+		
+		paths.clear();
+		paths.add(Path.parse("//@id"));
+		idxDef = IndexDefBuilder.createCASIdxDef(null, false, null, paths);
+		mdCollection.getIndexController().createIndexes(idxDef);
+		mdIDCasIndexNo = idxDef.getID();
+		
 		mdCollection.calculateStatistics();
 		mdCollection.persist();
 	}

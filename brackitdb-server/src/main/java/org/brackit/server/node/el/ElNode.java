@@ -31,8 +31,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.brackit.server.io.buffer.PageID;
+import org.brackit.server.metadata.pathSynopsis.NsMapping;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
+import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr.SubtreeCopyResult;
 import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.txnode.DebugListener;
@@ -44,13 +46,19 @@ import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.IndexIterator;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.locking.services.MetaLockService;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.node.parser.ListenMode;
+import org.brackit.xquery.node.parser.NavigationalSubtreeParser;
 import org.brackit.xquery.node.parser.StreamSubtreeProcessor;
+import org.brackit.xquery.node.parser.SubtreeHandler;
 import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.node.parser.SubtreeParser;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
 import org.brackit.xquery.xdm.OperationNotSupportedException;
+import org.brackit.xquery.xdm.Scope;
 import org.brackit.xquery.xdm.Stream;
 
 /**
@@ -59,7 +67,7 @@ import org.brackit.xquery.xdm.Stream;
  * 
  */
 public class ElNode extends TXNode<ElNode> {
-	
+
 	private class AttributeStream implements Stream<ElNode> {
 		private IndexIterator it;
 
@@ -109,9 +117,11 @@ public class ElNode extends TXNode<ElNode> {
 
 	protected final ElLocator locator;
 
-	protected String value;
+	protected Atomic value;
 
 	protected PSNode psNode;
+
+	private ElScope scope;
 
 	protected PageID hintPageID;
 
@@ -128,7 +138,7 @@ public class ElNode extends TXNode<ElNode> {
 	}
 
 	public ElNode(ElLocator locator, XTCdeweyID deweyID, byte type,
-			String value, PSNode psNode) {
+			Atomic value, PSNode psNode) {
 		super(deweyID, type);
 		this.locator = locator;
 		this.value = value;
@@ -183,12 +193,6 @@ public class ElNode extends TXNode<ElNode> {
 		return (psNode != null) ? psNode.getPCR() : -1;
 	}
 
-	public int getVocID() {
-		return ((type == Kind.ELEMENT.ID) || (type == Kind.ATTRIBUTE.ID)) ? psNode
-				.getVocID()
-				: -1;
-	}
-
 	@Override
 	public ElNode getNodeInternal(XTCdeweyID deweyID) throws DocumentException {
 		ElStore r = locator.collection.store;
@@ -197,7 +201,7 @@ public class ElNode extends TXNode<ElNode> {
 			return this;
 		}
 
-		if (deweyID.isRoot()) {
+		if (deweyID.isDocument()) {
 			return new ElNode(locator);
 		}
 
@@ -227,8 +231,8 @@ public class ElNode extends TXNode<ElNode> {
 	}
 
 	@Override
-	public ElNode insertRecord(XTCdeweyID childDeweyID, Kind kind, String value)
-			throws DocumentException {
+	public ElNode insertRecord(XTCdeweyID childDeweyID, Kind kind, QNm name,
+			Atomic value) throws DocumentException {
 		if ((kind != Kind.ELEMENT) && (kind != Kind.TEXT)
 				&& (kind != Kind.COMMENT)
 				&& (kind != Kind.PROCESSING_INSTRUCTION)) {
@@ -244,16 +248,15 @@ public class ElNode extends TXNode<ElNode> {
 		ElNode node;
 
 		if (kind == Kind.ELEMENT) {
-			int vocID = coll.getDictionary().translate(getTX(), value);
-			PSNode childPsNode = pathSynopsisMgr.getChild(getTX(), psNode
-					.getPCR(), vocID, Kind.ELEMENT.ID);
+			PSNode childPsNode = pathSynopsisMgr.getChild(psNode.getPCR(),
+					name, Kind.ELEMENT.ID, null);
 			record = ElRecordAccess.createRecord(childPsNode.getPCR(),
 					Kind.ELEMENT.ID, null);
 			node = new ElNode(locator, childDeweyID, kind.ID, null, childPsNode);
 			value = null;
 		} else {
 			record = ElRecordAccess.createRecord(psNode.getPCR(), kind.ID,
-					value);
+					value.stringValue());
 			node = new ElNode(locator, childDeweyID, kind.ID, value, psNode);
 		}
 
@@ -286,26 +289,24 @@ public class ElNode extends TXNode<ElNode> {
 	}
 
 	@Override
-	public String getNameInternal() throws DocumentException {
-		return ((type == Kind.ELEMENT.ID) || (type == Kind.ATTRIBUTE.ID)) ? psNode
-				.getName()
-				: "";
+	public QNm getNameInternal() throws DocumentException {
+		return psNode.getName();
 	}
 
 	@Override
-	public String getValueInternal() throws DocumentException {
+	public Atomic getValueInternal() throws DocumentException {
 		return ((type != Kind.DOCUMENT.ID) && (type != Kind.ELEMENT.ID)) ? value
-				: getText(this);
+				: new Una(getText(this));
 	}
 
 	@Override
-	public void setNameInternal(String name)
-			throws OperationNotSupportedException, DocumentException {
-		throw new OperationNotSupportedException();
+	public void setNameInternal(QNm name) throws DocumentException {
+		// change name, leave mapping unchanged
+		setNsMappingAndName(psNode.getNsMapping(), name);
 	}
 
 	@Override
-	public void setValueInternal(String value)
+	public void setValueInternal(Atomic value)
 			throws OperationNotSupportedException, DocumentException {
 		if (type == Kind.ELEMENT.ID) {
 			throw new DocumentException(
@@ -321,7 +322,8 @@ public class ElNode extends TXNode<ElNode> {
 					OpenMode.UPDATE);
 			byte[] oldRecord = iterator.getValue();
 			int PCR = ElRecordAccess.getPCR(oldRecord);
-			byte[] record = ElRecordAccess.createRecord(PCR, type, value);
+			byte[] record = ElRecordAccess.createRecord(PCR, type, value
+					.stringValue());
 
 			// delete old entry from all indexes
 			notifyUpdate(locator, ListenMode.DELETE, this);
@@ -340,7 +342,7 @@ public class ElNode extends TXNode<ElNode> {
 	}
 
 	@Override
-	public boolean deleteAttributeInternal(String name)
+	public boolean deleteAttributeInternal(QNm name)
 			throws OperationNotSupportedException, DocumentException {
 		ElNode attribute = getAttribute(name);
 
@@ -353,7 +355,7 @@ public class ElNode extends TXNode<ElNode> {
 	}
 
 	@Override
-	public ElNode setAttributeInternal(String name, String value)
+	public ElNode setAttributeInternal(QNm name, Atomic value)
 			throws OperationNotSupportedException, DocumentException {
 		ElCollection coll = locator.collection;
 		ElStore r = coll.store;
@@ -362,11 +364,11 @@ public class ElNode extends TXNode<ElNode> {
 		boolean update = false;
 
 		PSNode elementPsNode = psNode;
-		int vocID = coll.getDictionary().translate(getTX(), name);
-		PSNode attributePsNode = locator.pathSynopsis.getChild(getTX(),
-				elementPsNode.getPCR(), vocID, Kind.ATTRIBUTE.ID);
+
+		PSNode attributePsNode = locator.pathSynopsis.getChild(elementPsNode
+				.getPCR(), name, Kind.ATTRIBUTE.ID, null);
 		byte[] record = ElRecordAccess.createRecord(attributePsNode.getPCR(),
-				Kind.ATTRIBUTE.ID, value);
+				Kind.ATTRIBUTE.ID, value.stringValue());
 
 		try {
 			// Scan all attributes of this element and check if attribute with
@@ -439,7 +441,7 @@ public class ElNode extends TXNode<ElNode> {
 	}
 
 	@Override
-	public ElNode getAttributeInternal(String name) throws DocumentException {
+	public ElNode getAttributeInternal(QNm name) throws DocumentException {
 		ElStore r = locator.collection.store;
 		PageID rootPageID = locator.rootPageID;
 
@@ -803,8 +805,14 @@ public class ElNode extends TXNode<ElNode> {
 	}
 
 	@Override
+	public void parse(SubtreeHandler handler) throws DocumentException {
+		SubtreeParser parser = new NavigationalSubtreeParser(this);
+		parser.parse(handler);
+	}
+
+	@Override
 	public String toString() {
-		String name = ((type == Kind.ATTRIBUTE.ID) || (type == Kind.ELEMENT.ID)) ? psNode
+		QNm name = ((type == Kind.ATTRIBUTE.ID) || (type == Kind.ELEMENT.ID)) ? psNode
 				.getName()
 				: null;
 		int pcr = (psNode != null) ? psNode.getPCR() : -1;
@@ -813,5 +821,27 @@ public class ElNode extends TXNode<ElNode> {
 						"%s(doc='%s', docID='%s', type='%s', name='%s', value='%s', pcr='%s')",
 						deweyID, locator.collection.getName(), deweyID
 								.getDocID(), getKind(), name, value, pcr);
+	}
+
+	@Override
+	public Scope getScope() {
+
+		if (scope == null && type == Kind.ELEMENT.ID) {
+			scope = new ElScope(this);
+		}
+
+		return scope;
+	}
+
+	protected void setNsMappingAndName(NsMapping nsMapping, QNm name)
+			throws DocumentException {
+
+		SubtreeCopyResult res = locator.collection.pathSynopsis.copySubtree(
+				psNode.getPCR(), nsMapping, name);
+
+		// iterate over subtree, change PCRs of decendants
+		// TODO
+		throw new OperationNotSupportedException();
+
 	}
 }

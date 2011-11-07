@@ -31,6 +31,7 @@ import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.node.stream.AtomStream;
 import org.brackit.xquery.node.stream.EmptyStream;
@@ -142,7 +143,7 @@ public class NavigationExpander implements Cursor {
 		@Override
 		Stream<? extends Node<?>> evaluate(QueryContext ctx, Node<?> node)
 				throws QueryException {
-			Node<?> attribute = node.getAttribute(name.stringValue());
+			Node<?> attribute = node.getAttribute(new QNm(name.stringValue()));
 			return (attribute == null) ? new EmptyStream<Node<?>>() : filter(
 					ctx, new AtomStream<Node<?>>(attribute));
 		}
@@ -240,7 +241,7 @@ public class NavigationExpander implements Cursor {
 				foundRelative = false;
 			}
 		} catch (ClassCastException e) {
-			throw new QueryException(e, ErrorCode.ERR_TYPE_NOT_A_NODE);
+			throw new QueryException(e, ErrorCode.ERR_TYPE_INAPPROPRIATE_TYPE);
 		}
 	}
 

@@ -110,6 +110,18 @@ public class ElRecordAccess implements ElPlaceHolderHelper {
 		return value;
 	}
 
+	public final static Atomic getTypedValue(byte[] physicalRecord) {
+		String untypedValue = getValue(physicalRecord);
+		byte type = getType(physicalRecord);
+		
+		// default type mapping
+		if (type == Kind.COMMENT.ID || type == Kind.PROCESSING_INSTRUCTION.ID) {
+			return new Str(untypedValue);
+		} else {
+			return new Una(untypedValue);
+		}
+	}
+
 	public static final byte[] createRecord(int PCR, byte type, String value) {
 		int valueLength = 0;
 		int pcrLength = 0;
@@ -128,7 +140,7 @@ public class ElRecordAccess implements ElPlaceHolderHelper {
 
 		byte[] physicalRecord = new byte[1 + pcrLength + valueLength];
 
-		physicalRecord[0] = (byte) ((physicalRecord[0] & ~(TYPE_MASK << 2)) | (type << 2));
+		setType(physicalRecord, type);
 
 		if (value != null) {
 			System.arraycopy(valueBytes, 0, physicalRecord, 1 + pcrLength,

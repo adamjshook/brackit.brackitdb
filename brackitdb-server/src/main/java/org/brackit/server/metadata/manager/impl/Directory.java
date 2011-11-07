@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.brackit.server.node.txnode.TXNode;
+import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.node.parser.FragmentHelper;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Node;
@@ -81,7 +82,7 @@ public class Directory extends Item<Directory> {
 	public void create() throws DocumentException {
 		FragmentHelper helper = new FragmentHelper();
 		helper.openElement(MetaDataMgrImpl.DIR_TAG);
-		helper.attribute(MetaDataMgrImpl.NAME_ATTRIBUTE, name);
+		helper.attribute(MetaDataMgrImpl.NAME_ATTR, new Str(name));
 		helper.closeElement();
 		Node<?> toMaterialize = helper.getRoot();
 

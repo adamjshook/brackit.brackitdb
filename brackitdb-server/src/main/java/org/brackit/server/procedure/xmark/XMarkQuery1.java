@@ -69,6 +69,7 @@ import org.brackit.xquery.util.path.PathException;
 import org.brackit.xquery.xdm.Axis;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
+import org.brackit.xquery.xdm.OperationNotSupportedException;
 import org.brackit.xquery.xdm.Sequence;
 
 /**
@@ -112,7 +113,7 @@ public class XMarkQuery1 implements Procedure {
 			evaluateWithDocumentScan(ctx, doc, out, false);
 			break;
 		case 3:
-			evaluateWithElementIndex(ctx, doc, out);
+			evaluateWithNameIndex(ctx, doc, out);
 			break;
 		case 4:
 			evaluateWithPathAndContentIndex(ctx, doc, out);
@@ -219,24 +220,28 @@ public class XMarkQuery1 implements Procedure {
 		long end = System.currentTimeMillis();
 	}
 
-	private void evaluateWithElementIndex(TXQueryContext ctx, TXNode<?> doc,
+	private void evaluateWithNameIndex(TXQueryContext ctx, TXNode<?> doc,
 			StringBuilder out) throws QueryException, DocumentException {
-		IndexDef elementIndex = doc.getCollection().get(Indexes.class)
-				.findElementIndex();
+		QNm site = new QNm("site");
+		QNm people = new QNm("people");
+		QNm person = new QNm("person");
+		IndexDef nameIndex = doc.getCollection().get(Indexes.class)
+				.findNameIndex(site, people, person);
 
-		if (elementIndex == null) {
-			throw new DocumentException("No element index found");
+		if (nameIndex == null) {
+			throw new DocumentException("No name index found");
 		}
 
-		int elementIndexNo = elementIndex.getID();
+		int nameIndexNo = nameIndex.getID();
 		IndexController<?> indexController = doc.getCollection()
 				.getIndexController();
-		Cursor in1 = new StreamOperator(indexController.openElementIndex(
-				elementIndexNo, "site", SearchMode.FIRST));
-		Cursor in2 = new StreamOperator(indexController.openElementIndex(
-				elementIndexNo, "people", SearchMode.FIRST));
-		Cursor in3 = new StreamOperator(indexController.openElementIndex(
-				elementIndexNo, "person", SearchMode.FIRST));
+		Cursor in1 = new StreamOperator(indexController.openNameIndex(
+				nameIndexNo, site, SearchMode.FIRST));
+		Cursor in2 = new StreamOperator(indexController.openNameIndex(
+				nameIndexNo, people, SearchMode.FIRST));
+		
+		Cursor in3 = new StreamOperator(indexController.openNameIndex(
+				nameIndexNo, person, SearchMode.FIRST));
 
 		Cursor join;
 		join = new MergeJoin(in1, in2, new AxisPredicate(Axis.PARENT,
@@ -272,8 +277,11 @@ public class XMarkQuery1 implements Procedure {
 			TXNode<?> doc, StringBuilder out) throws QueryException {
 		IndexDef pathIndex = doc.getCollection().get(Indexes.class)
 				.findPathIndex(Path.parse("/site/people/person"));
-		IndexDef contentIndex = doc.getCollection().get(Indexes.class)
-				.findContentIndex();
+
+		// IndexDef contentIndex = doc.getCollection().get(Indexes.class)
+		// .findContentIndex();
+		// TODO
+		IndexDef contentIndex = null;
 
 		if (pathIndex == null) {
 			throw new DocumentException("No path index found");
@@ -292,9 +300,12 @@ public class XMarkQuery1 implements Procedure {
 		Filter filter = indexController.createPathFilter("/site/people/person");
 		Cursor in1 = new StreamOperator(indexController.openPathIndex(
 				pathIndexNo, filter, SearchMode.FIRST));
-		Cursor in2 = new StreamOperator(indexController.openContentIndex(
-				contentIndexNo, new Str("person0"), new Str("person0"), true,
-				true, SearchMode.GREATER_OR_EQUAL));
+		
+//		Cursor in2 = new StreamOperator(indexController.openContentIndex(
+//				contentIndexNo, new Str("person0"), new Str("person0"), true,
+//				true, SearchMode.GREATER_OR_EQUAL));
+		// TODO
+		Cursor in2 = null;
 
 		MergeJoin join = new MergeJoin(in1, in2, new AxisPredicate(
 				Axis.ANCESTOR, new BoundVariable(new QNm("l"), 0),

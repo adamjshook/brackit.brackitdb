@@ -28,6 +28,8 @@
 package org.brackit.server.node.util;
 
 import org.brackit.xquery.QueryContext;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
 import org.brackit.xquery.xdm.Node;
@@ -108,7 +110,7 @@ public class Traverser {
 			}
 		} else if (node.getKind() == Kind.TEXT) {
 			stats.countText();
-			String text = node.getValue();
+			Atomic text = node.getValue();
 		} else {
 			throw new DocumentException("Unexpected node type: %s", node);
 		}
@@ -142,7 +144,7 @@ public class Traverser {
 			}
 		} else if (node.getKind() == Kind.TEXT) {
 			stats.countText();
-			String text = node.getValue();
+			Atomic text = node.getValue();
 		} else {
 			throw new DocumentException("Unexpected node type: %s", node);
 		}
@@ -213,8 +215,8 @@ public class Traverser {
 		while ((attribute = attributes.next()) != null) {
 			processed++;
 			stats.countAttribute();
-			String attributeName = attribute.getName();
-			String attributeValue = attribute.getValue();
+			QNm attributeName = attribute.getName();
+			Atomic attributeValue = attribute.getValue();
 		}
 		attributes.close();
 

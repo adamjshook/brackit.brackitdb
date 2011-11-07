@@ -27,6 +27,7 @@
  */
 package org.brackit.server.metadata.pathSynopsis;
 
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.xdm.DocumentException;
 
 /**
@@ -34,7 +35,8 @@ import org.brackit.xquery.xdm.DocumentException;
  * 
  */
 public interface PSSnapshotBuilder {
-	public void startNode(int PCR, int vocID, String nodeName, byte nodeType)
+	public void startNode(int PCR, int uriVocID, int prefixVocID,
+			int localNameVocID, QNm nodeName, byte nodeType)
 			throws DocumentException;
 
 	public void endNode() throws DocumentException;

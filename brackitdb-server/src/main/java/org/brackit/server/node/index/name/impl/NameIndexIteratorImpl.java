@@ -25,27 +25,70 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.index.element.impl;
+package org.brackit.server.node.index.name.impl;
 
-import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.store.Field;
+import org.brackit.xquery.util.log.Logger;
+import org.brackit.server.node.txnode.IndexEncoder;
+import org.brackit.server.store.index.IndexAccessException;
+import org.brackit.server.store.index.IndexIterator;
+import org.brackit.xquery.xdm.DocumentException;
+import org.brackit.xquery.xdm.Node;
+import org.brackit.xquery.xdm.Stream;
 
 /**
  * @author Sebastian Baechle
  * 
  */
-public interface NameDirectoryEncoder {
-	public byte[] encodeKey(int vocID);
+public class NameIndexIteratorImpl<E extends Node<E>> implements Stream<E> {
+	private static final Logger log = Logger
+			.getLogger(NameIndexIteratorImpl.class);
 
-	public byte[] encodeValue(PageID pageID);
+	private IndexIterator iterator;
 
-	public int decodeVocID(byte[] key);
+	private final IndexEncoder<E> encoder;
 
-	public PageID decodePageID(byte[] value);
+	private boolean first = true;
 
-	public Field getKeyType();
+	public NameIndexIteratorImpl(IndexIterator iterator,
+			IndexEncoder<E> encoder) {
+		this.iterator = iterator;
+		this.encoder = encoder;
+	}
 
-	public Field getValueType();
+	@Override
+	public E next() throws DocumentException {
+		if (iterator == null) {
+			return null;
+		}
 
-	public boolean sortRequired();
+		try {
+			if (!first) {
+				iterator.next();
+			} else {
+				first = false;
+			}
+
+			byte[] key = iterator.getKey();
+			if (key == null) {
+				return null;
+			}
+
+			byte[] value = iterator.getValue();
+
+			return encoder.decode(key, value);
+		} catch (DocumentException e) {
+			close();
+			throw e;
+		} catch (IndexAccessException e) {
+			throw new DocumentException(e);
+		}
+	}
+
+	@Override
+	public void close() {
+		if (iterator != null) {
+			iterator.close();
+			iterator = null;
+		}
+	}
 }

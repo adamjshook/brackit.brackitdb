@@ -27,63 +27,76 @@
  */
 package org.brackit.server.node.index.definition;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.Type;
 
 /**
+ * Utility class for simplified index definition creation.
+ * 
  * @author Sebastian Baechle
+ * @author Max Bechtold
  * 
  */
 public class IndexDefBuilder {
 
 	public final static Cluster DEFAULT_CLUSTER = Cluster.SPLID;
 
-	public IndexDefBuilder() {
+	private IndexDefBuilder() {
 	}
 
-	IndexDef createContentIndexDefinition(boolean onElementContent,
-			boolean onAttributeContent, Type type) {
-		return new IndexDef(type, onElementContent, onAttributeContent, false);
-	}
-
-	IndexDef createCASIndexDefinition(List<Path<String>> paths,
-			Cluster cluster, boolean unique, Type type) {
-
-		if (cluster == null)
+	public static IndexDef createCASIdxDef(Cluster cluster, boolean unique, 
+			Type type, List<Path<QNm>> paths) {
+		if (cluster == null) {
 			cluster = DEFAULT_CLUSTER;
+		}
+		if (type == null) {
+			type = Type.STR;
+		}
 		return new IndexDef(type, cluster, paths, unique);
 	}
 
-	IndexDef createPathIndexDefinition(List<Path<String>> paths, Cluster cluster) {
-
-		if (cluster == null)
+	public static IndexDef createPathIdxDef(Cluster cluster, 
+			List<Path<QNm>> paths) {
+		if (cluster == null) {
 			cluster = DEFAULT_CLUSTER;
+		}
 		return new IndexDef(cluster, paths);
 	}
 
-	IndexDef createFilteredElementIndexDefinition(Cluster cluster,
-			List<String> filter) {
+	public static IndexDef createNameIdxDef(Cluster cluster) {
+		HashSet<QNm> excluded = new HashSet<QNm>();
+		HashMap<QNm, Cluster> included = new HashMap<QNm, Cluster>();
 
-		HashSet<String> excluded = new HashSet<String>(filter);
-		HashMap<String, Cluster> included = new HashMap<String, Cluster>();
-
-		if (cluster == null)
+		if (cluster == null) {
 			cluster = DEFAULT_CLUSTER;
+		}
+		return new IndexDef(cluster, included, excluded);
+	}
+	
+	public static IndexDef createFilteredNameIdxDef(Cluster cluster, 
+			QNm... filter) {
+		HashSet<QNm> excluded = new HashSet<QNm>(Arrays.asList(filter));
+		HashMap<QNm, Cluster> included = new HashMap<QNm, Cluster>();
+
+		if (cluster == null) {
+			cluster = DEFAULT_CLUSTER;
+		}
 		return new IndexDef(cluster, included, excluded);
 	}
 
-	IndexDef createSelectiveElementIndexDefinition(
-			Map<String, Cluster> included, Cluster cluster) {
-
-		HashSet<String> excluded = new HashSet<String>();
-
-		if (cluster == null)
+	public static IndexDef createSelectiveNameIdxDef(Cluster cluster, 
+			Map<QNm, Cluster> included) {
+		HashSet<QNm> excluded = new HashSet<QNm>();
+		if (cluster == null) {
 			cluster = DEFAULT_CLUSTER;
+		}
 		return new IndexDef(cluster, included, excluded);
 	}
 }

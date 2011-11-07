@@ -25,14 +25,15 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.index.element.impl;
+package org.brackit.server.node.index.name.impl;
 
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.index.definition.IndexDef;
-import org.brackit.server.node.index.element.ElementIndex;
 import org.brackit.server.node.index.external.IndexStatistics;
+import org.brackit.server.node.index.name.NameIndex;
+import org.brackit.server.node.index.name.impl.NameDirectoryEncoderImpl.QVocID;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.node.txnode.IndexEncoderHelper;
 import org.brackit.server.node.txnode.TXNode;
@@ -55,15 +56,15 @@ import org.brackit.xquery.xdm.Stream;
  * @author Sebastian Baechle
  * 
  */
-public class ElementIndexImpl<E extends TXNode<E>> implements ElementIndex<E> {
+public class NameIndexImpl<E extends TXNode<E>> implements NameIndex<E> {
 	private final Index index;
 
-	private final NameDirectoryEncoder nameDirectoryEncoder;
+	private final NameDirectoryEncoder nameDirEncoder;
 
-	public ElementIndexImpl(BufferMgr bufferMgr) {
+	public NameIndexImpl(BufferMgr bufferMgr) {
 		this.index = new BPlusIndex(bufferMgr, new KVLLockService(
-				ElementIndex.class.getSimpleName()));
-		this.nameDirectoryEncoder = new NameDirectoyEncoderImpl();
+				NameIndex.class.getSimpleName()));
+		this.nameDirEncoder = new NameDirectoryEncoderImpl();
 	}
 
 	@Override
@@ -85,7 +86,7 @@ public class ElementIndexImpl<E extends TXNode<E>> implements ElementIndex<E> {
 			if (iterator.getKey() != null) {
 				do {
 					byte[] value = iterator.getValue();
-					PageID nodeReferenceIdxNo = nameDirectoryEncoder
+					PageID nodeReferenceIdxNo = nameDirEncoder
 							.decodePageID(value);
 					SizeCounterVisitor scv = new SizeCounterVisitor();
 					index.traverse(tx, nodeReferenceIdxNo, scv);
@@ -117,32 +118,30 @@ public class ElementIndexImpl<E extends TXNode<E>> implements ElementIndex<E> {
 	public SubtreeListener<? super E> createBuilder(Tx tx,
 			IndexEncoderHelper<E> helper, int containerNo, IndexDef idxDef)
 			throws DocumentException {
-		return new ElementIndexBuilder<E>(tx, index, helper, containerNo,
-				idxDef);
+		return new NameIndexBuilder<E>(tx, index, helper, containerNo, idxDef);
 	}
 
 	public Stream<? extends E> open(Tx tx, IndexEncoderHelper<E> helper,
-			int inverseIdxNo, int vocID, SearchMode searchMode,
+			int inverseIdxNo, QVocID qVocID, SearchMode searchMode,
 			XTCdeweyID deweyID) throws DocumentException {
 		IndexIterator iterator = null;
 		try {
 			byte[] value = index.read(tx, new PageID(inverseIdxNo),
-					nameDirectoryEncoder.encodeKey(vocID));
+					nameDirEncoder.encodeKey(qVocID));
 
 			if (value != null) {
-				IndexEncoder<E> nodeReferenceEncoder = helper
-						.getElementIndexEncoder();
-				PageID nodeReferenceIdxNo = nameDirectoryEncoder
-						.decodePageID(value);
+				IndexEncoder<E> nodeRefEncoder = 
+					helper.getNameIndexEncoder();
+				PageID nodeReferenceIdxNo = nameDirEncoder.decodePageID(value);
 				byte[] openKey = (deweyID != null) ? deweyID.toBytes() : null;
 				byte[] openValue = (deweyID != null) ? deweyID.toBytes() : null;
 				iterator = index.open(tx, nodeReferenceIdxNo, searchMode,
 						openKey, openValue, OpenMode.READ);
-				return new ElementIndexIteratorImpl<E>(iterator,
-						nodeReferenceEncoder);
+				return new NameIndexIteratorImpl<E>(iterator,
+						nodeRefEncoder);
 			} else {
 				iterator = new NullIndexIterator(Field.NULL, Field.NULL);
-				return new ElementIndexIteratorImpl<E>(iterator, null);
+				return new NameIndexIteratorImpl<E>(iterator, null);
 			}
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
@@ -153,12 +152,12 @@ public class ElementIndexImpl<E extends TXNode<E>> implements ElementIndex<E> {
 	public SubtreeListener<? super E> createListener(Tx tx,
 			IndexEncoderHelper<E> helper, ListenMode mode, IndexDef idxDef)
 			throws DocumentException {
-		return new ElementIndexListener<E>(tx, index, helper, idxDef, mode);
+		return new NameIndexListener<E>(tx, index, helper, idxDef, mode);
 	}
 
 	@Override
 	public void drop(Tx tx, int indexNo) throws DocumentException {
-		NameDirectoryEncoder encoder = new NameDirectoyEncoderImpl();
+		NameDirectoryEncoder encoder = new NameDirectoryEncoderImpl();
 		PageID rootPageID = new PageID(indexNo);
 		IndexIterator iterator = null;
 
@@ -171,8 +170,8 @@ public class ElementIndexImpl<E extends TXNode<E>> implements ElementIndex<E> {
 					byte[] value = iterator.getValue();
 
 					if (value != null) {
-						PageID nodeReferenceIdxNo = encoder.decodePageID(value);
-						index.dropIndex(tx, nodeReferenceIdxNo);
+						PageID nodeRefIdxNo = encoder.decodePageID(value);
+						index.dropIndex(tx, nodeRefIdxNo);
 					}
 				} while (iterator.next());
 			} finally {

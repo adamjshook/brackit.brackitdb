@@ -32,6 +32,8 @@ import java.util.List;
 
 import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.DefaultHandler;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
@@ -84,7 +86,7 @@ public abstract class RecordGenerator extends DefaultHandler {
 	}
 
 	@Override
-	public void text(String content) throws DocumentException {
+	public void text(Atomic content) throws DocumentException {
 		level++;
 		lastAttributeDeweyID = null;
 		Record node = pushNode(Kind.TEXT, null, content);
@@ -96,7 +98,7 @@ public abstract class RecordGenerator extends DefaultHandler {
 	}
 
 	@Override
-	public void comment(String content) throws DocumentException {
+	public void comment(Atomic content) throws DocumentException {
 		// root-level comments are not supported yet
 		if (level == 0) {
 			return;
@@ -113,15 +115,17 @@ public abstract class RecordGenerator extends DefaultHandler {
 	}
 
 	@Override
-	public void processingInstruction(String content) throws DocumentException {
+	public void processingInstruction(QNm name, Atomic content) 
+	throws DocumentException {
 		// processing instructions not working yet
+		// TODO Is this still true?
 		if (true) {
 			return;
 		}
 
 		level++;
 		lastAttributeDeweyID = null;
-		Record node = pushNode(Kind.PROCESSING_INSTRUCTION, null, content);
+		Record node = pushNode(Kind.PROCESSING_INSTRUCTION, name, content);
 
 		if (level < (stackSize - 1)) {
 			stack[--stackSize] = null;
@@ -130,7 +134,7 @@ public abstract class RecordGenerator extends DefaultHandler {
 	}
 
 	@Override
-	public void startElement(String name) throws DocumentException {
+	public void startElement(QNm name) throws DocumentException {
 		level++;
 		lastAttributeDeweyID = null;
 		// System.err.println("start element: Incremented level to " +
@@ -139,7 +143,7 @@ public abstract class RecordGenerator extends DefaultHandler {
 	}
 
 	@Override
-	public void attribute(String name, String value) throws DocumentException {
+	public void attribute(QNm name, Atomic value) throws DocumentException {
 		XTCdeweyID deweyID = lastAttributeDeweyID;
 
 		if (subtreeRootDeweyID != null) {
@@ -155,7 +159,7 @@ public abstract class RecordGenerator extends DefaultHandler {
 		Record node = buildAttribute(deweyID, name, value);
 	}
 
-	private Record pushNode(Kind kind, String name, String text)
+	private Record pushNode(Kind kind, QNm name, Atomic value)
 			throws DocumentException {
 		Record node = null;
 		XTCdeweyID deweyID = null;
@@ -181,11 +185,11 @@ public abstract class RecordGenerator extends DefaultHandler {
 		if (kind == Kind.ELEMENT) {
 			node = buildElement(deweyID, name);
 		} else if (kind == Kind.TEXT) {
-			node = buildText(deweyID, text);
+			node = buildText(deweyID, value);
 		} else if (kind == Kind.COMMENT) {
-			node = buildComment(deweyID, text);
+			node = buildComment(deweyID, value);
 		} else if (kind == Kind.PROCESSING_INSTRUCTION) {
-			node = buildProcessingInstruction(deweyID, text);
+			node = buildProcessingInstruction(deweyID, name, value);
 		}
 
 		if (stackSize == 0) {
@@ -203,7 +207,7 @@ public abstract class RecordGenerator extends DefaultHandler {
 	}
 
 	@Override
-	public void endElement(String name) throws DocumentException {
+	public void endElement(QNm name) throws DocumentException {
 		level--;
 		lastAttributeDeweyID = null;
 		// System.err.println("end element: Decremented level to " + level);
@@ -213,18 +217,18 @@ public abstract class RecordGenerator extends DefaultHandler {
 		}
 	}
 
-	public abstract Record buildAttribute(XTCdeweyID deweyID, String name,
-			String value) throws DocumentException;
+	public abstract Record buildAttribute(XTCdeweyID deweyID, QNm name,
+			Atomic value) throws DocumentException;
 
-	public abstract Record buildElement(XTCdeweyID deweyID, String name)
+	public abstract Record buildElement(XTCdeweyID deweyID, QNm name)
 			throws DocumentException;
 
-	public abstract Record buildText(XTCdeweyID deweyID, String value)
+	public abstract Record buildText(XTCdeweyID deweyID, Atomic value)
 			throws DocumentException;
 
-	public abstract Record buildComment(XTCdeweyID deweyID, String value)
+	public abstract Record buildComment(XTCdeweyID deweyID, Atomic value)
 			throws DocumentException;
 
 	public abstract Record buildProcessingInstruction(XTCdeweyID deweyID,
-			String value) throws DocumentException;
+			QNm name, Atomic value) throws DocumentException;
 }

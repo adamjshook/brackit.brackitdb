@@ -41,6 +41,8 @@ import javax.xml.parsers.SAXParserFactory;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsis;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisNode;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.Kind;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -76,30 +78,17 @@ public class PathSynopsisTest {
 		List<Float> msr = new ArrayList<Float>();
 
 		for (String query : queries) {
+			Path<QNm> path = Path.parse(query);
 			Set<Integer> result = null;
 			System.out.println("Testing query #" + (msr.size() + 1) + ": '"
-					+ query + "'");
-			startMillis = System.currentTimeMillis();
-			System.out.println("getPCRsForPathMax invoked at "
-					+ sdf.format(new Date(startMillis)) + "...");
-
-			for (int i = 0; i < ITERATIONS; i++) {
-				ps.clearCache();
-				result = ps.getPCRsForPathMax(null, query);
-			}
-
-			endMillis = System.currentTimeMillis();
-			long optTime = endMillis - startMillis;
-			System.out.println("Finished in " + optTime + " ms.");
-			System.out.println("Returned PCRs: " + result);
-
+					+ path + "'");
 			startMillis = System.currentTimeMillis();
 			System.out.println("getPCRsForPathSebastian invoked at "
 					+ sdf.format(new Date(startMillis)) + "...");
 
 			for (int i = 0; i < ITERATIONS; i++) {
 				ps.clearCache();
-				result = ps.getPCRsForPath(null, query);
+				result = ps.getPCRsForPath(null, path);
 			}
 
 			endMillis = System.currentTimeMillis();
@@ -113,8 +102,7 @@ public class PathSynopsisTest {
 		for (Float f : msr) {
 			sum += f;
 		}
-		System.out
-				.println("Average speedup: " + (sum / queries.length));
+		System.out.println("Average speedup: " + (sum / queries.length));
 
 	}
 
@@ -142,14 +130,16 @@ class PathSynopsisHandler extends org.xml.sax.helpers.DefaultHandler {
 	@Override
 	public void startElement(String uri, String localName, String name,
 			Attributes attributes) throws SAXException {
-		PathSynopsisNode newNode = ps.getNewNode(name.substring(1), Integer
-				.parseInt(name.substring(1)), Kind.ELEMENT.ID, contextNode, 0);
+		PathSynopsisNode newNode = ps.getNewNode(new QNm(name.substring(1)),
+				-1, -1, Integer.parseInt(name.substring(1)), Kind.ELEMENT.ID,
+				null, contextNode, 0);
 		contextNode = newNode;
 
 		for (int i = 0; i < attributes.getLength(); i++) {
 			String aName = attributes.getQName(i);
-			ps.getNewNode(aName.substring(1), Integer.parseInt(aName
-					.substring(1)), Kind.ATTRIBUTE.ID, contextNode, 0);
+			ps.getNewNode(new QNm(aName.substring(1)), -1, -1, Integer
+					.parseInt(aName.substring(1)), Kind.ATTRIBUTE.ID, null,
+					contextNode, 0);
 		}
 	}
 

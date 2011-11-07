@@ -27,6 +27,8 @@
  */
 package org.brackit.server.metadata.pathSynopsis;
 
+import org.brackit.xquery.atomic.QNm;
+
 /**
  * @author Sebastian Baechle
  * 
@@ -34,11 +36,22 @@ package org.brackit.server.metadata.pathSynopsis;
 public interface PSNode {
 	public int getPCR();
 
-	public int getVocID();
+	public int getURIVocID();
 
-	public String getName();
+	public int getPrefixVocID();
+
+	public int getLocalNameVocID();
+
+	public QNm getName();
 
 	public int getLevel();
 
 	public PSNode getParent();
+
+	/**
+	 * Returns local prefix declarations. If there are none, null is returned.
+	 */
+	public NsMapping getNsMapping();
+	
+	public boolean hasNsMapping(NsMapping nsMapping);
 }

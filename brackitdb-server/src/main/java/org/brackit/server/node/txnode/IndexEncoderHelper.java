@@ -41,13 +41,10 @@ public interface IndexEncoderHelper<E extends Node<E>> {
 	public IndexEncoder<E> getCasIndexEncoder(Type contentType, Field keyType,
 			Field valueType) throws DocumentException;
 
-	public IndexEncoder<E> getContentIndexEncoder(Type contentType,
-			Field keyType, Field valueType) throws DocumentException;
-
 	public IndexEncoder<E> getPathIndexEncoder(Field keyType, Field valueType)
 			throws DocumentException;
 
-	public IndexEncoder<E> getElementIndexEncoder() throws DocumentException;
+	public IndexEncoder<E> getNameIndexEncoder() throws DocumentException;
 
 	public DictionaryMgr getDictionary();
 }

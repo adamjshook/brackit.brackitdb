@@ -32,7 +32,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.brackit.server.metadata.pathSynopsis.NsMapping;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.util.path.PathException;
 import org.brackit.xquery.xdm.DocumentException;
@@ -73,7 +75,7 @@ public class PathSynopsis {
 	private int psIdxNo = -1;
 
 	// needs to be cleared when a path is added or removed !!
-	private HashMap<String, Set<Integer>> pathCache = new HashMap<String, Set<Integer>>();
+	private HashMap<Path<QNm>, Set<Integer>> pathCache = new HashMap<Path<QNm>, Set<Integer>>();
 
 	public PathSynopsis(int idxNo) {
 		this.psIdxNo = idxNo;
@@ -81,11 +83,16 @@ public class PathSynopsis {
 		this.pcrTable = new PathSynopsisNode[20];
 	}
 
-	public PathSynopsisNode getNewNode(int pcr, String name, int vocId,
-			byte kind, PathSynopsisNode parent) {
+	public PathSynopsisNode getNewNode(int pcr, QNm name, int uriVocID,
+			int prefixVocID, int localNameVocID, byte kind,
+			NsMapping nsMapping, PathSynopsisNode parent) {
 		pathCache.clear();
-		PathSynopsisNode psN = new PathSynopsisNode(vocId, pcr, name, kind,
-				parent, this);
+		
+		if (nsMapping != null) {
+			nsMapping.finalize();
+		}
+		PathSynopsisNode psN = new PathSynopsisNode(uriVocID, prefixVocID,
+				localNameVocID, pcr, name, kind, nsMapping, parent, this);
 
 		if (pcr > this.pcr) {
 			this.pcr++;
@@ -116,155 +123,21 @@ public class PathSynopsis {
 		return psN;
 	}
 
-	public PathSynopsisNode getNewNode(String name, int vocId, byte kind,
+	public PathSynopsisNode getNewNode(QNm name, int uriVocID, int prefixVocID,
+			int localNameVocID, byte kind, NsMapping nsMapping,
 			PathSynopsisNode parent, int count) {
-		return getNewNode(++pcr, name, vocId, kind, parent);
+		return getNewNode(++pcr, name, uriVocID, prefixVocID, localNameVocID,
+				kind, nsMapping, parent);
 	}
 
 	public PathSynopsisNode getNodeByPcr(int pcr) {
 		return ((pcr <= this.pcr) && (pcr > 0)) ? pcrTable[pcr] : null;
 	}
 
-	@Deprecated
-	public Set<Integer> getPCRsForPathMax(Tx transaction, String queryString) {
-		Set<Integer> returnSet = this.pathCache.get(queryString);
-		if (returnSet == null)
-			returnSet = new HashSet<Integer>();
-		else
-			return returnSet;
-
-		PathSynopsisNode checkedNode = null;
-		PathSynopsisNode currentNode = null;
-		PathSynopsisNode pendingNode = null;
-
-		String[] queryArray = queryString.split("/");
-		String lastPart = queryArray[queryArray.length - 1];
-
-		// Determine number of actual elements for level value
-		int e = 0;
-		for (String part : queryArray) {
-			if (!part.isEmpty())
-				e++;
-		}
-
-		// 1st pass: Filter out non-qualifying nodes
-		// by looking at their names
-		// (i.e. end of resp. path)
-		for (int i = 1; i <= pcr; i++) {
-			checkedNode = pcrTable[i];
-
-			if (checkedNode == null) {
-				continue;
-			}
-			currentNode = checkedNode;
-			pendingNode = null;
-
-			int depth = queryArray.length - 1;
-			boolean unmatch = false;
-			boolean wildcard = false;
-			int pending = -1;
-			int cl = e; // current level
-			int pl = 0; // pending level
-
-			// Handle case when query ends on attribute
-			if (lastPart.startsWith("@")) {
-				if (currentNode.getKind() != Kind.ATTRIBUTE.ID
-						|| !String.valueOf(currentNode.getVocID()).equals(
-								lastPart.substring(1))) {
-					unmatch = true;
-				} else {
-					depth--;
-					cl--;
-					currentNode = currentNode.getParent();
-				}
-			}
-
-			// Bottom-up run through query resp. path arrays to decide whether
-			// they match or not
-			// Note: First element of queryArray will always be empty (due to
-			// split op on "/...")
-			while (!unmatch && depth > 0 && currentNode != null
-					&& cl <= currentNode.getLevel() + 1) {
-				if (queryArray[depth].isEmpty()) { // wildcard found
-					if (depth == 1) {
-						break;
-					} else {
-						pending = --depth;
-						wildcard = true;
-						pendingNode = null;
-					}
-				}
-
-				while (depth > 0 && currentNode != null
-						&& cl <= currentNode.getLevel() + 1) {
-					if (!queryArray[depth].equals("*")
-							&& !queryArray[depth].equals(String
-									.valueOf(currentNode.getVocID()))) {
-						unmatch = true;
-					} else {
-						unmatch = false;
-						depth--;
-						cl--;
-						if (wildcard && currentNode.getLevel() > 0) {
-							pendingNode = currentNode;
-							pl = cl;
-						}
-					}
-
-					currentNode = currentNode.getParent();
-
-					if (!wildcard || !unmatch) {
-						break;
-					}
-				}
-
-				wildcard = false;
-
-				if (pendingNode != null && (unmatch || depth == 0)) {
-					// Reset to pending node´s parent
-					// and continue searching
-					currentNode = pendingNode.getParent();
-					pendingNode = null;
-					depth = pending;
-					cl = pl;
-					unmatch = false;
-					wildcard = true;
-				}
-
-			}
-
-			// Treat different cases of termination and set unmatch accordingly
-			if (depth == 1 && queryArray[1].isEmpty() && !unmatch) {
-				// query starts with wildcard and path
-				// matches until there unmatch = false;
-				// obsolete
-			} else if ((depth == 0 && currentNode != null)
-					|| (depth > 0 && currentNode == null)) {
-				// path matched until end, but either
-				// path or query unfinished
-				unmatch = true;
-			} else if (currentNode != null && cl > currentNode.getLevel() + 1) {
-				// too few elements/ left in path
-				// to match query
-				unmatch = true;
-			}
-
-			if (!unmatch) {
-				// if the paths match add this
-				// node to the return set
-				returnSet.add(checkedNode.getPCR());
-			}
-
-		}
-
-		this.pathCache.put(queryString, returnSet);
-		return returnSet;
-	}
-
-	public Set<Integer> getPCRsForPath(Tx transaction, String queryString)
+	public Set<Integer> getPCRsForPath(Tx transaction, Path<QNm> path)
 			throws DocumentException {
 		try {
-			Set<Integer> pcrSet = pathCache.get(queryString);
+			Set<Integer> pcrSet = pathCache.get(path);
 
 			if (pcrSet != null) {
 				return pcrSet;
@@ -272,7 +145,6 @@ public class PathSynopsis {
 
 			pcrSet = new HashSet<Integer>();
 
-			Path<String> path = Path.parse(queryString);
 			boolean isAttributePattern = path.isAttribute();
 			int pathLength = path.getLength();
 
@@ -295,7 +167,7 @@ public class PathSynopsis {
 					pcrSet.add(node.getPCR());
 				}
 			}
-			pathCache.put(queryString, pcrSet);
+			pathCache.put(path, pcrSet);
 			return pcrSet;
 		} catch (PathException e) {
 			throw new DocumentException(e);
@@ -332,8 +204,9 @@ public class PathSynopsis {
 
 		StringBuffer buf = levelBuffers.get(node.getLevel() - 1);
 		String str = String.format("[%s:%s]  ", node.getPCR(),
-				(node.getKind() == Kind.ATTRIBUTE.ID) ? "@" + node.getVocID()
-						: node.getVocID());
+				((node.getKind() == Kind.ATTRIBUTE.ID) ? "@" : "")
+						+ String.format("(%s,%s,%s)", node.getURIVocID(), node
+								.getPrefixVocID(), node.getLocalNameVocID()));
 		buf.append(str);
 
 		if (levelBuffers.size() - 1 > node.getLevel()) // child level exists

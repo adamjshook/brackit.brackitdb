@@ -32,6 +32,8 @@ import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
+import org.brackit.server.node.index.name.impl.NameDirectoryEncoderImpl.QVocID;
+
 /**
  * Swiss army knife for encoding/decoding of basic data types.
  * 
@@ -127,7 +129,15 @@ public final class Calc {
 		byte[] tmp = s.getBytes(UTF8);
 		System.arraycopy(tmp, 0, b, off, tmp.length);
 	}
-
+	
+	public static byte[] fromQVocID(QVocID qVocID) {
+		byte[] b1 = fromInt(qVocID.uriVocID);
+		byte[] b2 = fromInt(qVocID.nameVocID);
+		byte[] bytes = Arrays.copyOf(b1, b1.length + b2.length);
+		System.arraycopy(b2, 0, bytes, b1.length, b2.length);
+		return bytes;
+	}
+	
 	public static int toUIntVar(byte[] b) {
 		int len = b.length;
 		if (len == 1) {

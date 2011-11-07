@@ -33,8 +33,8 @@ import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.node.el.index.ElBPlusIndex;
 import org.brackit.server.node.index.cas.CASIndex;
 import org.brackit.server.node.index.cas.impl.CASIndexImpl;
-import org.brackit.server.node.index.element.ElementIndex;
-import org.brackit.server.node.index.element.impl.ElementIndexImpl;
+import org.brackit.server.node.index.name.NameIndex;
+import org.brackit.server.node.index.name.impl.NameIndexImpl;
 import org.brackit.server.node.index.path.PathIndex;
 import org.brackit.server.node.index.path.impl.PathIndexImpl;
 import org.brackit.server.tx.locking.services.MetaLockService;
@@ -54,7 +54,7 @@ public class ElStore {
 
 	protected final PathSynopsisMgrFactory pathSynopsisMgrFactory;
 
-	protected final ElementIndex<ElNode> elementIndex;
+	protected final NameIndex<ElNode> nameIndex;
 
 	protected final PathIndex<ElNode> pathIndex;
 
@@ -66,7 +66,7 @@ public class ElStore {
 		this.index = new ElBPlusIndex(bufferMgr, new ElRecordAccess());
 		this.bufferMgr = bufferMgr;
 		this.pathSynopsisMgrFactory = new PathSynopsisMgrFactory(bufferMgr);
-		this.elementIndex = new ElementIndexImpl<ElNode>(bufferMgr);
+		this.nameIndex = new NameIndexImpl<ElNode>(bufferMgr);
 		this.pathIndex = new PathIndexImpl<ElNode>(bufferMgr);
 		this.casIndex = new CASIndexImpl<ElNode>(bufferMgr);
 		this.mls = mls;

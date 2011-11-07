@@ -40,6 +40,8 @@ import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.node.txnode.TXCollection;
 import org.brackit.server.node.txnode.TXNodeTest;
 import org.brackit.server.tx.TxException;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.node.SubtreePrinter;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.node.parser.FragmentHelper;
@@ -58,6 +60,8 @@ import org.xml.sax.InputSource;
  */
 public class ElNodeTest extends TXNodeTest<ElNode> {
 	protected ElStore elStore;
+	
+	private static final File bigDocument = new File("xmark100.xml");
 
 	@Test
 	public void testFromBytes() throws Exception {
@@ -77,11 +81,12 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		check(firstnameT, deweyID4, Kind.TEXT, "", "Kurt");
 	}
 	
-	private void check(ElNode node, XTCdeweyID deweyID, Kind kind, String name, String value) throws DocumentException {
+	private void check(ElNode node, XTCdeweyID deweyID, Kind kind, 
+			String name, String value) throws DocumentException {
 		assertEquals("DeweyID is correct", deweyID, node.getDeweyID());
 		assertEquals("Kind is correct", kind, node.getKind());
 		assertEquals("Name is correct", name, node.getName());
-		assertEquals("Value is correct", value, node.getValue());
+		assertEquals("Value is correct", value, node.getValue().stringValue());
 	}
 	
 	
@@ -98,13 +103,13 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		printIndex(tx, "/media/ramdisk/testEmptyElementUnderRollback1_1.dot",
 				locator.getID(), true);
 
-		root.setAttribute("att", "test");
+		root.setAttribute(new QNm("att"), new Una("test"));
 
 		printIndex(tx, "/media/ramdisk/testEmptyElementUnderRollback1_2.dot",
 				locator.getID(), true);
 
 		root.insertRecord(root.getDeweyID().getNewChildID(), Kind.ELEMENT,
-				"child");
+				new QNm("child"), null);
 
 		printIndex(tx, "/media/ramdisk/testEmptyElementUnderRollback1_3.dot",
 				locator.getID(), true);
@@ -119,17 +124,27 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 	@Test
 	public void traverseBigDocumentInPreOrder() throws Exception,
 			FileNotFoundException {
-		TXCollection<ElNode> locator = createDocument(new DocumentParser(
-				new File("/home/sbaechl/projects/xtc/docs/xmark8.xml")));
-		// Logger.getLogger(BPlusIndex.class.getName()).setLevel(org.apache.log4j.Level.TRACE);
-		ElNode root = locator.getDocument().getFirstChild().getNode(
-				XTCdeweyID.newRootID(locator.getID()));
-		Node domRoot = createDomTree(ctx, new InputSource(new FileReader(
-				"/home/sbaechl/projects/xtc/docs/xmark8.xml")));
+		
 		long start = System.currentTimeMillis();
-		checkSubtreePreOrder(ctx, root, domRoot); // check document index
+		ElCollection coll = (ElCollection) createDocument(new DocumentParser(
+				bigDocument));
+		ElLocator locator = coll.getDocument().locator;
 		long end = System.currentTimeMillis();
-		System.out.println(end - start);
+		System.out.println("Document created in: " + (end - start) / 1000f);
+
+		ElNode root = coll.getDocument().getNode(
+				XTCdeweyID.newRootID(locator.docID));
+		Node domRoot = null;
+
+		domRoot = createDomTree(new InputSource(
+				new FileReader(bigDocument)));
+		System.out.println("DOM-Tree created!");
+
+		start = System.currentTimeMillis();
+		checkSubtreePreOrderReduced(root, domRoot); // check document index
+		end = System.currentTimeMillis();
+		System.out.println("Preorder Traversal: " + (end - start) / 1000f);
+		
 	}
 
 	@Ignore
@@ -177,16 +192,28 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 	@Ignore
 	@Test
 	public void traverseBigDocumentInPostOrder() throws Exception {
-		TXCollection<ElNode> locator = createDocument(new DocumentParser(
-				new File("/docs/xmark8.xml")));
-		// Logger.getLogger(SlottedPageContext.class.getName()).setLevel(Level.TRACE);
-		// Logger.getLogger(BPlusIndex.class.getName()).setLevel(Level.TRACE);
-		ElNode root = locator.getDocument().getFirstChild().getNode(
-				XTCdeweyID.newRootID(locator.getID()));
-		Node domRoot = createDomTree(ctx, new InputSource(new FileReader(
-				"/docs/xmark8.xml")));
+		
+		long start = System.currentTimeMillis();
+		ElCollection coll = (ElCollection) createDocument(new DocumentParser(
+				bigDocument));
+		ElLocator locator = coll.getDocument().locator;
+		long end = System.currentTimeMillis();
+		System.out.println("Document created in: " + (end - start) / 1000f);
 
-		checkSubtreePostOrder(ctx, root, domRoot); // check document index
+		ElNode root = coll.getDocument().getNode(
+				XTCdeweyID.newRootID(locator.docID));
+		Node domRoot = null;
+
+		domRoot = createDomTree(new InputSource(
+				new FileReader(bigDocument)));
+		System.out.println("DOM-Tree created!");
+
+		start = System.currentTimeMillis();
+		checkSubtreePostOrderReduced(root, domRoot); // check document
+															// index
+		end = System.currentTimeMillis();
+		System.out.println("Postorder Traversal: " + (end - start) / 1000f);
+		
 	}
 
 	@Test
@@ -195,7 +222,7 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 				DOCUMENT));
 		ElNode root = locator.getDocument().getFirstChild().getNode(
 				XTCdeweyID.newRootID(locator.getID()));
-		Node domRoot = createDomTree(ctx, new InputSource(new StringReader(
+		Node domRoot = createDomTree(new InputSource(new StringReader(
 				DOCUMENT)));
 
 		ElNode department = root.getFirstChild();
@@ -219,7 +246,7 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 
 		tx.undo(savepointLSN);
 
-		checkSubtreePreOrder(ctx, root, domRoot); // check document index
+		checkSubtreePreOrder(root, domRoot); // check document index
 	}
 
 	@Test
@@ -239,7 +266,7 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 
 		tx.checkPrevLSN();
 
-		ElNode attribute = root.getAttribute("test");
+		ElNode attribute = root.getAttribute(new QNm("test"));
 		attribute.delete();
 		ElNode checkRoot = locator.getDocument().getFirstChild().getNode(
 				root.getDeweyID());

@@ -32,6 +32,7 @@ import java.util.List;
 import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.store.SearchMode;
 import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.stream.filter.Filter;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.DocumentException;
@@ -46,10 +47,6 @@ import org.brackit.xquery.xdm.Stream;
  * 
  */
 public interface IndexController<E extends Node<E>> {
-	/**
-	 * Creates a new index for the given document.
-	 */
-	public IndexDef createIndex(String statement) throws DocumentException;
 
 	/**
 	 * Creates new indexes for the given document.
@@ -63,18 +60,10 @@ public interface IndexController<E extends Node<E>> {
 	public void dropIndex(IndexDef indexDefinition) throws DocumentException;
 
 	/**
-	 * Opens a stream for the given content index positioned for the given
+	 * Opens a stream for the given name index positioned for the given
 	 * search key.
 	 */
-	public Stream<? extends E> openContentIndex(int indexNo,
-			Atomic minSearchKey, Atomic maxSearchKey, boolean includeMin,
-			boolean includeMax, SearchMode searchMode) throws DocumentException;
-
-	/**
-	 * Opens a stream for the given element index positioned for the given
-	 * search key.
-	 */
-	public Stream<? extends E> openElementIndex(int indexNo, String name,
+	public Stream<? extends E> openNameIndex(int indexNo, QNm name,
 			SearchMode searchMode) throws DocumentException;
 
 	/**
@@ -94,13 +83,13 @@ public interface IndexController<E extends Node<E>> {
 			boolean includeMin, boolean includeMax, SearchMode searchMode)
 			throws DocumentException;
 
-	public Filter<E> createPathFilter(List<Path<String>> paths)
+	public Filter<E> createPathFilter(List<Path<QNm>> paths)
 			throws DocumentException;
 
 	public Filter<E> createPathFilter(String... queryString)
 			throws DocumentException;
 
-	public Filter<E> createCASFilter(List<Path<String>> paths)
+	public Filter<E> createCASFilter(List<Path<QNm>> paths)
 			throws DocumentException;
 
 	public Filter<E> createCASFilter(String... queryString)

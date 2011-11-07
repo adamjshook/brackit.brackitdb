@@ -56,25 +56,24 @@ public class PathSynopsisMgr05 extends AbstractPathSynopsisMgr implements
 
 	private final ConcurrentHashMap<Tx, HashMap<PathSynopsis, Integer>> psNodesByTA;
 
-	public PathSynopsisMgr05(PSConverter psc, DictionaryMgr dictionaryMgr,
-			PathSynopsis ps) {
-		super(psc, dictionaryMgr, ps);
+	public PathSynopsisMgr05(Tx tx, PSConverter psc,
+			DictionaryMgr dictionaryMgr, PathSynopsis ps) {
+		super(tx, psc, dictionaryMgr, ps);
 		psNodesByTA = new ConcurrentHashMap<Tx, HashMap<PathSynopsis, Integer>>();
 	}
 
 	@Override
-	protected void addNodeToTaList(Tx transaction, PathSynopsis pathSynopsis,
-			PathSynopsisNode node) {
+	protected void addNodeToTaList(PathSynopsis pathSynopsis, PathSynopsisNode node) {
 		// gets the IdxNo's of the PathSynopsis
 		// that are affected by the transaction
-		HashMap<PathSynopsis, Integer> psByTA = psNodesByTA.get(transaction);
+		HashMap<PathSynopsis, Integer> psByTA = psNodesByTA.get(tx);
 
 		if (psByTA == null) {
 			// the first time the transaction
 			// affects the PathSynopsis
 			psByTA = new HashMap<PathSynopsis, Integer>();
-			psNodesByTA.put(transaction, psByTA);
-			transaction.addPreCommitHook(this);
+			psNodesByTA.put(tx, psByTA);
+			tx.addPreCommitHook(this);
 		}
 
 		// gets the List of PathSynopsisNodes that are affected
@@ -117,5 +116,13 @@ public class PathSynopsisMgr05 extends AbstractPathSynopsisMgr implements
 	@Override
 	public void abort(Tx transaction) {
 		psNodesByTA.remove(transaction);
+	}
+	
+	@Override
+	public PathSynopsisMgr copyFor(Tx tx) {
+		if (tx.equals(tx)) {
+			return this;
+		}
+		return new PathSynopsisMgr05(tx, psc, dictionaryMgr, ps);
 	}
 }

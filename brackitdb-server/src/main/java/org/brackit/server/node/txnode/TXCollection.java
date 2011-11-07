@@ -40,6 +40,8 @@ import org.brackit.server.store.index.Index;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.IndexIterator;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.node.SubtreePrinter;
 import org.brackit.xquery.node.parser.SubtreeParser;
 import org.brackit.xquery.node.stream.AtomStream;
@@ -55,7 +57,7 @@ import org.brackit.xquery.xdm.Stream;
  */
 public abstract class TXCollection<E extends TXNode<E>> extends
 		BaseCollection<E> {
-	public static final String COLLECTION_FLAG_ATTRIBUTE = "collection";
+	public static final QNm COLLECTION_FLAG_ATTRIBUTE = new QNm("collection");
 
 	protected final Tx tx;
 
@@ -97,7 +99,7 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 			E doc;
 			try {
 				while ((doc = docs.next()) != null) {
-					new SubtreePrinter(new PrintStream(out)).print(doc);		
+					new SubtreePrinter(new PrintStream(out)).print(doc);
 				}
 			} finally {
 				docs.close();
@@ -240,8 +242,8 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 	@Override
 	public Node<?> materialize() throws DocumentException {
 		Node<?> root = super.materialize();
-		root.setAttribute(COLLECTION_FLAG_ATTRIBUTE, Boolean
-				.toString(document == null));
+		root.setAttribute(COLLECTION_FLAG_ATTRIBUTE,
+				new Una(Boolean.toString(document == null)));
 		return root;
 	}
 
