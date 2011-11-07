@@ -87,9 +87,9 @@ public class ElCollection extends TXCollection<ElNode> {
 	@Override
 	public ElNode store(SubtreeParser parser) throws DocumentException {
 		try {
-			PageID rootPageID = store.index.createIndex(tx,
-					new PageID(docID.value()).getContainerNo(), Field.DEWEYID,
-					Field.EL_REC, true, true, -1);
+			PageID rootPageID = store.index.createIndex(tx, new PageID(docID
+					.value()).getContainerNo(), Field.DEWEYID, Field.EL_REC,
+					true, true, -1);
 			ElNode document = new ElNode(this, rootPageID);
 			DocID docID = new DocID(rootPageID.value());
 			XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(docID);
@@ -113,8 +113,8 @@ public class ElCollection extends TXCollection<ElNode> {
 		name = spec.getDocumentName();
 		dictionary = spec.getDictionary();
 		// create a path synopsis and document reference container
-		pathSynopsis = store.pathSynopsisMgrFactory.create(tx,
-				spec.getDictionary(), spec.getContainerID());
+		pathSynopsis = store.pathSynopsisMgrFactory.create(tx, spec
+				.getDictionary(), spec.getContainerID());
 		docID = new DocID(createDocumentReferenceIndex(tx,
 				spec.getContainerID()).value());
 	}
@@ -122,15 +122,15 @@ public class ElCollection extends TXCollection<ElNode> {
 	public ElNode create(StorageSpec spec, SubtreeParser parser)
 			throws DocumentException {
 		try {
-			PageID rootPageID = store.index.createIndex(tx,
-					spec.getContainerID(), Field.DEWEYID, Field.EL_REC, true,
-					spec.isKeyCompression(), -1);
+			PageID rootPageID = store.index.createIndex(tx, spec
+					.getContainerID(), Field.DEWEYID, Field.EL_REC, true, spec
+					.isKeyCompression(), -1);
 
 			docID = new DocID(rootPageID.value());
 			name = spec.getDocumentName();
 			dictionary = spec.getDictionary();
-			pathSynopsis = store.pathSynopsisMgrFactory.create(tx,
-					spec.getDictionary(), spec.getContainerID());
+			pathSynopsis = store.pathSynopsisMgrFactory.create(tx, spec
+					.getDictionary(), spec.getContainerID());
 			document = new ElNode(this, rootPageID);
 
 			// write document to document container
@@ -171,8 +171,8 @@ public class ElCollection extends TXCollection<ElNode> {
 	@Override
 	public Node<?> materialize() throws DocumentException {
 		Node<?> root = super.materialize();
-		root.setAttribute(PATHSYNOPSIS_ID_ATTRIBUTE,
-				new Una(Integer.toString(pathSynopsis.getPathSynopsisNo())));
+		root.setAttribute(PATHSYNOPSIS_ID_ATTRIBUTE, new Una(Integer
+				.toString(pathSynopsis.getPathSynopsisNo())));
 		return root;
 	}
 
@@ -182,9 +182,8 @@ public class ElCollection extends TXCollection<ElNode> {
 		dictionary = store.dictionary;
 
 		if (pathSynopsis == null) {
-			PageID psID = PageID.fromString(root
-					.getAttribute(PATHSYNOPSIS_ID_ATTRIBUTE).getValue()
-					.stringValue());
+			PageID psID = PageID.fromString(root.getAttribute(
+					PATHSYNOPSIS_ID_ATTRIBUTE).getValue().stringValue());
 			pathSynopsis = store.pathSynopsisMgrFactory.load(tx, dictionary,
 					psID);
 		}
@@ -218,8 +217,8 @@ public class ElCollection extends TXCollection<ElNode> {
 	public void delete() throws DocumentException {
 		try {
 			super.delete();
-			store.index.dropIndex(tx,
-					new PageID(pathSynopsis.getPathSynopsisNo()));
+			store.index.dropIndex(tx, new PageID(pathSynopsis
+					.getPathSynopsisNo()));
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}

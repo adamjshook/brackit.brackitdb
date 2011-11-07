@@ -27,22 +27,25 @@
  */
 package org.brackit.server.node.bracket;
 
+import org.brackit.server.metadata.pathSynopsis.NsMapping;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.txnode.SubtreeBuilder;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
 
 /**
  * @author Martin Hiller
- *
+ * 
  */
 public class BracketSubtreeHandler extends SubtreeBuilder<BracketNode> {
-	
+
 	private final BracketLocator locator;
 
 	private final DictionaryMgr dictionary;
@@ -51,6 +54,8 @@ public class BracketSubtreeHandler extends SubtreeBuilder<BracketNode> {
 
 	private final Tx tx;
 
+	private NsMapping nsMapping;
+
 	public BracketSubtreeHandler(BracketLocator locator, BracketNode parent,
 			XTCdeweyID rootDeweyID, SubtreeListener<BracketNode>[] listener)
 			throws DocumentException {
@@ -58,44 +63,78 @@ public class BracketSubtreeHandler extends SubtreeBuilder<BracketNode> {
 		this.locator = locator;
 		this.tx = locator.collection.getTX();
 		this.dictionary = locator.collection.getDictionary();
-		this.psMgr = locator.pathSynopsis.spawnBulkPsManager(tx);
+		this.psMgr = locator.pathSynopsis.spawnBulkPsManager();
 	}
 
 	@Override
-	protected BracketNode buildElement(BracketNode parent, String name, XTCdeweyID deweyID)
-			throws DocumentException {
-		int vocID = dictionary.translate(tx, name);
-		PSNode psNode = psMgr.getChild(tx, parent.getPCR(), vocID,
-				Kind.ELEMENT.ID);
+	protected BracketNode buildElement(BracketNode parent, QNm name,
+			XTCdeweyID deweyID) throws DocumentException {
+
+		PSNode psNode = psMgr.getChild(parent.getPCR(), name, Kind.ELEMENT.ID,
+				nsMapping);
+		nsMapping = null;
+
 		return new BracketNode(locator, deweyID, Kind.ELEMENT.ID, null, psNode);
 	}
 
 	@Override
-	protected BracketNode buildText(BracketNode parent, String text, XTCdeweyID deweyID)
-			throws DocumentException {
-		return new BracketNode(locator, deweyID, Kind.TEXT.ID, text, parent.psNode);
-	}
-
-	@Override
-	protected BracketNode buildAttribute(BracketNode parent, String name, String value,
+	protected BracketNode buildText(BracketNode parent, Atomic text,
 			XTCdeweyID deweyID) throws DocumentException {
-		int vocID = dictionary.translate(tx, name);
-		PSNode psNode = psMgr.getChild(tx, parent.getPCR(), vocID,
-				Kind.ATTRIBUTE.ID);
-		return new BracketNode(locator, deweyID, Kind.ATTRIBUTE.ID, value, psNode);
+		return new BracketNode(locator, deweyID, Kind.TEXT.ID, text,
+				parent.psNode);
 	}
 
 	@Override
-	protected BracketNode buildComment(BracketNode parent, String text, XTCdeweyID deweyID)
-			throws DocumentException {
+	protected BracketNode buildAttribute(BracketNode parent, QNm name,
+			Atomic value, XTCdeweyID deweyID) throws DocumentException {
+
+		if (nsMapping != null) {
+			throw new RuntimeException();
+		}
+		PSNode psNode = psMgr.getChild(parent.getPCR(), name,
+				Kind.ATTRIBUTE.ID, null);
+		
+		return new BracketNode(locator, deweyID, Kind.ATTRIBUTE.ID, value,
+				psNode);
+	}
+
+	@Override
+	protected BracketNode buildComment(BracketNode parent, Atomic text,
+			XTCdeweyID deweyID) throws DocumentException {
 		return new BracketNode(locator, deweyID, Kind.COMMENT.ID, text,
 				parent.psNode);
 	}
 
 	@Override
-	protected BracketNode buildProcessingInstruction(BracketNode parent, String text,
-			XTCdeweyID deweyID) throws DocumentException {
-		return new BracketNode(locator, deweyID, Kind.PROCESSING_INSTRUCTION.ID,
-				text, parent.psNode);
+	protected BracketNode buildProcessingInstruction(BracketNode parent, QNm name,
+			Atomic text, XTCdeweyID deweyID) throws DocumentException {
+		
+		if (nsMapping != null) {
+			throw new RuntimeException();
+		}
+		PSNode psNode = psMgr.getChild(parent.getPCR(), name,
+				Kind.PROCESSING_INSTRUCTION.ID, null);
+		
+		return new BracketNode(locator, deweyID,
+				Kind.PROCESSING_INSTRUCTION.ID, text, psNode);
+	}
+	
+	@Override
+	public void startMapping(String prefix, String uri)
+			throws DocumentException {
+
+		int prefixVocID = (prefix == null || prefix.isEmpty() ? -1 : dictionary
+				.translate(tx, prefix));
+		int uriVocID = (uri.isEmpty() ? -1 : dictionary.translate(tx, uri));
+
+		if (nsMapping == null) {
+			nsMapping = new NsMapping(prefixVocID, uriVocID);
+		} else {
+			nsMapping.addPrefix(prefixVocID, uriVocID);
+		}
+	}
+
+	@Override
+	public void endMapping(String prefix) throws DocumentException {
 	}
 }

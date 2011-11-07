@@ -71,7 +71,7 @@ public class PCRClusterPathEncoder implements IndexEncoder<BracketNode> {
 		}
 
 		BracketLocator locator = document.getLocator();
-		PSNode psNode = locator.pathSynopsis.get(collection.getTX(), pcr);
+		PSNode psNode = locator.pathSynopsis.get(pcr);
 		byte type = (deweyID.level == psNode.getLevel() ? Kind.ELEMENT.ID
 				: Kind.TEXT.ID);
 

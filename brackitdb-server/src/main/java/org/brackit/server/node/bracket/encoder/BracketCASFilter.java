@@ -34,6 +34,7 @@ import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
 import org.brackit.server.node.bracket.BracketCollection;
 import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.stream.filter.Filter;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.DocumentException;
@@ -44,7 +45,7 @@ import org.brackit.xquery.xdm.DocumentException;
  */
 public class BracketCASFilter implements Filter<BracketNode> {
 
-	private final List<Path<String>> paths;
+	private final List<Path<QNm>> paths;
 
 	private final Tx tx;
 
@@ -56,7 +57,7 @@ public class BracketCASFilter implements Filter<BracketNode> {
 
 	private int maxKnownPCR;
 
-	public BracketCASFilter(List<Path<String>> paths, BracketCollection collection) {
+	public BracketCASFilter(List<Path<QNm>> paths, BracketCollection collection) {
 		super();
 		this.paths = paths;
 		this.tx = collection.getTX();
@@ -68,16 +69,16 @@ public class BracketCASFilter implements Filter<BracketNode> {
 	@Override
 	public boolean filter(BracketNode node) throws DocumentException {
 		if (genericCas) {
-			return true;
+			return false;
 		}
 
 		int pcr = node.getPCR();
 
 		if (pcr > maxKnownPCR) {
 			maxKnownPCR = pathSynopsis.getMaxPCR();
-			pcrFilter = pathSynopsis.getPCRsForPaths(tx, paths);
+			pcrFilter = pathSynopsis.getPCRsForPaths(paths);
 		}
 
-		return (pcrFilter.contains(pcr));
+		return (!pcrFilter.contains(pcr));
 	}
 }

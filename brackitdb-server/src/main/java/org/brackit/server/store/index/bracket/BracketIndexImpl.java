@@ -29,6 +29,8 @@ package org.brackit.server.store.index.bracket;
 
 import java.io.PrintStream;
 
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.ListenMode;
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
@@ -162,19 +164,19 @@ public class BracketIndexImpl implements BracketIndex {
 	}
 
 	@Override
-	public BracketAttributeTuple setAttribute(BracketNode element, String name,
-			String value) throws IndexAccessException, DocumentException {
+	public BracketAttributeTuple setAttribute(BracketNode element, QNm name,
+			Atomic value) throws IndexAccessException, DocumentException {
 
 		BracketLocator locator = element.getLocator();
 		XTCdeweyID attributeDeweyID = null;
 
 		Tx tx = locator.collection.getTX();
 
-		int vocID = locator.collection.getDictionary().translate(tx, name);
-		PSNode attributePsNode = locator.pathSynopsis.getChild(tx,
-				element.getPCR(), vocID, Kind.ATTRIBUTE.ID);
-		byte[] physicalRecord = ElRecordAccess.createRecord(
-				attributePsNode.getPCR(), Kind.ATTRIBUTE.ID, value);
+		PSNode attributePsNode = locator.pathSynopsis.getChild(
+				element.getPCR(), name, Kind.ATTRIBUTE.ID, null);
+		
+		byte[] physicalRecord = ElRecordAccess.createRecord(attributePsNode
+				.getPCR(), Kind.ATTRIBUTE.ID, value.stringValue());
 
 		Leaf page = null;
 		Leaf next = null;
@@ -224,8 +226,8 @@ public class BracketIndexImpl implements BracketIndex {
 							// insert
 							XTCdeweyID lastKey = page.getKey();
 							attributeDeweyID = (lastKey.isAttribute() ? XTCdeweyID
-									.newBetween(lastKey, null) : lastKey
-									.getNewAttributeID());
+									.newBetween(lastKey, null)
+									: lastKey.getNewAttributeID());
 							if (attributeDeweyID.compareDivisions(page
 									.getHighKey()) >= 0) {
 								// insert in next page
@@ -268,14 +270,14 @@ public class BracketIndexImpl implements BracketIndex {
 				page = tree.insertIntoLeaf(tx, locator.rootPageID, page,
 						attributeDeweyID, physicalRecord, 0, true, -1);
 			}
-			
-			BracketNode newAttribute = new BracketNode(locator, attributeDeweyID,
-					Kind.ATTRIBUTE.ID, value, attributePsNode);
+
+			BracketNode newAttribute = new BracketNode(locator,
+					attributeDeweyID, Kind.ATTRIBUTE.ID, value, attributePsNode);
 			newAttribute.hintPageInfo = page.getHintPageInformation();
-			
+
 			page.cleanup();
 			page = null;
-			
+
 			return new BracketAttributeTuple(oldAttribute, newAttribute);
 
 		} catch (IndexOperationException e) {

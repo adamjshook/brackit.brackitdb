@@ -35,6 +35,7 @@ import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.node.index.AtomicUtil;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.store.Field;
+import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
 import org.brackit.xquery.xdm.Type;
@@ -72,18 +73,18 @@ public class PCRClusterEncoder implements IndexEncoder<BracketNode> {
 			deweyID = Field.PCRDEWEYID.decodeDeweyID(document.getID(), value);
 			pcr = Field.PCRDEWEYID.decodePCR(value);
 		}
-		String content = decodeContent(key, value);
+		Atomic content = decodeContent(key, value);
 		byte type = (deweyID.isAttribute()) ? Kind.ATTRIBUTE.ID
 				: Kind.ELEMENT.ID;
 
 		BracketLocator locator = document.getLocator();
-		PSNode psNode = locator.pathSynopsis.get(collection.getTX(), pcr);
+		PSNode psNode = locator.pathSynopsis.get(pcr);
 		return new BracketNode(locator, deweyID, type, content, psNode);
 	}
 
 	@Override
 	public byte[] encodeKey(BracketNode node) throws DocumentException {
-		String content = node.getValue();
+		Atomic content = node.getValue();
 		return AtomicUtil.toBytes(content, type);
 	}
 
@@ -97,9 +98,9 @@ public class PCRClusterEncoder implements IndexEncoder<BracketNode> {
 		}
 	}
 
-	private String decodeContent(byte[] key, byte[] value)
+	private Atomic decodeContent(byte[] key, byte[] value)
 			throws DocumentException {
-		return AtomicUtil.fromBytes(key, type).stringValue();
+		return AtomicUtil.fromBytes(key, type);
 	}
 
 	@Override

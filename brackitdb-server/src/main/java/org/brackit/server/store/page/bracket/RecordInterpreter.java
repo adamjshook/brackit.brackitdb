@@ -28,6 +28,7 @@
 package org.brackit.server.store.page.bracket;
 
 import org.brackit.server.node.el.ElRecordAccess;
+import org.brackit.xquery.atomic.Atomic;
 
 /**
  * @author Martin Hiller
@@ -41,7 +42,7 @@ public class RecordInterpreter {
 	
 	private int pcr = -1;
 	private byte type = -1;
-	private String value = null;
+	private Atomic value = null;
 	
 	public RecordInterpreter(byte[] buf, int offset, int len) {
 		this.buf = buf;
@@ -69,9 +70,9 @@ public class RecordInterpreter {
 		return type;
 	}
 	
-	public String getValue() {
+	public Atomic getValue() {
 		if (value == null) {
-			value = ElRecordAccess.getValue(buf, offset, len);
+			value = ElRecordAccess.getTypedValue(buf, offset, len, getType());
 		}
 		return value;
 	}

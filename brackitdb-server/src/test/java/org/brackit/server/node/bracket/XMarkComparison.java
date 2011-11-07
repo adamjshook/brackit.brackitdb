@@ -44,7 +44,6 @@ import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.XQuery;
-import org.brackit.xquery.atomic.Int32;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.xdm.Item;
 import org.brackit.xquery.xdm.Iter;
@@ -144,7 +143,7 @@ public class XMarkComparison {
 		long end = 0;
 		
 		QueryContext ctx = createContext();
-		ctx.setDefaultContext(coll.getDocument(), Int32.ONE, Int32.ONE);
+		ctx.setDefaultDocument(coll.getDocument());
 		
 		for (int i = 0; i < warmupCount; i++) {
 			pseudoSerialize(query.execute(ctx));

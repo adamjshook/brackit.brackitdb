@@ -29,8 +29,10 @@ package org.brackit.server.node.el;
 
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.el.index.ElPlaceHolderHelper;
-import org.brackit.server.store.page.bracket.RecordInterpreter;
 import org.brackit.server.util.Calc;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.Str;
+import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.xdm.Kind;
 
 /**
@@ -56,7 +58,7 @@ public class ElRecordAccess implements ElPlaceHolderHelper {
 	private final static int TYPE_MASK = 7;
 
 	public final static int getPCR(byte[] physicalRecord) {
-		int pcrSize = ((physicalRecord[0] & PCR_SIZE_MASK) + 1);
+		int pcrSize = getPCRsize(physicalRecord);
 		return (pcrSize > 0) ? Calc.toInt(physicalRecord, 1, pcrSize) : 0;
 	}
 	
@@ -78,7 +80,7 @@ public class ElRecordAccess implements ElPlaceHolderHelper {
 	}
 
 	public final static String getValue(byte[] physicalRecord) {
-		int pcrSize = ((physicalRecord[0] & PCR_SIZE_MASK) + 1);
+		int pcrSize = getPCRsize(physicalRecord);
 		int valueOffset = 1 + pcrSize;
 		int valueLength = physicalRecord.length - valueOffset;
 		String value = "";
@@ -113,7 +115,21 @@ public class ElRecordAccess implements ElPlaceHolderHelper {
 	public final static Atomic getTypedValue(byte[] physicalRecord) {
 		String untypedValue = getValue(physicalRecord);
 		byte type = getType(physicalRecord);
-		
+		return getTypedValue(type, untypedValue);
+	}
+	
+	public final static Atomic getTypedValue(byte[] buf, int offset, int len) {
+		String untypedValue = getValue(buf, offset, len);
+		byte type = getType(buf, offset, len);
+		return getTypedValue(type, untypedValue);
+	}
+	
+	public final static Atomic getTypedValue(byte[] buf, int offset, int len, byte type) {
+		String untypedValue = getValue(buf, offset, len);
+		return getTypedValue(type, untypedValue);
+	}
+	
+	private static final Atomic getTypedValue(byte type, String untypedValue) {
 		// default type mapping
 		if (type == Kind.COMMENT.ID || type == Kind.PROCESSING_INSTRUCTION.ID) {
 			return new Str(untypedValue);

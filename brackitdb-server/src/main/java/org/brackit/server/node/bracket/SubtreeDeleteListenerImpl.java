@@ -91,7 +91,7 @@ public class SubtreeDeleteListenerImpl implements SubtreeDeleteListener {
 			}
 		}
 		
-		BracketNode node = locator.fromBytes(deweyID, value);
+		BracketNode node = locator.bracketNodeLoader.load(deweyID, value);
 		
 		Kind kind = node.getKind();
 		
