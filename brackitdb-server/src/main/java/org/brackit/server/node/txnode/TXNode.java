@@ -38,8 +38,10 @@ import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.locking.LockClass;
 import org.brackit.server.tx.locking.services.MetaLockService;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.AbstractNode;
-import org.brackit.xquery.node.linked.LNodeFactory;
+import org.brackit.xquery.node.d2linked.D2NodeFactory;
 import org.brackit.xquery.node.parser.NavigationalSubtreeParser;
 import org.brackit.xquery.node.parser.StreamSubtreeParser;
 import org.brackit.xquery.node.parser.SubtreeParser;
@@ -103,14 +105,14 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	protected abstract E getNodeInternal(XTCdeweyID deweyID)
 			throws DocumentException;
 
-	protected abstract String getNameInternal() throws DocumentException;
+	protected abstract QNm getNameInternal() throws DocumentException;
 
-	protected abstract void setNameInternal(String name)
+	protected abstract void setNameInternal(QNm name)
 			throws OperationNotSupportedException, DocumentException;
 
-	protected abstract String getValueInternal() throws DocumentException;
+	protected abstract Atomic getValueInternal() throws DocumentException;
 
-	protected abstract void setValueInternal(String value)
+	protected abstract void setValueInternal(Atomic value)
 			throws OperationNotSupportedException, DocumentException;
 
 	protected abstract void deleteInternal() throws DocumentException;
@@ -128,20 +130,20 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	protected abstract Stream<? extends E> getSubtreeInternal()
 			throws DocumentException;
 
-	protected abstract E getAttributeInternal(String name)
+	protected abstract E getAttributeInternal(QNm name)
 			throws DocumentException;
 
 	protected abstract Stream<? extends E> getAttributesInternal()
 			throws DocumentException;
 
-	protected abstract E setAttributeInternal(String name, String value)
+	protected abstract E setAttributeInternal(QNm name, Atomic value)
 			throws OperationNotSupportedException, DocumentException;
 
-	protected abstract boolean deleteAttributeInternal(String name)
+	protected abstract boolean deleteAttributeInternal(QNm name)
 			throws DocumentException;
 
-	protected abstract E insertRecord(XTCdeweyID deweyID, Kind kind,
-			String value) throws OperationNotSupportedException,
+	protected abstract E insertRecord(XTCdeweyID deweyID, Kind kind, QNm name,
+			Atomic value) throws OperationNotSupportedException,
 			DocumentException;
 
 	protected abstract E insertSubtree(XTCdeweyID deweyID, SubtreeParser parser)
@@ -285,8 +287,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().useReadLocks()) {
-			nls.lockLevelShared(tx, deweyID, tx.getIsolationLevel().lockClass(
-					false), false);
+			nls.lockLevelShared(tx, deweyID,
+					tx.getIsolationLevel().lockClass(false), false);
 		}
 
 		Stream<E> children;
@@ -309,12 +311,6 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	}
 
 	@Override
-	public String getAttributeValue(String name) throws DocumentException {
-		E attribute = getAttribute(name);
-		return (attribute != null) ? attribute.getValue() : null;
-	}
-
-	@Override
 	public final void delete() throws DocumentException {
 		if (type == Kind.DOCUMENT.ID) {
 			throw new OperationNotSupportedException(
@@ -329,8 +325,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		Tx tx = getTX();
 		MetaLockService<?> nls = getNls();
 		if (nls.supportsExclusiveTreeLock(tx)) {
-			nls.lockTreeUpdate(tx, deweyID, tx.getIsolationLevel().lockClass(
-					true), false);
+			nls.lockTreeUpdate(tx, deweyID,
+					tx.getIsolationLevel().lockClass(true), false);
 			nls.lockTreeExclusive(tx, deweyID, tx.getIsolationLevel()
 					.lockClass(true), false);
 		} else {
@@ -342,7 +338,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	}
 
 	@Override
-	public final E getAttribute(String name) throws DocumentException {
+	public final E getAttribute(QNm name) throws DocumentException {
 		if (type != Kind.ELEMENT.ID) {
 			return null;
 		}
@@ -353,11 +349,11 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().shortReadLocks()) {
-			nls.lockNodeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
-					false), false);
+			nls.lockNodeShared(tx, deweyID,
+					tx.getIsolationLevel().lockClass(false), false);
 		}
 		if (tx.getIsolationLevel().useReadLocks()) {
-			nls.lockEdgeShared(tx, deweyID, name);
+			nls.lockEdgeShared(tx, deweyID, name.stringValue());
 		}
 
 		E attribute = getAttributeInternal(name);
@@ -370,7 +366,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		}
 
 		if (tx.getIsolationLevel().shortReadLocks()) {
-			nls.unlockEdge(tx, deweyID, name);
+			nls.unlockEdge(tx, deweyID, name.stringValue());
 			nls.unlockNode(tx, deweyID);
 		}
 		return attribute;
@@ -391,8 +387,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		XTCdeweyID attributeRootDeweyID = deweyID.getAttributeRootID();
 
 		if (tx.getIsolationLevel().shortReadLocks()) {
-			nls.lockNodeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
-					false), false);
+			nls.lockNodeShared(tx, deweyID,
+					tx.getIsolationLevel().lockClass(false), false);
 		}
 
 		if (tx.getIsolationLevel().longReadLocks()) {
@@ -427,8 +423,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().shortReadLocks()) {
-			nls.lockNodeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
-					false), false);
+			nls.lockNodeShared(tx, deweyID,
+					tx.getIsolationLevel().lockClass(false), false);
 		}
 		if (tx.getIsolationLevel().useReadLocks()) {
 			nls.lockEdgeShared(tx, deweyID, FIRST_CHILD);
@@ -463,8 +459,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().shortReadLocks()) {
-			nls.lockNodeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
-					false), false);
+			nls.lockNodeShared(tx, deweyID,
+					tx.getIsolationLevel().lockClass(false), false);
 		}
 		if (tx.getIsolationLevel().useReadLocks()) {
 			nls.lockEdgeShared(tx, deweyID, LAST_CHILD);
@@ -488,9 +484,9 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	}
 
 	@Override
-	public String getName() throws DocumentException {
+	public QNm getName() throws DocumentException {
 		if ((type != Kind.ELEMENT.ID) && (type != Kind.ATTRIBUTE.ID)) {
-			return "";
+			return null;
 		}
 		return getNameInternal();
 		// TODO extremely fine-grained and expensive!
@@ -521,8 +517,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().shortReadLocks()) {
-			nls.lockNodeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
-					false), false);
+			nls.lockNodeShared(tx, deweyID,
+					tx.getIsolationLevel().lockClass(false), false);
 		}
 		if (tx.getIsolationLevel().useReadLocks()) {
 			nls.lockEdgeShared(tx, deweyID, NEXT_SIBLING);
@@ -554,8 +550,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().useReadLocks()) {
-			nls.lockNodeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
-					false), false);
+			nls.lockNodeShared(tx, deweyID,
+					tx.getIsolationLevel().lockClass(false), false);
 		}
 
 		E node = getNodeInternal(deweyID);
@@ -601,8 +597,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().shortReadLocks()) {
-			nls.lockNodeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
-					false), false);
+			nls.lockNodeShared(tx, deweyID,
+					tx.getIsolationLevel().lockClass(false), false);
 		}
 		if (tx.getIsolationLevel().useReadLocks()) {
 			nls.lockEdgeShared(tx, deweyID, PREV_SIBLING);
@@ -638,8 +634,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().useReadLocks()) {
-			nls.lockTreeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
-					false), false);
+			nls.lockTreeShared(tx, deweyID,
+					tx.getIsolationLevel().lockClass(false), false);
 		}
 
 		Stream<? extends E> subtree;
@@ -657,7 +653,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	}
 
 	@Override
-	public final String getValue() throws DocumentException {
+	public final Atomic getValue() throws DocumentException {
 		Tx tx = getTX();
 		if (tx.getLockDepth() <= 0) {
 			return getValueInternal();
@@ -673,7 +669,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 						.lockClass(false), false);
 		}
 
-		String value = getValueInternal();
+		Atomic value = getValueInternal();
 
 		if (tx.getIsolationLevel().shortReadLocks()) {
 			getNls().unlockNode(tx, deweyID);
@@ -683,7 +679,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	}
 
 	@Override
-	public final boolean deleteAttribute(String name)
+	public final boolean deleteAttribute(QNm name)
 			throws OperationNotSupportedException, DocumentException {
 		if (type != Kind.ELEMENT.ID) {
 			throw new OperationNotSupportedException(
@@ -701,14 +697,14 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 						.lockClass(false), false);
 		}
 
-		nls.lockEdgeUpdate(tx, deweyID, name);
-		nls.lockEdgeExclusive(tx, deweyID, name);
+		nls.lockEdgeUpdate(tx, deweyID, name.stringValue());
+		nls.lockEdgeExclusive(tx, deweyID, name.stringValue());
 
 		return deleteAttributeInternal(name);
 	}
 
 	@Override
-	public final E setAttribute(String name, String value)
+	public final E setAttribute(QNm name, Atomic value)
 			throws OperationNotSupportedException, DocumentException {
 		if (type != Kind.ELEMENT.ID) {
 			throw new OperationNotSupportedException(
@@ -726,8 +722,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 						.lockClass(false), false);
 		}
 
-		nls.lockEdgeUpdate(tx, deweyID, name);
-		nls.lockEdgeExclusive(tx, deweyID, name);
+		nls.lockEdgeUpdate(tx, deweyID, name.stringValue());
+		nls.lockEdgeExclusive(tx, deweyID, name.stringValue());
 
 		E attribute = getAttributeInternal(name);
 
@@ -755,8 +751,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	}
 
 	@Override
-	public final void setName(String name)
-			throws OperationNotSupportedException, DocumentException {
+	public final void setName(QNm name) throws OperationNotSupportedException,
+			DocumentException {
 		if ((type != Kind.ELEMENT.ID) && (type != Kind.ATTRIBUTE.ID)) {
 			throw new OperationNotSupportedException(
 					"Cannot set name for non-element and non-attribute nodes.");
@@ -785,7 +781,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	}
 
 	@Override
-	public final void setValue(String value)
+	public final void setValue(Atomic value)
 			throws OperationNotSupportedException, DocumentException {
 		if (type == Kind.DOCUMENT.ID) {
 			throw new OperationNotSupportedException(
@@ -815,7 +811,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	}
 
 	@Override
-	public final E append(Kind kind, String value)
+	public final E append(Kind kind, QNm name, Atomic value)
 			throws OperationNotSupportedException, DocumentException {
 		if ((this.type != Kind.ELEMENT.ID) && (this.type != Kind.DOCUMENT.ID)) {
 			throw new OperationNotSupportedException(
@@ -857,7 +853,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		nls.lockTreeExclusive(tx, newChildDeweyID, tx.getIsolationLevel()
 				.lockClass(true), false);
 
-		E result = insertRecord(newChildDeweyID, kind, value);
+		E result = insertRecord(newChildDeweyID, kind, name, value);
 
 		if (tx.getIsolationLevel().shortReadLocks()) {
 			nls.unlockNode(tx, deweyID);
@@ -999,7 +995,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	}
 
 	@Override
-	public final E prepend(Kind kind, String value)
+	public final E prepend(Kind kind, QNm name, Atomic value)
 			throws OperationNotSupportedException, DocumentException {
 		if ((this.type != Kind.ELEMENT.ID) && (this.type != Kind.DOCUMENT.ID)) {
 			throw new OperationNotSupportedException(
@@ -1032,8 +1028,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		} else {
 			nls.lockEdgeUpdate(tx, firstChild.getDeweyID(), PREV_SIBLING);
 			nls.lockEdgeExclusive(tx, firstChild.getDeweyID(), PREV_SIBLING);
-			newChildDeweyID = XTCdeweyID.newBetween(null, firstChild
-					.getDeweyID());
+			newChildDeweyID = XTCdeweyID.newBetween(null,
+					firstChild.getDeweyID());
 		}
 
 		nls.lockTreeUpdate(tx, newChildDeweyID, tx.getIsolationLevel()
@@ -1041,7 +1037,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		nls.lockTreeExclusive(tx, newChildDeweyID, tx.getIsolationLevel()
 				.lockClass(true), false);
 
-		E result = insertRecord(newChildDeweyID, kind, value);
+		E result = insertRecord(newChildDeweyID, kind, name, value);
 
 		if (tx.getIsolationLevel().shortReadLocks()) {
 			nls.unlockNode(tx, deweyID);
@@ -1093,8 +1089,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		} else {
 			nls.lockEdgeUpdate(tx, firstChild.getDeweyID(), PREV_SIBLING);
 			nls.lockEdgeExclusive(tx, firstChild.getDeweyID(), PREV_SIBLING);
-			newChildDeweyID = XTCdeweyID.newBetween(null, firstChild
-					.getDeweyID());
+			newChildDeweyID = XTCdeweyID.newBetween(null,
+					firstChild.getDeweyID());
 		}
 
 		nls.lockTreeUpdate(tx, newChildDeweyID, tx.getIsolationLevel()
@@ -1155,8 +1151,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		} else {
 			nls.lockEdgeUpdate(tx, firstChild.getDeweyID(), PREV_SIBLING);
 			nls.lockEdgeExclusive(tx, firstChild.getDeweyID(), PREV_SIBLING);
-			newChildDeweyID = XTCdeweyID.newBetween(null, firstChild
-					.getDeweyID());
+			newChildDeweyID = XTCdeweyID.newBetween(null,
+					firstChild.getDeweyID());
 		}
 
 		nls.lockTreeUpdate(tx, newChildDeweyID, tx.getIsolationLevel()
@@ -1183,7 +1179,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	}
 
 	@Override
-	public E insertAfter(Kind kind, String value)
+	public E insertAfter(Kind kind, QNm name, Atomic value)
 			throws OperationNotSupportedException, DocumentException {
 		if ((kind == Kind.ATTRIBUTE) || (kind == Kind.DOCUMENT)) {
 			throw new OperationNotSupportedException(
@@ -1213,14 +1209,12 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		} else {
 			nls.lockEdgeUpdate(tx, nextSibling.getDeweyID(), PREV_SIBLING);
 			nls.lockEdgeExclusive(tx, nextSibling.getDeweyID(), PREV_SIBLING);
-			newSiblingDeweyID = XTCdeweyID.newBetween(deweyID, nextSibling
-					.getDeweyID());
+			newSiblingDeweyID = XTCdeweyID.newBetween(deweyID,
+					nextSibling.getDeweyID());
 		}
 		nls.lockTreeUpdate(tx, newSiblingDeweyID, lockClass(tx, true), false);
-		nls
-				.lockTreeExclusive(tx, newSiblingDeweyID, lockClass(tx, true),
-						false);
-		E newSibling = getParent().insertRecord(newSiblingDeweyID, kind, value);
+		nls.lockTreeExclusive(tx, newSiblingDeweyID, lockClass(tx, true), false);
+		E newSibling = getParent().insertRecord(newSiblingDeweyID, kind, name, value);
 
 		if (tx.getIsolationLevel().shortReadLocks()) {
 			nls.unlockNode(tx, deweyID);
@@ -1269,13 +1263,11 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		} else {
 			nls.lockEdgeUpdate(tx, nextSibling.getDeweyID(), PREV_SIBLING);
 			nls.lockEdgeExclusive(tx, nextSibling.getDeweyID(), PREV_SIBLING);
-			newSiblingDeweyID = XTCdeweyID.newBetween(deweyID, nextSibling
-					.getDeweyID());
+			newSiblingDeweyID = XTCdeweyID.newBetween(deweyID,
+					nextSibling.getDeweyID());
 		}
 		nls.lockTreeUpdate(tx, newSiblingDeweyID, lockClass(tx, true), false);
-		nls
-				.lockTreeExclusive(tx, newSiblingDeweyID, lockClass(tx, true),
-						false);
+		nls.lockTreeExclusive(tx, newSiblingDeweyID, lockClass(tx, true), false);
 		E newSibling = getParent().insertSubtree(newSiblingDeweyID,
 				new NavigationalSubtreeParser(child));
 
@@ -1326,13 +1318,11 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		} else {
 			nls.lockEdgeUpdate(tx, nextSibling.getDeweyID(), PREV_SIBLING);
 			nls.lockEdgeExclusive(tx, nextSibling.getDeweyID(), PREV_SIBLING);
-			newSiblingDeweyID = XTCdeweyID.newBetween(deweyID, nextSibling
-					.getDeweyID());
+			newSiblingDeweyID = XTCdeweyID.newBetween(deweyID,
+					nextSibling.getDeweyID());
 		}
 		nls.lockTreeUpdate(tx, newSiblingDeweyID, lockClass(tx, true), false);
-		nls
-				.lockTreeExclusive(tx, newSiblingDeweyID, lockClass(tx, true),
-						false);
+		nls.lockTreeExclusive(tx, newSiblingDeweyID, lockClass(tx, true), false);
 		E newSibling = getParent().insertSubtree(newSiblingDeweyID, parser);
 
 		if (tx.getIsolationLevel().shortReadLocks()) {
@@ -1352,7 +1342,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	}
 
 	@Override
-	public E insertBefore(Kind kind, String value)
+	public E insertBefore(Kind kind, QNm name, Atomic value)
 			throws OperationNotSupportedException, DocumentException {
 		if ((kind == Kind.ATTRIBUTE) || (kind == Kind.DOCUMENT)) {
 			throw new OperationNotSupportedException(
@@ -1387,10 +1377,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		}
 
 		nls.lockTreeUpdate(tx, newSiblingDeweyID, lockClass(tx, true), false);
-		nls
-				.lockTreeExclusive(tx, newSiblingDeweyID, lockClass(tx, true),
-						false);
-		E newSibling = getParent().insertRecord(newSiblingDeweyID, kind, value);
+		nls.lockTreeExclusive(tx, newSiblingDeweyID, lockClass(tx, true), false);
+		E newSibling = getParent().insertRecord(newSiblingDeweyID, kind, name, value);
 
 		if (tx.getIsolationLevel().shortReadLocks()) {
 			nls.unlockNode(tx, deweyID);
@@ -1444,9 +1432,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		}
 
 		nls.lockTreeUpdate(tx, newSiblingDeweyID, lockClass(tx, true), false);
-		nls
-				.lockTreeExclusive(tx, newSiblingDeweyID, lockClass(tx, true),
-						false);
+		nls.lockTreeExclusive(tx, newSiblingDeweyID, lockClass(tx, true), false);
 		E newSibling = getParent().insertSubtree(newSiblingDeweyID,
 				new NavigationalSubtreeParser(child));
 
@@ -1502,9 +1488,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		}
 
 		nls.lockTreeUpdate(tx, newSiblingDeweyID, lockClass(tx, true), false);
-		nls
-				.lockTreeExclusive(tx, newSiblingDeweyID, lockClass(tx, true),
-						false);
+		nls.lockTreeExclusive(tx, newSiblingDeweyID, lockClass(tx, true), false);
 		E newSibling = getParent().insertSubtree(newSiblingDeweyID, parser);
 
 		if (tx.getIsolationLevel().shortReadLocks()) {
@@ -1524,7 +1508,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 	}
 
 	@Override
-	public E replaceWith(Kind kind, String value)
+	public E replaceWith(Kind kind, QNm name, Atomic value)
 			throws OperationNotSupportedException, DocumentException {
 		if (this.type == Kind.DOCUMENT.ID) {
 			throw new OperationNotSupportedException(
@@ -1554,7 +1538,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		XTCdeweyID rememberedDeweyID = deweyID;
 		E parent = getParentInternal();
 		delete();
-		return parent.insertRecord(rememberedDeweyID, kind, value);
+		return parent.insertRecord(rememberedDeweyID, kind, name, value);
 	}
 
 	@Override
@@ -1601,7 +1585,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		}
 
 		;
-		Node<?> node = (new LNodeFactory()).build(parser);
+		Node<?> node = (new D2NodeFactory()).build(parser);
 		Kind kind = node.getKind();
 
 		if (this.type == Kind.ATTRIBUTE.ID) {

@@ -29,6 +29,8 @@ package org.brackit.server.node.txnode;
 
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.SubtreeHandler;
 import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.node.parser.SubtreeProcessor;
@@ -65,21 +67,21 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 		this.rootDeweyID = rootDeweyID;
 	}
 
-	protected abstract E buildElement(E parent, String name, XTCdeweyID deweyID)
+	protected abstract E buildElement(E parent, QNm name, XTCdeweyID deweyID)
 			throws DocumentException;
 
-	protected abstract E buildAttribute(E parent, String name, String value,
+	protected abstract E buildAttribute(E parent, QNm name, Atomic value,
 			XTCdeweyID deweyID) throws DocumentException;
 
-	protected abstract E buildText(E parent, String text, XTCdeweyID deweyID)
+	protected abstract E buildText(E parent, Atomic text, XTCdeweyID deweyID)
 			throws DocumentException;
 
-	protected abstract E buildComment(E parent, String text, XTCdeweyID deweyID)
+	protected abstract E buildComment(E parent, Atomic text, XTCdeweyID deweyID)
 			throws DocumentException;
 
 	// TODO check params for PI's
-	protected abstract E buildProcessingInstruction(E parent, String text,
-			XTCdeweyID deweyID) throws DocumentException;
+	protected abstract E buildProcessingInstruction(E parent, QNm name, 
+			Atomic text, XTCdeweyID deweyID) throws DocumentException;
 
 	public E getSubtreeRoot() throws DocumentException {
 		if (subtreeRoot == null) {
@@ -143,7 +145,7 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 	}
 
 	@Override
-	public void text(String content) throws DocumentException {
+	public void text(Atomic content) throws DocumentException {
 		try {
 			level++;
 			lastAttributeDeweyID = null;
@@ -161,7 +163,7 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 	}
 
 	@Override
-	public void comment(String content) throws DocumentException {
+	public void comment(Atomic content) throws DocumentException {
 		try {
 			// root-level comments are not supported yet
 			if (level == 0) {
@@ -184,16 +186,17 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 	}
 
 	@Override
-	public void processingInstruction(String content) throws DocumentException {
+	public void processingInstruction(QNm name, Atomic content) 
+			throws DocumentException {
 		try {
 			// processing instructions not working yet
-			if (true) {
-				return;
-			}
+//			if (true) {
+//				return;
+//			}
 
 			level++;
 			lastAttributeDeweyID = null;
-			E node = pushNode(Kind.PROCESSING_INSTRUCTION, null, content);
+			E node = pushNode(Kind.PROCESSING_INSTRUCTION, name, content);
 			notifyProcessingInstruction(node);
 
 			if (level < (stackSize - 1)) {
@@ -207,7 +210,7 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 	}
 
 	@Override
-	public void startElement(String name) throws DocumentException {
+	public void startElement(QNm name) throws DocumentException {
 		try {
 			level++;
 			lastAttributeDeweyID = null;
@@ -222,7 +225,7 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 		}
 	}
 
-	public void attribute(String name, String value) throws DocumentException {
+	public void attribute(QNm name, Atomic value) throws DocumentException {
 		XTCdeweyID deweyID = lastAttributeDeweyID;
 
 		if (rootDeweyID != null) {
@@ -241,7 +244,7 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 		notifyAttribute(node);
 	}
 
-	private E pushNode(Kind kind, String name, String text)
+	private E pushNode(Kind kind, QNm name, Atomic text)
 			throws DocumentException {
 		E node = null;
 		XTCdeweyID deweyID = null;
@@ -273,7 +276,7 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 		} else if (kind == Kind.COMMENT) {
 			node = buildComment(parent, text, deweyID);
 		} else if (kind == Kind.PROCESSING_INSTRUCTION) {
-			node = buildProcessingInstruction(parent, text, deweyID);
+			node = buildProcessingInstruction(parent, name, text, deweyID);
 		}
 
 		if (stackSize == 0) {
@@ -291,7 +294,7 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 	}
 
 	@Override
-	public void endElement(String name) throws DocumentException {
+	public void endElement(QNm name) throws DocumentException {
 		try {
 			notifyEndElement((E) stack[stackSize - 1]);
 

@@ -47,21 +47,21 @@ public class PathSynopsisMgrFactory {
 		this.psc = new PSConverterImpl(bufferMgr);
 	}
 
-	public PathSynopsisMgr load(Tx transaction, DictionaryMgr dictionary,
+	public PathSynopsisMgr load(Tx tx, DictionaryMgr dictionary,
 			PageID psID) throws DocumentException {
 		try {
-			return new PathSynopsisMgr05(psc, dictionary, psc.load(transaction,
+			return new PathSynopsisMgr05(tx, psc, dictionary, psc.load(tx,
 					dictionary, psID));
 		} catch (ServerException e) {
 			throw new DocumentException(e);
 		}
 	}
 
-	public PathSynopsisMgr create(Tx transaction, DictionaryMgr dictionary,
+	public PathSynopsisMgr create(Tx tx, DictionaryMgr dictionary,
 			int containerID) throws DocumentException {
 		try {
-			return new PathSynopsisMgr05(psc, dictionary, psc.create(
-					transaction, containerID));
+			return new PathSynopsisMgr05(tx, psc, dictionary, psc.create(
+					tx, containerID));
 		} catch (ServerException e) {
 			throw new DocumentException(e);
 		}

@@ -100,7 +100,7 @@ public class CASIndexIteratorImpl<E extends Node<E>> implements Stream<E> {
 
 				E node = encoder.decode(key, value);
 
-				if ((filter != null) && (!filter.filter(node))) {
+				if (filter != null && filter.filter(node)) {
 					iterator.next();
 					continue;
 				}

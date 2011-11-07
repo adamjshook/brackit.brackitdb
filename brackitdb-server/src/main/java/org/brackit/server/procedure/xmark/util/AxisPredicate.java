@@ -77,7 +77,7 @@ public class AxisPredicate implements Expr {
 
 			return (result ? Bool.TRUE : Bool.FALSE);
 		} catch (ClassCastException e) {
-			throw new QueryException(e, ErrorCode.ERR_TYPE_NOT_A_NODE);
+			throw new QueryException(e, ErrorCode.ERR_TYPE_INAPPROPRIATE_TYPE);
 		} catch (NullPointerException e) {
 			throw new QueryException(e,
 					ErrorCode.BIT_DYN_RT_ILLEGAL_STATE_ERROR);

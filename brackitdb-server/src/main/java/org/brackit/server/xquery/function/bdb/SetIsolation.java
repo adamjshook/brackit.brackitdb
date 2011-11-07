@@ -37,12 +37,13 @@ import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.function.AbstractFunction;
-import org.brackit.xquery.function.Signature;
-import org.brackit.xquery.sequence.type.AtomicType;
-import org.brackit.xquery.sequence.type.Cardinality;
-import org.brackit.xquery.sequence.type.SequenceType;
+import org.brackit.xquery.module.StaticContext;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Sequence;
+import org.brackit.xquery.xdm.Signature;
+import org.brackit.xquery.xdm.type.AtomicType;
+import org.brackit.xquery.xdm.type.Cardinality;
+import org.brackit.xquery.xdm.type.SequenceType;
 
 /**
  * 
@@ -61,8 +62,8 @@ public class SetIsolation extends AbstractFunction {
 	}
 
 	@Override
-	public Sequence execute(QueryContext ctx, Sequence[] args)
-			throws QueryException {
+	public Sequence execute(StaticContext sctx, QueryContext ctx, 
+			Sequence[] args) throws QueryException {
 		try {
 			Atomic atomic = (Atomic) args[0];
 			String s = atomic.stringValue();

@@ -35,12 +35,13 @@ import org.brackit.xquery.QueryException;
 import org.brackit.xquery.atomic.IntNumeric;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.function.AbstractFunction;
-import org.brackit.xquery.function.Signature;
-import org.brackit.xquery.sequence.type.AtomicType;
-import org.brackit.xquery.sequence.type.Cardinality;
-import org.brackit.xquery.sequence.type.SequenceType;
+import org.brackit.xquery.module.StaticContext;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Sequence;
+import org.brackit.xquery.xdm.Signature;
+import org.brackit.xquery.xdm.type.AtomicType;
+import org.brackit.xquery.xdm.type.Cardinality;
+import org.brackit.xquery.xdm.type.SequenceType;
 
 /**
  * 
@@ -59,8 +60,8 @@ public class SetLockdepth extends AbstractFunction {
 	}
 
 	@Override
-	public Sequence execute(QueryContext ctx, Sequence[] args)
-			throws QueryException {
+	public Sequence execute(StaticContext sctx, QueryContext ctx, 
+			Sequence[] args) throws QueryException {
 		try {
 			IntNumeric value = (IntNumeric) args[0];
 			Session session = ((TXQueryContext) ctx).getTX().getSession();

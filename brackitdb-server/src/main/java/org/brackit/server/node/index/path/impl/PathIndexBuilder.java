@@ -89,7 +89,7 @@ public class PathIndexBuilder<E extends Node<E>> extends DefaultListener<E>
 
 	@Override
 	public <T extends E> void attribute(T node) throws DocumentException {
-		if ((filter != null) && (filter.filter(node))) {
+		if (filter != null && !filter.filter(node)) {
 			byte[] key = encoder.encodeKey(node);
 			byte[] value = encoder.encodeValue(node);
 
@@ -157,7 +157,7 @@ public class PathIndexBuilder<E extends Node<E>> extends DefaultListener<E>
 
 	@Override
 	public <T extends E> void startElement(T node) throws DocumentException {
-		if ((filter != null) && (filter.filter(node))) {
+		if (filter != null && (!filter.filter(node))) {
 			byte[] key = encoder.encodeKey(node);
 			byte[] value = encoder.encodeValue(node);
 

@@ -30,6 +30,8 @@ package org.brackit.server.metaData.pathSynopsis.manager;
 import org.brackit.server.metadata.pathSynopsis.converter.PSConverter;
 import org.brackit.server.metadata.pathSynopsis.manager.AbstractPathSynopsisMgr;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsis;
+import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
+import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr05;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisNode;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.tx.Tx;
@@ -41,18 +43,25 @@ import org.brackit.xquery.xdm.DocumentException;
  */
 public class PathSynopsisMgrMockup extends AbstractPathSynopsisMgr {
 
-	public PathSynopsisMgrMockup(PSConverter psc, DictionaryMgr dictionary,
-			PathSynopsis ps) {
-		super(psc, dictionary, ps);
+	public PathSynopsisMgrMockup(Tx tx, PSConverter psc,
+			DictionaryMgr dictionary, PathSynopsis ps) {
+		super(tx, psc, dictionary, ps);
 	}
 
 	@Override
-	protected void addNodeToTaList(Tx transaction, PathSynopsis pathSynopsis,
-			PathSynopsisNode node) throws DocumentException {
+	protected void addNodeToTaList(PathSynopsis pathSynopsis, PathSynopsisNode node) throws DocumentException {
 		synchronized (pathSynopsis) {
 			if (node.getPCR() >= pathSynopsis.getMaxStoredPCR()) {
 				pathSynopsis.setMaxStoredPCR(node.getPCR());
 			}
 		}
+	}
+
+	@Override
+	public PathSynopsisMgr copyFor(Tx tx) {
+		if (tx.equals(tx)) {
+			return this;
+		}
+		return new PathSynopsisMgrMockup(tx, psc, dictionaryMgr, ps);
 	}
 }

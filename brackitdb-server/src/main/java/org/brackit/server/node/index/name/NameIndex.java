@@ -25,40 +25,39 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.index.content;
+package org.brackit.server.node.index.name;
 
+import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.index.definition.IndexDef;
-import org.brackit.server.node.txnode.IndexEncoder;
+import org.brackit.server.node.index.name.impl.NameDirectoryEncoderImpl.QVocID;
 import org.brackit.server.node.txnode.IndexEncoderHelper;
 import org.brackit.server.store.SearchMode;
 import org.brackit.server.tx.Tx;
-import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.node.parser.ListenMode;
 import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Node;
 import org.brackit.xquery.xdm.Stream;
-import org.brackit.xquery.xdm.Type;
 
 /**
- * @author Karsten Schmidt
+ * @author Sebastian Baechle
  * 
  */
-public interface ContentIndex<E extends Node<E>> {
+public interface NameIndex<E extends Node<E>> {
 	public SubtreeListener<? super E> createBuilder(Tx tx,
-			IndexEncoder<E> encoder, int containerNo, IndexDef idxDef)
+			IndexEncoderHelper<E> helper, int containerNo, IndexDef idxDef)
 			throws DocumentException;
 
 	public Stream<? extends E> open(Tx tx, IndexEncoderHelper<E> helper,
-			int idxNo, Type type, SearchMode searchMode, Atomic minSearchKey,
-			Atomic maxSearchKey, boolean includeMin, boolean includeMax)
-			throws DocumentException;
+			int nameIndexNo, QVocID qVocID, SearchMode searchMode,
+			XTCdeweyID deweyID) throws DocumentException;
 
 	public SubtreeListener<? super E> createListener(Tx tx,
-			IndexEncoder<E> encoder, ListenMode mode, IndexDef idxDef)
+			IndexEncoderHelper<E> helper, ListenMode mode, IndexDef idxDef)
 			throws DocumentException;
 
-	public void drop(Tx tx, int idxNo) throws DocumentException;
+	public void drop(Tx tx, int indexNo) throws DocumentException;
 
-	void calculateStatistics(Tx tx, IndexDef idxDef) throws DocumentException;
+	public void calculateStatistics(Tx tx, IndexDef idxDef)
+			throws DocumentException;
 }

@@ -33,25 +33,22 @@ import java.util.List;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.el.encoder.ElCASFilter;
 import org.brackit.server.node.el.encoder.ElPathFilter;
-import org.brackit.server.node.el.encoder.PCRClusterPathEncoder;
 import org.brackit.server.node.el.encoder.PCRClusterEncoder;
-import org.brackit.server.node.el.encoder.SplidClusterPathEncoder;
+import org.brackit.server.node.el.encoder.PCRClusterPathEncoder;
 import org.brackit.server.node.el.encoder.SplidClusterEncoder;
+import org.brackit.server.node.el.encoder.SplidClusterPathEncoder;
 import org.brackit.server.node.index.definition.Cluster;
 import org.brackit.server.node.index.definition.IndexDef;
-import org.brackit.server.node.index.definition.IndexType;
 import org.brackit.server.node.txnode.IndexControllerImpl;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.store.Field;
-import org.brackit.server.store.SearchMode;
 import org.brackit.server.tx.TxException;
-import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.ListenMode;
 import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.node.stream.filter.Filter;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.DocumentException;
-import org.brackit.xquery.xdm.Stream;
 import org.brackit.xquery.xdm.Type;
 
 /**
@@ -63,24 +60,9 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 	private final ElCollection collection;
 
 	public ElIndexController(ElCollection collection) {
-		super(collection, collection.store.elementIndex, null,
+		super(collection, collection.store.nameIndex,
 				collection.store.pathIndex, collection.store.casIndex);
 		this.collection = collection;
-	}
-
-	@Override
-	public IndexDef createIndex(String statement) throws DocumentException {
-		IndexDef indexDefinition = null;
-
-		try {
-			long undoNextLSN = collection.getTX().checkPrevLSN();
-			indexDefinition = super.createIndex(statement);
-			collection.persist();
-			collection.getTX().logDummyCLR(undoNextLSN);
-			return indexDefinition;
-		} catch (TxException e) {
-			throw new DocumentException(e);
-		}
 	}
 
 	@Override
@@ -132,16 +114,9 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 		IndexEncoder<ElNode> encoder;
 
 		switch (idxDef.getType()) {
-		case ELEMENT:
-			return elementIndex.createBuilder(collection.getTX(), this,
+		case NAME:
+			return nameIndex.createBuilder(collection.getTX(), this,
 					containerNo, idxDef);
-		case CONTENT:
-			// convert request for content index to generic cas index
-			idxDef.setType(IndexType.CAS);
-			if (idxDef.isElementContent())
-				idxDef.addPath((new Path<String>()).descendant("*"));
-			if (idxDef.isAttributeContent())
-				idxDef.addPath((new Path<String>()).descendantAttribute("*"));
 		case CAS:
 			encoder = (idxDef.getClustering() == Cluster.SPLID) ? new SplidClusterEncoder(
 					collection, idxDef.getContentType())
@@ -150,9 +125,9 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 					new ElCASFilter(idxDef.getPaths(), collection),
 					containerNo, idxDef);
 		case PATH:
-			encoder = (idxDef.getClustering() == Cluster.SPLID) ? new SplidClusterPathEncoder(
-					collection)
-					: new PCRClusterPathEncoder(collection);
+			encoder = (idxDef.getClustering() == Cluster.SPLID) 
+						? new SplidClusterPathEncoder(collection)
+						: new PCRClusterPathEncoder(collection);
 			return pathIndex.createBuilder(collection.getTX(), encoder,
 					new ElPathFilter(idxDef.getPaths(), collection),
 					containerNo, idxDef);
@@ -168,8 +143,8 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 		IndexEncoder<ElNode> encoder;
 
 		switch (idxDef.getType()) {
-		case ELEMENT:
-			return elementIndex.createListener(collection.getTX(), this, mode,
+		case NAME:
+			return nameIndex.createListener(collection.getTX(), this, mode,
 					idxDef);
 		case CAS:
 			encoder = (idxDef.getClustering() == Cluster.SPLID) ? new SplidClusterEncoder(
@@ -194,15 +169,6 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 	}
 
 	@Override
-	public Stream<? extends ElNode> openContentIndex(int indexNo,
-			Atomic minSearchKey, Atomic maxSearchKey, boolean includeMin,
-			boolean includeMax, SearchMode searchMode) throws DocumentException {
-		Filter<ElNode> filter = createCASFilter("//*", "//@*");
-		return openCASIndex(indexNo, filter, minSearchKey, maxSearchKey,
-				includeMin, includeMax, searchMode);
-	}
-
-	@Override
 	public IndexEncoder<ElNode> getCasIndexEncoder(Type contentType,
 			Field keyType, Field valueType) throws DocumentException {
 		if ((valueType == Field.DEWEYIDPCR)
@@ -218,14 +184,7 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 	}
 
 	@Override
-	public IndexEncoder<ElNode> getContentIndexEncoder(Type contentType,
-			Field keyType, Field valueType) throws DocumentException {
-		throw new DocumentException(
-				"Plain content indexes are not supported in elementless storage");
-	}
-
-	@Override
-	public IndexEncoder<ElNode> getElementIndexEncoder()
+	public IndexEncoder<ElNode> getNameIndexEncoder()
 			throws DocumentException {
 		return new SplidClusterPathEncoder(collection);
 	}
@@ -246,7 +205,7 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 	@Override
 	public Filter<ElNode> createCASFilter(String... queryString)
 			throws DocumentException {
-		List<Path<String>> paths = new ArrayList<Path<String>>(
+		List<Path<QNm>> paths = new ArrayList<Path<QNm>>(
 				queryString.length);
 		for (String path : queryString)
 			paths.add(Path.parse(path));
@@ -256,7 +215,7 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 	@Override
 	public Filter<ElNode> createPathFilter(String... queryString)
 			throws DocumentException {
-		List<Path<String>> paths = new ArrayList<Path<String>>(
+		List<Path<QNm>> paths = new ArrayList<Path<QNm>>(
 				queryString.length);
 		for (String path : queryString)
 			paths.add(Path.parse(path));
@@ -264,14 +223,14 @@ public class ElIndexController extends IndexControllerImpl<ElNode> {
 	}
 
 	@Override
-	public Filter<ElNode> createCASFilter(List<Path<String>> paths)
+	public Filter<ElNode> createCASFilter(List<Path<QNm>> paths)
 			throws DocumentException {
-		return new ElPathFilter(new ArrayList<Path<String>>(paths), collection);
+		return new ElPathFilter(new ArrayList<Path<QNm>>(paths), collection);
 	}
 
 	@Override
-	public Filter<ElNode> createPathFilter(List<Path<String>> paths)
+	public Filter<ElNode> createPathFilter(List<Path<QNm>> paths)
 			throws DocumentException {
-		return new ElPathFilter(new ArrayList<Path<String>>(paths), collection);
+		return new ElPathFilter(new ArrayList<Path<QNm>>(paths), collection);
 	}
 }

@@ -42,6 +42,7 @@ import org.brackit.server.procedure.ProcedureUtil;
 import org.brackit.server.store.SearchMode;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.xdm.DocumentException;
@@ -63,9 +64,10 @@ public class InsertSubtrees implements Procedure {
 				params[0]);
 		String fragmentFile = params[1];
 
-		int elementIdxNo = getElementIndex(ctx, coll);
+		QNm asia = new QNm("asia");
+		int nameIdxNo = getNameIndex(ctx, coll, asia);
 		Stream<? extends Node<?>> elements = coll.getIndexController()
-				.openElementIndex(elementIdxNo, "asia", SearchMode.FIRST);
+				.openNameIndex(nameIdxNo, asia, SearchMode.FIRST);
 
 		Node<?> refNode = null;
 		if ((refNode = elements.next()) == null) {
@@ -92,14 +94,15 @@ public class InsertSubtrees implements Procedure {
 		}
 	}
 
-	private int getElementIndex(QueryContext ctx, DBCollection<?> coll)
+	private int getNameIndex(QueryContext ctx, DBCollection<?> coll, 
+			QNm... nms)
 			throws DocumentException {
 		Indexes indexes = coll.get(Indexes.class);
-		IndexDef elementIndex = indexes.findElementIndex();
-		if (elementIndex != null) {
-			return elementIndex.getID();
+		IndexDef nameIndex = indexes.findNameIndex(nms);
+		if (nameIndex != null) {
+			return nameIndex.getID();
 		}
-		throw new DocumentException("No element index found for document %s.",
+		throw new DocumentException("No name index found for document %s.",
 				coll.getID());
 	}
 

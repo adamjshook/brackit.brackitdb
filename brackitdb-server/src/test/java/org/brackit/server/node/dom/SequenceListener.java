@@ -72,8 +72,8 @@ public class SequenceListener extends DOMListener {
 			collectedText.append(node.getValue());
 		else
 			stack.peekLast().appendChild(
-					new TextImpl(document, stack.peekLast(), null, node
-							.getValue()));
+					new TextImpl(document, stack.peekLast(), null, 
+							node.getValue().stringValue()));
 	}
 
 	@Override
@@ -81,8 +81,8 @@ public class SequenceListener extends DOMListener {
 			throws DocumentException {
 		handlePendingNodes();
 		NodeImpl current = stack.peekLast();
-		ElementImpl newChild = new ElementImpl(document, current, node
-				.getName(), null);
+		ElementImpl newChild = new ElementImpl(document, current, 
+				node.getName().stringValue(), null);
 		((Element) current).appendChild(newChild);
 		stack.addLast(newChild);
 	}
@@ -120,7 +120,7 @@ public class SequenceListener extends DOMListener {
 		handlePendingNodes();
 		stack.peekLast().appendChild(
 				new CommentImpl(document, stack.peekLast(), null, node
-						.getValue()));
+						.getValue().stringValue()));
 	}
 
 	@Override
@@ -128,8 +128,9 @@ public class SequenceListener extends DOMListener {
 			T node) throws DocumentException {
 		handlePendingNodes();
 		stack.peekLast().appendChild(
-				new ProcInstrImpl(document, stack.peekLast(), null, node
-						.getValue()));
+				new ProcInstrImpl(document, stack.peekLast(), 
+						node.getName().stringValue(), 
+						node.getValue().stringValue()));
 	}
 
 	public void appendText(String value) {

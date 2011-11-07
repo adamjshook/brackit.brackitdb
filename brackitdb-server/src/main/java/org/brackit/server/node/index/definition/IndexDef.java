@@ -42,6 +42,7 @@ import java.util.Map.Entry;
 import org.brackit.server.metadata.materialize.Materializable;
 import org.brackit.server.node.index.external.IndexStatistics;
 import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.module.Namespaces;
 import org.brackit.xquery.node.SubtreePrinter;
 import org.brackit.xquery.node.parser.FragmentHelper;
@@ -58,47 +59,41 @@ import org.brackit.xquery.xdm.Type;
  */
 public class IndexDef implements Materializable, Serializable {
 
-	private static final String EXCLUDING_TAG = "excluding";
+	private static final QNm EXCLUDING_TAG = new QNm("excluding");
 
-	private static final String INCLUDING_TAG = "including";
+	private static final QNm INCLUDING_TAG = new QNm("including");
 
-	private static final String PATH_TAG = "path";
+	private static final QNm PATH_TAG = new QNm("path");
 
-	private static final String CONTENT_ATTRIBUTE = "content";
+	private static final QNm UNIQUE_ATTRIBUTE = new QNm("unique");
 
-	private static final String UNIQUE_ATTRIBUTE = "unique";
+	private static final QNm CLUSTER_ATTRIBUTE = new QNm("cluster");
 
-	private static final String CLUSTER_ATTRIBUTE = "cluster";
+	private static final QNm CONTENT_TYPE_ATTRIBUTE = new QNm("keyType");
 
-	private static final String CONTENT_TYPE_ATTRIBUTE = "keyType";
+	private static final QNm TYPE_ATTRIBUTE = new QNm("type");
 
-	private static final String TYPE_ATTRIBUTE = "type";
-
-	private static final String ID_ATTRIBUTE = "id";
+	private static final QNm ID_ATTRIBUTE = new QNm("id");
 
 	private static final long serialVersionUID = 1L;
 
-	public static final String INDEX_TAG = "index";
+	public static final QNm INDEX_TAG = new QNm("index");
 
 	private IndexType type;
 
 	private Cluster cluster = Cluster.SPLID;
 
 	// paths for path and CAS indexes
-	private final List<Path<String>> paths = new ArrayList<Path<String>>();
+	private final List<Path<QNm>> paths = new ArrayList<Path<QNm>>();
 
-	// only for element indexes
-	private final Set<String> excluded = new HashSet<String>();
-	private final Map<String, Cluster> included = new HashMap<String, Cluster>();
+	// only for name indexes
+	private final Set<QNm> excluded = new HashSet<QNm>();
+	private final Map<QNm, Cluster> included = new HashMap<QNm, Cluster>();
 
-	// unique flag (for CAS and content indexes)
+	// unique flag (for CAS indexes)
 	private boolean unique = false;
 
-	// only for content indexes
-	private boolean elementContent = false;
-	private boolean attributeContent = false;
-
-	// for content and cas indexes
+	// for CAS indexes
 	private Type contentType;
 
 	// populated when index is built
@@ -111,11 +106,11 @@ public class IndexDef implements Materializable, Serializable {
 	}
 
 	/*
-	 * Element index
+	 * Name index
 	 */
-	public IndexDef(Cluster cluster, Map<String, Cluster> included,
-			Set<String> excluded) {
-		this.type = IndexType.ELEMENT;
+	public IndexDef(Cluster cluster, Map<QNm, Cluster> included,
+			Set<QNm> excluded) {
+		this.type = IndexType.NAME;
 		this.included.putAll(included);
 		this.excluded.addAll(excluded);
 	}
@@ -123,7 +118,7 @@ public class IndexDef implements Materializable, Serializable {
 	/*
 	 * Path index
 	 */
-	public IndexDef(Cluster cluster, List<Path<String>> paths) {
+	public IndexDef(Cluster cluster, List<Path<QNm>> paths) {
 		this.type = IndexType.PATH;
 		this.paths.addAll(paths);
 		this.cluster = cluster;
@@ -133,7 +128,7 @@ public class IndexDef implements Materializable, Serializable {
 	 * CAS index
 	 */
 	public IndexDef(Type contentType, Cluster cluster,
-			List<Path<String>> paths, boolean unique) {
+			List<Path<QNm>> paths, boolean unique) {
 		this.type = IndexType.CAS;
 		this.contentType = contentType;
 		this.paths.addAll(paths);
@@ -141,21 +136,9 @@ public class IndexDef implements Materializable, Serializable {
 		this.unique = unique;
 	}
 
-	/*
-	 * Content index
-	 */
-	public IndexDef(Type contentType, boolean elementContent,
-			boolean attributeContent, boolean unique) {
-		this.type = IndexType.CONTENT;
-		this.contentType = contentType;
-		this.elementContent = elementContent;
-		this.attributeContent = attributeContent;
-		this.unique = unique;
-	}
-
 	@Override
 	public void init(Node<?> root) throws DocumentException {
-		String name = root.getName();
+		QNm name = root.getName();
 
 		if (!name.equals(INDEX_TAG)) {
 			throw new DocumentException("Expected tag '%s' but found '%s'",
@@ -166,40 +149,27 @@ public class IndexDef implements Materializable, Serializable {
 
 		attribute = root.getAttribute(ID_ATTRIBUTE);
 		if (attribute != null) {
-			id = Integer.valueOf(attribute.getValue());
+			id = Integer.valueOf(attribute.getValue().stringValue());
 		}
 
 		attribute = root.getAttribute(TYPE_ATTRIBUTE);
 		if (attribute != null) {
-			type = (IndexType.valueOf(attribute.getValue()));
+			type = (IndexType.valueOf(attribute.getValue().stringValue()));
 		}
 
 		attribute = root.getAttribute(CONTENT_TYPE_ATTRIBUTE);
 		if (attribute != null) {
-			contentType = (resolveType(attribute.getValue()));
+			contentType = (resolveType(attribute.getValue().stringValue()));
 		}
 
 		attribute = root.getAttribute(CLUSTER_ATTRIBUTE);
 		if (attribute != null) {
-			cluster = (Cluster.valueOf(attribute.getValue()));
+			cluster = (Cluster.valueOf(attribute.getValue().stringValue()));
 		}
 
 		attribute = root.getAttribute(UNIQUE_ATTRIBUTE);
 		if (attribute != null) {
-			unique = (Boolean.valueOf(attribute.getValue()));
-		}
-
-		attribute = root.getAttribute(CONTENT_ATTRIBUTE);
-		if (attribute != null) {
-			String contentMode = attribute.getValue();
-			if (contentMode.equals("all")) {
-				attributeContent = true;
-				elementContent = true;
-			} else if (contentMode.equals("element")) {
-				elementContent = true;
-			} else if (contentMode.equals("attribute")) {
-				attributeContent = true;
-			}
+			unique = (Boolean.valueOf(attribute.getValue().stringValue()));
 		}
 
 		Stream<? extends Node<?>> children = root.getChildren();
@@ -211,23 +181,25 @@ public class IndexDef implements Materializable, Serializable {
 					indexStatistics = new IndexStatistics();
 					indexStatistics.init(child);
 				} else {
-					String childName = child.getName();
+					QNm childName = child.getName();
+					String value = child.getValue().stringValue();
 
 					if (childName.equals(PATH_TAG)) {
-						String path = child.getValue();
+						String path = value;
 						paths.add(Path.parse(path));
 					} else if (childName.equals(INCLUDING_TAG)) {
-						for (String s : child.getValue().split(",")) {
+						for (String s : value.split(",")) {
 							if (s.length() > 0) {
 								String includeString = s;
 								String[] tmp = includeString.split("@");
-								included.put(tmp[0], Cluster.valueOf(tmp[1]));
+								included.put(new QNm(tmp[0]), 
+										Cluster.valueOf(tmp[1]));
 							}
 						}
 					} else if (childName.equals(EXCLUDING_TAG)) {
-						for (String s : child.getValue().split(",")) {
+						for (String s : value.split(",")) {
 							if (s.length() > 0)
-								excluded.add(s);
+								excluded.add(new QNm(s));
 						}
 					}
 				}
@@ -242,29 +214,22 @@ public class IndexDef implements Materializable, Serializable {
 		FragmentHelper tmp = new FragmentHelper();
 
 		tmp.openElement(INDEX_TAG);
-		tmp.attribute(TYPE_ATTRIBUTE, type.toString());
-		tmp.attribute(ID_ATTRIBUTE, Integer.toString(id));
-		tmp.attribute(CLUSTER_ATTRIBUTE, cluster.toString());
+		tmp.attribute(TYPE_ATTRIBUTE, new Una(type.toString()));
+		tmp.attribute(ID_ATTRIBUTE, new Una(Integer.toString(id)));
+		tmp.attribute(CLUSTER_ATTRIBUTE, new Una(cluster.toString()));
 
 		if (contentType != null) {
-			tmp.attribute(CONTENT_TYPE_ATTRIBUTE, contentType.toString());
+			tmp.attribute(CONTENT_TYPE_ATTRIBUTE, new Una(contentType.toString()));
 		}
 
 		if (isUnique()) {
-			tmp.attribute(UNIQUE_ATTRIBUTE, Boolean.toString(isUnique()));
-		}
-
-		// for content indexes: content mode (element, attribute, all)
-		if (isContentIndex()) {
-			String contentMode = (isAllContent()) ? "all"
-					: (isElementContent()) ? "element" : "attribute";
-			tmp.attribute(CONTENT_ATTRIBUTE, contentMode);
+			tmp.attribute(UNIQUE_ATTRIBUTE, new Una(Boolean.toString(isUnique())));
 		}
 
 		if (paths != null && !paths.isEmpty()) {
-			for (Path<String> path : paths) {
+			for (Path<QNm> path : paths) {
 				tmp.openElement(PATH_TAG);
-				tmp.content(path.toString());
+				tmp.content(path.toString()); // TODO
 				tmp.closeElement();
 			}
 		}
@@ -272,7 +237,7 @@ public class IndexDef implements Materializable, Serializable {
 			tmp.openElement(EXCLUDING_TAG);
 
 			StringBuilder buf = new StringBuilder();
-			for (String s : excluded) {
+			for (QNm s : excluded) {
 				buf.append(s + ",");
 			}
 			// remove trailing ","
@@ -285,7 +250,7 @@ public class IndexDef implements Materializable, Serializable {
 			tmp.openElement(INCLUDING_TAG);
 
 			StringBuilder buf = new StringBuilder();
-			for (Entry<String, Cluster> e : included.entrySet()) {
+			for (Entry<QNm, Cluster> e : included.entrySet()) {
 				buf.append(e.getKey() + "@" + e.getValue() + ",");
 			}
 			// remove trailing ","
@@ -313,12 +278,8 @@ public class IndexDef implements Materializable, Serializable {
 		throw new DocumentException("Unknown content type type: '%s'", name);
 	}
 
-	public boolean isElementIndex() {
-		return type == IndexType.ELEMENT;
-	}
-
-	public boolean isContentIndex() {
-		return type == IndexType.CONTENT;
+	public boolean isNameIndex() {
+		return type == IndexType.NAME;
 	}
 
 	public boolean isCasIndex() {
@@ -341,7 +302,7 @@ public class IndexDef implements Materializable, Serializable {
 		return type;
 	}
 
-	public List<Path<String>> getPaths() {
+	public List<Path<QNm>> getPaths() {
 		return Collections.unmodifiableList(paths);
 	}
 
@@ -349,11 +310,11 @@ public class IndexDef implements Materializable, Serializable {
 		return this.cluster;
 	}
 
-	public Map<String, Cluster> getIncluded() {
+	public Map<QNm, Cluster> getIncluded() {
 		return Collections.unmodifiableMap(included);
 	}
 
-	public Set<String> getExcluded() {
+	public Set<QNm> getExcluded() {
 		return Collections.unmodifiableSet(excluded);
 	}
 
@@ -366,18 +327,6 @@ public class IndexDef implements Materializable, Serializable {
 		} catch (DocumentException e) {
 			return e.getMessage();
 		}
-	}
-
-	public boolean isElementContent() {
-		return elementContent;
-	}
-
-	public boolean isAttributeContent() {
-		return attributeContent;
-	}
-
-	public boolean isAllContent() {
-		return isElementContent() && isAttributeContent();
 	}
 
 	public Type getContentType() {
@@ -409,7 +358,7 @@ public class IndexDef implements Materializable, Serializable {
 		this.type = type;
 	}
 
-	public void addPath(Path<String> path) {
+	public void addPath(Path<QNm> path) {
 		this.paths.add(path);
 	}
 }

@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.node.index.element.impl;
+package org.brackit.server.node.index.name.impl;
 
 import java.util.Map;
 import java.util.Set;
@@ -35,12 +35,14 @@ import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.index.cas.impl.CASIndexListener;
 import org.brackit.server.node.index.definition.Cluster;
 import org.brackit.server.node.index.definition.IndexDef;
+import org.brackit.server.node.index.name.impl.NameDirectoryEncoderImpl.QVocID;
 import org.brackit.server.node.txnode.IndexEncoder;
 import org.brackit.server.node.txnode.IndexEncoderHelper;
 import org.brackit.server.node.txnode.TXNode;
 import org.brackit.server.store.index.Index;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.DefaultListener;
 import org.brackit.xquery.node.parser.ListenMode;
 import org.brackit.xquery.node.parser.SubtreeListener;
@@ -50,7 +52,7 @@ import org.brackit.xquery.xdm.DocumentException;
  * @author Sebastian Baechle
  * 
  */
-public class ElementIndexListener<E extends TXNode<E>> extends
+public class NameIndexListener<E extends TXNode<E>> extends
 		DefaultListener<E> implements SubtreeListener<E> {
 	private static final Logger log = Logger.getLogger(CASIndexListener.class);
 
@@ -62,15 +64,11 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 	private final NameDirectoryEncoder nameDirectoryEncoder;
 	protected final IndexEncoderHelper<E> helper;
 
-	private final boolean hasIncludes;
+	private final Map<QNm, Cluster> includes;
 
-	private final Map<String, Cluster> includes;
+	private final Set<QNm> excludes;
 
-	private final boolean hasExcludes;
-
-	private final Set<String> excludes;
-
-	public ElementIndexListener(Tx tx, Index index,
+	public NameIndexListener(Tx tx, Index index,
 			IndexEncoderHelper<E> helper, IndexDef indexDef, ListenMode mode) {
 		this.tx = tx;
 		this.index = index;
@@ -79,11 +77,9 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 		this.helper = helper;
 
 		this.indexNo = new PageID(indexDef.getID());
-		this.nameDirectoryEncoder = new NameDirectoyEncoderImpl();
+		this.nameDirectoryEncoder = new NameDirectoryEncoderImpl();
 		this.includes = indexDef.getIncluded();
 		this.excludes = indexDef.getExcluded();
-		hasIncludes = includes.size() > 0;
-		hasExcludes = excludes.size() > 0;
 	}
 
 	@Override
@@ -100,28 +96,30 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 		}
 	}
 
+	public <T extends E> void attribute(T node) throws DocumentException {
+		// TODO Listen for attributes and handle them appropriately
+	}
+	
 	protected <T extends E> void insertElement(T node) throws DocumentException {
-		String name = node.getName();
-		boolean included = (!hasIncludes) || includes.containsKey(name);
-		boolean excluded = (!hasExcludes) || !excludes.contains(name);
-		if ((!included) || (excluded)) {
+		QNm name = node.getName();
+		boolean included = (includes.isEmpty() || includes.containsKey(name));
+		boolean excluded = (!excludes.isEmpty() && excludes.contains(name));
+		if (!included || excluded) {
 			return;
 		}
-		int vocID = helper.getDictionary().translate(tx, name);
+		
+		QVocID qVocID = QVocID.fromQNm(tx, helper.getDictionary(), name);
 		try {
 			PageID nodePageID;
-			IndexEncoder<E> encoder = helper.getElementIndexEncoder();
-			byte[] nameDirectoryKey = nameDirectoryEncoder.encodeKey(vocID);
+			IndexEncoder<E> encoder = helper.getNameIndexEncoder();
+			byte[] nameDirectoryKey = nameDirectoryEncoder.encodeKey(qVocID);
 			byte[] nameDirectoryValue = index.read(tx, indexNo,
 					nameDirectoryKey);
 
 			if (nameDirectoryValue == null) {
 				if (log.isDebugEnabled()) {
-					log
-							.debug(String
-									.format(
-											"Creating new node reference index for vocID %s in index %s.",
-											vocID, indexNo));
+					log.debug(String.format("Creating new node reference " +
+						"index for qVocID %s in index %s.", qVocID, indexNo));
 				}
 
 				nodePageID = index.createIndex(tx, indexNo.getContainerNo(),
@@ -136,9 +134,8 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 			}
 
 			if (log.isDebugEnabled()) {
-				log.debug(String.format(
-						"Inserting (%s, %s) in element index %s.", vocID, node
-								.getDeweyID(), indexNo));
+				log.debug(String.format("Inserting (%s, %s) in name " +
+						"index %s.", qVocID, node.getDeweyID(), indexNo));
 			}
 
 			byte[] key = encoder.encodeKey(node);
@@ -150,35 +147,32 @@ public class ElementIndexListener<E extends TXNode<E>> extends
 	}
 
 	protected <T extends E> void deleteElement(T node) throws DocumentException {
-		String name = node.getName();
-		boolean included = (!hasIncludes) || includes.containsKey(name);
-		boolean excluded = (!hasExcludes) || !excludes.contains(name);
-		if ((!included) || (excluded)) {
+		QNm name = node.getName();
+		boolean included = (includes.isEmpty() || includes.containsKey(name));
+		boolean excluded = (!excludes.isEmpty() && excludes.contains(name));
+		if (!included || excluded) {
 			return;
 		}
-		int vocID = helper.getDictionary().translate(tx, name);
-
+		
+		QVocID qVocID = QVocID.fromQNm(tx, helper.getDictionary(), name);
 		try {
 			PageID nodePageID;
-			IndexEncoder<E> encoder = helper.getElementIndexEncoder();
-			byte[] nameDirectoryKey = nameDirectoryEncoder.encodeKey(vocID);
+			IndexEncoder<E> encoder = helper.getNameIndexEncoder();
+			byte[] nameDirectoryKey = nameDirectoryEncoder.encodeKey(qVocID);
 			byte[] nameDirectoryValue = index.read(tx, indexNo,
 					nameDirectoryKey);
 
 			if (nameDirectoryValue == null) {
 				if (log.isInfoEnabled()) {
-					log.warn(String
-							.format("No valid node reference index "
-									+ "for vocID %s in index %s found.", vocID,
-									indexNo));
+					log.warn(String.format("No valid node reference index " +
+						"for qVocID %s in index %s found.", qVocID, indexNo));
 				}
 			} else {
 				nodePageID = nameDirectoryEncoder
 						.decodePageID(nameDirectoryValue);
 				if (log.isDebugEnabled()) {
-					log.debug(String.format(
-							"Deleting (%s, %s) from element index %s.", vocID,
-							node.getDeweyID(), indexNo));
+					log.debug(String.format("Deleting (%s, %s) from name " +
+							"index %s.", qVocID, node.getDeweyID(), indexNo));
 				}
 				byte[] key = encoder.encodeKey(node);
 				byte[] value = encoder.encodeValue(node);

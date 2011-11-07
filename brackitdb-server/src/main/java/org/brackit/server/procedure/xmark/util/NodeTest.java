@@ -83,7 +83,7 @@ public class NodeTest implements Expr {
 					&& ((name == null) || (node.getName().equals(name)));
 			return res ? Bool.TRUE : Bool.FALSE;
 		} catch (ClassCastException e) {
-			throw new QueryException(e, ErrorCode.ERR_TYPE_NOT_A_NODE);
+			throw new QueryException(e, ErrorCode.ERR_TYPE_INAPPROPRIATE_TYPE);
 		}
 	}
 

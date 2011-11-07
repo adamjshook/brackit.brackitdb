@@ -33,12 +33,12 @@ import org.brackit.xquery.QueryException;
 import org.brackit.xquery.Tuple;
 import org.brackit.xquery.expr.Accessor;
 import org.brackit.xquery.operator.Cursor;
-import org.brackit.xquery.sequence.type.ItemTest;
 import org.brackit.xquery.xdm.Expr;
 import org.brackit.xquery.xdm.Item;
 import org.brackit.xquery.xdm.Node;
 import org.brackit.xquery.xdm.Sequence;
 import org.brackit.xquery.xdm.Stream;
+import org.brackit.xquery.xdm.type.ItemType;
 
 /**
  * 
@@ -54,7 +54,7 @@ public class StepOp implements Cursor {
 
 	private final Accessor axis;
 
-	private final ItemTest test;
+	private final ItemType test;
 
 	private final Expr[] predicates;
 	//	
@@ -80,12 +80,12 @@ public class StepOp implements Cursor {
 
 	private boolean foundRelative;
 
-	public StepOp(Cursor in, int position, Accessor axis, ItemTest test,
+	public StepOp(Cursor in, int position, Accessor axis, ItemType test,
 			Expr[] predicates, boolean pipeSingle) {
 		this(in, position, axis, test, predicates, pipeSingle, null);
 	}
 
-	public StepOp(Cursor in, int position, Accessor axis, ItemTest test,
+	public StepOp(Cursor in, int position, Accessor axis, ItemType test,
 			Expr[] predicates, boolean pipeSingle, int... projections) {
 		super();
 		this.in = in;
@@ -137,7 +137,7 @@ public class StepOp implements Cursor {
 				foundRelative = false;
 			}
 		} catch (ClassCastException e) {
-			throw new QueryException(e, ErrorCode.ERR_TYPE_NOT_A_NODE);
+			throw new QueryException(e, ErrorCode.ERR_TYPE_INAPPROPRIATE_TYPE);
 		}
 	}
 
