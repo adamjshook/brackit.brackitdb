@@ -204,6 +204,14 @@ public class BracketNode extends TXNode<BracketNode> {
 	@Override
 	public BracketNode getNodeInternal(XTCdeweyID deweyID)
 			throws DocumentException {
+		
+		if (deweyID.equals(this.deweyID)) {
+			return this;
+		}
+		
+		if (deweyID.isDocument()) {
+			return new BracketNode(locator);
+		}
 
 		try {
 			BracketIter iterator = locator.collection.store.index.open(getTX(),
