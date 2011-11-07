@@ -41,4 +41,6 @@ public interface BracketNodeLoader {
 	public BracketNode load(XTCdeweyID deweyID, RecordInterpreter record)
 			throws DocumentException;
 
+	public BracketNode load(XTCdeweyID deweyID, byte[] record)
+			throws DocumentException;
 }

@@ -54,16 +54,41 @@ public class BracketLocator {
 
 	private final class BracketNodeLoaderImpl implements BracketNodeLoader {
 		@Override
-		public BracketNode load(XTCdeweyID deweyID, RecordInterpreter record) throws DocumentException {
+		public final BracketNode load(XTCdeweyID deweyID,
+				RecordInterpreter record) throws DocumentException {
 
 			int pcr = record.getPCR();
-			PSNode psn = pathSynopsis.get(collection.getTX(), pcr);
+			PSNode psn = pathSynopsis.get(pcr);
+			int dist = deweyID.getLevel() - psn.getLevel();
+
+			if ((dist == 1)) {
+				return new BracketNode(BracketLocator.this, deweyID, record
+						.getType(), record.getValue(), psn);
+			} else if (dist <= 0) {
+				while (dist++ < 0) {
+					psn = psn.getParent();
+				}
+				return new BracketNode(BracketLocator.this, deweyID,
+						Kind.ELEMENT.ID, null, psn);
+			} else {
+				throw new DocumentException(
+						"Node %s has level %s but PCR %s has level %s",
+						deweyID, deweyID.getLevel(), pcr, psn.getLevel());
+			}
+		}
+
+		@Override
+		public BracketNode load(XTCdeweyID deweyID, byte[] record)
+				throws DocumentException {
+
+			int pcr = ElRecordAccess.getPCR(record);
+			PSNode psn = pathSynopsis.get(pcr);
 			int dist = deweyID.getLevel() - psn.getLevel();
 
 			if ((dist == 1)) {
 				return new BracketNode(BracketLocator.this, deweyID,
-						record.getType(),
-						record.getValue(), psn);
+						ElRecordAccess.getType(record), ElRecordAccess
+								.getTypedValue(record), psn);
 			} else if (dist <= 0) {
 				while (dist++ < 0) {
 					psn = psn.getParent();
@@ -77,6 +102,7 @@ public class BracketLocator {
 			}
 		}
 	}
+
 	public BracketNodeLoader bracketNodeLoader;
 
 	public BracketLocator(BracketCollection collection, DocID docID,
@@ -94,27 +120,5 @@ public class BracketLocator {
 		this.collection = collection;
 		this.pathSynopsis = locator.pathSynopsis;
 		this.bracketNodeLoader = new BracketNodeLoaderImpl();
-	}
-
-	public BracketNode fromBytes(XTCdeweyID deweyID, byte[] record)
-			throws DocumentException {
-		int pcr = ElRecordAccess.getPCR(record);
-		PSNode psn = pathSynopsis.get(collection.getTX(), pcr);
-		int dist = deweyID.getLevel() - psn.getLevel();
-
-		if ((dist == 1)) {
-			return new BracketNode(this, deweyID,
-					ElRecordAccess.getType(record),
-					ElRecordAccess.getValue(record), psn);
-		} else if (dist <= 0) {
-			while (dist++ < 0) {
-				psn = psn.getParent();
-			}
-			return new BracketNode(this, deweyID, Kind.ELEMENT.ID, null, psn);
-		} else {
-			throw new DocumentException(
-					"Node %s has level %s but PCR %s has level %s", deweyID,
-					deweyID.getLevel(), pcr, psn.getLevel());
-		}
 	}
 }

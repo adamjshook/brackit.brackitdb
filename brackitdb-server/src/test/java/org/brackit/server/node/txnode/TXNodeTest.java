@@ -38,12 +38,14 @@ import java.util.ArrayList;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.SysMockup;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.metadata.TXQueryContext;
 import org.brackit.server.node.DocID;
+import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.aries.BPlusIndex;
 import org.brackit.server.store.index.aries.display.DisplayVisitor;
@@ -52,6 +54,7 @@ import org.brackit.xquery.node.NodeTest;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
+import org.brackit.xquery.xdm.Stream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -230,6 +233,69 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 							+ "\"", Kind.TEXT, node.getKind());
 			assertEquals(String.format("Text of node %s", nodeString), text
 					.getNodeValue().trim(), node.getValue().stringValue());
+		} else {
+			throw new DocumentException("Unexpected dom node: %s",
+					domNode.getClass());
+		}
+	}
+	
+	protected void checkSubtreeViaChildStream(final E node, org.w3c.dom.Node domNode) throws Exception {
+		E child = null;
+		String nodeString = node.toString();
+
+		if (domNode instanceof Element) {
+			Element element = (Element) domNode;
+			assertEquals(nodeString + " is of type element", Kind.ELEMENT,
+					node.getKind());
+
+			// System.out.println("Checking name of element " +
+			// node.getDeweyID() + " level " + node.getDeweyID().getLevel() +
+			// " is " + element.getNodeName());
+
+			assertEquals(String.format("Name of node %s", nodeString),
+					element.getNodeName(), node.getName());
+			compareAttributes(node, element);
+
+			NodeList domChildNodes = element.getChildNodes();
+			ArrayList<E> children = new ArrayList<E>();
+
+			Stream<E> childStream = node.getChildren();
+			for (E c = childStream.next(); c != null; c = childStream
+					.next()) {
+				// System.out.println(String.format("-> Found child of %s : %s",
+				// node, c));
+				children.add(c);
+			}
+			childStream.close();
+
+			childStream = node.getChildren();
+			for (int i = 0; i < domChildNodes.getLength(); i++) {
+				org.w3c.dom.Node domChild = domChildNodes.item(i);
+				// System.out.println("Checking if child  " + ((domChild
+				// instanceof Element) ? domChild.getNodeName() :
+				// domChild.getNodeValue()) + " exists under " + node);
+
+				child = childStream.next();
+
+				assertNotNull(String.format("child node %s of node %s", i,
+						nodeString), child);
+
+				checkSubtreePreOrderReduced(child, domChild);
+			}
+			childStream.close();
+
+			assertEquals(
+					String.format("child count of element %s", nodeString),
+					domChildNodes.getLength(), children.size());
+
+		} else if (domNode instanceof Text) {
+			Text text = (Text) domNode;
+
+			assertEquals(
+					nodeString + " is of type text : \"" + text.getNodeValue()
+							+ "\"", Kind.TEXT, node.getKind());
+			assertEquals(String.format("Text of node %s", nodeString), text
+					.getNodeValue().trim(), node.getValue());
 		} else {
 			throw new DocumentException("Unexpected dom node: %s",
 					domNode.getClass());

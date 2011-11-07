@@ -35,11 +35,11 @@ import org.brackit.server.node.bracket.BracketAttributeTuple;
 import org.brackit.server.node.bracket.BracketLocator;
 import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.OpenMode;
-import org.brackit.server.store.SearchMode;
 import org.brackit.server.store.index.IndexAccessException;
-import org.brackit.server.store.index.IndexIterator;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Stream;
 
@@ -178,6 +178,6 @@ public interface BracketIndex {
 	 * Sets an attribute. Returns the new attribute node and (if it is the case)
 	 * the old overwritten attribute.
 	 */
-	public BracketAttributeTuple setAttribute(BracketNode element, String name,
-			String value) throws IndexAccessException, DocumentException;
+	public BracketAttributeTuple setAttribute(BracketNode element, QNm name,
+			Atomic value) throws IndexAccessException, DocumentException;
 }

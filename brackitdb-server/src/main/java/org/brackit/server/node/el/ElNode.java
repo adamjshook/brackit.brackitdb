@@ -296,12 +296,12 @@ public class ElNode extends TXNode<ElNode> {
 	@Override
 	public Atomic getValueInternal() throws DocumentException {
 		return ((type != Kind.DOCUMENT.ID) && (type != Kind.ELEMENT.ID)) ? value
-				: new Una(getText(this));
+				: new Una(getText());
 	}
 
 	@Override
 	public void setNameInternal(QNm name) throws DocumentException {
-		// change name, leave mapping unchanged
+		// change name, leave NS mapping unchanged
 		setNsMappingAndName(psNode.getNsMapping(), name);
 	}
 
@@ -765,7 +765,7 @@ public class ElNode extends TXNode<ElNode> {
 		return root;
 	}
 
-	private String getText(ElNode node) throws DocumentException {
+	private String getText() throws DocumentException {
 		ElStore r = locator.collection.store;
 		StringBuilder text = new StringBuilder();
 

@@ -150,7 +150,7 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 		checkForPendingElement(node);
 
 		byte[] textRecord = ElRecordAccess.createRecord(node.getPCR(),
-				node.getKind().ID, node.getValue());
+				node.getKind().ID, node.getValue().stringValue());
 		insertRecord(node, textRecord);
 	}
 
@@ -174,7 +174,7 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 		checkForPendingElement(node);
 
 		byte[] attributeRecord = ElRecordAccess.createRecord(node.getPCR(),
-				Kind.ATTRIBUTE.ID, node.getValue());
+				Kind.ATTRIBUTE.ID, node.getValue().stringValue());
 		insertRecord(node, attributeRecord);
 	}
 

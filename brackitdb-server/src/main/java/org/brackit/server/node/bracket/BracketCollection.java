@@ -37,6 +37,8 @@ import org.brackit.server.node.txnode.TXCollection;
 import org.brackit.server.store.index.Index;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.node.parser.SubtreeParser;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
@@ -44,16 +46,16 @@ import org.brackit.xquery.xdm.Node;
 
 /**
  * @author Martin Hiller
- *
+ * 
  */
 public class BracketCollection extends TXCollection<BracketNode> {
-	
-	public static final String PATHSYNOPSIS_ID_ATTRIBUTE = "pathSynopsis";
+
+	public static final QNm PATHSYNOPSIS_ID_ATTRIBUTE = new QNm("pathSynopsis");
 
 	protected PathSynopsisMgr pathSynopsis;
 
 	protected final BracketStore store;
-	
+
 	protected final BracketIndexController indexController;
 
 	public BracketCollection(Tx tx, BracketStore elStore) {
@@ -158,16 +160,15 @@ public class BracketCollection extends TXCollection<BracketNode> {
 
 	@Override
 	public BracketNode getDocument(DocID docID) throws DocumentException {
-		return new BracketNode(
-				new BracketLocator(this, docID, new PageID(docID.value())),
-				new XTCdeweyID(docID), Kind.DOCUMENT.ID, null, null);
+		return new BracketNode(new BracketLocator(this, docID, new PageID(docID
+				.value())), new XTCdeweyID(docID), Kind.DOCUMENT.ID, null, null);
 	}
 
 	@Override
 	public Node<?> materialize() throws DocumentException {
 		Node<?> root = super.materialize();
-		root.setAttribute(PATHSYNOPSIS_ID_ATTRIBUTE, Integer
-				.toString(pathSynopsis.getPathSynopsisNo()));
+		root.setAttribute(PATHSYNOPSIS_ID_ATTRIBUTE, new Una(Integer
+				.toString(pathSynopsis.getPathSynopsisNo())));
 		return root;
 	}
 
@@ -177,14 +178,14 @@ public class BracketCollection extends TXCollection<BracketNode> {
 		dictionary = store.dictionary;
 
 		if (pathSynopsis == null) {
-			PageID psID = PageID.fromString(root
-					.getAttributeValue(PATHSYNOPSIS_ID_ATTRIBUTE));
+			PageID psID = PageID.fromString(root.getAttribute(
+					PATHSYNOPSIS_ID_ATTRIBUTE).getValue().stringValue());
 			pathSynopsis = store.pathSynopsisMgrFactory.load(tx, dictionary,
 					psID);
 		}
 
-		if (!Boolean.parseBoolean(root
-				.getAttributeValue(COLLECTION_FLAG_ATTRIBUTE))) {
+		if (!Boolean.parseBoolean(root.getAttribute(COLLECTION_FLAG_ATTRIBUTE)
+				.getValue().stringValue())) {
 			document = new BracketNode(this, new PageID(docID.value()));
 		}
 	}
@@ -201,8 +202,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	}
 
 	@Override
-	public IndexController<BracketNode> getIndexController()
-	{
+	public IndexController<BracketNode> getIndexController() {
 		return indexController;
 	}
 

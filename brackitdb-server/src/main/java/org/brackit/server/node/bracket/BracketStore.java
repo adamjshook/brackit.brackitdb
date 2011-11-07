@@ -32,8 +32,8 @@ import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgrFactory;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.node.index.cas.CASIndex;
 import org.brackit.server.node.index.cas.impl.CASIndexImpl;
-import org.brackit.server.node.index.element.ElementIndex;
-import org.brackit.server.node.index.element.impl.ElementIndexImpl;
+import org.brackit.server.node.index.name.NameIndex;
+import org.brackit.server.node.index.name.impl.NameIndexImpl;
 import org.brackit.server.node.index.path.PathIndex;
 import org.brackit.server.node.index.path.impl.PathIndexImpl;
 import org.brackit.server.store.index.Index;
@@ -61,7 +61,7 @@ public class BracketStore {
 
 	protected final PathSynopsisMgrFactory pathSynopsisMgrFactory;
 
-	protected final ElementIndex<BracketNode> elementIndex;
+	protected final NameIndex<BracketNode> nameIndex;
 
 	protected final PathIndex<BracketNode> pathIndex;
 
@@ -74,7 +74,7 @@ public class BracketStore {
 		this.stdIndex = new BPlusIndex(bufferMgr);
 		this.bufferMgr = bufferMgr;
 		this.pathSynopsisMgrFactory = new PathSynopsisMgrFactory(bufferMgr);
-		this.elementIndex = new ElementIndexImpl<BracketNode>(bufferMgr);
+		this.nameIndex = new NameIndexImpl<BracketNode>(bufferMgr);
 		this.pathIndex = new PathIndexImpl<BracketNode>(bufferMgr);
 		this.casIndex = new CASIndexImpl<BracketNode>(bufferMgr);
 		this.mls = mls;

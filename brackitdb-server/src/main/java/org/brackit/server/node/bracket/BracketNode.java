@@ -31,8 +31,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.brackit.server.io.buffer.PageID;
+import org.brackit.server.metadata.pathSynopsis.NsMapping;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
+import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr.SubtreeCopyResult;
 import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.el.ElRecordAccess;
@@ -49,13 +51,19 @@ import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.page.bracket.RecordInterpreter;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.locking.services.MetaLockService;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.node.parser.ListenMode;
+import org.brackit.xquery.node.parser.NavigationalSubtreeParser;
+import org.brackit.xquery.node.parser.SubtreeHandler;
 import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.node.parser.SubtreeParser;
 import org.brackit.xquery.node.stream.AtomStream;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
 import org.brackit.xquery.xdm.OperationNotSupportedException;
+import org.brackit.xquery.xdm.Scope;
 import org.brackit.xquery.xdm.Stream;
 
 /**
@@ -100,10 +108,12 @@ public class BracketNode extends TXNode<BracketNode> {
 
 	protected final BracketLocator locator;
 
-	protected String value;
+	protected Atomic value;
 
 	protected PSNode psNode;
 
+	private BracketScope scope;
+	
 	public HintPageInformation hintPageInfo;
 
 	public BracketNode(BracketLocator locator) {
@@ -118,7 +128,7 @@ public class BracketNode extends TXNode<BracketNode> {
 	}
 
 	public BracketNode(BracketLocator locator, XTCdeweyID deweyID, byte type,
-			String value, PSNode psNode) {
+			Atomic value, PSNode psNode) {
 		super(deweyID, type);
 		this.locator = locator;
 		this.value = value;
@@ -174,11 +184,6 @@ public class BracketNode extends TXNode<BracketNode> {
 		return (psNode != null) ? psNode.getPCR() : -1;
 	}
 
-	public int getVocID() {
-		return ((type == Kind.ELEMENT.ID) || (type == Kind.ATTRIBUTE.ID)) ? psNode
-				.getVocID() : -1;
-	}
-
 	private BracketNode getNodeGeneric(NavigationMode navMode,
 			XTCdeweyID referenceDeweyID) throws DocumentException {
 
@@ -204,11 +209,11 @@ public class BracketNode extends TXNode<BracketNode> {
 	@Override
 	public BracketNode getNodeInternal(XTCdeweyID deweyID)
 			throws DocumentException {
-		
+
 		if (deweyID.equals(this.deweyID)) {
 			return this;
 		}
-		
+
 		if (deweyID.isDocument()) {
 			return new BracketNode(locator);
 		}
@@ -233,7 +238,7 @@ public class BracketNode extends TXNode<BracketNode> {
 
 	@Override
 	public BracketNode insertRecord(XTCdeweyID childDeweyID, Kind kind,
-			String value) throws DocumentException {
+			QNm name, Atomic value) throws DocumentException {
 		if ((kind != Kind.ELEMENT) && (kind != Kind.TEXT)
 				&& (kind != Kind.COMMENT)
 				&& (kind != Kind.PROCESSING_INSTRUCTION)) {
@@ -249,24 +254,25 @@ public class BracketNode extends TXNode<BracketNode> {
 		BracketNode node;
 
 		if (kind == Kind.ELEMENT) {
-			int vocID = coll.getDictionary().translate(getTX(), value);
-			PSNode childPsNode = pathSynopsisMgr.getChild(getTX(),
-					psNode.getPCR(), vocID, Kind.ELEMENT.ID);
+			PSNode childPsNode = pathSynopsisMgr.getChild(psNode.getPCR(),
+					name, Kind.ELEMENT.ID, null);
 			physicalRecord = ElRecordAccess.createRecord(childPsNode.getPCR(),
 					Kind.ELEMENT.ID, null);
+			;
 			node = new BracketNode(locator, childDeweyID, kind.ID, null,
 					childPsNode);
 			value = null;
 		} else {
 			physicalRecord = ElRecordAccess.createRecord(psNode.getPCR(),
-					kind.ID, value);
+					kind.ID, value.stringValue());
 			node = new BracketNode(locator, childDeweyID, type, value, psNode);
 		}
 
 		notifyUpdate(locator, ListenMode.INSERT, node);
 
 		try {
-			InsertController insertCtrl = r.index.openForInsert(locator, OpenMode.UPDATE, childDeweyID);
+			InsertController insertCtrl = r.index.openForInsert(locator,
+					OpenMode.UPDATE, childDeweyID);
 			insertCtrl.insert(childDeweyID, physicalRecord, 0);
 			insertCtrl.close();
 		} catch (IndexAccessException e) {
@@ -290,25 +296,25 @@ public class BracketNode extends TXNode<BracketNode> {
 	}
 
 	@Override
-	public String getNameInternal() throws DocumentException {
-		return ((type == Kind.ELEMENT.ID) || (type == Kind.ATTRIBUTE.ID)) ? psNode
-				.getName() : null;
+	public QNm getNameInternal() throws DocumentException {
+		return psNode.getName();
 	}
 
 	@Override
-	public String getValueInternal() throws DocumentException {
+	public Atomic getValueInternal() throws DocumentException {
 		return ((type != Kind.DOCUMENT.ID) && (type != Kind.ELEMENT.ID)) ? value
-				: getText();
+				: new Una(getText());
 	}
 
 	@Override
-	public void setNameInternal(String name)
+	public void setNameInternal(QNm name)
 			throws OperationNotSupportedException, DocumentException {
-		throw new OperationNotSupportedException();
+		// change name, leave NS mapping unchanged
+		setNsMappingAndName(psNode.getNsMapping(), name);
 	}
 
 	@Override
-	public void setValueInternal(String value)
+	public void setValueInternal(Atomic value)
 			throws OperationNotSupportedException, DocumentException {
 		if (type == Kind.ELEMENT.ID) {
 			throw new DocumentException(
@@ -327,7 +333,7 @@ public class BracketNode extends TXNode<BracketNode> {
 			int PCR = oldRecord.getPCR();
 
 			byte[] physicalRecord = ElRecordAccess.createRecord(PCR, type,
-					value);
+					value.stringValue());
 
 			// delete old entry from all indexes
 			notifyUpdate(locator, ListenMode.DELETE, this);
@@ -345,7 +351,7 @@ public class BracketNode extends TXNode<BracketNode> {
 	}
 
 	@Override
-	public boolean deleteAttributeInternal(String name)
+	public boolean deleteAttributeInternal(QNm name)
 			throws OperationNotSupportedException, DocumentException {
 
 		BracketNode attribute = getAttribute(name);
@@ -359,23 +365,32 @@ public class BracketNode extends TXNode<BracketNode> {
 	}
 
 	@Override
-	public BracketNode setAttributeInternal(String name, String value)
+	public void parse(SubtreeHandler handler) throws DocumentException {
+		SubtreeParser parser = new NavigationalSubtreeParser(this);
+		parser.parse(handler);
+	}
+
+	@Override
+	public BracketNode setAttributeInternal(QNm name, Atomic value)
 			throws OperationNotSupportedException, DocumentException {
 
 		BracketStore r = locator.collection.store;
-		
+
 		try {
-			
-			BracketAttributeTuple attributeTuple = r.index.setAttribute(this, name, value);
-			
+
+			BracketAttributeTuple attributeTuple = r.index.setAttribute(this,
+					name, value);
+
 			// notify indexes
 			if (attributeTuple.oldAttribute != null) {
-				notifyUpdate(locator, ListenMode.DELETE, attributeTuple.oldAttribute);
+				notifyUpdate(locator, ListenMode.DELETE,
+						attributeTuple.oldAttribute);
 			}
-			notifyUpdate(locator, ListenMode.INSERT, attributeTuple.newAttribute);
-			
+			notifyUpdate(locator, ListenMode.INSERT,
+					attributeTuple.newAttribute);
+
 			return attributeTuple.newAttribute;
-			
+
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -403,8 +418,7 @@ public class BracketNode extends TXNode<BracketNode> {
 	}
 
 	@Override
-	public BracketNode getAttributeInternal(String name)
-			throws DocumentException {
+	public BracketNode getAttributeInternal(QNm name) throws DocumentException {
 		try {
 			BracketIter iterator = locator.collection.store.index.open(getTX(),
 					locator.rootPageID, NavigationMode.NEXT_ATTRIBUTE, deweyID,
@@ -441,8 +455,8 @@ public class BracketNode extends TXNode<BracketNode> {
 	@Override
 	public BracketNode getFirstChildInternal() throws DocumentException {
 		if (type == Kind.DOCUMENT.ID) {
-			return getNodeGeneric(NavigationMode.TO_KEY,
-					XTCdeweyID.newRootID(locator.docID));
+			return getNodeGeneric(NavigationMode.TO_KEY, XTCdeweyID
+					.newRootID(locator.docID));
 		} else {
 			return getNodeGeneric(NavigationMode.FIRST_CHILD, deweyID);
 		}
@@ -451,8 +465,8 @@ public class BracketNode extends TXNode<BracketNode> {
 	@Override
 	public BracketNode getLastChildInternal() throws DocumentException {
 		if (type == Kind.DOCUMENT.ID) {
-			return getNodeGeneric(NavigationMode.TO_KEY,
-					XTCdeweyID.newRootID(locator.docID));
+			return getNodeGeneric(NavigationMode.TO_KEY, XTCdeweyID
+					.newRootID(locator.docID));
 		} else {
 			return getNodeGeneric(NavigationMode.LAST_CHILD, deweyID);
 		}
@@ -548,8 +562,8 @@ public class BracketNode extends TXNode<BracketNode> {
 		}
 
 		BracketSubtreeHandler subtreeHandler = new BracketSubtreeHandler(
-				locator, this, rootDeweyID,
-				listener.toArray(new SubtreeListener[listener.size()]));
+				locator, this, rootDeweyID, listener
+						.toArray(new SubtreeListener[listener.size()]));
 		parser.parse(subtreeHandler);
 
 		BracketNode root = getNode(rootDeweyID);
@@ -585,7 +599,8 @@ public class BracketNode extends TXNode<BracketNode> {
 					if (deweyID.isPrefixOf(currentDeweyID)) {
 						if (!currentDeweyID.isAttribute()) {
 
-							String textValue = iterator.getRecord().getValue();
+							String textValue = iterator.getRecord().getValue()
+									.stringValue();
 
 							if (textValue != null) {
 								text.append(textValue);
@@ -607,13 +622,15 @@ public class BracketNode extends TXNode<BracketNode> {
 
 	@Override
 	public String toString() {
-		String name = ((type == Kind.ATTRIBUTE.ID) || (type == Kind.ELEMENT.ID)) ? psNode
-				.getName() : null;
+		QNm name = ((type == Kind.ATTRIBUTE.ID) || (type == Kind.ELEMENT.ID)) ? psNode
+				.getName()
+				: null;
 		int pcr = (psNode != null) ? psNode.getPCR() : -1;
 		return String
-				.format("%s(doc='%s', docID='%s', type='%s', name='%s', value='%s', pcr='%s')",
-						deweyID, locator.collection.getName(),
-						deweyID.getDocID(), getKind(), name, value, pcr);
+				.format(
+						"%s(doc='%s', docID='%s', type='%s', name='%s', value='%s', pcr='%s')",
+						deweyID, locator.collection.getName(), deweyID
+								.getDocID(), getKind(), name, value, pcr);
 	}
 
 	@Override
@@ -638,8 +655,8 @@ public class BracketNode extends TXNode<BracketNode> {
 
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().useReadLocks()) {
-			nls.lockTreeShared(tx, deweyID,
-					tx.getIsolationLevel().lockClass(false), false);
+			nls.lockTreeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
+					false), false);
 		}
 
 		Stream<? extends BracketNode> subtree;
@@ -660,5 +677,26 @@ public class BracketNode extends TXNode<BracketNode> {
 			BracketFilter filter) {
 		return locator.collection.store.index.openSubtreeStream(locator,
 				deweyID, hintPageInfo, filter, self, true);
+	}
+
+	protected void setNsMappingAndName(NsMapping nsMapping, QNm name)
+			throws DocumentException {
+
+		SubtreeCopyResult res = locator.collection.pathSynopsis.copySubtree(
+				psNode.getPCR(), nsMapping, name);
+
+		// iterate over subtree, change PCRs of decendants
+		// TODO
+		throw new OperationNotSupportedException();
+	}
+
+	@Override
+	public Scope getScope() {
+
+		if (scope == null && type == Kind.ELEMENT.ID) {
+			scope = new BracketScope(this);
+		}
+
+		return scope;
 	}
 }
