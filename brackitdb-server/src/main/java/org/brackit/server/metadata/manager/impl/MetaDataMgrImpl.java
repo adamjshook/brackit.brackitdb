@@ -46,9 +46,9 @@ import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr03;
 import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
-import org.brackit.server.node.el.ElCollection;
-import org.brackit.server.node.el.ElNode;
-import org.brackit.server.node.el.ElStore;
+import org.brackit.server.node.bracket.BracketCollection;
+import org.brackit.server.node.bracket.BracketNode;
+import org.brackit.server.node.bracket.BracketStore;
 import org.brackit.server.node.index.IndexController;
 import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.index.definition.IndexDefBuilder;
@@ -108,8 +108,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	private final HookedCache<DocID, DBCollection<?>> collectionCache;
 
 	private final HookedCache<DocID, BlobHandle> blobCache;
-
-	private final ElStore elStore;
+	
+	private final BracketStore bracketStore;
 
 	private final BlobStore blobStore;
 
@@ -117,7 +117,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 	private final DictionaryMgr defaultDictionary;
 
-	private ElCollection mdCollection;
+	private BracketCollection mdCollection;
 
 	private Directory mdRootDir;
 
@@ -135,7 +135,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		int maxLocks = Cfg.asInt(TxMgr.MAX_LOCKS, 200000);
 		mls = new UnifiedMetaLockService("DocumentLockService", maxLocks,
 				maxTransactions);
-		elStore = new ElStore(bufferMgr, defaultDictionary, mls);
+		bracketStore = new BracketStore(bufferMgr, defaultDictionary, mls);
 		blobStore = new IndexBlobStore(bufferMgr);
 	}
 
@@ -224,10 +224,10 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		TXCollection<?> collection = null;
 
 		StorageSpec spec = new StorageSpec(name, defaultDictionary);
-		ElCollection elCollection = new ElCollection(tx, elStore);
-		elCollection.create(spec, parser);
+		BracketCollection bracketCollection = new BracketCollection(tx, bracketStore);
+		bracketCollection.create(spec, parser);
 
-		collection = elCollection;
+		collection = bracketCollection;
 		Document document = new Document(collection.getID(), name, directory,
 				null);
 		collection.setPersistor(document);
@@ -260,10 +260,10 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		TXCollection<?> collection = null;
 
 		StorageSpec spec = new StorageSpec(name, defaultDictionary);
-		ElCollection elCollection = new ElCollection(tx, elStore);
-		elCollection.create(spec);
+		BracketCollection bracketCollection = new BracketCollection(tx, bracketStore);
+		bracketCollection.create(spec);
 
-		collection = elCollection;
+		collection = bracketCollection;
 		Document document = new Document(collection.getID(), name, directory,
 				null);
 		collection.setPersistor(document);
@@ -304,7 +304,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 
 		// Check if persisted object exists
-		IndexController<ElNode> indexController = mdCollection.copyFor(tx)
+		IndexController<BracketNode> indexController = mdCollection.copyFor(tx)
 				.getIndexController();
 		Str name = new Str(path.toString());
 		Stream<? extends Node<?>> stream = indexController.openCASIndex(
@@ -350,13 +350,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	private DBCollection<?> buildCollection(Tx tx, Document document)
 			throws DocumentException {
 
-		TXCollection<?> collection = null;
+		TXCollection<?> collection = new BracketCollection(tx, bracketStore);
 		Node<?> node = document.getMasterDocNode();
-		boolean elementless = (node
-				.getAttribute(ElCollection.PATHSYNOPSIS_ID_ATTRIBUTE) != null);
-		if (elementless) {
-			collection = new ElCollection(tx, elStore);
-		}
 		collection.init(node);
 		collection.setPersistor(document);
 
@@ -428,7 +423,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 	private Item<Directory> getItemByID(Tx tx, int id, boolean forUpdate)
 			throws ItemNotFoundException, MetaDataException, DocumentException {
-		IndexController<ElNode> indexController = mdCollection.copyFor(tx)
+		IndexController<BracketNode> indexController = mdCollection.copyFor(tx)
 				.getIndexController();
 		Stream<? extends Node<?>> stream = indexController.openCASIndex(
 				mdIDCasIndexNo, null, new Str(Integer.toString(id)), null,
@@ -463,7 +458,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		;
 		String name = path.toString();
 
-		IndexController<ElNode> indexController = mdCollection.copyFor(tx)
+		IndexController<BracketNode> indexController = mdCollection.copyFor(tx)
 				.getIndexController();
 		Stream<? extends TXNode<?>> stream = indexController.openCASIndex(
 				mdNameCasIndexNo, null, new Str(name), null, true, true,
@@ -848,7 +843,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		// load metadata document and perform delayed init to load indexes
 		// of metadata document etc.
 		defaultDictionary.load(tx, DEFAULT_DICTIONARY_ID);
-		mdCollection = new ElCollection(tx, elStore);
+		mdCollection = new BracketCollection(tx, bracketStore);
 
 		mdCollection.init(MASTERDOC_NAME, MASTERDOC_PAGEID, MASTERDOC_PSPAGEID);
 		TXNode<?> mdRootNode = mdCollection.getDocument().getFirstChild();
@@ -880,12 +875,12 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 		// store metadata document
 		int dictionaryID = defaultDictionary.create(tx);
-		mdCollection = new ElCollection(tx, elStore);
+		mdCollection = new BracketCollection(tx, bracketStore);
 		mdCollection
 				.create(spec, new DocumentParser(MASTERDOC_DEFAULTDOCUMENT));
 
 		// create root directory for cache
-		ElNode rootNode = mdCollection.getDocument().getFirstChild();
+		BracketNode rootNode = mdCollection.getDocument().getFirstChild();
 		TXNode<?> dirRootNode = rootNode.getLastChild();
 		mdRootDir = new Directory("", null, dirRootNode);
 		Path<String> rootPath = new Path<String>();

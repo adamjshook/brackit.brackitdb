@@ -27,6 +27,8 @@
  */
 package org.brackit.server.node.bracket;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -45,6 +47,7 @@ import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.XQuery;
 import org.brackit.xquery.node.parser.DocumentParser;
+import org.brackit.xquery.xdm.Collection;
 import org.brackit.xquery.xdm.Item;
 import org.brackit.xquery.xdm.Iter;
 import org.brackit.xquery.xdm.Kind;
@@ -77,8 +80,8 @@ public class XMarkComparison {
 	
 	protected static ElMockup elStore;
 	
-//	protected QueryContext ctx;
 //	protected Collection<?> coll;
+//	protected QueryContext ctx;
 
 	protected String readQuery(String dirname, String filename)
 			throws IOException {
@@ -133,6 +136,7 @@ public class XMarkComparison {
 		XQuery query = xquery(readQuery(QUERY_DIR, queryName));
 		long elResult = queryDoc(elColl, query, warmupCount);
 		System.out.println(String.format("EL:      %5d", elResult));
+		query = xquery(readQuery(QUERY_DIR, queryName));
 		long bracketResult = queryDoc(bracketColl, query, warmupCount);
 		System.out.println(String.format("Bracket: %5d", bracketResult));
 	}
@@ -143,7 +147,7 @@ public class XMarkComparison {
 		long end = 0;
 		
 		QueryContext ctx = createContext();
-		ctx.setDefaultDocument(coll.getDocument());
+		ctx.setContextItem(coll.getDocument());
 		
 		for (int i = 0; i < warmupCount; i++) {
 			pseudoSerialize(query.execute(ctx));
@@ -316,8 +320,8 @@ public class XMarkComparison {
 	public void setUp() throws Exception {
 		bracketColl = bracketStore.newTXforDocument(bracketColl, true);
 		elColl = elStore.newTXforDocument(elColl, true);
-//		ctx = new QueryContext();
 //		coll = bracketColl;
+//		ctx = new QueryContext();
 	}
 	
 	@After
