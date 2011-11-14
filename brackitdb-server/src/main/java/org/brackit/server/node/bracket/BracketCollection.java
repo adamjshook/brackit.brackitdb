@@ -58,16 +58,16 @@ public class BracketCollection extends TXCollection<BracketNode> {
 
 	protected final BracketIndexController indexController;
 
-	public BracketCollection(Tx tx, BracketStore elStore) {
+	public BracketCollection(Tx tx, BracketStore bracketStore) {
 		super(tx);
-		this.store = elStore;
+		this.store = bracketStore;
 		this.indexController = new BracketIndexController(this);
 	}
 
 	protected BracketCollection(BracketCollection collection, Tx tx) {
 		super(collection, tx);
 		this.store = collection.store;
-		this.pathSynopsis = collection.pathSynopsis;
+		this.pathSynopsis = collection.pathSynopsis.copyFor(tx);
 		this.indexController = new BracketIndexController(this);
 	}
 

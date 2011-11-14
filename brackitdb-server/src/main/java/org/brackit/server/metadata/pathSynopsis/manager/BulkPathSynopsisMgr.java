@@ -97,7 +97,7 @@ public class BulkPathSynopsisMgr extends AbstractPathSynopsisMgr implements
 
 	@Override
 	public PathSynopsisMgr copyFor(Tx tx) {
-		if (tx.equals(tx)) {
+		if (this.tx.equals(tx)) {
 			return this;
 		}
 		return new BulkPathSynopsisMgr(tx, psc, dictionaryMgr, ps);
