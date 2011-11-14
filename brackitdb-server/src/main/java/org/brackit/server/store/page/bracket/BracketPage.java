@@ -2084,11 +2084,17 @@ public final class BracketPage extends BasePage {
 	public boolean update(byte[] newValue, boolean externalized,
 			int currentOffset) {
 
-		// determine currentKeyType
+		// determine currentKeyType & set currentOffset to the value reference
 		BracketKey.Type currentKeyType = null;
 		if (currentOffset != BEFORE_LOW_KEY_OFFSET) {
-			currentKeyType = (currentOffset == LOW_KEY_OFFSET ? getLowKeyType()
-					: BracketKey.loadNew(page, currentOffset).type);
+			
+			if (currentOffset == LOW_KEY_OFFSET) {
+				currentKeyType = getLowKeyType();
+				currentOffset = getKeyAreaStartOffset();
+			} else {
+				currentKeyType = BracketKey.loadNew(page, currentOffset).type;
+				currentOffset += BracketKey.PHYSICAL_LENGTH;
+			}
 		}
 
 		// check validity of key type
@@ -2100,9 +2106,6 @@ public final class BracketPage extends BasePage {
 
 		// create new length field
 		byte[] valueLengthField = getValueLengthField(newValue, externalized);
-
-		// set offset to value reference
-		currentOffset += BracketKey.PHYSICAL_LENGTH;
 
 		// determine value offset
 		int valueOffset = getValueOffset(currentOffset);
@@ -2136,9 +2139,9 @@ public final class BracketPage extends BasePage {
 			}
 
 			// check whether a defragmentation is needed
-			if (requiredSpace > getFreeSpaceOffset() - getKeyAreaEndOffset()) {
+			if (valueLengthField.length + newValue.length > getFreeSpaceOffset() - getKeyAreaEndOffset()) {
 				// defragmentation
-				defragment(0);
+				defragment(currentOffset);
 			}
 
 			// store new value in front of the value area

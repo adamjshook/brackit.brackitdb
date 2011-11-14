@@ -120,7 +120,7 @@ public class PathSynopsisMgr05 extends AbstractPathSynopsisMgr implements
 	
 	@Override
 	public PathSynopsisMgr copyFor(Tx tx) {
-		if (tx.equals(tx)) {
+		if (this.tx.equals(tx)) {
 			return this;
 		}
 		return new PathSynopsisMgr05(tx, psc, dictionaryMgr, ps);

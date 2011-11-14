@@ -118,7 +118,7 @@ public class BracketLocator {
 		this.docID = locator.docID;
 		this.rootPageID = locator.rootPageID;
 		this.collection = collection;
-		this.pathSynopsis = locator.pathSynopsis;
+		this.pathSynopsis = collection.getPathSynopsis();
 		this.bracketNodeLoader = new BracketNodeLoaderImpl();
 	}
 }

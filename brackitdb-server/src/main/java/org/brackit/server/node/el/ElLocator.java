@@ -61,7 +61,7 @@ public final class ElLocator {
 		this.docID = locator.docID;
 		this.rootPageID = locator.rootPageID;
 		this.collection = collection;
-		this.pathSynopsis = locator.pathSynopsis;
+		this.pathSynopsis = collection.getPathSynopsis();
 	}
 
 	public ElNode fromBytes(XTCdeweyID deweyID, byte[] record)
