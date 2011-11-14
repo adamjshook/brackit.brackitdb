@@ -1340,7 +1340,8 @@ public final class BracketTree extends PageContextFactory {
 
 					// try to find the reference key
 					boolean useHintPage = false;
-					if (key.compareDivisions(hintLeaf.getHighKey()) < 0) {
+					XTCdeweyID highKey = hintLeaf.getHighKey();
+					if (highKey == null || key.compareDivisions(hintLeaf.getHighKey()) < 0) {
 						NavigationStatus navStatus = hintLeaf
 								.navigateContextFree(key, NavigationMode.TO_KEY);
 						if (navStatus == NavigationStatus.FOUND) {
