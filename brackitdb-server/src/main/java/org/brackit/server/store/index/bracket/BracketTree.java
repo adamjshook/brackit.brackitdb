@@ -1573,7 +1573,7 @@ public final class BracketTree extends PageContextFactory {
 
 			// move nodes from left to right
 			left.moveToSplitPosition(OCCUPANCY_RATE_DEFAULT);
-			boolean returnLeft = (left.getOffset() < currentPos.keyOffset);
+			boolean returnLeft = (currentPos.keyOffset < left.getOffset());
 			moveNodes(left, right, logged, logged);
 			right.moveBeforeFirst();
 			byte[] separatorKey = right.getLowKeyBytes();
