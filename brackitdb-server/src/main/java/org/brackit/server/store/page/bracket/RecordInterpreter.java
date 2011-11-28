@@ -27,6 +27,7 @@
  */
 package org.brackit.server.store.page.bracket;
 
+import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.node.el.ElRecordAccess;
 import org.brackit.xquery.atomic.Atomic;
 
@@ -41,6 +42,7 @@ public class RecordInterpreter {
 	private final int len;
 	
 	private int pcr = -1;
+	private PSNode psNode = null;
 	private byte type = -1;
 	private Atomic value = null;
 	
@@ -75,5 +77,13 @@ public class RecordInterpreter {
 			value = ElRecordAccess.getTypedValue(buf, offset, len, getType());
 		}
 		return value;
+	}
+	
+	public PSNode getPsNode() {
+		return psNode;
+	}
+
+	public void setPsNode(PSNode psNode) {
+		this.psNode = psNode;
 	}
 }

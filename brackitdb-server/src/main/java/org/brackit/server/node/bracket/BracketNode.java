@@ -48,6 +48,7 @@ import org.brackit.server.store.index.bracket.HintPageInformation;
 import org.brackit.server.store.index.bracket.InsertController;
 import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
+import org.brackit.server.store.index.bracket.filter.PSNodeFilter;
 import org.brackit.server.store.page.bracket.RecordInterpreter;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.locking.services.MetaLockService;
@@ -72,40 +73,6 @@ import org.brackit.xquery.xdm.Stream;
  */
 public class BracketNode extends TXNode<BracketNode> {
 
-	private class AttributeStream implements Stream<BracketNode> {
-		private BracketIter it;
-
-		@Override
-		public BracketNode next() throws DocumentException {
-			try {
-				if (it == null) {
-					it = locator.collection.store.index.open(getTX(),
-							locator.rootPageID, NavigationMode.NEXT_ATTRIBUTE,
-							deweyID, OpenMode.READ, hintPageInfo);
-					if (it == null) {
-						return null;
-					}
-				} else if (!it.navigate(NavigationMode.NEXT_ATTRIBUTE)) {
-					return null;
-				}
-
-				return it.load(locator.bracketNodeLoader);
-			} catch (IndexAccessException e) {
-				throw new DocumentException(e);
-			}
-		}
-
-		public void close() {
-			if (it != null) {
-				try {
-					it.close();
-				} catch (IndexAccessException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-	}
-
 	protected final BracketLocator locator;
 
 	protected Atomic value;
@@ -113,7 +80,7 @@ public class BracketNode extends TXNode<BracketNode> {
 	protected PSNode psNode;
 
 	private BracketScope scope;
-	
+
 	public HintPageInformation hintPageInfo;
 
 	public BracketNode(BracketLocator locator) {
@@ -419,37 +386,30 @@ public class BracketNode extends TXNode<BracketNode> {
 
 	@Override
 	public BracketNode getAttributeInternal(QNm name) throws DocumentException {
-		try {
-			BracketIter iterator = locator.collection.store.index.open(getTX(),
-					locator.rootPageID, NavigationMode.NEXT_ATTRIBUTE, deweyID,
-					OpenMode.READ, hintPageInfo);
-			if (iterator == null) {
-				return null;
-			}
 
-			BracketNode attribute = null;
+		// look for the requested attribute PSNode
+		PSNode attributePSNode = locator.pathSynopsis.getChildIfExists(psNode
+				.getPCR(), name, Kind.ATTRIBUTE.ID, null);
 
-			do {
-				BracketNode currentAttribute = iterator
-						.load(locator.bracketNodeLoader);
-
-				if (currentAttribute.psNode.getName().equals(name)) {
-					attribute = currentAttribute;
-					break;
-				}
-			} while (iterator.navigate(NavigationMode.NEXT_ATTRIBUTE));
-
-			iterator.close();
-			return attribute;
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
+		if (attributePSNode == null) {
+			return null;
 		}
+
+		Stream<BracketNode> aStream = locator.collection.store.index
+				.openAttributeStream(locator, deweyID, hintPageInfo,
+						new PSNodeFilter(attributePSNode));
+		
+		BracketNode attribute = aStream.next();
+		aStream.close();
+		
+		return attribute;
 	}
 
 	@Override
 	public Stream<? extends BracketNode> getAttributesInternal()
 			throws OperationNotSupportedException, DocumentException {
-		return new AttributeStream();
+		return locator.collection.store.index.openAttributeStream(locator,
+				deweyID, hintPageInfo, null);
 	}
 
 	@Override

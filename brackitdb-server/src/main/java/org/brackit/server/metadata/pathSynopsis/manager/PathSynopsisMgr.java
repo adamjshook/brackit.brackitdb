@@ -48,18 +48,18 @@ import org.brackit.xquery.xdm.DocumentException;
  * @author Sebastian Baechle
  */
 public interface PathSynopsisMgr extends TXObject<PathSynopsisMgr> {
-	
+
 	public static class SubtreeCopyResult {
 		public final PSNode newRoot;
 		public final Map<Integer, Integer> pcrMap;
-		
+
 		public SubtreeCopyResult(PSNode newRoot, Map<Integer, Integer> pcrMap) {
 			super();
 			this.newRoot = newRoot;
 			this.pcrMap = pcrMap;
 		}
 	}
-	
+
 	/**
 	 * Spawns a private path synopsis manager for the specified document,
 	 * optimized for transaction-local bulk use (e.g. store,restore). Access to
@@ -74,8 +74,7 @@ public interface PathSynopsisMgr extends TXObject<PathSynopsisMgr> {
 
 	public PSNode get(int pcr) throws DocumentException;
 
-	public PSNode getAncestor(int pcr, int level)
-			throws DocumentException;
+	public PSNode getAncestor(int pcr, int level) throws DocumentException;
 
 	public PSNode getAncestorOrParent(int pcr, int level)
 			throws DocumentException;
@@ -84,15 +83,14 @@ public interface PathSynopsisMgr extends TXObject<PathSynopsisMgr> {
 	 * Returns the requested child PSNode. If such a child does not exist it is
 	 * created and returned.
 	 */
-	public PSNode getChild(int parentPcr, QNm name, byte kind, NsMapping nsMapping)
-			throws DocumentException;
+	public PSNode getChild(int parentPcr, QNm name, byte kind,
+			NsMapping nsMapping) throws DocumentException;
 
 	/**
 	 * Allows to make a snapshot of the path synopsis containing relevant meta
 	 * data
 	 */
-	public void snapshot(PSSnapshotBuilder builder)
-			throws DocumentException;
+	public void snapshot(PSSnapshotBuilder builder) throws DocumentException;
 
 	public int getPathSynopsisNo() throws DocumentException;
 
@@ -109,5 +107,13 @@ public interface PathSynopsisMgr extends TXObject<PathSynopsisMgr> {
 	 * whole new subtree. The mapping between the PCRs of the old and the new
 	 * subtree is described by the returned Map.
 	 */
-	public SubtreeCopyResult copySubtree(int originalPCR, NsMapping newNsMapping, QNm newName) throws DocumentException;
+	public SubtreeCopyResult copySubtree(int originalPCR,
+			NsMapping newNsMapping, QNm newName) throws DocumentException;
+
+	/**
+	 * Returns the requested child PSNode. If such a child does not exist, null
+	 * is returned.
+	 */
+	public PSNode getChildIfExists(int parentPcr, QNm name, byte kind,
+			NsMapping nsMapping) throws DocumentException;
 }
