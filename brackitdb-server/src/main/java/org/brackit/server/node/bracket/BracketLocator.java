@@ -57,8 +57,10 @@ public class BracketLocator {
 		public final BracketNode load(XTCdeweyID deweyID,
 				RecordInterpreter record) throws DocumentException {
 
-			int pcr = record.getPCR();
-			PSNode psn = pathSynopsis.get(pcr);
+			PSNode psn = record.getPsNode();
+			if (psn == null) {
+				psn = pathSynopsis.get(record.getPCR());
+			}
 			int dist = deweyID.getLevel() - psn.getLevel();
 
 			if ((dist == 1)) {
@@ -73,7 +75,7 @@ public class BracketLocator {
 			} else {
 				throw new DocumentException(
 						"Node %s has level %s but PCR %s has level %s",
-						deweyID, deweyID.getLevel(), pcr, psn.getLevel());
+						deweyID, deweyID.getLevel(), psn.getPCR(), psn.getLevel());
 			}
 		}
 

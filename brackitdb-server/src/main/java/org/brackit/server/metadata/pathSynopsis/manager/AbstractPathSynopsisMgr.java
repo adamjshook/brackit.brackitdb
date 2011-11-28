@@ -203,6 +203,72 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 		// throw new DocumentException(e);
 		// }
 	}
+	
+	@Override
+	public PSNode getChildIfExists(int parentPcr, QNm name, byte kind,
+			NsMapping nsMapping) throws DocumentException {
+
+		int uriVocID = 0;
+		if (name.nsURI.isEmpty()) {
+			uriVocID = -1;
+		} else {
+			uriVocID = dictionaryMgr.translateIfExists(name.nsURI);
+			if (uriVocID < 0) {
+				// PS node can not exist
+				return null;
+			}
+		}
+		
+		int prefixVocID = 0;
+		if (name.prefix == null) {
+			prefixVocID = -1;
+		} else {
+			prefixVocID = dictionaryMgr.translateIfExists(name.prefix);
+			if (prefixVocID < 0) {
+				// PS node can not exist
+				return null;
+			}
+		}
+		
+		int localNameVocID = dictionaryMgr.translateIfExists(name.localName);
+		if (localNameVocID < 0) {
+			// PS node can not exist
+			return null;
+		}
+
+		synchronized (ps) {
+			PathSynopsisNode parent = null;
+
+			if (parentPcr != -1) {
+				parent = getNode(ps, parentPcr);
+
+				for (PathSynopsisNode child : parent.children) {
+					if ((child.uriVocID == uriVocID)
+							&& (child.prefixVocID == prefixVocID)
+							&& (child.localNameVocID == localNameVocID)
+							&& (child.kind == kind)
+							&& (child.hasNsMapping(nsMapping))) {
+						if (!child.isStored()) {
+							addNodeToTaList(ps, child);
+						}
+						return child;
+					}
+				}
+			} else {
+				for (PathSynopsisNode root : ps.getRoots()) {
+					if ((root.uriVocID == uriVocID)
+							&& (root.prefixVocID == prefixVocID)
+							&& (root.localNameVocID == localNameVocID)
+							&& (root.kind == kind)
+							&& (root.hasNsMapping(nsMapping))) {
+						return root;
+					}
+				}
+			}
+
+			return null;
+		}
+	}
 
 	@Override
 	public PSNode getChild(int parentPcr, QNm name, byte kind,

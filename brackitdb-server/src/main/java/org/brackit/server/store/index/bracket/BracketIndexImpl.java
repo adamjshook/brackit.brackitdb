@@ -151,6 +151,14 @@ public class BracketIndexImpl implements BracketIndex {
 	}
 
 	@Override
+	public Stream<BracketNode> openAttributeStream(BracketLocator locator,
+			XTCdeweyID elementDeweyID, HintPageInformation hintPageInfo,
+			BracketFilter filter) {
+		return new AttributeStream(locator, tree, elementDeweyID, hintPageInfo,
+				filter);
+	}
+	
+	@Override
 	public Stream<BracketNode> openSubtreeStream(BracketLocator locator,
 			XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo,
 			BracketFilter filter, boolean self, boolean skipAttributes) {

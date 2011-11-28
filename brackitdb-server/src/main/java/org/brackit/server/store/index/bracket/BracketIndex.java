@@ -166,6 +166,10 @@ public interface BracketIndex {
 	public Stream<BracketNode> openSubtreeStream(BracketLocator locator,
 			XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo,
 			BracketFilter filter, boolean self, boolean skipAttributes);
+	
+	public Stream<BracketNode> openAttributeStream(BracketLocator locator,
+			XTCdeweyID elementDeweyID, HintPageInformation hintPageInfo,
+			BracketFilter filter);
 
 	/**
 	 * Opens the index for a (bulk) insert operation.
