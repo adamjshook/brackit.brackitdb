@@ -88,10 +88,10 @@ public class ElCollection extends TXCollection<ElNode> {
 	public ElNode store(SubtreeParser parser) throws DocumentException {
 		try {
 			PageID rootPageID = store.index.createIndex(tx, new PageID(docID
-					.value()).getContainerNo(), Field.DEWEYID, Field.EL_REC,
+					.getCollID()).getContainerNo(), Field.DEWEYID, Field.EL_REC,
 					true, true, -1);
 			ElNode document = new ElNode(this, rootPageID);
-			DocID docID = new DocID(rootPageID.value());
+			DocID docID = new DocID(rootPageID.value(), XXX);
 			XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(docID);
 			document.store(rootDeweyID, parser, true, false);
 			return document;
@@ -103,7 +103,7 @@ public class ElCollection extends TXCollection<ElNode> {
 	@Override
 	public void delete(DocID docID) throws DocumentException {
 		try {
-			store.index.dropIndex(tx, new PageID(docID.value()));
+			store.index.dropIndex(tx, new PageID(docID.getCollID()));
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -116,7 +116,7 @@ public class ElCollection extends TXCollection<ElNode> {
 		pathSynopsis = store.pathSynopsisMgrFactory.create(tx, spec
 				.getDictionary(), spec.getContainerID());
 		docID = new DocID(createDocumentReferenceIndex(tx,
-				spec.getContainerID()).value());
+				spec.getContainerID()).value(), XXX);
 	}
 
 	public ElNode create(StorageSpec spec, SubtreeParser parser)
@@ -126,7 +126,7 @@ public class ElCollection extends TXCollection<ElNode> {
 					.getContainerID(), Field.DEWEYID, Field.EL_REC, true, spec
 					.isKeyCompression(), -1);
 
-			docID = new DocID(rootPageID.value());
+			docID = new DocID(rootPageID.value(), XXX);
 			name = spec.getDocumentName();
 			dictionary = spec.getDictionary();
 			pathSynopsis = store.pathSynopsisMgrFactory.create(tx, spec
@@ -144,7 +144,7 @@ public class ElCollection extends TXCollection<ElNode> {
 
 	public void init(String name, PageID rootPageID, PageID psPageID)
 			throws DocumentException {
-		docID = new DocID(rootPageID.value());
+		docID = new DocID(rootPageID.value(), XXX);
 		this.name = name;
 		dictionary = store.dictionary;
 		pathSynopsis = store.pathSynopsisMgrFactory.load(tx, dictionary,
@@ -164,7 +164,7 @@ public class ElCollection extends TXCollection<ElNode> {
 	@Override
 	public ElNode getDocument(DocID docID) throws DocumentException {
 		return new ElNode(
-				new ElLocator(this, docID, new PageID(docID.value())),
+				new ElLocator(this, docID, new PageID(docID.getCollID())),
 				new XTCdeweyID(docID), Kind.DOCUMENT.ID, null, null);
 	}
 
@@ -190,7 +190,7 @@ public class ElCollection extends TXCollection<ElNode> {
 
 		if (!Boolean.parseBoolean(root.getAttribute(COLLECTION_FLAG_ATTRIBUTE)
 				.getValue().stringValue())) {
-			document = new ElNode(this, new PageID(docID.value()));
+			document = new ElNode(this, new PageID(docID.getCollID()));
 		}
 	}
 
@@ -199,7 +199,7 @@ public class ElCollection extends TXCollection<ElNode> {
 		super.calculateStatistics();
 		try {
 			IndexStatisticsVisitor visitor = new IndexStatisticsVisitor();
-			store.index.traverse(tx, new PageID(docID.value()), visitor);
+			store.index.traverse(tx, new PageID(docID.getCollID()), visitor);
 			set(visitor.getIndexStatistics());
 
 			indexController.calculateStatistics();

@@ -89,7 +89,7 @@ public class BracketNode extends TXNode<BracketNode> {
 	}
 
 	public BracketNode(BracketCollection collection, PageID rootPageID) {
-		super(new XTCdeweyID(new DocID(rootPageID.value())), Kind.DOCUMENT.ID);
+		super(new XTCdeweyID(new DocID(rootPageID.value(), XXX)), Kind.DOCUMENT.ID);
 		this.locator = new BracketLocator(collection, deweyID.getDocID(),
 				rootPageID);
 	}

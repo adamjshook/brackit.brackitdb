@@ -142,7 +142,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	@Override
 	public DBCollection<?> lookup(Tx tx, DocID id)
 			throws ItemNotFoundException, DocumentException {
-		Item<Directory> item = getItemByID(tx, id.value(), false);
+		Item<Directory> item = getItemByID(tx, id.getCollID(), false);
 
 		if (!(item instanceof Document)) {
 			throw new MetaDataException("%s is not a document.", id);
@@ -499,7 +499,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			// SubtreePrinter.print(transaction, itemRoot, System.out);
 			DocID docID = new DocID(Integer.parseInt(itemRoot
 					.getAttribute(BaseCollection.ID_ATTRIBUTE)
-					.getValue().stringValue()));
+					.getValue().stringValue()), XXX);
 			item = new Document(docID, name, parent, itemRoot);
 		} else if (DIR_TAG.equals(itemRootTag)) {
 			Directory directory = new Directory(name, parent, itemRoot);
@@ -518,7 +518,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		} else if (BaseBlobHandle.BLOB_TAG.equals(itemRootTag)) {
 			DocID docID = new DocID(Integer.parseInt(itemRoot
 					.getAttribute(BaseBlobHandle.ID_ATTRIBUTE)
-					.getValue().stringValue()));
+					.getValue().stringValue()), XXX);
 			item = new Blob(docID, name, parent, itemRoot);
 		} else {
 			throw new MetaDataException("Unknown item tag: %s.", itemRootTag);
@@ -630,7 +630,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 		// object cast is a hack for a sun compiler bug
 		if (cachedCollection.getID()
-				.equals(new DocID(MASTERDOC_PAGEID.value())))
+				.equals(new DocID(MASTERDOC_PAGEID.value(), XXX)))
 			throw new DocumentException(
 					"Deletion of master document forbidden.");
 
@@ -680,7 +680,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 	@Override
 	public BlobHandle getBlob(Tx tx, DocID id) throws DocumentException {
-		Item<Directory> item = getItemByID(tx, id.value(), false);
+		Item<Directory> item = getItemByID(tx, id.getCollID(), false);
 
 		if (!(item instanceof Blob)) {
 			throw new MetaDataException("%s is not a blob.", id);

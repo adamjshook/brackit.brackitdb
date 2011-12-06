@@ -87,9 +87,9 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	public BracketNode store(SubtreeParser parser) throws DocumentException {
 		try {
 			PageID rootPageID = store.index.createIndex(tx, new PageID(docID
-					.value()).getContainerNo());
+					.getCollID()).getContainerNo());
 			BracketNode document = new BracketNode(this, rootPageID);
-			DocID docID = new DocID(rootPageID.value());
+			DocID docID = new DocID(rootPageID.value(), XXX);
 			XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(docID);
 			document.store(rootDeweyID, parser, true, false);
 			return document;
@@ -101,7 +101,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	@Override
 	public void delete(DocID docID) throws DocumentException {
 		try {
-			store.index.dropIndex(tx, new PageID(docID.value()));
+			store.index.dropIndex(tx, new PageID(docID.getCollID()));
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -114,7 +114,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 		pathSynopsis = store.pathSynopsisMgrFactory.create(tx, spec
 				.getDictionary(), spec.getContainerID());
 		docID = new DocID(createDocumentReferenceIndex(tx,
-				spec.getContainerID()).value());
+				spec.getContainerID()).value(), XXX);
 	}
 
 	public BracketNode create(StorageSpec spec, SubtreeParser parser)
@@ -123,7 +123,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 			PageID rootPageID = store.index.createIndex(tx, spec
 					.getContainerID());
 
-			docID = new DocID(rootPageID.value());
+			docID = new DocID(rootPageID.value(), XXX);
 			name = spec.getDocumentName();
 			dictionary = spec.getDictionary();
 			pathSynopsis = store.pathSynopsisMgrFactory.create(tx, spec
@@ -141,7 +141,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 
 	public void init(String name, PageID rootPageID, PageID psPageID)
 			throws DocumentException {
-		docID = new DocID(rootPageID.value());
+		docID = new DocID(rootPageID.value(), XXX);
 		this.name = name;
 		dictionary = store.dictionary;
 		pathSynopsis = store.pathSynopsisMgrFactory.load(tx, dictionary,
@@ -161,7 +161,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	@Override
 	public BracketNode getDocument(DocID docID) throws DocumentException {
 		return new BracketNode(new BracketLocator(this, docID, new PageID(docID
-				.value())), new XTCdeweyID(docID), Kind.DOCUMENT.ID, null, null);
+				.getCollID())), new XTCdeweyID(docID), Kind.DOCUMENT.ID, null, null);
 	}
 
 	@Override
@@ -186,7 +186,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 
 		if (!Boolean.parseBoolean(root.getAttribute(COLLECTION_FLAG_ATTRIBUTE)
 				.getValue().stringValue())) {
-			document = new BracketNode(this, new PageID(docID.value()));
+			document = new BracketNode(this, new PageID(docID.getCollID()));
 		}
 	}
 

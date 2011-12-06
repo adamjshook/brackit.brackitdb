@@ -113,7 +113,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 			PageID pageID = store.create(tx, containerNo);
 			store.writeStream(tx, pageID, in, false);
 			this.name = name;
-			this.docID = new DocID(pageID.value());
+			this.docID = new DocID(pageID.value(), XXX);
 		} catch (BlobStoreAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -126,7 +126,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	@Override
 	public void delete() throws DocumentException {
 		try {
-			store.drop(tx, new PageID(docID.value()));
+			store.drop(tx, new PageID(docID.getCollID()));
 		} catch (BlobStoreAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -135,7 +135,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	@Override
 	public InputStream read() throws DocumentException {
 		try {
-			return store.readStream(tx, new PageID(docID.value()));
+			return store.readStream(tx, new PageID(docID.getCollID()));
 		} catch (BlobStoreAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -144,7 +144,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	@Override
 	public void write(InputStream in) throws DocumentException {
 		try {
-			store.writeStream(tx, new PageID(docID.value()), in, true);
+			store.writeStream(tx, new PageID(docID.getCollID()), in, true);
 		} catch (BlobStoreAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -210,7 +210,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	public void init(Node<?> root) throws DocumentException {
 		name = root.getAttribute(NAME_ATTRIBUTE).getValue().stringValue();
 		docID = new DocID(Integer.parseInt(root.getAttribute(ID_ATTRIBUTE)
-				.getValue().stringValue()));
+				.getValue().stringValue()), XXX);
 
 		Stream<? extends Node<?>> children = root.getChildren();
 
@@ -262,7 +262,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	@Override
 	public void serialize(OutputStream out) throws DocumentException {
 		try {
-			InputStream in = store.readStream(tx, new PageID(docID.value()));
+			InputStream in = store.readStream(tx, new PageID(docID.getCollID()));
 
 			try {
 				byte[] buf = new byte[256];

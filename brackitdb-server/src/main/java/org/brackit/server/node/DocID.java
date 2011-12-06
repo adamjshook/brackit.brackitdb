@@ -29,6 +29,8 @@ package org.brackit.server.node;
 
 import java.io.Serializable;
 import java.text.ParseException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Unique identifier for a document. Introduced for transparent collection
@@ -39,34 +41,65 @@ import java.text.ParseException;
  */
 public final class DocID implements Serializable, Comparable<DocID> {
 
-	private final int docID;
+	private final static Pattern parsePattern = Pattern.compile("(\\d+)(?:\\[(\\d+)\\])?");
+	private final static String toStringPattern = "%s[%s]";
 
-	public DocID(int docID) {
-		this.docID = docID;
-	}
+	private final int collID;
+	private final int docNumber;
 
-	@Override
-	public int hashCode() {
-		return this.docID;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		return ((obj instanceof DocID) && (((DocID) obj).docID == docID));
+	public DocID(int collID, int docNumber) {
+		this.collID = collID;
+		this.docNumber = docNumber;
 	}
 
 	public static DocID parse(String identifierString) throws ParseException {
-		try {
-			int docID = Integer.parseInt(identifierString);
-			return new DocID(docID);
+		try {			
+			Matcher matcher = parsePattern.matcher(identifierString);
+			
+			if (!matcher.matches()) {
+				throw new ParseException(String.format(
+						"Invalid document identifier '%s'.", identifierString),
+						0);
+			}
+
+			int collectionID = Integer.parseInt(matcher.group(1));
+			
+			int docNumber = 0;
+			String docNumberString = matcher.group(2);
+			if (docNumberString != null) {
+				docNumber = Integer.parseInt(docNumberString);
+			}
+
+			return new DocID(collectionID, docNumber);
 		} catch (NumberFormatException e) {
 			throw new ParseException(String.format(
 					"Invalid document identifier '%s'.", identifierString), 0);
 		}
 	}
 
+	@Override
+	public int hashCode() {
+		return collID ^ docNumber;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		DocID other = (DocID) obj;
+		if (collID != other.collID)
+			return false;
+		if (docNumber != other.docNumber)
+			return false;
+		return true;
+	}
+
 	public byte[] getBytes() {
-		byte[] buffer = new byte[4];
+		byte[] buffer = new byte[8];
 		toBytes(buffer);
 		return buffer;
 	}
@@ -76,10 +109,14 @@ public final class DocID implements Serializable, Comparable<DocID> {
 	}
 
 	public void toBytes(byte[] buffer, int offset) {
-		buffer[offset] = (byte) ((docID >> 24) & 255);
-		buffer[offset + 1] = (byte) ((docID >> 16) & 255);
-		buffer[offset + 2] = (byte) ((docID >> 8) & 255);
-		buffer[offset + 3] = (byte) (docID & 255);
+		buffer[offset] = (byte) ((collID >> 24) & 255);
+		buffer[offset + 1] = (byte) ((collID >> 16) & 255);
+		buffer[offset + 2] = (byte) ((collID >> 8) & 255);
+		buffer[offset + 3] = (byte) (collID & 255);
+		buffer[offset + 4] = (byte) ((docNumber >> 24) & 255);
+		buffer[offset + 5] = (byte) ((docNumber >> 16) & 255);
+		buffer[offset + 6] = (byte) ((docNumber >> 8) & 255);
+		buffer[offset + 7] = (byte) (docNumber & 255);
 	}
 
 	public static DocID fromBytes(byte[] buffer) {
@@ -87,28 +124,49 @@ public final class DocID implements Serializable, Comparable<DocID> {
 	}
 
 	public static DocID fromBytes(byte[] buffer, int offset) {
-		int no = ((buffer[offset] & 255) << 24)
+
+		int collectionID = ((buffer[offset] & 255) << 24)
 				| ((buffer[offset + 1] & 255) << 16)
 				| ((buffer[offset + 2] & 255) << 8)
 				| (buffer[offset + 3] & 255);
-		return (no != 0) ? new DocID(no) : null;
+
+		if (collectionID == 0) {
+			// invalid collectionID
+			return null;
+		}
+
+		int docNumber = ((buffer[offset + 4] & 255) << 24)
+				| ((buffer[offset + 5] & 255) << 16)
+				| ((buffer[offset + 6] & 255) << 8)
+				| (buffer[offset + 7] & 255);
+
+		return new DocID(collectionID, docNumber);
 	}
 
-	public int value() {
-		return docID;
+	public int getCollID() {
+		return collID;
+	}
+	
+	public int getDocNumber() {
+		return docNumber;
 	}
 
 	public static int getSize() {
-		return 4;
+		return 8;
 	}
 
 	@Override
 	public int compareTo(DocID other) {
-		return docID - other.docID;
+		
+		int collCompare = collID - other.collID;
+		if (collCompare != 0) {
+			return collCompare;
+		}
+		return docNumber - other.docNumber;
 	}
 
 	@Override
 	public String toString() {
-		return Integer.toString(docID);
+		return String.format(toStringPattern, collID, docNumber);
 	}
 }

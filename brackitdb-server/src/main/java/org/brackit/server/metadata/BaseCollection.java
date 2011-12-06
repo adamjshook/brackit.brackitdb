@@ -151,7 +151,7 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 	public void init(Node<?> root) throws DocumentException {
 		name = root.getAttribute(NAME_ATTRIBUTE).getValue().stringValue();
 		docID = new DocID(Integer.parseInt(root.getAttribute(ID_ATTRIBUTE)
-				.getValue().stringValue()));
+				.getValue().stringValue()), XXX);
 
 		Stream<? extends Node<?>> children = root.getChildren();
 

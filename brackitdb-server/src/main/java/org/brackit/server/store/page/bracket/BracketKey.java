@@ -58,19 +58,23 @@ public final class BracketKey {
 
 	public static final int TOTAL_LENGTH = PHYSICAL_LENGTH + DATA_REF_LENGTH;
 	public static final int TOTAL_LENGTH_DECREMENTED = TOTAL_LENGTH - 1;
+	
+	public static final int HAS_DATA_REF_MASK = (1 << 31);
 
 	/**
 	 * Enumerates the different bracket key types.
 	 */
 	public enum Type {
-		DATA((byte) 0), ATTRIBUTE((byte) 1), NODATA((byte) 2), OVERFLOW(
-				(byte) 3);
+		DATA((byte) 4, true),
+		ATTRIBUTE((byte) 5, false),
+		NODATA((byte) 0, true),
+		OVERFLOW((byte) 2, false),
+		DOCUMENT((byte) 1, false);
 
 		static final Type[] reverseMap;
 		static {
-			Type[] values = Type.values();
-			reverseMap = new Type[values.length];
-			for (Type keyType : values) {
+			reverseMap = new Type[8];
+			for (Type keyType : Type.values()) {
 				reverseMap[keyType.physicalValue] = keyType;
 			}
 		}
@@ -78,13 +82,15 @@ public final class BracketKey {
 		final int dataReferenceLength;
 		public final boolean hasDataReference;
 		final boolean opensNewSubtree;
+		final boolean isOverflow;
 
-		private Type(byte b) {
+		private Type(byte b, boolean opensNewSubtree) {
 			this.physicalValue = b;
-			this.dataReferenceLength = (b / 2 == 0) ? BracketKey.DATA_REF_LENGTH
+			this.dataReferenceLength = ((b & 4) > 0) ? BracketKey.DATA_REF_LENGTH
 					: 0;
-			this.hasDataReference = (b / 2 == 0);
-			this.opensNewSubtree = (b % 2 == 0);
+			this.hasDataReference = ((b & 4) > 0);
+			this.isOverflow = ((b & 2) > 0);
+			this.opensNewSubtree = opensNewSubtree;
 		}
 
 		/**

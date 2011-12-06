@@ -158,7 +158,7 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 					"Removing documents from a single collection not allowed.");
 		}
 
-		DocID docID = new DocID((int) documentID);
+		DocID docID = new DocID((int) documentID, XXX);
 		deleteDocument(docID);
 		delete(docID);
 	}
@@ -186,7 +186,7 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 				documentPageIDs.close();
 			}
 
-			deleteDocumentReferenceIndex(new PageID(docID.value()));
+			deleteDocumentReferenceIndex(new PageID(docID.getCollID()));
 		}
 	}
 
@@ -211,7 +211,7 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 
 	private void addDocument(E document) throws DocumentException {
 		try {
-			getIndex().insert(tx, new PageID(docID.value()),
+			getIndex().insert(tx, new PageID(docID.getCollID()),
 					document.getDeweyID().getDocID().getBytes(), new byte[0]);
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
@@ -220,7 +220,7 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 
 	private void deleteDocument(DocID docID) throws DocumentException {
 		try {
-			getIndex().delete(tx, new PageID(docID.value()), docID.getBytes(),
+			getIndex().delete(tx, new PageID(docID.getCollID()), docID.getBytes(),
 					new byte[0]);
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
@@ -231,7 +231,7 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 			throws DocumentException {
 		try {
 			IndexIterator iterator = getIndex().open(tx,
-					new PageID(docID.value()), SearchMode.FIRST, null, null,
+					new PageID(docID.getCollID()), SearchMode.FIRST, null, null,
 					OpenMode.READ);
 			return new DocRefIndexStream(iterator);
 		} catch (IndexAccessException e) {

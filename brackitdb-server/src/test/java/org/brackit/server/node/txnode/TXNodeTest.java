@@ -355,7 +355,7 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 			boolean showValues) throws IndexAccessException {
 		try {
 			PrintStream printer = new PrintStream(new File(filename));
-			index.traverse(transaction, new PageID(docID.value()),
+			index.traverse(transaction, new PageID(docID.getCollID()),
 					new DisplayVisitor(printer, showValues));
 			printer.close();
 		} catch (IOException e) {

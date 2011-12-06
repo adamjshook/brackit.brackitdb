@@ -48,7 +48,7 @@ public class SearchModeTest {
 	private List<byte[]> values;
 
 	public SearchModeTest() throws Exception {
-		deweyIDs = DeweyIDGenerator.generateDeweyIDs(new DocID(4711),
+		deweyIDs = DeweyIDGenerator.generateDeweyIDs(new DocID(4711, XXX),
 				getClass().getResource("/xmark/auction.xml").getFile());
 		deweyIDs = deweyIDs.subList(0, 50);
 		values = new ArrayList<byte[]>(deweyIDs.size());

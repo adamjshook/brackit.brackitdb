@@ -133,7 +133,7 @@ public class ElNode extends TXNode<ElNode> {
 	}
 
 	public ElNode(ElCollection collection, PageID rootPageID) {
-		super(new XTCdeweyID(new DocID(rootPageID.value())), Kind.DOCUMENT.ID);
+		super(new XTCdeweyID(new DocID(rootPageID.value(), XXX)), Kind.DOCUMENT.ID);
 		this.locator = new ElLocator(collection, deweyID.getDocID(), rootPageID);
 	}
 

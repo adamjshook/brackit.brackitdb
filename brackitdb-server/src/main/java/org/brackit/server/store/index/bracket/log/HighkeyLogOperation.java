@@ -222,7 +222,7 @@ public class HighkeyLogOperation extends BracketIndexLogOperation {
 	@Override
 	public String toString() {
 
-		DocID docID = new DocID(rootPageID.value());
+		DocID docID = new DocID(rootPageID.value(), XXX);
 		XTCdeweyID oldDeweyID = (oldHighKey == null) ? null : new XTCdeweyID(docID, oldHighKey);
 		XTCdeweyID newDeweyID = (newHighKey == null) ? null : new XTCdeweyID(docID, newHighKey);
 		
