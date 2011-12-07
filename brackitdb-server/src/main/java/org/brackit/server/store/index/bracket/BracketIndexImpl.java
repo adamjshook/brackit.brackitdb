@@ -31,7 +31,6 @@ import java.io.PrintStream;
 
 import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.node.parser.ListenMode;
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
@@ -40,19 +39,16 @@ import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.BracketAttributeTuple;
 import org.brackit.server.node.bracket.BracketLocator;
 import org.brackit.server.node.bracket.BracketNode;
-import org.brackit.server.node.bracket.BracketStore;
 import org.brackit.server.node.el.ElRecordAccess;
 import org.brackit.server.store.OpenMode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.index.bracket.page.Leaf;
 import org.brackit.server.store.page.bracket.RecordInterpreter;
-import org.brackit.server.store.page.bracket.navigation.NavigationResult;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 import org.brackit.server.tx.Tx;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
-import org.brackit.xquery.xdm.Stream;
 
 /**
  * @author Martin Hiller
@@ -143,23 +139,35 @@ public class BracketIndexImpl implements BracketIndex {
 	}
 
 	@Override
-	public Stream<BracketNode> openChildStream(BracketLocator locator,
+	public StreamIterator openChildStream(BracketLocator locator,
 			XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo,
 			BracketFilter filter) {
 		return new ChildStream(locator, tree, parentDeweyID, hintPageInfo,
 				filter);
 	}
+	
+	@Override
+	public StreamIterator forkChildStream(StreamIterator origin,
+			BracketFilter filter) throws DocumentException {
+		return new ChildStream(origin, filter);
+	}
 
 	@Override
-	public Stream<BracketNode> openAttributeStream(BracketLocator locator,
+	public StreamIterator openAttributeStream(BracketLocator locator,
 			XTCdeweyID elementDeweyID, HintPageInformation hintPageInfo,
 			BracketFilter filter) {
 		return new AttributeStream(locator, tree, elementDeweyID, hintPageInfo,
 				filter);
 	}
-	
+
 	@Override
-	public Stream<BracketNode> openSubtreeStream(BracketLocator locator,
+	public StreamIterator forkAttributeStream(StreamIterator origin,
+			BracketFilter filter) throws DocumentException {
+		return new AttributeStream(origin, filter);
+	}
+
+	@Override
+	public StreamIterator openSubtreeStream(BracketLocator locator,
 			XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo,
 			BracketFilter filter, boolean self, boolean skipAttributes) {
 		if (skipAttributes) {
@@ -168,6 +176,17 @@ public class BracketIndexImpl implements BracketIndex {
 		} else {
 			return new SubtreeStream(locator, tree, subtreeRoot, hintPageInfo,
 					filter, self);
+		}
+	}
+	
+	@Override
+	public StreamIterator forkSubtreeStream(StreamIterator origin,
+			BracketFilter filter, boolean self, boolean skipAttributes)
+			throws DocumentException {
+		if (skipAttributes) {
+			return new SubtreeStreamSkipAttr(origin, filter, self);
+		} else {
+			return new SubtreeStream(origin, filter, self);
 		}
 	}
 
@@ -182,9 +201,10 @@ public class BracketIndexImpl implements BracketIndex {
 
 		PSNode attributePsNode = locator.pathSynopsis.getChild(
 				element.getPCR(), name, Kind.ATTRIBUTE.ID, null);
-		
-		byte[] physicalRecord = ElRecordAccess.createRecord(attributePsNode
-				.getPCR(), Kind.ATTRIBUTE.ID, value.stringValue());
+
+		byte[] physicalRecord = ElRecordAccess.createRecord(
+				attributePsNode.getPCR(), Kind.ATTRIBUTE.ID,
+				value.stringValue());
 
 		Leaf page = null;
 		Leaf next = null;
@@ -234,8 +254,8 @@ public class BracketIndexImpl implements BracketIndex {
 							// insert
 							XTCdeweyID lastKey = page.getKey();
 							attributeDeweyID = (lastKey.isAttribute() ? XTCdeweyID
-									.newBetween(lastKey, null)
-									: lastKey.getNewAttributeID());
+									.newBetween(lastKey, null) : lastKey
+									.getNewAttributeID());
 							if (attributeDeweyID.compareDivisions(page
 									.getHighKey()) >= 0) {
 								// insert in next page

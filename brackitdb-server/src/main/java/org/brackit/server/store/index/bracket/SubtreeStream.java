@@ -32,6 +32,7 @@ import org.brackit.server.node.bracket.BracketLocator;
 import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
+import org.brackit.xquery.xdm.DocumentException;
 
 /**
  * @author Martin Hiller
@@ -46,6 +47,12 @@ public final class SubtreeStream extends StreamIterator {
 			XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo,
 			BracketFilter filter, boolean self) {
 		super(locator, tree, subtreeRoot, hintPageInfo, filter);
+		this.self = self;
+	}
+
+	public SubtreeStream(StreamIterator other, BracketFilter filter, boolean self)
+			throws DocumentException {
+		super(other, filter);
 		this.self = self;
 	}
 

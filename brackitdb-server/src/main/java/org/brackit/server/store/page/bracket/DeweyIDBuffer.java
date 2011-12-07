@@ -66,14 +66,17 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	/**
 	 * Constructor for DeweyIDBuffer.
 	 * 
-	 * @param assignedPage
-	 *            assigns this DeweyIDBuffer to a certain page
 	 * @param deweyID
 	 *            the DeweyID this instance is representing
 	 */
 	public DeweyIDBuffer(XTCdeweyID deweyID) {
 		this();
 		setTo(deweyID);
+	}
+	
+	public DeweyIDBuffer(DeweyIDBuffer other) {
+		this();
+		setTo(other);
 	}
 
 	/**
@@ -284,6 +287,36 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 
 		this.currentLength = otherDivisions.length;
 		this.bufferedKey = other;
+
+		if (compareMode) {
+			comparePrefix = getCommonPrefixLength(compareDivisions);
+			determineCompareValue();
+		}
+	}
+	
+	/**
+	 * Copies content from the other DeweyIDBuffer.
+	 */
+	public void setTo(DeweyIDBuffer other) {
+		if (other.currentBuffer == null) {
+			//other buffer not initialized
+			return;
+		}
+		
+		this.docID = other.docID;
+		
+		if (this.currentBuffer == null
+				|| this.currentBuffer.length < other.currentLength) {
+			// a new array has to be allocated
+			this.currentBuffer = new int[Math.max(minBufferSize,
+					(other.currentLength * 3) / 2 + 1)];
+		}
+		// copy currentBuffer
+		System.arraycopy(other.currentBuffer, 0, this.currentBuffer, 0,
+				other.currentLength);
+
+		this.currentLength = other.currentLength;
+		this.bufferedKey = other.bufferedKey;
 
 		if (compareMode) {
 			comparePrefix = getCommonPrefixLength(compareDivisions);

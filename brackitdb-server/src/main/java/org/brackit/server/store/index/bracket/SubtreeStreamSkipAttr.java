@@ -32,13 +32,14 @@ import org.brackit.server.node.bracket.BracketLocator;
 import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
+import org.brackit.xquery.xdm.DocumentException;
 
 /**
  * @author Martin Hiller
- *
+ * 
  */
 public final class SubtreeStreamSkipAttr extends StreamIterator {
-	
+
 	private int subtreeRootLevel = -1;
 	private final boolean self;
 
@@ -46,6 +47,12 @@ public final class SubtreeStreamSkipAttr extends StreamIterator {
 			XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo,
 			BracketFilter filter, boolean self) {
 		super(locator, tree, subtreeRoot, hintPageInfo, filter);
+		this.self = self;
+	}
+
+	public SubtreeStreamSkipAttr(StreamIterator other, BracketFilter filter,
+			boolean self) throws DocumentException {
+		super(other, filter);
 		this.self = self;
 	}
 
@@ -70,7 +77,7 @@ public final class SubtreeStreamSkipAttr extends StreamIterator {
 						deweyIDBuffer);
 			}
 			subtreeRootLevel = page.getLevel();
-			
+
 			if (!self) {
 				// move to next node
 				nextInternal();
@@ -87,7 +94,8 @@ public final class SubtreeStreamSkipAttr extends StreamIterator {
 
 		if (!page.moveNextNonAttr()) {
 			// use BracketTree to load next page
-			page = tree.getNextPage(tx, locator.rootPageID, page, OPEN_MODE, true);
+			page = tree.getNextPage(tx, locator.rootPageID, page, OPEN_MODE,
+					true);
 			if (page != null && !page.moveNextNonAttr()) {
 				page.cleanup();
 				page = null;
