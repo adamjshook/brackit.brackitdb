@@ -287,13 +287,6 @@ public interface Leaf extends BPContext {
 			throws IndexOperationException;
 
 	/**
-	 * Loads the BracketNode this context points to, unless it does not pass the
-	 * filter. If rejected by the filter, null is returned.
-	 */
-	public BracketNode load(BracketNodeLoader loader, BracketFilter filter)
-			throws IndexOperationException;
-
-	/**
 	 * Returns a record (interpreter) for the current context.
 	 */
 	public RecordInterpreter getRecord() throws IndexOperationException;
@@ -309,4 +302,17 @@ public interface Leaf extends BPContext {
 	 * there may be another attribute in the next page)
 	 */
 	public NavigationStatus moveNextAttribute();
+
+	/**
+	 * Creates a new leaf context for this page in READ mode (e.g. shared
+	 * latch). The corresponding page handle will therefore be fixed and latched
+	 * again.
+	 */
+	public Leaf fork() throws IndexOperationException;
+
+	/**
+	 * Checks whether the current node (this page is pointing to) is accepted by
+	 * the given filter.
+	 */
+	public boolean accept(BracketFilter filter) throws IndexOperationException;
 }

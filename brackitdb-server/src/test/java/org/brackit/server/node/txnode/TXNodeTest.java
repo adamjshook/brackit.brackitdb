@@ -151,7 +151,7 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 				assertNotNull(String.format("child node %s of node %s", i,
 						nodeString), child);
 
-				checkSubtreePreOrderReduced(child, domChild);
+				checkSubtreeViaChildStream(child, domChild);
 			}
 
 			assertEquals(
@@ -253,7 +253,7 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 			// " is " + element.getNodeName());
 
 			assertEquals(String.format("Name of node %s", nodeString),
-					element.getNodeName(), node.getName());
+					element.getNodeName(), node.getName().toString());
 			compareAttributes(node, element);
 
 			NodeList domChildNodes = element.getChildNodes();
@@ -295,7 +295,7 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 					nodeString + " is of type text : \"" + text.getNodeValue()
 							+ "\"", Kind.TEXT, node.getKind());
 			assertEquals(String.format("Text of node %s", nodeString), text
-					.getNodeValue().trim(), node.getValue());
+					.getNodeValue().trim(), node.getValue().stringValue());
 		} else {
 			throw new DocumentException("Unexpected dom node: %s",
 					domNode.getClass());
