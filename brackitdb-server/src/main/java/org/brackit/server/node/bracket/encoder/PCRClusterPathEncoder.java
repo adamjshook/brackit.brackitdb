@@ -106,7 +106,7 @@ public class PCRClusterPathEncoder implements IndexEncoder<BracketNode> {
 
 	@Override
 	public int getUnitID() {
-		return collection.getID().getCollID();
+		return collection.getID().getCollectionID();
 	}
 
 	@Override

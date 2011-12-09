@@ -87,7 +87,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	public BracketNode store(SubtreeParser parser) throws DocumentException {
 		try {
 			PageID rootPageID = store.index.createIndex(tx, new PageID(docID
-					.getCollID()).getContainerNo());
+					.getCollectionID()).getContainerNo());
 			BracketNode document = new BracketNode(this, rootPageID);
 			DocID docID = new DocID(rootPageID.value(), XXX);
 			XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(docID);
@@ -101,7 +101,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	@Override
 	public void delete(DocID docID) throws DocumentException {
 		try {
-			store.index.dropIndex(tx, new PageID(docID.getCollID()));
+			store.index.dropIndex(tx, new PageID(docID.getCollectionID()));
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -161,7 +161,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	@Override
 	public BracketNode getDocument(DocID docID) throws DocumentException {
 		return new BracketNode(new BracketLocator(this, docID, new PageID(docID
-				.getCollID())), new XTCdeweyID(docID), Kind.DOCUMENT.ID, null, null);
+				.getCollectionID())), new XTCdeweyID(docID), Kind.DOCUMENT.ID, null, null);
 	}
 
 	@Override
@@ -186,7 +186,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 
 		if (!Boolean.parseBoolean(root.getAttribute(COLLECTION_FLAG_ATTRIBUTE)
 				.getValue().stringValue())) {
-			document = new BracketNode(this, new PageID(docID.getCollID()));
+			document = new BracketNode(this, new PageID(docID.getCollectionID()));
 		}
 	}
 

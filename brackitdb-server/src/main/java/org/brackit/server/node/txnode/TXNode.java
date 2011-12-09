@@ -78,7 +78,7 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 
 	@Override
 	public long getFragmentID() {
-		return (((long) deweyID.docID.getCollID()) << 32);
+		return (((long) deweyID.docID.getCollectionID()) << 32);
 	}
 
 	@Override

@@ -65,7 +65,7 @@ public final class LockType {
 
 	public final static LockName buildEdgeLockName(XTCdeweyID deweyID, int edge) {
 		final int[] divisions = deweyID.getDivisionValues();
-		final int docID = deweyID.getDocID().getCollID();
+		final int docID = deweyID.getDocID().getCollectionID();
 		final LockName[] lockNames = new LockName[deweyID.getLevel() + 1];
 		int[] key = deweyID.divisionValues;
 		long template = ((long) docID) << 32;

@@ -27,6 +27,8 @@
  */
 package org.brackit.server.store.page.bracket;
 
+import org.brackit.server.node.DocID;
+
 /**
  * Combines some basic commonalities for different DeweyID representations (like
  * the XTCdeweyID and the DeweyIDBuffer)
@@ -50,4 +52,9 @@ public interface SimpleDeweyID {
 	 * @return true iff this DeweyID represents an attribute node
 	 */
 	public boolean isAttribute();
+	
+	/**
+	 * @return the DocID
+	 */
+	public DocID getDocID();
 }

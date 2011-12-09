@@ -44,11 +44,11 @@ public final class DocID implements Serializable, Comparable<DocID> {
 	private final static Pattern parsePattern = Pattern.compile("(\\d+)(?:\\[(\\d+)\\])?");
 	private final static String toStringPattern = "%s[%s]";
 
-	private final int collID;
+	private final int collectionID;
 	private final int docNumber;
 
 	public DocID(int collID, int docNumber) {
-		this.collID = collID;
+		this.collectionID = collID;
 		this.docNumber = docNumber;
 	}
 
@@ -79,7 +79,7 @@ public final class DocID implements Serializable, Comparable<DocID> {
 
 	@Override
 	public int hashCode() {
-		return collID ^ docNumber;
+		return collectionID ^ docNumber;
 	}
 
 	@Override
@@ -91,7 +91,7 @@ public final class DocID implements Serializable, Comparable<DocID> {
 		if (getClass() != obj.getClass())
 			return false;
 		DocID other = (DocID) obj;
-		if (collID != other.collID)
+		if (collectionID != other.collectionID)
 			return false;
 		if (docNumber != other.docNumber)
 			return false;
@@ -109,10 +109,10 @@ public final class DocID implements Serializable, Comparable<DocID> {
 	}
 
 	public void toBytes(byte[] buffer, int offset) {
-		buffer[offset] = (byte) ((collID >> 24) & 255);
-		buffer[offset + 1] = (byte) ((collID >> 16) & 255);
-		buffer[offset + 2] = (byte) ((collID >> 8) & 255);
-		buffer[offset + 3] = (byte) (collID & 255);
+		buffer[offset] = (byte) ((collectionID >> 24) & 255);
+		buffer[offset + 1] = (byte) ((collectionID >> 16) & 255);
+		buffer[offset + 2] = (byte) ((collectionID >> 8) & 255);
+		buffer[offset + 3] = (byte) (collectionID & 255);
 		buffer[offset + 4] = (byte) ((docNumber >> 24) & 255);
 		buffer[offset + 5] = (byte) ((docNumber >> 16) & 255);
 		buffer[offset + 6] = (byte) ((docNumber >> 8) & 255);
@@ -143,8 +143,8 @@ public final class DocID implements Serializable, Comparable<DocID> {
 		return new DocID(collectionID, docNumber);
 	}
 
-	public int getCollID() {
-		return collID;
+	public int getCollectionID() {
+		return collectionID;
 	}
 	
 	public int getDocNumber() {
@@ -158,7 +158,7 @@ public final class DocID implements Serializable, Comparable<DocID> {
 	@Override
 	public int compareTo(DocID other) {
 		
-		int collCompare = collID - other.collID;
+		int collCompare = collectionID - other.collectionID;
 		if (collCompare != 0) {
 			return collCompare;
 		}
@@ -167,6 +167,6 @@ public final class DocID implements Serializable, Comparable<DocID> {
 
 	@Override
 	public String toString() {
-		return String.format(toStringPattern, collID, docNumber);
+		return String.format(toStringPattern, collectionID, docNumber);
 	}
 }
