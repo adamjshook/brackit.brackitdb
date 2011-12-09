@@ -27,23 +27,27 @@
  */
 package org.brackit.server.store.page.bracket;
 
+import org.brackit.server.node.DocID;
+
 /**
  * Object containing a simple DeweyID (consisting of an int array and a length indicator).
  * 
  * @author Martin Hiller
  *
  */
-public class SimpleDeweyIDImpl implements SimpleDeweyID {
+public final class SimpleDeweyIDImpl implements SimpleDeweyID {
 	
-	private int[] divisions;
-	private int length;
+	private final DocID docID;
+	private final int[] divisions;
+	private final int length;
 	
 	/**
 	 * Creates a simple DeweyID.
 	 * @param divisions the DeweyID divisions
 	 * @param length indicates how many divisions from the divisions array are valid
 	 */
-	public SimpleDeweyIDImpl(int[] divisions, int length) {
+	public SimpleDeweyIDImpl(DocID docID, int[] divisions, int length) {
+		this.docID = docID;
 		this.divisions = divisions;
 		this.length = length;
 	}
@@ -70,6 +74,14 @@ public class SimpleDeweyIDImpl implements SimpleDeweyID {
 	@Override
 	public boolean isAttribute() {
 		return length > 2 && divisions[length - 2] == 1;
+	}
+
+	/**
+	 * @see org.brackit.server.store.page.bracket.SimpleDeweyID#getDocID()
+	 */
+	@Override
+	public DocID getDocID() {
+		return docID;
 	}
 
 }

@@ -27,6 +27,8 @@
  */
 package org.brackit.server.store.page.bracket;
 
+import org.brackit.server.node.DocID;
+
 /**
  * 
  * Represents the logical view on the bracket-based key format.
@@ -58,18 +60,17 @@ public final class BracketKey {
 
 	public static final int TOTAL_LENGTH = PHYSICAL_LENGTH + DATA_REF_LENGTH;
 	public static final int TOTAL_LENGTH_DECREMENTED = TOTAL_LENGTH - 1;
-	
-	public static final int HAS_DATA_REF_MASK = (1 << 31);
+
+	public static final int HAS_DATA_REF_MASK = (1 << 7); // leftmost bit
+	public static final int TYPE_MASK = (7 << 5); // leftmost three bits
+	public static final int ANGLE_BRACKETS_MASK = 31; // rightmost five bits
 
 	/**
 	 * Enumerates the different bracket key types.
 	 */
 	public enum Type {
-		DATA((byte) 4, true),
-		ATTRIBUTE((byte) 5, false),
-		NODATA((byte) 0, true),
-		OVERFLOW((byte) 2, false),
-		DOCUMENT((byte) 1, false);
+		DATA((byte) 4, true), ATTRIBUTE((byte) 5, false), NODATA((byte) 0, true), OVERFLOW(
+				(byte) 2, false), DOCUMENT((byte) 1, false);
 
 		static final Type[] reverseMap;
 		static {
@@ -83,13 +84,15 @@ public final class BracketKey {
 		public final boolean hasDataReference;
 		final boolean opensNewSubtree;
 		final boolean isOverflow;
+		final boolean isDocument;
 
 		private Type(byte b, boolean opensNewSubtree) {
 			this.physicalValue = b;
-			this.dataReferenceLength = ((b & 4) > 0) ? BracketKey.DATA_REF_LENGTH
-					: 0;
 			this.hasDataReference = ((b & 4) > 0);
+			this.dataReferenceLength = this.hasDataReference ? BracketKey.DATA_REF_LENGTH
+					: 0;
 			this.isOverflow = ((b & 2) > 0);
+			this.isDocument = (b == (byte) 1);
 			this.opensNewSubtree = opensNewSubtree;
 		}
 
@@ -114,7 +117,7 @@ public final class BracketKey {
 	 * number of closing angle brackets (for overflow areas)
 	 */
 	protected int angleBrackets;
-	private static final int ANGLE_BRACKETS_MAX = 63;
+	private static final int ANGLE_BRACKETS_MAX = 31;
 	/**
 	 * number of DeweyID gaps
 	 */
@@ -151,7 +154,7 @@ public final class BracketKey {
 	 * @return type of the specified bracket key
 	 */
 	public static Type loadType(byte[] storage, int keyOffset) {
-		return Type.reverseMap[storage[keyOffset + 1] & 3];
+		return Type.reverseMap[(storage[keyOffset] & 0xFF) >>> 5];
 	}
 
 	/**
@@ -164,7 +167,7 @@ public final class BracketKey {
 	 * @return
 	 */
 	public static boolean hasDataReference(byte[] storage, int keyOffset) {
-		return (storage[keyOffset + 1] & 2) == 0;
+		return (storage[keyOffset] & HAS_DATA_REF_MASK) > 0;
 	}
 
 	/**
@@ -211,10 +214,20 @@ public final class BracketKey {
 	public static byte[] generateBracketKeys(SimpleDeweyID previousID,
 			SimpleDeweyID currentID) {
 
+		DocID docID1 = previousID.getDocID();
 		int[] divisions1 = previousID.getDivisionValues();
 		int length1 = previousID.getNumberOfDivisions();
+		DocID docID2 = currentID.getDocID();
 		int[] divisions2 = currentID.getDivisionValues();
 		int length2 = currentID.getNumberOfDivisions();
+
+		int docDiff = docID2.getDocNumber() - docID1.getDocNumber();
+		if (docDiff > 0) {
+			// a new document bracket key has to be generated
+			byte[] result = new byte[PHYSICAL_LENGTH];
+			(new BracketKey(0, 0, docDiff, Type.DOCUMENT)).store(result, 0);
+			return result;
+		}
 
 		int commonPrefix = getCommonPrefixLength(divisions1, length1,
 				divisions2, length2);
@@ -408,15 +421,15 @@ public final class BracketKey {
 	public int store(byte[] storage, int position, boolean ignoreKeyType) {
 
 		// byte 0
-		storage[position] = (byte) roundBrackets;
+		if (ignoreKeyType) {
+			storage[position] = (byte) (angleBrackets | (storage[position] & TYPE_MASK));
+		} else {
+			storage[position] = (byte) (angleBrackets | (type.physicalValue << 5));
+		}
 		position++;
 
 		// byte 1
-		if (ignoreKeyType) {
-			storage[position] = (byte) ((angleBrackets << 2) | (storage[position] & 3));
-		} else {
-			storage[position] = (byte) ((angleBrackets << 2) | type.physicalValue);
-		}
+		storage[position] = (byte) roundBrackets;
 		position++;
 
 		// byte 2
@@ -434,22 +447,40 @@ public final class BracketKey {
 	 *            the byte array to load the bracket key from
 	 * @param position
 	 *            starting point in the byte array
+	 * @return false iff the loaded key represents a new document
 	 */
-	public void load(byte[] storage, int position) {
+	public boolean load(byte[] storage, int position) {
 
-		// byte 0
-		roundBrackets = storage[position] & 0xFF;
-		position++;
-
-		// byte 1
+		// process key type
 		int currentByte = storage[position] & 0xFF;
-		angleBrackets = currentByte >>> 2;
-		type = Type.reverseMap[currentByte & 3];
-		position++;
+		type = Type.reverseMap[currentByte >>> 5];
 
-		// byte 2
-		idGaps = storage[position] & 0xFF;
+		if (type.isDocument) {
 
+			// interpret remaining bits as gap between the old and the new
+			// document number (within the same collection)
+
+			idGaps = ((currentByte & ANGLE_BRACKETS_MASK) << 16)
+					| ((storage[position + 1] & 0xFF) << 8)
+					| (storage[position + 2] & 0xFF);
+			
+			return false;
+
+		} else {
+
+			// process angle brackets
+			angleBrackets = currentByte & ANGLE_BRACKETS_MASK;
+			position++;
+
+			// byte 1
+			roundBrackets = storage[position] & 0xFF;
+			position++;
+
+			// byte 2
+			idGaps = storage[position] & 0xFF;
+
+			return true;
+		}
 	}
 
 	/**
@@ -514,6 +545,8 @@ public final class BracketKey {
 	 */
 	public String getBracketString() {
 
+		// TODO
+
 		StringBuilder result = new StringBuilder();
 
 		if (type == Type.ATTRIBUTE) {
@@ -552,12 +585,11 @@ public final class BracketKey {
 			int keyPosition) {
 
 		// load correct byte
-		keyPosition++;
 		int typeByte = storage[keyPosition];
 
 		// change key type
-		storage[keyPosition] = (byte) ((typeByte & 252) | newType.physicalValue);
+		storage[keyPosition] = (byte) ((typeByte & ANGLE_BRACKETS_MASK) | (newType.physicalValue << 5));
 
-		return keyPosition + 2;
+		return keyPosition + PHYSICAL_LENGTH;
 	}
 }

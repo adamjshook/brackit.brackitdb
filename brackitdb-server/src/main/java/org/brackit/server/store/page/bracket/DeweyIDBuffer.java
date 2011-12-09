@@ -46,8 +46,10 @@ import org.brackit.server.store.page.bracket.BracketKey.Type;
 public final class DeweyIDBuffer implements SimpleDeweyID {
 
 	private static final int minBufferSize = 16;
-	private DocID docID;
 	private PageID assignedPage;
+
+	private int collectionID;
+	private int docNumber;
 
 	private int[] currentBuffer;
 	private int currentLength;
@@ -175,7 +177,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		if (currentBuffer == null) {
 			return null;
 		}
-		bufferedKey = new XTCdeweyID(docID, currentLength, currentBuffer);
+		bufferedKey = new XTCdeweyID(getDocID(), currentLength, currentBuffer);
 		return bufferedKey;
 	}
 
@@ -185,8 +187,8 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	 * @return backup DeweyID or null, if not in backup mode
 	 */
 	public SimpleDeweyID getBackupAsSimpleDeweyID() {
-		return backupMode ? new SimpleDeweyIDImpl(backupBuffer, backupLength)
-				: null;
+		return backupMode ? new SimpleDeweyIDImpl(getDocID(), backupBuffer,
+				backupLength) : null;
 	}
 
 	/**
@@ -195,8 +197,8 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	 * @return backup DeweyID or null, if not in backup mode
 	 */
 	public XTCdeweyID getBackupDeweyID() {
-		return backupMode ? new XTCdeweyID(docID, backupLength, backupBuffer)
-				: null;
+		return backupMode ? new XTCdeweyID(getDocID(), backupLength,
+				backupBuffer) : null;
 	}
 
 	/**
@@ -268,7 +270,9 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	 *            the XTCdeweyID to take the content from
 	 */
 	public void setTo(XTCdeweyID other) {
-		this.docID = other.getDocID();
+		DocID docID = other.getDocID();
+		this.collectionID = docID.getCollectionID();
+		this.docNumber = docID.getDocNumber();
 
 		int[] otherDivisions = other.getDivisionValues();
 
@@ -464,9 +468,9 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	public int getLevelDifferenceTo(SimpleDeweyID other) {
 		return getLevel(other) - getLevel(this);
 	}
-	
+
 	public int getLevel() {
-		
+
 		int level = 0;
 
 		for (int i = 0; i < currentLength; i++) {
@@ -524,6 +528,16 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	 */
 	public void update(final BracketKey key, boolean ignoreAttributes) {
 
+		BracketKey.Type keyType = key.type;
+		
+		if (keyType.isDocument) {
+			// reset divisions
+			currentLength = 0;
+			// increase document number
+			docNumber += key.idGaps;
+			return;
+		}
+		
 		if (ignoreAttributes) {
 			// optimization if attributes are irrelevant
 
@@ -537,7 +551,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		} else {
 
 			final boolean previousIsAttribute = isAttribute();
-			final boolean currentIsAttribute = (key.type == Type.ATTRIBUTE);
+			final boolean currentIsAttribute = (keyType == Type.ATTRIBUTE);
 
 			if (previousIsAttribute && currentIsAttribute) {
 				// previous node and current node are attributes for the same
@@ -570,7 +584,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		increaseLastDivision(2 * key.idGaps);
 
 		// if this bracket key represents an overflow area
-		if (key.type == Type.OVERFLOW) {
+		if (keyType.isOverflow) {
 			decreaseLastDivision(1);
 		}
 
@@ -596,7 +610,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 				out.append("DeweyID:    ");
 			}
 
-			out.append(this.docID);
+			out.append(getDocID());
 			out.append(XTCdeweyID.documentSeparator);
 
 			for (int i = 0; i < currentLength; i++) {
@@ -642,7 +656,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 			bufferedKey = null;
 		}
 	}
-	
+
 	/**
 	 * If this buffer contains an attribute DeweyID, it will be set to the
 	 * related element DeweyID.
@@ -699,7 +713,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	protected void restore(boolean keepBackup) {
 
 		bufferedKey = null;
-		
+
 		if (!backupMode) {
 			throw new RuntimeException("There is no backup to be restored!");
 		}
@@ -777,5 +791,13 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		}
 
 		assignedPage = null;
+	}
+
+	/**
+	 * @see org.brackit.server.store.page.bracket.SimpleDeweyID#getDocID()
+	 */
+	@Override
+	public DocID getDocID() {
+		return new DocID(collectionID, docNumber);
 	}
 }

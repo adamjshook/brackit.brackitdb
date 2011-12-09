@@ -76,7 +76,7 @@ public class HashLockNameFactory implements TreeLockNameFactory {
 	@Override
 	public LockName getLockName(int level) {
 		if ((level == lockNames.length) && (tail != 0)) {
-			long template = ((long) deweyID.getDocID().getCollID()) << 32;
+			long template = ((long) deweyID.getDocID().getCollectionID()) << 32;
 			return new DefaultLockName(template | tail + (h << 6) + (h << 16)
 					- h);
 		}
@@ -93,7 +93,7 @@ public class HashLockNameFactory implements TreeLockNameFactory {
 	}
 
 	private void foldNext() {
-		long template = ((long) deweyID.getDocID().getCollID()) << 32;
+		long template = ((long) deweyID.getDocID().getCollectionID()) << 32;
 		int[] divisions = deweyID.divisionValues;
 
 		do {

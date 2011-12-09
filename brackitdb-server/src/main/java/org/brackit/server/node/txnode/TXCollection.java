@@ -186,7 +186,7 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 				documentPageIDs.close();
 			}
 
-			deleteDocumentReferenceIndex(new PageID(docID.getCollID()));
+			deleteDocumentReferenceIndex(new PageID(docID.getCollectionID()));
 		}
 	}
 
@@ -211,7 +211,7 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 
 	private void addDocument(E document) throws DocumentException {
 		try {
-			getIndex().insert(tx, new PageID(docID.getCollID()),
+			getIndex().insert(tx, new PageID(docID.getCollectionID()),
 					document.getDeweyID().getDocID().getBytes(), new byte[0]);
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
@@ -220,7 +220,7 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 
 	private void deleteDocument(DocID docID) throws DocumentException {
 		try {
-			getIndex().delete(tx, new PageID(docID.getCollID()), docID.getBytes(),
+			getIndex().delete(tx, new PageID(docID.getCollectionID()), docID.getBytes(),
 					new byte[0]);
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
@@ -231,7 +231,7 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 			throws DocumentException {
 		try {
 			IndexIterator iterator = getIndex().open(tx,
-					new PageID(docID.getCollID()), SearchMode.FIRST, null, null,
+					new PageID(docID.getCollectionID()), SearchMode.FIRST, null, null,
 					OpenMode.READ);
 			return new DocRefIndexStream(iterator);
 		} catch (IndexAccessException e) {

@@ -117,7 +117,7 @@ public class PCRClusterEncoder implements IndexEncoder<ElNode> {
 
 	@Override
 	public int getUnitID() {
-		return collection.getID().getCollID();
+		return collection.getID().getCollectionID();
 	}
 
 	@Override

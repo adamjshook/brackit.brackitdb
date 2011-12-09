@@ -88,7 +88,7 @@ public class ElCollection extends TXCollection<ElNode> {
 	public ElNode store(SubtreeParser parser) throws DocumentException {
 		try {
 			PageID rootPageID = store.index.createIndex(tx, new PageID(docID
-					.getCollID()).getContainerNo(), Field.DEWEYID, Field.EL_REC,
+					.getCollectionID()).getContainerNo(), Field.DEWEYID, Field.EL_REC,
 					true, true, -1);
 			ElNode document = new ElNode(this, rootPageID);
 			DocID docID = new DocID(rootPageID.value(), XXX);
@@ -103,7 +103,7 @@ public class ElCollection extends TXCollection<ElNode> {
 	@Override
 	public void delete(DocID docID) throws DocumentException {
 		try {
-			store.index.dropIndex(tx, new PageID(docID.getCollID()));
+			store.index.dropIndex(tx, new PageID(docID.getCollectionID()));
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -164,7 +164,7 @@ public class ElCollection extends TXCollection<ElNode> {
 	@Override
 	public ElNode getDocument(DocID docID) throws DocumentException {
 		return new ElNode(
-				new ElLocator(this, docID, new PageID(docID.getCollID())),
+				new ElLocator(this, docID, new PageID(docID.getCollectionID())),
 				new XTCdeweyID(docID), Kind.DOCUMENT.ID, null, null);
 	}
 
@@ -190,7 +190,7 @@ public class ElCollection extends TXCollection<ElNode> {
 
 		if (!Boolean.parseBoolean(root.getAttribute(COLLECTION_FLAG_ATTRIBUTE)
 				.getValue().stringValue())) {
-			document = new ElNode(this, new PageID(docID.getCollID()));
+			document = new ElNode(this, new PageID(docID.getCollectionID()));
 		}
 	}
 
@@ -199,7 +199,7 @@ public class ElCollection extends TXCollection<ElNode> {
 		super.calculateStatistics();
 		try {
 			IndexStatisticsVisitor visitor = new IndexStatisticsVisitor();
-			store.index.traverse(tx, new PageID(docID.getCollID()), visitor);
+			store.index.traverse(tx, new PageID(docID.getCollectionID()), visitor);
 			set(visitor.getIndexStatistics());
 
 			indexController.calculateStatistics();

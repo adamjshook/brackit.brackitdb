@@ -142,7 +142,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	@Override
 	public DBCollection<?> lookup(Tx tx, DocID id)
 			throws ItemNotFoundException, DocumentException {
-		Item<Directory> item = getItemByID(tx, id.getCollID(), false);
+		Item<Directory> item = getItemByID(tx, id.getCollectionID(), false);
 
 		if (!(item instanceof Document)) {
 			throw new MetaDataException("%s is not a document.", id);
@@ -680,7 +680,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 	@Override
 	public BlobHandle getBlob(Tx tx, DocID id) throws DocumentException {
-		Item<Directory> item = getItemByID(tx, id.getCollID(), false);
+		Item<Directory> item = getItemByID(tx, id.getCollectionID(), false);
 
 		if (!(item instanceof Blob)) {
 			throw new MetaDataException("%s is not a blob.", id);

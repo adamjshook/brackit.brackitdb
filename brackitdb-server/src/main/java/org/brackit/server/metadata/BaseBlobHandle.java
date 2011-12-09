@@ -126,7 +126,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	@Override
 	public void delete() throws DocumentException {
 		try {
-			store.drop(tx, new PageID(docID.getCollID()));
+			store.drop(tx, new PageID(docID.getCollectionID()));
 		} catch (BlobStoreAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -135,7 +135,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	@Override
 	public InputStream read() throws DocumentException {
 		try {
-			return store.readStream(tx, new PageID(docID.getCollID()));
+			return store.readStream(tx, new PageID(docID.getCollectionID()));
 		} catch (BlobStoreAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -144,7 +144,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	@Override
 	public void write(InputStream in) throws DocumentException {
 		try {
-			store.writeStream(tx, new PageID(docID.getCollID()), in, true);
+			store.writeStream(tx, new PageID(docID.getCollectionID()), in, true);
 		} catch (BlobStoreAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -262,7 +262,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	@Override
 	public void serialize(OutputStream out) throws DocumentException {
 		try {
-			InputStream in = store.readStream(tx, new PageID(docID.getCollID()));
+			InputStream in = store.readStream(tx, new PageID(docID.getCollectionID()));
 
 			try {
 				byte[] buf = new byte[256];
