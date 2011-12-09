@@ -55,12 +55,14 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	private int currentLength;
 
 	private boolean backupMode;
+	private int backupDocNumber;
 	private int[] backupBuffer;
 	private int backupLength;
 
 	private boolean compareMode;
+	private int compareDocNumber;
 	private int[] compareDivisions;
-	private int comparePrefix;
+	private int comparePrefix = -1;
 	private int compareValue;
 
 	private XTCdeweyID bufferedKey = null;
@@ -187,8 +189,8 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	 * @return backup DeweyID or null, if not in backup mode
 	 */
 	public SimpleDeweyID getBackupAsSimpleDeweyID() {
-		return backupMode ? new SimpleDeweyIDImpl(getDocID(), backupBuffer,
-				backupLength) : null;
+		return backupMode ? new SimpleDeweyIDImpl(new DocID(collectionID,
+				backupDocNumber), backupBuffer, backupLength) : null;
 	}
 
 	/**
@@ -197,8 +199,8 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	 * @return backup DeweyID or null, if not in backup mode
 	 */
 	public XTCdeweyID getBackupDeweyID() {
-		return backupMode ? new XTCdeweyID(getDocID(), backupLength,
-				backupBuffer) : null;
+		return backupMode ? new XTCdeweyID(new DocID(collectionID,
+				backupDocNumber), backupLength, backupBuffer) : null;
 	}
 
 	/**
@@ -211,9 +213,9 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 
 	/**
 	 * Compares this DeweyID with the comparison DeweyID given in the
-	 * constructor. Returns -1 if this DeweyID is smaller than the other, 0 if
-	 * they are the same and +1 if this DeweyID is greater. If no comparison
-	 * DeweyID was given in the constructor, 0 will be returned.
+	 * constructor. Returns a negative number if this DeweyID is smaller than
+	 * the other, 0 if they are the same and a positive number if this DeweyID
+	 * is greater. If the comparison mode is not enabled, 0 will be returned.
 	 * 
 	 * @return the comparison value
 	 */
@@ -227,19 +229,18 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	 */
 	private void determineCompareValue() {
 
+		if (comparePrefix == -1) {
+			// compare docIDs
+			compareValue = docNumber - compareDocNumber;
+		}
+
 		if (comparePrefix == currentLength
 				|| comparePrefix == compareDivisions.length) {
 			// one DeweyID is an ancestor of the other (or they are the same)
-			if (currentLength < compareDivisions.length) {
-				compareValue = -1;
-			} else if (currentLength == compareDivisions.length) {
-				compareValue = 0;
-			} else {
-				compareValue = 1;
-			}
+			compareValue = currentLength - compareDivisions.length;
 		} else {
-			compareValue = (currentBuffer[comparePrefix] < compareDivisions[comparePrefix]) ? -1
-					: 1;
+			compareValue = currentBuffer[comparePrefix]
+					- compareDivisions[comparePrefix];
 		}
 
 	}
@@ -255,7 +256,9 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 			comparePrefix--;
 		} else if (comparePrefix == currentLength - 1) {
 			// comparePrefix may have to be incremented
-			if (comparePrefix < compareDivisions.length
+			if (comparePrefix == -1
+					&& docNumber == compareDocNumber
+					|| comparePrefix < compareDivisions.length
 					&& currentBuffer[comparePrefix] == compareDivisions[comparePrefix]) {
 				comparePrefix++;
 			}
@@ -290,7 +293,8 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		this.bufferedKey = other;
 
 		if (compareMode) {
-			comparePrefix = getCommonPrefixLength(compareDivisions);
+			comparePrefix = getCommonPrefixLength(compareDocNumber,
+					compareDivisions);
 			determineCompareValue();
 		}
 	}
@@ -306,10 +310,12 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 			throw new RuntimeException(
 					"DeweyIDBuffer needs to be instantiated before enabling the CompareMode!");
 		}
+		compareDocNumber = comparisonDeweyID.getDocID().getDocNumber();
 		// use a copy of the given DeweyID
 		compareDivisions = Arrays.copyOf(comparisonDeweyID.getDivisionValues(),
 				comparisonDeweyID.getNumberOfDivisions());
-		comparePrefix = getCommonPrefixLength(comparisonDeweyID);
+		comparePrefix = getCommonPrefixLength(compareDocNumber,
+				compareDivisions);
 		compareMode = true;
 		determineCompareValue();
 	}
@@ -319,46 +325,28 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	 */
 	public void disableCompareMode() {
 		if (compareMode) {
+			compareDocNumber = 0;
 			compareDivisions = null;
-			comparePrefix = 0;
+			comparePrefix = -1;
 			compareMode = false;
 			compareValue = 0;
 		}
 	}
 
 	/**
-	 * Returns the length (in number of divisions) of the common prefix.
-	 * 
-	 * @param other
-	 *            the other DeweyID to compare with
-	 * @return length of common prefix
-	 */
-	private int getCommonPrefixLength(SimpleDeweyID other) {
-		int otherLength = other.getNumberOfDivisions();
-		int upperBound = (currentLength < otherLength) ? currentLength
-				: otherLength;
-
-		int[] otherDivisions = other.getDivisionValues();
-		int commonPrefix = 0;
-		while (commonPrefix < upperBound) {
-			if (this.currentBuffer[commonPrefix] != otherDivisions[commonPrefix]) {
-				break;
-			} else {
-				commonPrefix++;
-			}
-		}
-
-		return commonPrefix;
-	}
-
-	/**
-	 * Returns the length (in number of divisions) of the common prefix.
+	 * Returns the length (in number of divisions) of the common prefix. Returns
+	 * -1 if even the docNumber differ.
 	 * 
 	 * @param otherDivisions
 	 *            the currentBuffer of the other DeweyID
 	 * @return length of common prefix
 	 */
-	private int getCommonPrefixLength(int[] otherDivisions) {
+	private int getCommonPrefixLength(int otherDocNumber, int[] otherDivisions) {
+
+		if (docNumber != otherDocNumber) {
+			return -1;
+		}
+
 		int upperBound = (currentLength < otherDivisions.length) ? currentLength
 				: otherDivisions.length;
 
@@ -384,7 +372,8 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		this.compareMode = other.compareMode;
 		this.compareDivisions = other.compareDivisions;
 		if (compareMode) {
-			comparePrefix = getCommonPrefixLength(compareDivisions);
+			comparePrefix = getCommonPrefixLength(compareDocNumber,
+					compareDivisions);
 			determineCompareValue();
 		}
 	}
@@ -494,9 +483,19 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	 */
 	public boolean setToParent() {
 
-		if (currentLength == 1) {
-			// current node is the root node
+		bufferedKey = null;
+		
+		if (currentLength == 0) {
+			// current node is the document node
 			return false;
+		} else if (currentLength == 1) {
+			// set to document DeweyID
+			currentLength = 0;
+			if (compareMode) {
+				comparePrefix = -1;
+				determineCompareValue();
+			}
+			return true;
 		}
 
 		int newLength = currentLength - 1;
@@ -512,8 +511,11 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		}
 
 		removeLastDivisions(currentLength - newLength);
-
-		bufferedKey = null;
+		
+		if (compareMode) {
+			determineCompareValue();
+		}
+		
 		return true;
 	}
 
@@ -529,15 +531,19 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	public void update(final BracketKey key, boolean ignoreAttributes) {
 
 		BracketKey.Type keyType = key.type;
-		
+
 		if (keyType.isDocument) {
 			// reset divisions
 			currentLength = 0;
 			// increase document number
 			docNumber += key.idGaps;
+			if (compareMode) {
+				comparePrefix = (docNumber != compareDocNumber) ? -1 : 0;
+				determineCompareValue();
+			}
 			return;
 		}
-		
+
 		if (ignoreAttributes) {
 			// optimization if attributes are irrelevant
 
@@ -674,6 +680,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 
 		if (currentBuffer == null) {
 			// Buffer not initialized yet
+			backupDocNumber = docNumber;
 			backupBuffer = null;
 			backupLength = 0;
 			backupMode = true;
@@ -700,7 +707,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		// backups
 		backupMode = false;
 		backupLength = 0;
-		bufferedKey = null;
+		backupDocNumber = 0;
 	}
 
 	/**
@@ -730,19 +737,23 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 			// copy back the backup to the current buffer
 			System.arraycopy(backupBuffer, 0, currentBuffer, 0, backupLength);
 			currentLength = backupLength;
+			docNumber = backupDocNumber;
 		} else {
 			// switch buffers
 			int[] temp = currentBuffer;
 			currentBuffer = backupBuffer;
 			currentLength = backupLength;
+			docNumber = backupDocNumber;
 			backupBuffer = temp;
 			backupMode = false;
 			backupLength = 0;
+			backupDocNumber = 0;
 		}
 
 		if (compareMode) {
 			// compare values changed
-			comparePrefix = getCommonPrefixLength(compareDivisions);
+			comparePrefix = getCommonPrefixLength(compareDocNumber,
+					compareDivisions);
 			determineCompareValue();
 		}
 	}
@@ -757,14 +768,16 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		if (assignedPage != null) {
 			if (pageID.equals(assignedPage)) {
 				throw new RuntimeException(
-						String.format(
-								"Assign Error: DeweyIDBuffer is already assigned to Page %s.",
-								assignedPage));
+						String
+								.format(
+										"Assign Error: DeweyIDBuffer is already assigned to Page %s.",
+										assignedPage));
 			} else {
 				throw new RuntimeException(
-						String.format(
-								"Assign Error: DeweyIDBuffer can not be assigned to Page %s, since it is used by Page %s.",
-								pageID, assignedPage));
+						String
+								.format(
+										"Assign Error: DeweyIDBuffer can not be assigned to Page %s, since it is used by Page %s.",
+										pageID, assignedPage));
 			}
 		}
 
@@ -785,9 +798,10 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 
 		if (!assignedPage.equals(pageID)) {
 			throw new RuntimeException(
-					String.format(
-							"Assign Error: DeweyIDBuffer can not be deassigned from Page %s, since it is assigned to Page %s.",
-							pageID, assignedPage));
+					String
+							.format(
+									"Assign Error: DeweyIDBuffer can not be deassigned from Page %s, since it is assigned to Page %s.",
+									pageID, assignedPage));
 		}
 
 		assignedPage = null;
