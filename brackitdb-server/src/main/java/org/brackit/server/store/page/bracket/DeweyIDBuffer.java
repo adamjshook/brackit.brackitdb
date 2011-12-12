@@ -484,7 +484,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	public boolean setToParent() {
 
 		bufferedKey = null;
-		
+
 		if (currentLength == 0) {
 			// current node is the document node
 			return false;
@@ -511,11 +511,11 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		}
 
 		removeLastDivisions(currentLength - newLength);
-		
+
 		if (compareMode) {
 			determineCompareValue();
 		}
-		
+
 		return true;
 	}
 
@@ -596,6 +596,54 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 
 		if (compareMode) {
 			determineCompareValue();
+		}
+
+		bufferedKey = null;
+	}
+
+	/**
+	 * This update method is faster but has some limitations/requirements: 1.
+	 * Neither this buffer's content nor the given key represents an attribute.
+	 * 2. The key is not of type DOCUMENT. 3. Compare value is not maintained
+	 * (no problem if compare mode is disabled anyway)
+	 */
+	public void updateOptimized(final BracketKey key) {
+
+		BracketKey.Type keyType = key.type;
+		int lastDivisionIndex = 0;
+
+		if (key.roundBrackets == 0) {
+
+			// append new division value 3
+			
+			if (currentLength == currentBuffer.length) {
+				int[] newBuffer = new int[(currentBuffer.length * 3) / 2 + 1];
+				System.arraycopy(currentBuffer, 0, newBuffer, 0,
+						currentBuffer.length);
+				currentBuffer = newBuffer;
+			}
+
+			currentBuffer[currentLength] = 3;
+			lastDivisionIndex = currentLength;
+			currentLength++;
+			
+		} else {
+			
+			// cut off some divisions
+			currentLength -= (key.roundBrackets + key.angleBrackets);
+			lastDivisionIndex = currentLength;
+			currentLength++;
+			
+			// set last division to the next odd number
+			currentBuffer[lastDivisionIndex] += ((currentBuffer[lastDivisionIndex] & 1) + 1);
+		}
+
+		// increase last division due to DeweyID gaps
+		currentBuffer[lastDivisionIndex] += 2 * key.idGaps;
+
+		// if this bracket key represents an overflow area
+		if (keyType.isOverflow) {
+			currentBuffer[lastDivisionIndex]--;
 		}
 
 		bufferedKey = null;

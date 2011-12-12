@@ -1359,11 +1359,15 @@ public final class BracketPage extends BasePage {
 		int levelDiff = 0;
 		while (currentOffset < keyAreaEndOffset) {
 
-			currentKey.load(page, currentOffset);
+			if (!currentKey.load(page, currentOffset)) {
+				// document key
+				navRes.status = NavigationStatus.NOT_EXISTENT;
+				return navRes;
+			}
 			currentKeyType = currentKey.type;
 
 			if (currentKeyType != BracketKey.Type.ATTRIBUTE) {
-				currentDeweyID.update(currentKey, true);
+				currentDeweyID.updateOptimized(currentKey);
 
 				levelDiff -= currentKey.roundBrackets;
 				if (currentKeyType.opensNewSubtree) {
@@ -1481,7 +1485,7 @@ public final class BracketPage extends BasePage {
 					+ getLowKeyType().dataReferenceLength;
 		} else {
 			if (currentKeyType == null) {
-				currentKeyType = Type.reverseMap[page[currentOffset + 1] & 3];
+				currentKeyType = Type.reverseMap[(page[currentOffset] & 0xFF) >>> 5];
 			}
 			currentOffset += BracketKey.PHYSICAL_LENGTH
 					+ currentKeyType.dataReferenceLength;
@@ -1497,12 +1501,21 @@ public final class BracketPage extends BasePage {
 		while (currentOffset < keyAreaEndOffset) {
 
 			// load next key from keyStorage
-			// load round brackets
-			currentKey.roundBrackets = page[currentOffset++] & 0xFF;
+			
 			// load angle brackets and type
 			temp = page[currentOffset++] & 0xFF;
-			currentKey.angleBrackets = temp >>> 2;
-			currentKeyType = Type.reverseMap[temp & 3];
+			currentKeyType = Type.reverseMap[temp >>> 5];
+			
+			if (currentKeyType.isDocument) {
+				// no next sibling
+				navRes.status = NavigationStatus.NOT_EXISTENT;
+				return navRes;
+			}
+			
+			currentKey.angleBrackets = temp & BracketKey.ANGLE_BRACKETS_MASK;
+			
+			// load round brackets
+			currentKey.roundBrackets = page[currentOffset++] & 0xFF;
 
 			if (currentKeyType != BracketKey.Type.ATTRIBUTE) {
 
@@ -1523,7 +1536,7 @@ public final class BracketPage extends BasePage {
 						firstUpdate = true;
 					}
 					currentKey.type = currentKeyType;
-					currentDeweyID.update(currentKey, true);
+					currentDeweyID.updateOptimized(currentKey);
 				}
 
 				if (currentKeyType == BracketKey.Type.OVERFLOW) {
@@ -1681,7 +1694,7 @@ public final class BracketPage extends BasePage {
 					+ getLowKeyType().dataReferenceLength;
 		} else {
 			if (currentKeyType == null) {
-				currentKeyType = Type.reverseMap[page[currentOffset + 1] & 3];
+				currentKeyType = Type.reverseMap[(page[currentOffset] & 0xFF) >>> 5];
 			}
 			currentOffset += BracketKey.PHYSICAL_LENGTH
 					+ currentKeyType.dataReferenceLength;
@@ -1697,17 +1710,16 @@ public final class BracketPage extends BasePage {
 		while (currentOffset < keyAreaEndOffset) {
 
 			// load type from keyStorage
-			temp = page[++currentOffset] & 0xFF;
-			currentKeyType = Type.reverseMap[temp & 3];
+			currentKeyType = Type.reverseMap[(page[currentOffset] & 0xFF) >>> 5];
 
 			if (currentKeyType == BracketKey.Type.ATTRIBUTE) {
 
-				currentOffset += BracketKey.TOTAL_LENGTH_DECREMENTED;
+				currentOffset += BracketKey.TOTAL_LENGTH;
 
 			} else if (currentKeyType.opensNewSubtree) {
 
 				// load brackets
-				currentKey.roundBrackets = page[--currentOffset] & 0xFF;
+				currentKey.roundBrackets = page[currentOffset + 1] & 0xFF;
 
 				// check closing brackets
 				if (currentKey.roundBrackets == 0) {
@@ -1718,7 +1730,7 @@ public final class BracketPage extends BasePage {
 					currentKey.idGaps = page[currentOffset + 2] & 0xFF;
 					currentKey.type = currentKeyType;
 
-					currentDeweyID.update(currentKey, true);
+					currentDeweyID.updateOptimized(currentKey);
 					navRes.status = NavigationStatus.FOUND;
 					navRes.keyOffset = currentOffset;
 					navRes.keyType = currentKeyType;
@@ -1729,9 +1741,15 @@ public final class BracketPage extends BasePage {
 				}
 				break;
 
+			} else if (currentKeyType.isDocument) {
+				
+				// no child exists
+				navRes.status = NavigationStatus.NOT_EXISTENT;
+				break;
+				
 			} else {
 				// overflow key
-				currentKey.roundBrackets = page[currentOffset - 1] & 0xFF;
+				currentKey.roundBrackets = page[++currentOffset] & 0xFF;
 
 				if (currentKey.roundBrackets > 0) {
 					// no child exists
@@ -1743,7 +1761,7 @@ public final class BracketPage extends BasePage {
 				currentKey.idGaps = page[++currentOffset] & 0xFF;
 				currentKey.type = currentKeyType;
 
-				currentDeweyID.update(currentKey, true);
+				currentDeweyID.updateOptimized(currentKey);
 				currentOffset++;
 			}
 		}
