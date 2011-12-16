@@ -35,6 +35,7 @@ import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.BracketNode;
+import org.brackit.server.store.Field;
 import org.brackit.server.store.blob.BlobStoreAccessException;
 import org.brackit.server.store.index.bracket.HintPageInformation;
 import org.brackit.server.store.index.bracket.IndexOperationException;
@@ -334,44 +335,63 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		initBuffer();
 
 		NavigationResult navRes = page.navigateNext(currentOffset,
-				currentDeweyID, bufferedKeyType);
+				currentDeweyID, bufferedKeyType, false);
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
 			setOffset(navRes.keyOffset, navRes.keyType, navRes.levelDiff);
 			return true;
 		} else {
-			return false;
-		}
-	}
-
-	@Override
-	public boolean moveNextNonAttr() {
-		initBuffer();
-
-		NavigationResult navRes = page.navigateNextNonAttr(currentOffset,
-				currentDeweyID, bufferedKeyType);
-
-		if (navRes.status == NavigationStatus.FOUND) {
-			// adjust current offset
-			setOffset(navRes.keyOffset, navRes.keyType, navRes.levelDiff);
-			return true;
-		} else {
-			moveBeforeFirst();
 			return false;
 		}
 	}
 	
 	@Override
-	public NavigationStatus moveNextAttribute() {
+	public NavigationStatus moveNextInDocument() {
 		initBuffer();
 
-		NavigationResult navRes = page.navigateNextAttribute(currentOffset,
+		NavigationResult navRes = page.navigateNext(currentOffset,
+				currentDeweyID, bufferedKeyType, true);
+
+		if (navRes.status == NavigationStatus.FOUND) {
+			// adjust current offset
+			setOffset(navRes.keyOffset, navRes.keyType, navRes.levelDiff);
+		} else {
+			moveBeforeFirst();
+		}
+		
+		return navRes.status;
+	}
+
+	@Override
+	public NavigationStatus moveNextNonAttrInDocument() {
+		initBuffer();
+
+		NavigationResult navRes = page.navigateNextNonAttrInDocument(currentOffset,
 				currentDeweyID, bufferedKeyType);
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
 			setOffset(navRes.keyOffset, navRes.keyType, navRes.levelDiff);
+		} else {
+			moveBeforeFirst();
+		}
+		
+		return navRes.status;
+	}
+	
+	@Override
+	public NavigationStatus moveNextAttributeInDocument() {
+		initBuffer();
+
+		NavigationResult navRes = page.navigateNextAttributeInDocument(currentOffset,
+				currentDeweyID, bufferedKeyType);
+
+		if (navRes.status == NavigationStatus.FOUND) {
+			// adjust current offset
+			setOffset(navRes.keyOffset, navRes.keyType, navRes.levelDiff);
+		} else {
+			moveBeforeFirst();
 		}
 		
 		return navRes.status;
@@ -557,7 +577,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 					.navigatePreviousSibling(currentOffset, currentDeweyID);
 			break;
 		case NEXT_ATTRIBUTE:
-			navRes = page.navigateNextAttribute(currentOffset, currentDeweyID,
+			navRes = page.navigateNextAttributeInDocument(currentOffset, currentDeweyID,
 					bufferedKeyType);
 			break;
 		case TO_INSERT_POS:
@@ -699,7 +719,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	public boolean setHighKey(XTCdeweyID highKey, boolean logged,
 			long undoNextLSN) throws IndexOperationException {
 
-		byte[] highKeyBytes = (highKey != null) ? highKey.toBytes() : null;
+		byte[] highKeyBytes = (highKey != null) ? Field.COLLECTIONDEWEYID.encode(highKey) : null;
 		LogOperation operation = null;
 		if (logged) {
 			operation = new HighkeyLogOperation(pageID, getRootPageID(),

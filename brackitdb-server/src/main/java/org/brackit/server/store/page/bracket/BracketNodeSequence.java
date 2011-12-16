@@ -30,6 +30,7 @@ package org.brackit.server.store.page.bracket;
 import java.nio.ByteBuffer;
 
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.store.Field;
 
 /**
  * Class representing a sequence of bracket nodes. It consists of a LowID (which
@@ -83,14 +84,14 @@ public final class BracketNodeSequence {
 		byte[] bracketKeys = null;
 
 		if (numberOfAncestors == 0) {
-			physicalLowID = deweyID.toBytes();
+			physicalLowID = Field.COLLECTIONDEWEYID.encode(deweyID);
 			lowIDType = (deweyID.isAttribute() ? BracketKey.Type.ATTRIBUTE
 					: BracketKey.Type.DATA);
 			bracketKeys = new byte[0];
 		} else {
 			XTCdeweyID ancestorKey = BracketNodeSequence.getAncestorKey(deweyID,
 					numberOfAncestors);
-			physicalLowID = ancestorKey.toBytes();
+			physicalLowID = Field.COLLECTIONDEWEYID.encode(ancestorKey);
 			lowIDType = BracketKey.Type.NODATA;
 			bracketKeys = BracketKey.generateBracketKeys(ancestorKey, deweyID);
 		}
@@ -559,7 +560,7 @@ public final class BracketNodeSequence {
 				break;
 			}
 		}
-		byte[] secondLowKeyBytes = deweyIDbuffer.getDeweyID().toBytes();
+		byte[] secondLowKeyBytes = Field.COLLECTIONDEWEYID.encode(deweyIDbuffer.getDeweyID());
 		if (secondLowKeyBytes.length > 255) {
 			throw new RuntimeException("StartDeweyID is too long!");
 		}

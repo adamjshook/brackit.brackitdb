@@ -299,14 +299,21 @@ public interface Leaf extends BPContext {
 	public RecordInterpreter getRecord() throws IndexOperationException;
 
 	/**
-	 * Moves to the next non-attribute node.
+	 * Moves to the next non-attribute node within this document.
 	 */
-	public boolean moveNextNonAttr();
+	public NavigationStatus moveNextNonAttrInDocument();
 
 	/**
 	 * Moves to the next attribute (of the current element node). Can return
 	 * FOUND, NOT_EXISTENT (if the next element is reached) or AFTER_LAST (if
 	 * there may be another attribute in the next page)
 	 */
-	public NavigationStatus moveNextAttribute();
+	public NavigationStatus moveNextAttributeInDocument();
+
+	/**
+	 * Moves to the next node within the current document. Returns FOUND,
+	 * NOT_EXISTENT (if the end of the document is reached) or AFTER_LAST (if
+	 * the document is potentially continued in the next page).
+	 */
+	public NavigationStatus moveNextInDocument();
 }

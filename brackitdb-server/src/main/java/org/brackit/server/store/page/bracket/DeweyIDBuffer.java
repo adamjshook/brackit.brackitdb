@@ -541,6 +541,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 				comparePrefix = (docNumber != compareDocNumber) ? -1 : 0;
 				determineCompareValue();
 			}
+			bufferedKey = null;
 			return;
 		}
 

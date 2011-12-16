@@ -344,6 +344,110 @@ public class XTCdeweyID implements java.io.Serializable,
 		this.divisionValues = new int[division];
 		System.arraycopy(tempDivision, 0, divisionValues, 0, division);
 	}
+	
+	public XTCdeweyID(DocID docID, byte[] deweyIDbytes, int offset, int length) {
+		int division = 1;
+		int currentLevel = 1;
+
+		int[] tempDivision = new int[10];
+		int tempDivisionLength = 0;
+
+		// the first division "1" is implicit there and not encoded in
+		// deweyIDbytes
+		tempDivision[tempDivisionLength++] = 1;
+
+		// first scan deweyID bytes to get length
+
+		int binaryTreeSearchIndex = 0;
+		int helpFindingBit;
+		boolean prefixBit = true;
+		int suffixlength = 0;
+		int suffix = 0;
+		// parse complete byte-Array
+		
+		int end = 8 * length;
+		
+		for (int bitIndex = 0; bitIndex < end; bitIndex++) {
+
+			switch (bitIndex % 8) {
+			case 0:
+				helpFindingBit = 128;
+				break;
+			case 1:
+				helpFindingBit = 64;
+				break;
+			case 2:
+				helpFindingBit = 32;
+				break;
+			case 3:
+				helpFindingBit = 16;
+				break;
+			case 4:
+				helpFindingBit = 8;
+				break;
+			case 5:
+				helpFindingBit = 4;
+				break;
+			case 6:
+				helpFindingBit = 2;
+				break;
+			default:
+				helpFindingBit = 1;
+				break;
+			}
+
+			if (prefixBit) { // still parsing the prefix
+				if ((deweyIDbytes[offset + bitIndex / 8] & helpFindingBit) == helpFindingBit) {
+					// bit is set
+					binaryTreeSearchIndex = (((2 * binaryTreeSearchIndex) + 2));
+				} else { // bit is not set
+					binaryTreeSearchIndex = (((2 * binaryTreeSearchIndex) + 1));
+				}
+
+				if ((binaryTreeSearchArray.length > binaryTreeSearchIndex)
+						&& (binaryTreeSearchArray[binaryTreeSearchIndex] != 0)) {
+					// division found;
+					prefixBit = false; // memorize we found the complete prefix
+					suffixlength = binaryTreeSearchArray[binaryTreeSearchIndex];
+					// initialize suffix
+					suffix = binaryTreeSuffixInit[binaryTreeSearchIndex];
+				}
+			} else { // prefix already found, so we are calculating the suffix
+				if ((deweyIDbytes[offset + bitIndex / 8] & helpFindingBit) == helpFindingBit) {
+					// bit is set
+					suffix += 1 << suffixlength - 1;
+				}
+
+				suffixlength--;
+				if (suffixlength == 0) {
+					// -1 is not a valid Divisionvalue
+					if (suffix != -1) {
+						division++;
+
+						if (tempDivisionLength == tempDivision.length) {
+							int[] newTempDivision = new int[tempDivisionLength + 5];
+							System.arraycopy(tempDivision, 0, newTempDivision,
+									0, tempDivisionLength);
+							tempDivision = newTempDivision;
+						}
+
+						tempDivision[tempDivisionLength++] = suffix;
+						if (suffix % 2 == 1)
+							currentLevel++;
+					}
+
+					prefixBit = true;
+					binaryTreeSearchIndex = 0;
+
+				}
+			}
+		}
+
+		this.docID = docID;
+		this.level = currentLevel;
+		this.divisionValues = new int[division];
+		System.arraycopy(tempDivision, 0, divisionValues, 0, division);
+	}
 
 	public XTCdeweyID(DocID docID) {
 		this.docID = docID;

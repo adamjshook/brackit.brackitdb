@@ -202,7 +202,7 @@ public class BracketIndexImpl implements BracketIndex {
 			NavigationStatus navStatus = null;
 			BracketNode oldAttribute = null;
 			while (true) {
-				while ((navStatus = page.moveNextAttribute()) == NavigationStatus.FOUND) {
+				while ((navStatus = page.moveNextAttributeInDocument()) == NavigationStatus.FOUND) {
 
 					RecordInterpreter oldRecord = page.getRecord();
 					if (oldRecord.getPCR() == attributePsNode.getPCR()) {

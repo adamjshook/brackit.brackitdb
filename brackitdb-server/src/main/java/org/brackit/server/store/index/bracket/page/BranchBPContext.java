@@ -63,7 +63,7 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 	private static final byte LAST_IN_LEVEL_FLAG = 2;
 	private static final byte COMPRESSED_FLAG = 8;
 
-	private static final Field KEY_TYPE = Field.DEWEYID;
+	private static final Field KEY_TYPE = Field.COLLECTIONDEWEYID;
 	private static final Field VALUE_TYPE = Field.PAGEID;
 
 	protected final KeyValuePage page;
