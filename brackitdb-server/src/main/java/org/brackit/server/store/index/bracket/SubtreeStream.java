@@ -32,6 +32,7 @@ import org.brackit.server.node.bracket.BracketLocator;
 import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
+import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 
 /**
  * @author Martin Hiller

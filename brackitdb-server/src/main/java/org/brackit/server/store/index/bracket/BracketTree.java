@@ -952,7 +952,7 @@ public final class BracketTree extends PageContextFactory {
 					if (log.isTraceEnabled()) {
 						log.trace(String.format(
 								"Reached leaf page %s searching for %s %s.",
-								page, searchMode, Field.DEWEYID.toString(key)));
+								page, searchMode, Field.COLLECTIONDEWEYID.toString(key)));
 						log.trace(page.dump("leaf page"));
 					}
 
@@ -965,7 +965,7 @@ public final class BracketTree extends PageContextFactory {
 						log.trace(String
 								.format("Reached branch page %s with height %s for search key %s.",
 										page, searchMode,
-										Field.DEWEYID.toString(key)));
+										Field.COLLECTIONDEWEYID.toString(key)));
 						log.trace(page.dump("branch page"));
 					}
 
@@ -981,7 +981,7 @@ public final class BracketTree extends PageContextFactory {
 				if (log.isTraceEnabled()) {
 					log.trace(String.format(
 							"Passing branch page %s and searching for %s %s.",
-							branchPage, Field.DEWEYID.toString(key)));
+							branchPage, Field.COLLECTIONDEWEYID.toString(key)));
 					log.trace(page.dump("tree page"));
 				}
 
@@ -1220,7 +1220,7 @@ public final class BracketTree extends PageContextFactory {
 			if (log.isTraceEnabled()) {
 				log.trace(page.dump(String.format(
 						"Page %s for insert of (%s, %s) at %s", page,
-						Field.DEWEYID.toString(insertKey),
+						Field.COLLECTIONDEWEYID.toString(insertKey),
 						Field.PAGEID.toString(insertValue), page.getPosition())));
 			}
 
@@ -1233,7 +1233,7 @@ public final class BracketTree extends PageContextFactory {
 				if (log.isTraceEnabled()) {
 					log.trace(String.format(
 							"Splitting page %s for insert of (%s, %s) at %s",
-							page, Field.DEWEYID.toString(insertKey),
+							page, Field.COLLECTIONDEWEYID.toString(insertKey),
 							Field.PAGEID.toString(insertValue),
 							page.getPosition()));
 				}
@@ -1250,7 +1250,7 @@ public final class BracketTree extends PageContextFactory {
 				if (log.isTraceEnabled()) {
 					log.trace(page.dump(String.format(
 							"Splitted page %s before insert of (%s, %s) at %s",
-							page, Field.DEWEYID.toString(insertKey),
+							page, Field.COLLECTIONDEWEYID.toString(insertKey),
 							Field.PAGEID.toString(insertValue),
 							page.getPosition())));
 				}
@@ -1738,7 +1738,7 @@ public final class BracketTree extends PageContextFactory {
 
 				// no split necessary
 				insertLeft = false;
-				separatorKey = firstNode.toBytes();
+				separatorKey = Field.COLLECTIONDEWEYID.encode(firstNode);
 
 			} else {
 
@@ -1795,7 +1795,7 @@ public final class BracketTree extends PageContextFactory {
 						// nodes still do not fit into left page -> try right
 						// page
 						insertLeft = false;
-						separatorKey = firstNode.toBytes();
+						separatorKey = Field.COLLECTIONDEWEYID.encode(firstNode);
 						if (!left.setHighKeyBytes(separatorKey, logged, -1)) {
 							// not enough space for highkey!
 							// move at least one record to the right page
@@ -2349,7 +2349,7 @@ public final class BracketTree extends PageContextFactory {
 							break;
 						}
 					} while ((page.hasNext())
-							&& (Field.DEWEYID.compare(separatorKey,
+							&& (Field.COLLECTIONDEWEYID.compare(separatorKey,
 									page.getKey()) <= 0));
 				}
 
@@ -2408,7 +2408,7 @@ public final class BracketTree extends PageContextFactory {
 		if (log.isTraceEnabled()) {
 			log.trace(String.format(
 					"Insert separator (%s, %s) in parent page %s.",
-					Field.DEWEYID.toString(separatorKey), rightPageID, parent));
+					Field.COLLECTIONDEWEYID.toString(separatorKey), rightPageID, parent));
 		}
 
 		parent = insertIntoBranch(tx, rootPageID, parent, separatorKey, value,
@@ -2746,7 +2746,7 @@ public final class BracketTree extends PageContextFactory {
 		try {
 			if (log.isTraceEnabled()) {
 				log.trace(String.format("Deleting (%s, %s) from page %s.",
-						Field.DEWEYID.toString(deleteKey),
+						Field.COLLECTIONDEWEYID.toString(deleteKey),
 						Field.PAGEID.toString(page.getValue()),
 						page.getPageID()));
 			}

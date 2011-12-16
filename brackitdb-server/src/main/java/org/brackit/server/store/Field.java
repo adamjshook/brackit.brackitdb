@@ -88,6 +88,11 @@ public class Field {
 	public static final FullDeweyIDField FULLDEWEYID = new FullDeweyIDField();
 
 	/**
+	 * DocumentNumber (within collection) | {@link XTCdeweyID}
+	 */
+	public static final CollectionDeweyIDField COLLECTIONDEWEYID = new CollectionDeweyIDField();
+
+	/**
 	 * {@link XTCdeweyID} | PCR
 	 */
 	public static final DeweyIDPCRField DEWEYIDPCR = new DeweyIDPCRField();
@@ -385,10 +390,14 @@ public class Field {
 			return b;
 		}
 
-		public XTCdeweyID decodeDeweyID(int collectionID, byte[] b) {
+		public XTCdeweyID decode(int collectionID, byte[] b) {
 			DocID docID = new DocID(collectionID, Calc.toInt(b, 0));
-			return new XTCdeweyID(docID, Arrays.copyOfRange(b, 4,
-					b.length));
+			return new XTCdeweyID(docID, Arrays.copyOfRange(b, 4, b.length));
+		}
+
+		public XTCdeweyID decode(int collectionID, byte[] b, int offset, int length) {
+			DocID docID = new DocID(collectionID, Calc.toInt(b, offset));
+			return new XTCdeweyID(docID, b, offset + 4, length - 4);
 		}
 
 		@Override
@@ -396,7 +405,7 @@ public class Field {
 			if (value == null) {
 				return null;
 			}
-			return decodeDeweyID(0, value).toString();
+			return decode(0, value).toString();
 		}
 
 		@Override
