@@ -1330,35 +1330,6 @@ public final class BracketTree extends PageContextFactory {
 						hintLeaf.setContext(key, hintPageInfo.currentOffset);
 					}
 
-				} else if (hintPage.isLeaf()
-						&& hintPage.getRootPageID().equals(rootPageID)) {
-
-					// page has changed, but is still a leaf of the correct
-					// document
-					hintLeaf = (Leaf) hintPage;
-					hintLeaf.assignDeweyIDBuffer(deweyIDBuffer);
-
-					// try to find the reference key
-					boolean useHintPage = false;
-					XTCdeweyID highKey = hintLeaf.getHighKey();
-					if (highKey == null || key.compareDivisions(hintLeaf.getHighKey()) < 0) {
-						NavigationStatus navStatus = hintLeaf
-								.navigateContextFree(key, NavigationMode.TO_KEY);
-						if (navStatus == NavigationStatus.FOUND) {
-							useHintPage = true;
-						}
-					}
-
-					if (useHintPage) {
-						// refresh hintPageInfo
-						hintPageInfo = new HintPageInformation(
-								hintLeaf.getPageID(), hintLeaf.getLSN(),
-								hintLeaf.getOffset());
-					} else {
-						// do not use this page as hint page
-						hintLeaf.cleanup();
-						hintLeaf = null;
-					}
 				} else {
 
 					if (log.isTraceEnabled()) {

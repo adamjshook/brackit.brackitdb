@@ -1433,21 +1433,11 @@ public final class BracketPage extends BasePage {
 			return navRes;
 		}
 
-		// initialize buffer
-		currentDeweyID.setTo(getLowKey());
-
 		// determine navigation properties
 		NavigationProperties prop = NavigationProfiles
 				.getPreviousByKeyOffset(currentOffset);
 
-		navigateGeneric(currentDeweyID, LOW_KEY_OFFSET, prop, false);
-
-		if (navRes.status != NavigationStatus.FOUND) {
-			// previous key is the low key
-			navRes.status = NavigationStatus.FOUND;
-			navRes.keyOffset = LOW_KEY_OFFSET;
-			navRes.keyType = getLowKeyType();
-		}
+		navigateGeneric(currentDeweyID, BEFORE_LOW_KEY_OFFSET, prop, false);
 
 		return navRes;
 	}
@@ -2017,52 +2007,24 @@ public final class BracketPage extends BasePage {
 	 */
 	public NavigationResult navigateToInsertPos(XTCdeweyID key,
 			DeweyIDBuffer currentDeweyID) {
-
-		boolean beforeFirst = false;
+		
+		navRes.reset();
+		
 		if (getRecordCount() == 0) {
-			beforeFirst = true;
-		} else {
-
-			currentDeweyID.setTo(getLowKey());
-			currentDeweyID.enableCompareMode(key);
-
-			if (currentDeweyID.compare() == 0) {
-				// key is low key
-				// duplicate detected
-				currentDeweyID.disableCompareMode();
-				navRes.reset();
-				return navRes;
-			} else if (currentDeweyID.compare() > 0) {
-				beforeFirst = true;
-			} else {
-
-				// look for correct insertion position
-				navigateGeneric(currentDeweyID, LOW_KEY_OFFSET,
-						NavigationProfiles.TO_INSERT_POS, true);
-
-				if (navRes.status != NavigationStatus.FOUND) {
-					// new record has to be inserted after the lowKey
-					navRes.status = NavigationStatus.FOUND;
-					navRes.keyOffset = LOW_KEY_OFFSET;
-					navRes.keyType = getLowKeyType();
-				} else {
-					// insertion position found
-
-					if (currentDeweyID.compare() == 0) {
-						// duplicate detected
-						currentDeweyID.disableCompareMode();
-						navRes.reset();
-						return navRes;
-					}
-				}
-			}
-
-			currentDeweyID.disableCompareMode();
+			navRes.status = NavigationStatus.FOUND;
+			navRes.keyOffset = BEFORE_LOW_KEY_OFFSET;
 		}
-
-		if (beforeFirst) {
-			// key has to be inserted before the low key
-			navRes.reset();
+		
+		currentDeweyID.setTo(getLowKey());
+		currentDeweyID.enableCompareMode(key);
+		
+		navigateGeneric(currentDeweyID, BEFORE_LOW_KEY_OFFSET,
+				NavigationProfiles.TO_INSERT_POS, true);
+		
+		currentDeweyID.disableCompareMode();
+		
+		if (navRes.status != NavigationStatus.FOUND) {
+			// new record has to be inserted before the lowkey
 			navRes.status = NavigationStatus.FOUND;
 			navRes.keyOffset = BEFORE_LOW_KEY_OFFSET;
 		}
