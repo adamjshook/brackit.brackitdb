@@ -151,7 +151,7 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 				assertNotNull(String.format("child node %s of node %s", i,
 						nodeString), child);
 
-				checkSubtreeViaChildStream(child, domChild);
+				checkSubtreePreOrderReduced(child, domChild);
 			}
 
 			assertEquals(
@@ -280,7 +280,7 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 				assertNotNull(String.format("child node %s of node %s", i,
 						nodeString), child);
 
-				checkSubtreePreOrderReduced(child, domChild);
+				checkSubtreeViaChildStream(child, domChild);
 			}
 			childStream.close();
 
