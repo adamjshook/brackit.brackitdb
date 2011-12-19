@@ -57,6 +57,8 @@ public abstract class StreamIterator implements Stream<BracketNode> {
 	protected final XTCdeweyID startDeweyID;
 	protected final HintPageInformation hintPageInfo;
 	protected final BracketFilter filter;
+
+	private BracketNode preFirstNode;
 	private boolean preFirst;
 	private boolean firstUsage;
 
@@ -70,6 +72,33 @@ public abstract class StreamIterator implements Stream<BracketNode> {
 		this.filter = filter;
 		this.tx = locator.collection.getTX();
 		this.deweyIDBuffer = new DeweyIDBuffer();
+		this.firstUsage = true;
+		this.preFirst = true;
+	}
+
+	public StreamIterator(StreamIterator other, BracketFilter filter)
+			throws DocumentException {
+
+		this.locator = other.locator;
+		this.tree = other.tree;
+
+		try {
+			this.page = other.page.fork();
+		} catch (IndexOperationException e) {
+			throw new DocumentException(e);
+		}
+
+		try {
+			this.startDeweyID = page.getKey();
+		} catch (IndexOperationException e) {
+			page.cleanup();
+			throw new DocumentException(e);
+		}
+
+		this.hintPageInfo = null;
+		this.filter = filter;
+		this.tx = other.tx;
+		this.deweyIDBuffer = page.getDeweyIDBuffer();
 		this.firstUsage = true;
 		this.preFirst = true;
 	}
@@ -91,22 +120,61 @@ public abstract class StreamIterator implements Stream<BracketNode> {
 	@Override
 	public BracketNode next() throws DocumentException {
 
-		try {
-			BracketNode node = null;
+		if (!moveNext()) {
+			// no next node qualifies
+			return null;
+		}
 
-			// while current node is filtered out: go to next node
-			while (node == null) {
+		return loadCurrent();
+	}
+
+	/**
+	 * Loads and returns the node this iterator points to. This method may only
+	 * be called after moveNext() was invoked and returned true.
+	 */
+	public BracketNode loadCurrent() throws DocumentException {
+
+		// special handling for document node
+		if (preFirstNode != null) {
+			BracketNode out = preFirstNode;
+			preFirstNode = null;
+			return out;
+		}
+
+		// assertion: page != null
+
+		try {
+
+			return page.load(locator.bracketNodeLoader);
+
+		} catch (IndexOperationException e) {
+			page.cleanup();
+			page = null;
+			throw new DocumentException("Error loading current node.", e);
+		}
+	}
+
+	/**
+	 * Moves this iterator to the next qualifying node. It returns false if
+	 * there are no more nodes, otherwise true.
+	 */
+	public boolean moveNext() throws DocumentException {
+
+		try {
+
+			// while current node is not accepted by the filter: go to next node
+			while (true) {
 
 				if (firstUsage) {
 
 					if (preFirst) {
 						preFirst = false;
-						node = preFirst();
-						if (node != null && filter != null
-								&& !filter.accept(node)) {
-							node = null;
+						preFirstNode = preFirst();
+						if (preFirstNode != null
+								&& (filter == null || filter
+										.accept(preFirstNode))) {
+							return true;
 						}
-						continue;
 					}
 
 					firstUsage = false;
@@ -123,17 +191,17 @@ public abstract class StreamIterator implements Stream<BracketNode> {
 
 				if (page == null) {
 					// context initialization or navigating to next node failed
-					return null;
+					return false;
 				}
 
 				// at this point, we know that the navigation succeeded and the
 				// context points to a valid node
 				currentKey = page.getKey();
-				node = page.load(locator.bracketNodeLoader, filter);
-				// if node is still 'null' it was not accepted by the filter
+				// check filter condition
+				if (filter == null || page.accept(filter)) {
+					return true;
+				}
 			}
-
-			return node;
 
 		} catch (IndexOperationException e) {
 			page.cleanup();

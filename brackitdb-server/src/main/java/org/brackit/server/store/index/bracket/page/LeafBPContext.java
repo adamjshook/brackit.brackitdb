@@ -30,6 +30,8 @@ package org.brackit.server.store.index.bracket.page;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.brackit.server.io.buffer.Buffer;
+import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.Handle;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
@@ -67,6 +69,7 @@ import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.log.LogOperation;
+import org.brackit.server.tx.thread.Latch;
 import org.brackit.xquery.xdm.DocumentException;
 
 /**
@@ -379,7 +382,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		
 		return navRes.status;
 	}
-	
+
 	@Override
 	public NavigationStatus moveNextAttributeInDocument() {
 		initBuffer();
@@ -393,7 +396,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		} else {
 			moveBeforeFirst();
 		}
-		
+
 		return navRes.status;
 	}
 
@@ -534,8 +537,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			// log insert
 			if (logged) {
 				LogOperation operation = new NodeSequenceLogOperation(
-						ActionType.INSERT, pageID, getRootPageID(),
-						sequence);
+						ActionType.INSERT, pageID, getRootPageID(), sequence);
 				log(tx, operation, undoNextLSN);
 			} else {
 				page.getHandle().setAssignedTo(tx);
@@ -1319,8 +1321,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		// log delete
 		if (logged) {
 			LogOperation operation = new NodeSequenceLogOperation(
-					SMO ? ActionType.SMO_DELETE : ActionType.DELETE,
-					pageID, getRootPageID(), nodes);
+					SMO ? ActionType.SMO_DELETE : ActionType.DELETE, pageID,
+					getRootPageID(), nodes);
 			log(tx, operation, undoNextLSN);
 		} else {
 			page.getHandle().setAssignedTo(tx);
@@ -1334,8 +1336,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			throws IndexOperationException {
 		if (insertSequence != null) {
 			LogOperation operation = new NodeSequenceLogOperation(
-					ActionType.INSERT, pageID, getRootPageID(),
-					insertSequence);
+					ActionType.INSERT, pageID, getRootPageID(), insertSequence);
 			try {
 				long lsn = (writeUndoNextLSN) ? tx.logUpdateSpecial(operation,
 						undoNextLSN) : tx.logUpdate(operation);
@@ -1393,13 +1394,6 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	public BracketNode load(BracketNodeLoader loader)
 			throws IndexOperationException {
 
-		return load(loader, null);
-	}
-
-	@Override
-	public BracketNode load(BracketNodeLoader loader, BracketFilter filter)
-			throws IndexOperationException {
-
 		if (CHECK_OFFSET_INTEGRITY) {
 			declareContextSensitive();
 		}
@@ -1410,19 +1404,6 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 				// load record from page
 				bufferedRecord = page.getRecordInterpreter(currentOffset,
 						extValueLoader);
-			}
-
-			// check whether current node is rejected by the filter
-			if (filter != null) {
-
-				if (bufferedKeyType == null) {
-					bufferedKeyType = page.getKeyType(currentOffset);
-				}
-
-				if (!filter.accept(currentDeweyID,
-						bufferedKeyType.hasDataReference, bufferedRecord)) {
-					return null;
-				}
 			}
 
 			BracketNode node = loader.load(currentDeweyID.getDeweyID(),
@@ -1438,6 +1419,36 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			throw new IndexOperationException("Error loading BracketNode!", e);
 		} catch (ExternalValueException e) {
 			throw new IndexOperationException("Error loading BracketNode!", e);
+		}
+	}
+
+	@Override
+	public boolean accept(BracketFilter filter) throws IndexOperationException {
+
+		if (CHECK_OFFSET_INTEGRITY) {
+			declareContextSensitive();
+		}
+
+		try {
+
+			// fetch record if needed
+			if (bufferedRecord == null) {
+				// load record from page
+				bufferedRecord = page.getRecordInterpreter(currentOffset,
+						extValueLoader);
+			}
+
+			// fetch key type if needed
+			if (bufferedKeyType == null) {
+				bufferedKeyType = page.getKeyType(currentOffset);
+			}
+
+			// invoke filter
+			return filter.accept(currentDeweyID,
+					bufferedKeyType.hasDataReference, bufferedRecord);
+
+		} catch (ExternalValueException e) {
+			throw new IndexOperationException(e);
 		}
 	}
 
@@ -1460,5 +1471,32 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	@Override
 	public PageID getPageID() {
 		return pageID;
+	}
+
+	@Override
+	public Leaf fork() throws IndexOperationException {
+
+		Buffer buffer = null;
+		Handle handle = null;
+
+		try {
+			buffer = page.getBuffer();
+			handle = buffer.fixPage(tx, pageID);
+			handle.latchS();
+
+			LeafBPContext other = new LeafBPContext(bufferMgr, tx,
+					new BracketPage(buffer, handle));
+			other.bufferedKeyType = this.bufferedKeyType;
+			other.bufferedRecord = this.bufferedRecord;
+			other.currentDeweyID = new DeweyIDBuffer(this.currentDeweyID);
+			other.currentOffset = this.currentOffset;
+			other.level = this.level;
+
+			return other;
+
+		} catch (BufferException e) {
+			throw new IndexOperationException(e,
+					"Could not fix requested page %s.", pageID);
+		}
 	}
 }

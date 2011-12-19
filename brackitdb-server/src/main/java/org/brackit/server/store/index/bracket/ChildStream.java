@@ -33,6 +33,7 @@ import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
+import org.brackit.xquery.xdm.DocumentException;
 
 /**
  * @author Martin Hiller
@@ -44,6 +45,11 @@ public final class ChildStream extends StreamIterator {
 			XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo,
 			BracketFilter filter) {
 		super(locator, tree, parentDeweyID, hintPageInfo, filter);
+	}
+
+	public ChildStream(StreamIterator other, BracketFilter filter)
+			throws DocumentException {
+		super(other, filter);
 	}
 
 	/**

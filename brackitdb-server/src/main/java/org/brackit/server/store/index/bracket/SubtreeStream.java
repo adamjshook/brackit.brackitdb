@@ -50,6 +50,12 @@ public final class SubtreeStream extends StreamIterator {
 		this.self = self;
 	}
 
+	public SubtreeStream(StreamIterator other, BracketFilter filter, boolean self)
+			throws DocumentException {
+		super(other, filter);
+		this.self = self;
+	}
+
 	/**
 	 * @see org.brackit.server.store.index.bracket.StreamIterator#first()
 	 */
