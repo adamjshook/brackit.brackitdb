@@ -41,7 +41,6 @@ import org.brackit.server.tx.Tx;
 import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.xdm.DocumentException;
-import org.brackit.xquery.xdm.Stream;
 
 /**
  * @author Martin Hiller
@@ -159,15 +158,15 @@ public interface BracketIndex {
 	public String printLeafScannerStats(NavigationMode navMode)
 			throws IndexAccessException;
 
-	public Stream<BracketNode> openChildStream(BracketLocator locator,
+	public StreamIterator openChildStream(BracketLocator locator,
 			XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo,
 			BracketFilter filter);
 
-	public Stream<BracketNode> openSubtreeStream(BracketLocator locator,
+	public StreamIterator openSubtreeStream(BracketLocator locator,
 			XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo,
 			BracketFilter filter, boolean self, boolean skipAttributes);
-	
-	public Stream<BracketNode> openAttributeStream(BracketLocator locator,
+
+	public StreamIterator openAttributeStream(BracketLocator locator,
 			XTCdeweyID elementDeweyID, HintPageInformation hintPageInfo,
 			BracketFilter filter);
 
@@ -184,4 +183,26 @@ public interface BracketIndex {
 	 */
 	public BracketAttributeTuple setAttribute(BracketNode element, QNm name,
 			Atomic value) throws IndexAccessException, DocumentException;
+
+	/**
+	 * Opens a new AttributeStream at the position where the given iterator
+	 * points to.
+	 */
+	public StreamIterator forkAttributeStream(StreamIterator origin,
+			BracketFilter filter) throws DocumentException;
+
+	/**
+	 * Opens a new ChildStream at the position where the given iterator points
+	 * to.
+	 */
+	public StreamIterator forkChildStream(StreamIterator origin,
+			BracketFilter filter) throws DocumentException;
+
+	/**
+	 * Opens a new SubtreeStream at the position where the given iterator points
+	 * to.
+	 */
+	public StreamIterator forkSubtreeStream(StreamIterator origin,
+			BracketFilter filter, boolean self, boolean skipAttributes)
+			throws DocumentException;
 }

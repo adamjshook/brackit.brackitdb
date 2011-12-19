@@ -99,7 +99,7 @@ public final class BracketIterImpl implements BracketIter {
 		assureContextValidity();
 		
 		try {
-			return page.load(loader, null);
+			return page.load(loader);
 		} catch (IndexOperationException e) {
 			close();
 			throw new IndexAccessException(e);

@@ -308,12 +308,25 @@ public interface Leaf extends BPContext {
 	 * FOUND, NOT_EXISTENT (if the next element is reached) or AFTER_LAST (if
 	 * there may be another attribute in the next page)
 	 */
-	public NavigationStatus moveNextAttributeInDocument();
+	public NavigationStatus moveNextAttribute();
 
 	/**
-	 * Moves to the next node within the current document. Returns FOUND,
-	 * NOT_EXISTENT (if the end of the document is reached) or AFTER_LAST (if
-	 * the document is potentially continued in the next page).
+	 * Creates a new leaf context for this page in READ mode (e.g. shared
+	 * latch). The corresponding page handle will therefore be fixed and latched
+	 * again.
 	 */
 	public NavigationStatus moveNextInDocument();
+
+	/**
+	 * Creates a new leaf context for this page in READ mode (e.g. shared
+	 * latch). The corresponding page handle will therefore be fixed and latched
+	 * again.
+	 */
+	public Leaf fork() throws IndexOperationException;
+
+	/**
+	 * Checks whether the current node (this page is pointing to) is accepted by
+	 * the given filter.
+	 */
+	public boolean accept(BracketFilter filter) throws IndexOperationException;
 }
