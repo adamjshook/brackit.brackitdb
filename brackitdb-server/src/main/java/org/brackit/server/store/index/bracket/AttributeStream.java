@@ -72,14 +72,14 @@ public class AttributeStream extends StreamIterator {
 	protected void nextInternal() throws IndexOperationException,
 			IndexAccessException {
 		
-		navStat = page.moveNextAttributeInDocument();
+		navStat = page.moveNextAttribute();
 		if (navStat == NavigationStatus.FOUND) {
 			return;
 		} else if(navStat == NavigationStatus.AFTER_LAST) {
 			// load next page
 			page = tree.getNextPage(tx, locator.rootPageID, page, OPEN_MODE, true);
 			if (page != null) {
-				navStat = page.moveNextAttributeInDocument();
+				navStat = page.moveNextAttribute();
 			}
 		}
 		

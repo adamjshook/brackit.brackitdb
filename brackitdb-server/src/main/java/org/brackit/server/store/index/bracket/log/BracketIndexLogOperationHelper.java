@@ -152,7 +152,7 @@ public class BracketIndexLogOperationHelper implements LogOperationHelper {
 			ByteBuffer buffer, PageID pageID, PageID rootPageID) {
 
 		int length = buffer.getShort() & 0xFFFF;
-		BracketNodeSequence nodes = BracketNodeSequence.read(length, buffer);
+		BracketNodeSequence nodes = BracketNodeSequence.read(rootPageID.value(), length, buffer);
 
 		return new NodeSequenceLogOperation(type, pageID, rootPageID, nodes);
 	}

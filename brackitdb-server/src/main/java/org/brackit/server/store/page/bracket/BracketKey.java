@@ -220,90 +220,130 @@ public final class BracketKey {
 		DocID docID2 = currentID.getDocID();
 		int[] divisions2 = currentID.getDivisionValues();
 		int length2 = currentID.getNumberOfDivisions();
+		
+		boolean previousIsAttribute = previousID.isAttribute();
+		boolean currentIsAttribute = currentID.isAttribute();
+		
+		byte[] result = null;
+		int resultOffset = 0;
+		int currentDivision = 0;
+		
+		BracketKey currentKey = new BracketKey();
 
 		int docDiff = docID2.getDocNumber() - docID1.getDocNumber();
 		if (docDiff > 0) {
 			// a new document bracket key has to be generated
-			byte[] result = new byte[PHYSICAL_LENGTH];
-			(new BracketKey(0, 0, docDiff, Type.DOCUMENT)).store(result, 0);
-			return result;
-		}
-
-		int commonPrefix = getCommonPrefixLength(divisions1, length1,
-				divisions2, length2);
-
-		boolean previousIsAttribute = previousID.isAttribute();
-		boolean currentIsAttribute = currentID.isAttribute();
-		boolean attributeForSameNode = (previousIsAttribute
-				&& currentIsAttribute && commonPrefix == length1 - 1);
-		byte[] result = new byte[(length2 - commonPrefix - ((currentIsAttribute && (!previousIsAttribute || !attributeForSameNode)) ? 1
-				: 0))
-				* PHYSICAL_LENGTH];
-		int resultOffset = 0;
-
-		int closingRoundBrackets = 0;
-		int closingAngleBrackets = 0;
-
-		// attribute nodes don't need to be closed by brackets
-		int upperBound = previousIsAttribute ? length1 - 2 : length1;
-
-		// for each differing division of previousID:
-		// check whether division is odd or even
-		// count closing round and angle brackets
-		for (int i = commonPrefix; i < upperBound; i++) {
-			if (divisions1[i] % 2 == 0) {
-				closingAngleBrackets++;
-			} else {
-				closingRoundBrackets++;
+			result = new byte[(1 + length2 - (currentIsAttribute ? 1 : 0)) * PHYSICAL_LENGTH];
+			
+			// store document key
+			currentKey.set(0, 0, docDiff - 1, Type.DOCUMENT);
+			resultOffset = currentKey.store(result, resultOffset);
+			
+			if (length2 > 0) {
+				
+				// TODO remove hard coding of root element
+				if (divisions2[0] != 1) {
+					throw new RuntimeException("A document can only contain one root element at the top.");
+				}
+				currentKey.set(0, 0, 0, getTypeForDivision(divisions2, length2, 0, currentIsAttribute));
+				resultOffset = currentKey.store(result, resultOffset);
+				
+				currentDivision = 1;				
 			}
-		}
-
-		// calculate number of DeweyID gaps for the first bracket key
-		int firstIdGaps = 0;
-		if (commonPrefix == length1) {
-			// previousID is an ancestor of currentID
-			firstIdGaps = calcIdGaps(1, divisions2[commonPrefix]);
+			
 		} else {
-			firstIdGaps = calcIdGaps(divisions1[commonPrefix],
-					divisions2[commonPrefix]);
+			
+			// nodes within same document
+			
+			int commonPrefix = getCommonPrefixLength(divisions1, length1,
+					divisions2, length2);
+			
+			boolean attributeForSameNode = (previousIsAttribute
+					&& currentIsAttribute && commonPrefix == length1 - 1);
+			result = new byte[(length2 - commonPrefix - ((currentIsAttribute && (!previousIsAttribute || !attributeForSameNode)) ? 1
+					: 0))
+					* PHYSICAL_LENGTH];
+
+			int closingRoundBrackets = 0;
+			int closingAngleBrackets = 0;
+
+			// attribute nodes don't need to be closed by brackets
+			int upperBound = previousIsAttribute ? length1 - 2 : length1;
+
+			// for each differing division of previousID:
+			// check whether division is odd or even
+			// count closing round and angle brackets
+			for (int i = commonPrefix; i < upperBound; i++) {
+				if (divisions1[i] % 2 == 0) {
+					closingAngleBrackets++;
+				} else {
+					closingRoundBrackets++;
+				}
+			}
+			
+			currentDivision = commonPrefix;
+
+			// calculate number of DeweyID gaps for the first bracket key
+			int firstIdGaps = 0;
+			if (commonPrefix == length1) {
+				// previousID is an ancestor of currentID
+				if (length1 == 0) {
+					// DeweyID1 is the document node
+					// TODO remove hard coding of root element
+					if (divisions2[0] != 1) {
+						throw new RuntimeException("A document can only contain one root element at the top.");
+					}
+					firstIdGaps = 0;
+				} else {
+					// skip the attribute division
+					if (divisions2[currentDivision] == 1) {
+						currentDivision++;
+					}
+					firstIdGaps = calcIdGaps(1, divisions2[currentDivision]);
+				}
+			} else {
+				firstIdGaps = calcIdGaps(divisions1[currentDivision],
+						divisions2[currentDivision]);
+			}
+			
+			// write first bracket key
+			currentKey.set(closingRoundBrackets, closingAngleBrackets,
+					firstIdGaps, getTypeForDivision(divisions2, length2, currentDivision, currentIsAttribute));
+			resultOffset = currentKey.store(result, resultOffset);
+			
+			currentDivision++;
 		}
 
-		// for each differing division of currentID:
+		// for each further division of currentID:
 		// create a new bracket key
-		boolean firstRun = true;
-		BracketKey currentKey = new BracketKey();
-		for (int i = commonPrefix; i < length2; i++) {
+		for (int i = currentDivision; i < length2; i++) {
 
 			// skip the attribute division
 			if (divisions2[i] != 1) {
 
 				// determine correct node type
-				Type type = null;
-				if (divisions2[i] % 2 == 0) {
-					// overflow node
-					type = Type.OVERFLOW;
-				} else if (i == length2 - 1) {
-					// last cycle
-					type = currentIsAttribute ? Type.ATTRIBUTE : Type.DATA;
-				} else {
-					// inner node
-					type = Type.NODATA;
-				}
+				Type type = getTypeForDivision(divisions2, length2, i, currentIsAttribute);
 
-				// create actual key
-				if (firstRun) {
-					currentKey.set(closingRoundBrackets, closingAngleBrackets,
-							firstIdGaps, type);
-				} else {
-					currentKey.set(0, 0, calcIdGaps(1, divisions2[i]), type);
-				}
-
+				// create and store key
+				currentKey.set(0, 0, calcIdGaps(1, divisions2[i]), type);
 				resultOffset = currentKey.store(result, resultOffset);
 			}
-
-			firstRun = false;
 		}
 		return result;
+	}
+	
+	private static Type getTypeForDivision(int[] divisions, int length, int index, boolean isAttribute) {
+		
+		if (divisions[index] % 2 == 0) {
+			// overflow node
+			return Type.OVERFLOW;
+		} else if (index == length - 1) {
+			// last cycle
+			return isAttribute ? Type.ATTRIBUTE : Type.DATA;
+		} else {
+			// inner node
+			return Type.NODATA;
+		}
 	}
 
 	/**
