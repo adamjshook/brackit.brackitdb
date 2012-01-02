@@ -287,13 +287,6 @@ public interface Leaf extends BPContext {
 			throws IndexOperationException;
 
 	/**
-	 * Loads the BracketNode this context points to, unless it does not pass the
-	 * filter. If rejected by the filter, null is returned.
-	 */
-	public BracketNode load(BracketNodeLoader loader, BracketFilter filter)
-			throws IndexOperationException;
-
-	/**
 	 * Returns a record (interpreter) for the current context.
 	 */
 	public RecordInterpreter getRecord() throws IndexOperationException;

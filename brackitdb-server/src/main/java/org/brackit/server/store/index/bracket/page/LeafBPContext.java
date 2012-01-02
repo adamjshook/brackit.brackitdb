@@ -384,10 +384,10 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	}
 
 	@Override
-	public NavigationStatus moveNextAttributeInDocument() {
+	public NavigationStatus moveNextAttribute() {
 		initBuffer();
 
-		NavigationResult navRes = page.navigateNextAttributeInDocument(currentOffset,
+		NavigationResult navRes = page.navigateNextAttribute(currentOffset,
 				currentDeweyID, bufferedKeyType);
 
 		if (navRes.status == NavigationStatus.FOUND) {
@@ -579,7 +579,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 					.navigatePreviousSibling(currentOffset, currentDeweyID);
 			break;
 		case NEXT_ATTRIBUTE:
-			navRes = page.navigateNextAttributeInDocument(currentOffset, currentDeweyID,
+			navRes = page.navigateNextAttribute(currentOffset, currentDeweyID,
 					bufferedKeyType);
 			break;
 		case TO_INSERT_POS:

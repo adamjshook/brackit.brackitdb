@@ -77,7 +77,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		this();
 		setTo(deweyID);
 	}
-	
+
 	public DeweyIDBuffer(DeweyIDBuffer other) {
 		this();
 		setTo(other);
@@ -235,9 +235,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		if (comparePrefix == -1) {
 			// compare docIDs
 			compareValue = docNumber - compareDocNumber;
-		}
-
-		if (comparePrefix == currentLength
+		} else if (comparePrefix == currentLength
 				|| comparePrefix == compareDivisions.length) {
 			// one DeweyID is an ancestor of the other (or they are the same)
 			compareValue = currentLength - compareDivisions.length;
@@ -301,18 +299,19 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 			determineCompareValue();
 		}
 	}
-	
+
 	/**
 	 * Copies content from the other DeweyIDBuffer.
 	 */
 	public void setTo(DeweyIDBuffer other) {
 		if (other.currentBuffer == null) {
-			//other buffer not initialized
+			// other buffer not initialized
 			return;
 		}
-		
-		this.docID = other.docID;
-		
+
+		this.collectionID = other.collectionID;
+		this.docNumber = other.docNumber;
+
 		if (this.currentBuffer == null
 				|| this.currentBuffer.length < other.currentLength) {
 			// a new array has to be allocated
@@ -327,7 +326,8 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		this.bufferedKey = other.bufferedKey;
 
 		if (compareMode) {
-			comparePrefix = getCommonPrefixLength(compareDivisions);
+			comparePrefix = getCommonPrefixLength(compareDocNumber,
+					compareDivisions);
 			determineCompareValue();
 		}
 	}
@@ -569,7 +569,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 			// reset divisions
 			currentLength = 0;
 			// increase document number
-			docNumber += key.idGaps;
+			docNumber += (key.idGaps + 1);
 			if (compareMode) {
 				comparePrefix = (docNumber != compareDocNumber) ? -1 : 0;
 				determineCompareValue();
@@ -582,7 +582,13 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 			// optimization if attributes are irrelevant
 
 			if (key.roundBrackets == 0) {
-				appendDivision(3);
+				// TODO remove hard coding of root element
+				if (currentLength == 0) {
+					// step from Document Key to its root element
+					appendDivision(1);
+				} else {
+					appendDivision(3);
+				}
 			} else {
 				removeLastDivisions(key.roundBrackets + key.angleBrackets - 1);
 				setLastDivToNextOdd();
@@ -611,7 +617,14 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 						// first append the attribute division 1
 						appendDivision(1);
 					}
-					appendDivision(3);
+
+					// TODO remove hard coding of root element
+					if (currentLength == 0) {
+						// step from Document Key to its root element
+						appendDivision(1);
+					} else {
+						appendDivision(3);
+					}
 				} else {
 					removeLastDivisions(key.roundBrackets + key.angleBrackets
 							- 1);
@@ -649,7 +662,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		if (key.roundBrackets == 0) {
 
 			// append new division value 3
-			
+
 			if (currentLength == currentBuffer.length) {
 				int[] newBuffer = new int[(currentBuffer.length * 3) / 2 + 1];
 				System.arraycopy(currentBuffer, 0, newBuffer, 0,
@@ -660,14 +673,14 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 			currentBuffer[currentLength] = 3;
 			lastDivisionIndex = currentLength;
 			currentLength++;
-			
+
 		} else {
-			
+
 			// cut off some divisions
 			currentLength -= (key.roundBrackets + key.angleBrackets);
 			lastDivisionIndex = currentLength;
 			currentLength++;
-			
+
 			// set last division to the next odd number
 			currentBuffer[lastDivisionIndex] += ((currentBuffer[lastDivisionIndex] & 1) + 1);
 		}
@@ -712,6 +725,8 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 				if (backupBuffer == null) {
 					out.append("null");
 				} else {
+					out.append(new DocID(collectionID, backupDocNumber));
+					out.append(XTCdeweyID.documentSeparator);
 					for (int i = 0; i < backupLength; i++) {
 						if (i != 0)
 							out.append(XTCdeweyID.divisionSeparator);
@@ -722,6 +737,8 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 
 			if (compareMode) {
 				out.append("\nCompare ID: ");
+				out.append(new DocID(collectionID, compareDocNumber));
+				out.append(XTCdeweyID.documentSeparator);
 				for (int i = 0; i < compareDivisions.length; i++) {
 					if (i != 0)
 						out.append(XTCdeweyID.divisionSeparator);
@@ -777,6 +794,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		// copy divisions
 		System.arraycopy(currentBuffer, 0, backupBuffer, 0, currentLength);
 
+		backupDocNumber = docNumber;
 		backupLength = currentLength;
 		backupMode = true;
 	}
@@ -809,6 +827,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 
 		if (backupBuffer == null) {
 			// nothing to restore
+			currentLength = 0;
 			if (!keepBackup) {
 				backupMode = false;
 			}
