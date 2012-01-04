@@ -30,6 +30,8 @@ package org.brackit.server.store.page.bracket;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.node.el.ElRecordAccess;
 import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.Una;
+import org.brackit.xquery.xdm.Kind;
 
 /**
  * @author Martin Hiller
@@ -46,6 +48,8 @@ public class RecordInterpreter {
 	private byte type = -1;
 	private Atomic value = null;
 	
+	public static final RecordInterpreter DOCUMENT_RECORD = new RecordInterpreter();
+	
 	public RecordInterpreter(byte[] buf, int offset, int len) {
 		this.buf = buf;
 		this.offset = offset;
@@ -56,6 +60,16 @@ public class RecordInterpreter {
 		this.buf = value;
 		this.offset = 0;
 		this.len = value.length;
+	}
+	
+	private RecordInterpreter() {
+		this.buf = null;
+		this.offset = 0;
+		this.len = 0;
+		
+		this.pcr = 0;
+		this.type = Kind.DOCUMENT.ID;
+		this.value = new Una("");
 	}
 	
 	public int getPCR() {

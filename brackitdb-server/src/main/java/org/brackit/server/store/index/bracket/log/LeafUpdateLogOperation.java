@@ -74,7 +74,7 @@ public class LeafUpdateLogOperation extends BracketIndexLogOperation {
 	public LeafUpdateLogOperation(PageID pageID, PageID rootPageID,
 			byte[] keyBytes, byte[] oldValue, byte[] newValue) {
 		super(LEAF_UPDATE, pageID, rootPageID);
-		this.key = new XTCdeweyID(new DocID(rootPageID.value(), XXX), keyBytes);
+		this.key = Field.COLLECTIONDEWEYID.decode(rootPageID.value(), keyBytes);
 		this.keyBytes = keyBytes;
 		this.oldValue = oldValue;
 		this.newValue = newValue;

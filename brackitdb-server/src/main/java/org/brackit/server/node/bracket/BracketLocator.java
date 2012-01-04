@@ -57,6 +57,11 @@ public class BracketLocator {
 		public final BracketNode load(XTCdeweyID deweyID,
 				RecordInterpreter record) throws DocumentException {
 
+			if (deweyID.isDocument()) {
+				// TODO
+				throw new RuntimeException("TODO: Create document node.");
+			}
+			
 			PSNode psn = record.getPsNode();
 			if (psn == null) {
 				psn = pathSynopsis.get(record.getPCR());
@@ -82,6 +87,11 @@ public class BracketLocator {
 		@Override
 		public BracketNode load(XTCdeweyID deweyID, byte[] record)
 				throws DocumentException {
+			
+			if (deweyID.isDocument()) {
+				// TODO
+				throw new RuntimeException("TODO: Create document node.");
+			}
 
 			int pcr = ElRecordAccess.getPCR(record);
 			PSNode psn = pathSynopsis.get(pcr);
