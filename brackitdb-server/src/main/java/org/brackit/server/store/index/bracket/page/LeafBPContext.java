@@ -54,6 +54,7 @@ import org.brackit.server.store.page.BasePage;
 import org.brackit.server.store.page.bracket.BracketKey;
 import org.brackit.server.store.page.bracket.BracketNodeSequence;
 import org.brackit.server.store.page.bracket.BracketPage;
+import org.brackit.server.store.page.bracket.BracketKey.Type;
 import org.brackit.server.store.page.bracket.BracketPage.UnresolvedValue;
 import org.brackit.server.store.page.bracket.BracketPageException;
 import org.brackit.server.store.page.bracket.DeletePreparation;
@@ -1399,15 +1400,23 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		}
 
 		try {
+			
+			RecordInterpreter record = bufferedRecord;
 
-			if (bufferedRecord == null) {
-				// load record from page
-				bufferedRecord = page.getRecordInterpreter(currentOffset,
-						extValueLoader);
+			// fetch record if needed
+			if (record == null) {
+				if (bufferedKeyType == Type.DOCUMENT) {
+					record = RecordInterpreter.DOCUMENT_RECORD;
+				} else {
+					// load record from page
+					bufferedRecord = page.getRecordInterpreter(currentOffset,
+							extValueLoader);
+					record = bufferedRecord;
+				}
 			}
 
 			BracketNode node = loader.load(currentDeweyID.getDeweyID(),
-					bufferedRecord);
+					record);
 
 			// set hintpage info
 			node.hintPageInfo = new HintPageInformation(pageID,
@@ -1430,22 +1439,29 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		}
 
 		try {
-
-			// fetch record if needed
-			if (bufferedRecord == null) {
-				// load record from page
-				bufferedRecord = page.getRecordInterpreter(currentOffset,
-						extValueLoader);
-			}
-
+			
 			// fetch key type if needed
 			if (bufferedKeyType == null) {
 				bufferedKeyType = page.getKeyType(currentOffset);
 			}
+			
+			RecordInterpreter record = bufferedRecord;
+
+			// fetch record if needed
+			if (record == null) {
+				if (bufferedKeyType == Type.DOCUMENT) {
+					record = RecordInterpreter.DOCUMENT_RECORD;
+				} else {
+					// load record from page
+					bufferedRecord = page.getRecordInterpreter(currentOffset,
+							extValueLoader);
+					record = bufferedRecord;
+				}
+			}
 
 			// invoke filter
 			return filter.accept(currentDeweyID,
-					bufferedKeyType.hasDataReference, bufferedRecord);
+					bufferedKeyType.hasDataReference, record);
 
 		} catch (ExternalValueException e) {
 			throw new IndexOperationException(e);
@@ -1454,14 +1470,32 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	@Override
 	public RecordInterpreter getRecord() throws IndexOperationException {
-
+		
+		if (bufferedKeyType == Type.DOCUMENT) {
+			// documents do not have a physical record
+			return null;
+		}
+		
 		try {
-			if (bufferedRecord == null) {
-				// load record from page
-				bufferedRecord = page.getRecordInterpreter(currentOffset,
-						extValueLoader);
+			
+			// fetch key type if needed
+			if (bufferedKeyType == null) {
+				bufferedKeyType = page.getKeyType(currentOffset);
 			}
-			return bufferedRecord;
+			
+			RecordInterpreter record = bufferedRecord;
+			
+			if (record == null) {
+				if (bufferedKeyType == Type.DOCUMENT) {
+					record = RecordInterpreter.DOCUMENT_RECORD;
+				} else {
+					// load record from page
+					bufferedRecord = page.getRecordInterpreter(currentOffset,
+							extValueLoader);
+					record = bufferedRecord;
+				}
+			}
+			return record;
 
 		} catch (ExternalValueException e) {
 			throw new IndexOperationException("Error loading the record!", e);

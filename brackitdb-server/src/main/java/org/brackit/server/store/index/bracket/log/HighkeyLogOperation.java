@@ -33,6 +33,7 @@ import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.store.Field;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.BracketTree;
 import org.brackit.server.store.index.bracket.IndexOperationException;
@@ -221,10 +222,10 @@ public class HighkeyLogOperation extends BracketIndexLogOperation {
 
 	@Override
 	public String toString() {
-
-		DocID docID = new DocID(rootPageID.value(), XXX);
-		XTCdeweyID oldDeweyID = (oldHighKey == null) ? null : new XTCdeweyID(docID, oldHighKey);
-		XTCdeweyID newDeweyID = (newHighKey == null) ? null : new XTCdeweyID(docID, newHighKey);
+		
+		int collectionID = rootPageID.value();
+		XTCdeweyID oldDeweyID = (oldHighKey == null) ? null : Field.COLLECTIONDEWEYID.decode(collectionID, oldHighKey);
+		XTCdeweyID newDeweyID = (newHighKey == null) ? null : Field.COLLECTIONDEWEYID.decode(collectionID, newHighKey);
 		
 		return String.format("%s(%s.%s->%s to %s in index %s)", getClass()
 				.getSimpleName(), pageID, "HIGHKEY", oldDeweyID, newDeweyID,

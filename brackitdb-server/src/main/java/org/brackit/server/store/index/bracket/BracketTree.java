@@ -1043,46 +1043,46 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-	protected Branch moveNext(Tx tx, PageID rootPageID, Branch page,
-			OpenMode openMode) throws IndexAccessException {
-		try {
-			if (page.moveNext()) {
-				return page;
-			}
-
-			if (page.isLastInLevel()) {
-				if (log.isTraceEnabled()) {
-					log.trace("Reached end of index.");
-				}
-				return page;
-			}
-
-			if (log.isTraceEnabled()) {
-				log.trace(String
-						.format("Reached end of current page %s. Attempting to proceed to next page %s.",
-								page, page.getValueAsPageID()));
-			}
-
-			Branch next = (Branch) getPage(tx, page.getValueAsPageID(),
-					openMode.forUpdate(), false);
-
-			if (log.isTraceEnabled()) {
-				log.trace(String.format("Switching to next page %s.", next));
-			}
-			page.cleanup();
-			try {
-				next.moveFirst();
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-			return next;
-		} catch (IndexOperationException e) {
-			page.cleanup();
-			throw new IndexAccessException(e, "Could not move to next entry");
-		}
-	}
+//	protected Branch moveNext(Tx tx, PageID rootPageID, Branch page,
+//			OpenMode openMode) throws IndexAccessException {
+//		try {
+//			if (page.moveNext()) {
+//				return page;
+//			}
+//
+//			if (page.isLastInLevel()) {
+//				if (log.isTraceEnabled()) {
+//					log.trace("Reached end of index.");
+//				}
+//				return page;
+//			}
+//
+//			if (log.isTraceEnabled()) {
+//				log.trace(String
+//						.format("Reached end of current page %s. Attempting to proceed to next page %s.",
+//								page, page.getValueAsPageID()));
+//			}
+//
+//			Branch next = (Branch) getPage(tx, page.getValueAsPageID(),
+//					openMode.forUpdate(), false);
+//
+//			if (log.isTraceEnabled()) {
+//				log.trace(String.format("Switching to next page %s.", next));
+//			}
+//			page.cleanup();
+//			try {
+//				next.moveFirst();
+//			} catch (Exception e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//
+//			return next;
+//		} catch (IndexOperationException e) {
+//			page.cleanup();
+//			throw new IndexAccessException(e, "Could not move to next entry");
+//		}
+//	}
 
 	protected Leaf movePrevious(Tx tx, PageID rootPageID, Leaf page,
 			OpenMode openMode) throws IndexAccessException {

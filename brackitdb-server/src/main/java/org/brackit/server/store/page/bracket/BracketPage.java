@@ -1253,9 +1253,27 @@ public final class BracketPage extends BasePage {
 	public NavigationResult navigateNext(int currentOffset,
 			DeweyIDBuffer currentDeweyID, BracketKey.Type currentKeyType,
 			boolean documentScope) {
+		
+		navRes.reset();
 
 		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
-			return navigateFirstCF(currentDeweyID);
+			
+			if (getRecordCount() == 0) {
+				return navRes;
+			}
+			
+			BracketKey.Type lowKeyType = getLowKeyType();
+			if (documentScope && lowKeyType.isDocument) {
+				return navRes;
+			}
+
+			navRes.status = NavigationStatus.FOUND;
+			navRes.keyOffset = LOW_KEY_OFFSET;
+			navRes.keyType = lowKeyType;
+
+			currentDeweyID.setTo(getLowKey());
+			return navRes;
+			
 		} else {
 
 			int keyAreaEndOffset = getKeyAreaEndOffset();
@@ -1271,8 +1289,7 @@ public final class BracketPage extends BasePage {
 				currentOffset += BracketKey.PHYSICAL_LENGTH
 						+ currentKeyType.dataReferenceLength;
 			}
-
-			navRes.reset();
+			
 			int levelDiff = 0;
 			while (currentOffset < keyAreaEndOffset) {
 
@@ -2014,8 +2031,7 @@ public final class BracketPage extends BasePage {
 			if (currentKey.type.hasDataReference) {
 
 				// check whether this record is the last one in this page
-				if (currentOffset + BracketKey.PHYSICAL_LENGTH
-						+ BracketKey.DATA_REF_LENGTH >= keyAreaEndOffset) {
+				if (currentOffset + BracketKey.TOTAL_LENGTH >= keyAreaEndOffset) {
 					break;
 				}
 
@@ -2201,7 +2217,7 @@ public final class BracketPage extends BasePage {
 	public boolean isLast(int currentOffset) {
 		return (currentOffset == BEFORE_LOW_KEY_OFFSET && getRecordCount() == 0
 				|| currentOffset == LOW_KEY_OFFSET && getRecordCount() == 1 || currentOffset
-				+ BracketKey.TOTAL_LENGTH == getKeyAreaEndOffset());
+				+ BracketKey.TOTAL_LENGTH >= getKeyAreaEndOffset());
 	}
 
 	/**
