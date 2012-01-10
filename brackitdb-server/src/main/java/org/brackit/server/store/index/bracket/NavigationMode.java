@@ -61,7 +61,7 @@ public enum NavigationMode {
 		public boolean isAfterHighKey(XTCdeweyID referenceKey,
 				XTCdeweyID highKey)
 		{
-			return (referenceKey.compareDivisions(highKey) > 0);
+			return (referenceKey.compareReduced(highKey) > 0);
 		}
 	},
 	FIRST_CHILD(SearchMode.GREATEST_HAVING_PREFIX) {
@@ -118,7 +118,7 @@ public enum NavigationMode {
 		public boolean isAfterHighKey(XTCdeweyID referenceKey,
 				XTCdeweyID highKey)
 		{
-			return (referenceKey.compareDivisions(highKey) >= 0);
+			return (referenceKey.compareReduced(highKey) >= 0);
 		}
 	},
 	TO_KEY(SearchMode.GREATER) {
@@ -132,7 +132,7 @@ public enum NavigationMode {
 		public boolean isAfterHighKey(XTCdeweyID referenceKey,
 				XTCdeweyID highKey)
 		{
-			return (referenceKey.compareDivisions(highKey) >= 0);
+			return (referenceKey.compareReduced(highKey) >= 0);
 		}
 	},
 	NEXT_ATTRIBUTE(SearchMode.GREATER) {
@@ -146,7 +146,7 @@ public enum NavigationMode {
 		public boolean isAfterHighKey(XTCdeweyID referenceKey,
 				XTCdeweyID highKey)
 		{
-			return (referenceKey.compareDivisions(highKey) >= 0);
+			return (referenceKey.compareReduced(highKey) >= 0);
 		}
 	};
 	

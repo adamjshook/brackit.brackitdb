@@ -2587,9 +2587,9 @@ public final class BracketPage extends BasePage {
 		boolean checkRightNeighbor = false;
 
 		// check whether left border is (possibly) included in this page
-		int compareLeftToLowKey = leftBorderDeweyID.compareDivisions(lowKey);
+		int compareLeftToLowKey = leftBorderDeweyID.compareReduced(lowKey);
 		boolean leftIncluded = (compareLeftToLowKey >= 0);
-		int compareRightToLowKey = rightBorderDeweyID.compareDivisions(lowKey);
+		int compareRightToLowKey = rightBorderDeweyID.compareReduced(lowKey);
 		boolean rightIncluded = (compareRightToLowKey >= 0);
 
 		// both the left and the right border are located in one of the previous
