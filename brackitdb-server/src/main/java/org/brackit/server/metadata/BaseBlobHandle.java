@@ -68,7 +68,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 
 	protected String name;
 
-	protected DocID docID;
+	protected int collID;
 
 	private Persistor persistor;
 
@@ -82,7 +82,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	protected BaseBlobHandle(BaseBlobHandle b, Tx tx) {
 		this.name = b.name;
 		this.store = b.store;
-		this.docID = b.docID;
+		this.collID = b.collID;
 		this.persistor = b.persistor;
 		this.tx = tx;
 	}
@@ -98,8 +98,8 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	}
 
 	@Override
-	public DocID getID() {
-		return docID;
+	public int getID() {
+		return collID;
 	}
 
 	@Override
@@ -113,7 +113,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 			PageID pageID = store.create(tx, containerNo);
 			store.writeStream(tx, pageID, in, false);
 			this.name = name;
-			this.docID = new DocID(pageID.value(), XXX);
+			this.collID = pageID.value();
 		} catch (BlobStoreAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -126,7 +126,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	@Override
 	public void delete() throws DocumentException {
 		try {
-			store.drop(tx, new PageID(docID.getCollectionID()));
+			store.drop(tx, new PageID(collID));
 		} catch (BlobStoreAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -135,7 +135,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	@Override
 	public InputStream read() throws DocumentException {
 		try {
-			return store.readStream(tx, new PageID(docID.getCollectionID()));
+			return store.readStream(tx, new PageID(collID));
 		} catch (BlobStoreAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -144,7 +144,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	@Override
 	public void write(InputStream in) throws DocumentException {
 		try {
-			store.writeStream(tx, new PageID(docID.getCollectionID()), in, true);
+			store.writeStream(tx, new PageID(collID), in, true);
 		} catch (BlobStoreAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -209,8 +209,8 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	@Override
 	public void init(Node<?> root) throws DocumentException {
 		name = root.getAttribute(NAME_ATTRIBUTE).getValue().stringValue();
-		docID = new DocID(Integer.parseInt(root.getAttribute(ID_ATTRIBUTE)
-				.getValue().stringValue()), XXX);
+		collID = Integer.parseInt(root.getAttribute(ID_ATTRIBUTE)
+				.getValue().stringValue());
 
 		Stream<? extends Node<?>> children = root.getChildren();
 
@@ -231,7 +231,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	public Node<?> materialize() throws DocumentException {
 		FragmentHelper helper = new FragmentHelper();
 		helper.openElement(BLOB_TAG).attribute(ID_ATTRIBUTE,
-				new Una(docID.toString())).attribute(NAME_ATTRIBUTE, new Una(name));
+				new Una(Integer.toString(collID))).attribute(NAME_ATTRIBUTE, new Una(name));
 		if (materializables != null) {
 			for (Materializable materializable : materializables.values()) {
 				helper.insert(materializable.materialize());
@@ -262,7 +262,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	@Override
 	public void serialize(OutputStream out) throws DocumentException {
 		try {
-			InputStream in = store.readStream(tx, new PageID(docID.getCollectionID()));
+			InputStream in = store.readStream(tx, new PageID(collID));
 
 			try {
 				byte[] buf = new byte[256];

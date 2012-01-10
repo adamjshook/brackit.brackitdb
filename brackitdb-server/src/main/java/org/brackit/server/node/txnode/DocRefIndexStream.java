@@ -31,6 +31,7 @@ import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.node.DocID;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.IndexIterator;
+import org.brackit.server.util.Calc;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Stream;
 
@@ -39,7 +40,7 @@ import org.brackit.xquery.xdm.Stream;
  * @author Sebastian Baechle
  * 
  */
-public class DocRefIndexStream implements Stream<DocID> {
+public class DocRefIndexStream implements Stream<Integer> {
 	private static final Logger log = Logger.getLogger(DocRefIndexStream.class);
 
 	private IndexIterator iterator;
@@ -60,7 +61,7 @@ public class DocRefIndexStream implements Stream<DocID> {
 	}
 
 	@Override
-	public DocID next() throws DocumentException {
+	public Integer next() throws DocumentException {
 		try {
 			if (iterator == null) {
 				return null;
@@ -79,9 +80,8 @@ public class DocRefIndexStream implements Stream<DocID> {
 				return null;
 			}
 
-			DocID docID = DocID.fromBytes(key);
-
-			return docID;
+			return Calc.toInt(key);
+			
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}

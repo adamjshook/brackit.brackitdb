@@ -39,7 +39,7 @@ import org.brackit.xquery.xdm.DocumentException;
  */
 public interface DBItem<E extends DBItem<E>> {
 
-	public DocID getID();
+	public int getID();
 
 	public String getName();
 

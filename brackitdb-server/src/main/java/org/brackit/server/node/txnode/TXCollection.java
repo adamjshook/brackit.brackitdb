@@ -40,6 +40,7 @@ import org.brackit.server.store.index.Index;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.IndexIterator;
 import org.brackit.server.tx.Tx;
+import org.brackit.server.util.Calc;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.node.SubtreePrinter;
@@ -84,9 +85,9 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 
 	public abstract E store(SubtreeParser parser) throws DocumentException;
 
-	public abstract void delete(DocID docID) throws DocumentException;
+	public abstract void delete(int docNumber) throws DocumentException;
 
-	public abstract E getDocument(DocID decodeDocID) throws DocumentException;
+	public abstract E getDocument(Integer docNumber) throws DocumentException;
 
 	public abstract Index getIndex();
 
@@ -113,10 +114,10 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 			return new AtomStream<E>(document);
 		}
 
-		return new TransformerStream<DocID, E>(
+		return new TransformerStream<Integer, E>(
 				getDocumentReferenceIndexStream()) {
 			@Override
-			protected E transform(DocID next) throws DocumentException {
+			protected E transform(Integer next) throws DocumentException {
 				return getDocument(next);
 			}
 		};
@@ -151,17 +152,17 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 		return document;
 	}
 
-	@Override
-	public void remove(long documentID) throws DocumentException {
-		if (document != null) {
-			throw new DocumentException(
-					"Removing documents from a single collection not allowed.");
-		}
-
-		DocID docID = new DocID((int) documentID, XXX);
-		deleteDocument(docID);
-		delete(docID);
-	}
+	// @Override
+	// public void remove(long documentID) throws DocumentException {
+	// if (document != null) {
+	// throw new DocumentException(
+	// "Removing documents from a single collection not allowed.");
+	// }
+	//
+	// DocID docID = new DocID((int) documentID, XXX);
+	// deleteDocument(docID);
+	// delete(docID);
+	// }
 
 	@Override
 	public void calculateStatistics() throws DocumentException {
@@ -173,20 +174,20 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 		super.delete();
 
 		if (document != null) {
-			delete(document.getDeweyID().getDocID());
+			delete(document.getDeweyID().getDocID().getDocNumber());
 		} else {
-			Stream<DocID> documentPageIDs = getDocumentReferenceIndexStream();
+			Stream<Integer> documentNumbers = getDocumentReferenceIndexStream();
 
 			try {
-				DocID docID;
-				while ((docID = documentPageIDs.next()) != null) {
-					delete(docID);
+				Integer docNumber;
+				while ((docNumber = documentNumbers.next()) != null) {
+					delete(docNumber);
 				}
 			} finally {
-				documentPageIDs.close();
+				documentNumbers.close();
 			}
 
-			deleteDocumentReferenceIndex(new PageID(docID.getCollectionID()));
+			deleteDocumentReferenceIndex(new PageID(collID));
 		}
 	}
 
@@ -211,8 +212,11 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 
 	private void addDocument(E document) throws DocumentException {
 		try {
-			getIndex().insert(tx, new PageID(docID.getCollectionID()),
-					document.getDeweyID().getDocID().getBytes(), new byte[0]);
+			getIndex().insert(
+					tx,
+					new PageID(collID),
+					Calc.fromInt(document.getDeweyID().getDocID()
+							.getDocNumber()), new byte[0]);
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -220,19 +224,19 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 
 	private void deleteDocument(DocID docID) throws DocumentException {
 		try {
-			getIndex().delete(tx, new PageID(docID.getCollectionID()), docID.getBytes(),
-					new byte[0]);
+			getIndex().delete(tx, new PageID(docID.getCollectionID()),
+					docID.getBytes(), new byte[0]);
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}
 	}
 
-	private Stream<DocID> getDocumentReferenceIndexStream()
+	private Stream<Integer> getDocumentReferenceIndexStream()
 			throws DocumentException {
 		try {
 			IndexIterator iterator = getIndex().open(tx,
-					new PageID(docID.getCollectionID()), SearchMode.FIRST, null, null,
-					OpenMode.READ);
+					new PageID(collID), SearchMode.FIRST,
+					null, null, OpenMode.READ);
 			return new DocRefIndexStream(iterator);
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
@@ -267,6 +271,6 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 
 	@Override
 	public String toString() {
-		return String.format("%s(%s)", docID, name);
+		return String.format("%s(%s)", collID, name);
 	}
 }
