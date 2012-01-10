@@ -344,7 +344,7 @@ public class XTCdeweyID implements java.io.Serializable,
 		this.divisionValues = new int[division];
 		System.arraycopy(tempDivision, 0, divisionValues, 0, division);
 	}
-	
+
 	public XTCdeweyID(DocID docID, byte[] deweyIDbytes, int offset, int length) {
 		int division = 1;
 		int currentLevel = 1;
@@ -364,9 +364,9 @@ public class XTCdeweyID implements java.io.Serializable,
 		int suffixlength = 0;
 		int suffix = 0;
 		// parse complete byte-Array
-		
+
 		int end = 8 * length;
-		
+
 		for (int bitIndex = 0; bitIndex < end; bitIndex++) {
 
 			switch (bitIndex % 8) {
@@ -1439,17 +1439,24 @@ public class XTCdeweyID implements java.io.Serializable,
 	}
 
 	/**
-	 * Like {@link #compareTo(XTCdeweyID)} but without checking the document ID.
-	 * Only the divisions are considered.
+	 * Like {@link #compareTo(XTCdeweyID)} but without checking the collection
+	 * ID. Only the divisions are considered.
 	 * 
 	 * @param deweyID
 	 *            the other DeweyID
 	 * @return -1 if this DeweyID is less than the other, 0 if they are equal,
 	 *         and 1 if this DeweyID is greater than the other
 	 */
-	public int compareDivisions(XTCdeweyID deweyID) {
+	public int compareReduced(XTCdeweyID deweyID) {
 		if (this == deweyID) {
 			return 0;
+		}
+
+		// compare docNumber
+		int docNumberDiff = this.docID.getDocNumber()
+				- deweyID.docID.getDocNumber();
+		if (docNumberDiff != 0) {
+			return docNumberDiff;
 		}
 
 		int[] myD = this.divisionValues;
@@ -1469,14 +1476,23 @@ public class XTCdeweyID implements java.io.Serializable,
 	}
 
 	/**
-	 * Compares this DeweyID's parent with the given DeweyID.
+	 * Compares this DeweyID's parent with the given DeweyID (except for the
+	 * collection ID).
 	 * 
 	 * @param other
 	 *            the other DeweyID
-	 * @return -1 if the parent is less than the other DeweyID, 0 if they are
-	 *         equal, and 1 if the parent is greater than the other DeweyID
+	 * @return a negative number if the parent is less than the other DeweyID, 0
+	 *         if they are equal, and a positive number if the parent is greater
+	 *         than the other DeweyID
 	 */
 	public int compareParentTo(XTCdeweyID other) {
+
+		// compare docNumber
+		int docNumberDiff = this.docID.getDocNumber()
+				- other.docID.getDocNumber();
+		if (docNumberDiff != 0) {
+			return docNumberDiff;
+		}
 
 		int parentLength = this.divisionValues.length - 1;
 		while (this.divisionValues[parentLength - 1] % 2 == 0) {

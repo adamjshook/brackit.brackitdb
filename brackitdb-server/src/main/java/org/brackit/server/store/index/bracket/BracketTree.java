@@ -612,7 +612,7 @@ public final class BracketTree extends PageContextFactory {
 								for (int j = i - (skipLastPage ? 1 : 0); j > 0; j--) {
 									currentLeaf = lastPages[j];
 									if (targetDeweyID
-											.compareDivisions(currentLeaf
+											.compareReduced(currentLeaf
 													.getLowKey()) >= 0) {
 										// lastChild lies in the j-th lastPage
 										cleanupPages(lastPages, j);
@@ -777,7 +777,7 @@ public final class BracketTree extends PageContextFactory {
 				throws IndexAccessException {
 			// determine previous sibling's DeweyID
 			XTCdeweyID lowKey = leaf.getLowKey();
-			if (lowKey.compareDivisions(key) < 0) {
+			if (lowKey.compareReduced(key) < 0) {
 
 				XTCdeweyID targetDeweyID = lowKey.getAncestor(key.getLevel());
 				if (targetDeweyID.isAttributeRoot()) {
@@ -1312,7 +1312,7 @@ public final class BracketTree extends PageContextFactory {
 						boolean useHintPage = false;
 						XTCdeweyID hintLeafHighKey = hintLeaf.getHighKey();
 						if (hintLeafHighKey == null
-								|| parentDeweyID.compareDivisions(hintLeaf
+								|| parentDeweyID.compareReduced(hintLeaf
 										.getHighKey()) < 0) {
 							NavigationStatus navStatus = hintLeaf
 									.navigateContextFree(parentDeweyID,
@@ -3479,9 +3479,9 @@ public final class BracketTree extends PageContextFactory {
 
 				// is leftBorderDeweyID included in this page?
 				if (lowKey == null
-						|| leftBorderDeweyID.compareDivisions(lowKey) < 0
+						|| leftBorderDeweyID.compareReduced(lowKey) < 0
 						|| highKey != null
-						&& leftBorderDeweyID.compareDivisions(highKey) >= 0) {
+						&& leftBorderDeweyID.compareReduced(highKey) >= 0) {
 					// left border not included
 					leaf.cleanup();
 					leaf = null;
@@ -3614,9 +3614,9 @@ public final class BracketTree extends PageContextFactory {
 				XTCdeweyID highKey = leaf.getHighKey();
 
 				// is this leaf the correct insertion page?
-				if (lowKey == null || insertKey.compareDivisions(lowKey) < 0
+				if (lowKey == null || insertKey.compareReduced(lowKey) < 0
 						|| (highKey != null)
-						&& insertKey.compareDivisions(highKey) >= 0) {
+						&& insertKey.compareReduced(highKey) >= 0) {
 					// wrong page
 					leaf.cleanup();
 					leaf = null;

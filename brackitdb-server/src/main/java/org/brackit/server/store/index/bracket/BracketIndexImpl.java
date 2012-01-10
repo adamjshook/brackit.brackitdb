@@ -256,7 +256,7 @@ public class BracketIndexImpl implements BracketIndex {
 							attributeDeweyID = (lastKey.isAttribute() ? XTCdeweyID
 									.newBetween(lastKey, null) : lastKey
 									.getNewAttributeID());
-							if (attributeDeweyID.compareDivisions(page
+							if (attributeDeweyID.compareReduced(page
 									.getHighKey()) >= 0) {
 								// insert in next page
 								page.cleanup();
