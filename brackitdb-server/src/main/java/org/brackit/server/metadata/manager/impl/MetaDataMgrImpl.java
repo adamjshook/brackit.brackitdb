@@ -495,7 +495,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		QNm itemRootTag = itemRoot.getName();
 		String name = itemRoot.getAttribute(NAME_ATTR).getValue().stringValue();
 
-		if (BaseCollection.DOCUMENT_TAG.equals(itemRootTag)) {
+		if (BaseCollection.COLLECTION_TAG.equals(itemRootTag)) {
 			// SubtreePrinter.print(transaction, itemRoot, System.out);
 			DocID docID = new DocID(Integer.parseInt(itemRoot
 					.getAttribute(BaseCollection.ID_ATTRIBUTE)
