@@ -58,11 +58,8 @@ import org.brackit.xquery.xdm.Stream;
  */
 public abstract class TXCollection<E extends TXNode<E>> extends
 		BaseCollection<E> {
-	public static final QNm COLLECTION_FLAG_ATTRIBUTE = new QNm("collection");
 
 	protected final Tx tx;
-
-	protected E document;
 
 	protected Persistor persistor;
 
@@ -83,172 +80,23 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 		return tx;
 	}
 
-	public abstract E store(SubtreeParser parser) throws DocumentException;
-
-	public abstract void delete(int docNumber) throws DocumentException;
-
-	public abstract E getDocument(Integer docNumber) throws DocumentException;
-
-	public abstract Index getIndex();
-
 	@Override
 	public void serialize(OutputStream out) throws DocumentException {
-		if (document != null) {
-			new SubtreePrinter(new PrintStream(out)).print(document);
-		} else {
-			Stream<? extends E> docs = getDocuments();
-			E doc;
-			try {
-				while ((doc = docs.next()) != null) {
-					new SubtreePrinter(new PrintStream(out)).print(doc);
-				}
-			} finally {
-				docs.close();
+
+		Stream<? extends E> docs = getDocuments();
+		E doc;
+		try {
+			while ((doc = docs.next()) != null) {
+				new SubtreePrinter(new PrintStream(out)).print(doc);
 			}
+		} finally {
+			docs.close();
 		}
 	}
-
-	@Override
-	public Stream<? extends E> getDocuments() throws DocumentException {
-		if (document != null) {
-			return new AtomStream<E>(document);
-		}
-
-		return new TransformerStream<Integer, E>(
-				getDocumentReferenceIndexStream()) {
-			@Override
-			protected E transform(Integer next) throws DocumentException {
-				return getDocument(next);
-			}
-		};
-	}
-
-	public void setDocument(E document) throws DocumentException {
-		if (this.document != null) {
-			throw new DocumentException("Document node already set.");
-		}
-		this.document = document;
-	}
-
-	@Override
-	public E getDocument() throws DocumentException {
-		if (document == null) {
-			throw new DocumentException(
-					"Operation not allowed for collections.");
-		}
-
-		return document;
-	}
-
-	@Override
-	public E add(SubtreeParser parser) throws DocumentException {
-		if (document != null) {
-			throw new DocumentException(
-					"Adding documents to a single collection not allowed.");
-		}
-
-		E document = store(parser);
-		addDocument(document);
-		return document;
-	}
-
-	// @Override
-	// public void remove(long documentID) throws DocumentException {
-	// if (document != null) {
-	// throw new DocumentException(
-	// "Removing documents from a single collection not allowed.");
-	// }
-	//
-	// DocID docID = new DocID((int) documentID, XXX);
-	// deleteDocument(docID);
-	// delete(docID);
-	// }
 
 	@Override
 	public void calculateStatistics() throws DocumentException {
 		super.calculateStatistics();
-	}
-
-	@Override
-	public void delete() throws DocumentException {
-		super.delete();
-
-		if (document != null) {
-			delete(document.getDeweyID().getDocID().getDocNumber());
-		} else {
-			Stream<Integer> documentNumbers = getDocumentReferenceIndexStream();
-
-			try {
-				Integer docNumber;
-				while ((docNumber = documentNumbers.next()) != null) {
-					delete(docNumber);
-				}
-			} finally {
-				documentNumbers.close();
-			}
-
-			deleteDocumentReferenceIndex(new PageID(collID));
-		}
-	}
-
-	private void deleteDocumentReferenceIndex(PageID rootPageID)
-			throws DocumentException {
-		try {
-			getIndex().dropIndex(tx, rootPageID);
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
-		}
-	}
-
-	protected PageID createDocumentReferenceIndex(Tx transaction,
-			int containerNo) throws DocumentException {
-		try {
-			return getIndex().createIndex(tx, containerNo, Field.PAGEID,
-					Field.NULL, true);
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
-		}
-	}
-
-	private void addDocument(E document) throws DocumentException {
-		try {
-			getIndex().insert(
-					tx,
-					new PageID(collID),
-					Calc.fromInt(document.getDeweyID().getDocID()
-							.getDocNumber()), new byte[0]);
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
-		}
-	}
-
-	private void deleteDocument(DocID docID) throws DocumentException {
-		try {
-			getIndex().delete(tx, new PageID(docID.getCollectionID()),
-					docID.getBytes(), new byte[0]);
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
-		}
-	}
-
-	private Stream<Integer> getDocumentReferenceIndexStream()
-			throws DocumentException {
-		try {
-			IndexIterator iterator = getIndex().open(tx,
-					new PageID(collID), SearchMode.FIRST,
-					null, null, OpenMode.READ);
-			return new DocRefIndexStream(iterator);
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
-		}
-	}
-
-	@Override
-	public Node<?> materialize() throws DocumentException {
-		Node<?> root = super.materialize();
-		root.setAttribute(COLLECTION_FLAG_ATTRIBUTE,
-				new Una(Boolean.toString(document == null)));
-		return root;
 	}
 
 	public Persistor getPersistor() {

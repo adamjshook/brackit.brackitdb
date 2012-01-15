@@ -62,7 +62,7 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 
 	protected DictionaryMgr dictionary;
 
-	protected int collID;
+	protected int collID = -1;
 
 	private Map<Class<? extends Materializable>, Materializable> materializables;
 
