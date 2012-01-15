@@ -43,6 +43,8 @@ import org.brackit.xquery.node.parser.SubtreeParser;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
 import org.brackit.xquery.xdm.Node;
+import org.brackit.xquery.xdm.OperationNotSupportedException;
+import org.brackit.xquery.xdm.Stream;
 
 /**
  * @author Martin Hiller
@@ -77,44 +79,22 @@ public class BracketCollection extends TXCollection<BracketNode> {
 			return this;
 		}
 		BracketCollection copyCol = new BracketCollection(this, tx);
-		if (document != null) {
-			copyCol.document = new BracketNode(copyCol, document);
-		}
 		return copyCol;
 	}
 
-	@Override
-	public BracketNode store(SubtreeParser parser) throws DocumentException {
+	public int create(StorageSpec spec) throws DocumentException {
 		try {
-			PageID rootPageID = store.index.createIndex(tx, new PageID(docID
-					.getCollectionID()).getContainerNo());
-			BracketNode document = new BracketNode(this, rootPageID);
-			DocID docID = new DocID(rootPageID.value(), XXX);
-			XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(docID);
-			document.store(rootDeweyID, parser, true, false);
-			return document;
+			name = spec.getDocumentName();
+			dictionary = spec.getDictionary();
+			// create a path synopsis and document reference container
+			pathSynopsis = store.pathSynopsisMgrFactory.create(tx, spec
+					.getDictionary(), spec.getContainerID());
+			PageID rootPageID = store.index.createIndex(tx, spec.getContainerID());
+			collID = rootPageID.value();
+			return collID;
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}
-	}
-
-	@Override
-	public void delete(DocID docID) throws DocumentException {
-		try {
-			store.index.dropIndex(tx, new PageID(docID.getCollectionID()));
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
-		}
-	}
-
-	public void create(StorageSpec spec) throws DocumentException {
-		name = spec.getDocumentName();
-		dictionary = spec.getDictionary();
-		// create a path synopsis and document reference container
-		pathSynopsis = store.pathSynopsisMgrFactory.create(tx, spec
-				.getDictionary(), spec.getContainerID());
-		docID = new DocID(createDocumentReferenceIndex(tx,
-				spec.getContainerID()).value(), XXX);
 	}
 
 	public BracketNode create(StorageSpec spec, SubtreeParser parser)
@@ -123,12 +103,14 @@ public class BracketCollection extends TXCollection<BracketNode> {
 			PageID rootPageID = store.index.createIndex(tx, spec
 					.getContainerID());
 
-			docID = new DocID(rootPageID.value(), XXX);
+			collID = rootPageID.value();
+			DocID docID = new DocID(collID, 0);
 			name = spec.getDocumentName();
 			dictionary = spec.getDictionary();
 			pathSynopsis = store.pathSynopsisMgrFactory.create(tx, spec
 					.getDictionary(), spec.getContainerID());
-			document = new BracketNode(this, rootPageID);
+			
+			BracketNode document = new BracketNode(this, rootPageID);
 
 			// write document to document container
 			XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(docID);
@@ -141,24 +123,18 @@ public class BracketCollection extends TXCollection<BracketNode> {
 
 	public void init(String name, PageID rootPageID, PageID psPageID)
 			throws DocumentException {
-		docID = new DocID(rootPageID.value(), XXX);
+		collID = rootPageID.value();
 		this.name = name;
 		dictionary = store.dictionary;
 		pathSynopsis = store.pathSynopsisMgrFactory.load(tx, dictionary,
 				psPageID);
-		document = new BracketNode(this, rootPageID);
-	}
-
-	@Override
-	public Index getIndex() {
-		return store.stdIndex;
 	}
 
 	public BracketNode getSingleDocument() {
-		return document;
+		// TODO: assumption: docNumber of single document collection is 0		
+		return new BracketNode();
 	}
 
-	@Override
 	public BracketNode getDocument(DocID docID) throws DocumentException {
 		return new BracketNode(new BracketLocator(this, docID, new PageID(docID
 				.getCollectionID())), new XTCdeweyID(docID), Kind.DOCUMENT.ID, null, null);
@@ -183,17 +159,12 @@ public class BracketCollection extends TXCollection<BracketNode> {
 			pathSynopsis = store.pathSynopsisMgrFactory.load(tx, dictionary,
 					psID);
 		}
-
-		if (!Boolean.parseBoolean(root.getAttribute(COLLECTION_FLAG_ATTRIBUTE)
-				.getValue().stringValue())) {
-			document = new BracketNode(this, new PageID(docID.getCollectionID()));
-		}
 	}
 
 	@Override
 	public void delete() throws DocumentException {
 		try {
-			super.delete();
+			store.index.dropIndex(tx, new PageID(collID));
 			store.index.dropIndex(tx, new PageID(pathSynopsis
 					.getPathSynopsisNo()));
 		} catch (IndexAccessException e) {
@@ -212,5 +183,43 @@ public class BracketCollection extends TXCollection<BracketNode> {
 
 	public PathSynopsisMgr getPathSynopsis() {
 		return pathSynopsis;
+	}
+
+	@Override
+	public BracketNode getDocument() throws DocumentException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void remove(long documentID) throws OperationNotSupportedException,
+			DocumentException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public Stream<? extends BracketNode> getDocuments()
+			throws DocumentException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public BracketNode add(SubtreeParser parser)
+			throws OperationNotSupportedException, DocumentException {
+
+		try {
+			PageID rootPageID = store.index.createIndex(tx, new PageID(docID
+					.getCollectionID()).getContainerNo());
+			BracketNode document = new BracketNode(this, rootPageID);
+			DocID docID = new DocID(rootPageID.value(), XXX);
+			XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(docID);
+			document.store(rootDeweyID, parser, false, false);
+			return document;
+		} catch (IndexAccessException e) {
+			throw new DocumentException(e);
+		}
+		
 	}
 }
