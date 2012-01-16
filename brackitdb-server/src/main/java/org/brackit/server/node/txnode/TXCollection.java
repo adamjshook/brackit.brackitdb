@@ -30,25 +30,10 @@ package org.brackit.server.node.txnode;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
-import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.metadata.BaseCollection;
-import org.brackit.server.node.DocID;
-import org.brackit.server.store.Field;
-import org.brackit.server.store.OpenMode;
-import org.brackit.server.store.SearchMode;
-import org.brackit.server.store.index.Index;
-import org.brackit.server.store.index.IndexAccessException;
-import org.brackit.server.store.index.IndexIterator;
 import org.brackit.server.tx.Tx;
-import org.brackit.server.util.Calc;
-import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.node.SubtreePrinter;
-import org.brackit.xquery.node.parser.SubtreeParser;
-import org.brackit.xquery.node.stream.AtomStream;
-import org.brackit.xquery.node.stream.TransformerStream;
 import org.brackit.xquery.xdm.DocumentException;
-import org.brackit.xquery.xdm.Node;
 import org.brackit.xquery.xdm.OperationNotSupportedException;
 import org.brackit.xquery.xdm.Stream;
 
