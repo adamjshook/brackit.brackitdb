@@ -88,10 +88,9 @@ public class BracketNode extends TXNode<BracketNode> {
 		this.locator = locator;
 	}
 
-	public BracketNode(BracketCollection collection, PageID rootPageID) {
-		super(new XTCdeweyID(new DocID(rootPageID.value(), XXX)), Kind.DOCUMENT.ID);
-		this.locator = new BracketLocator(collection, deweyID.getDocID(),
-				rootPageID);
+	public BracketNode(BracketCollection collection, int docNumber) {
+		super(new XTCdeweyID(new DocID(collection.getID(), docNumber)), Kind.DOCUMENT.ID);
+		this.locator = new BracketLocator(collection, deweyID.getDocID());
 	}
 
 	public BracketNode(BracketLocator locator, XTCdeweyID deweyID, byte type,
@@ -113,8 +112,7 @@ public class BracketNode extends TXNode<BracketNode> {
 		if (copyCol == locator.collection) {
 			return this;
 		}
-		BracketLocator copyLoc = new BracketLocator(copyCol, locator.docID,
-				locator.rootPageID);
+		BracketLocator copyLoc = new BracketLocator(copyCol, locator.docID);
 		BracketNode copyNode = new BracketNode(copyLoc, deweyID, type, value,
 				psNode);
 		return copyNode;

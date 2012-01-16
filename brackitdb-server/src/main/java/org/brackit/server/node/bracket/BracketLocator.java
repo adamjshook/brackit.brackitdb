@@ -117,10 +117,9 @@ public class BracketLocator {
 
 	public BracketNodeLoader bracketNodeLoader;
 
-	public BracketLocator(BracketCollection collection, DocID docID,
-			PageID rootPageID) {
+	public BracketLocator(BracketCollection collection, DocID docID) {
 		this.docID = docID;
-		this.rootPageID = rootPageID;
+		this.rootPageID = new PageID(collection.getID());
 		this.collection = collection;
 		this.pathSynopsis = collection.getPathSynopsis();
 		this.bracketNodeLoader = new BracketNodeLoaderImpl();
