@@ -76,7 +76,7 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 	public BracketDocIndexListener(ListenMode listenMode,
 			InsertController insertCtrl, boolean newDocument) {
 		this.locator = null;
-		this.index = locator.collection.store.index;
+		this.index = null;
 		this.listenMode = listenMode;
 		this.openMode = null;
 		this.insertCtrl = insertCtrl;

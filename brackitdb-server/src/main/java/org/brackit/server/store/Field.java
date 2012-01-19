@@ -382,8 +382,6 @@ public class Field {
 	 */
 	public static final class CollectionDeweyIDField extends Field {
 
-		private static final int NON_DOCUMENT_FLAG = (1 << 7);
-
 		public byte[] encode(XTCdeweyID deweyID) {
 			byte[] tmp = deweyID.toBytes();
 			byte[] b = new byte[4 + tmp.length];
@@ -394,9 +392,11 @@ public class Field {
 				// all bits are already in use, but we need one to distinguish
 				// between DeweyID of Document and root
 				throw new RuntimeException(
-						String.format(
-								"Document Number %s of Collection %s is too large to be encoded!",
-								docNumber, deweyID.docID.getCollectionID()));
+						String
+								.format(
+										"Document Number %s of Collection %s is too large to be encoded!",
+										docNumber, deweyID.docID
+												.getCollectionID()));
 			}
 
 			// basically the docNumber stored as unsigned integer, but the
@@ -412,7 +412,8 @@ public class Field {
 
 		public XTCdeweyID decode(int collectionID, byte[] b) {
 
-			int docNumber = ((b[0] & 0xFF) << 23) | ((b[1] & 0xFF) << 15) | ((b[2] & 0xFF) << 7) | ((b[3] & 0xFF) >>> 1);
+			int docNumber = ((b[0] & 0xFF) << 23) | ((b[1] & 0xFF) << 15)
+					| ((b[2] & 0xFF) << 7) | ((b[3] & 0xFF) >>> 1);
 			boolean isDocument = (b[3] & 1) == 0;
 
 			DocID docID = new DocID(collectionID, docNumber);
@@ -427,7 +428,9 @@ public class Field {
 		public XTCdeweyID decode(int collectionID, byte[] b, int offset,
 				int length) {
 
-			int docNumber = ((b[offset++] & 0xFF) << 23) | ((b[offset++] & 0xFF) << 15) | ((b[offset++] & 0xFF) << 7) | ((b[offset] & 0xFF) >>> 1);
+			int docNumber = ((b[offset++] & 0xFF) << 23)
+					| ((b[offset++] & 0xFF) << 15)
+					| ((b[offset++] & 0xFF) << 7) | ((b[offset] & 0xFF) >>> 1);
 			boolean isDocument = (b[offset++] & 1) == 0;
 
 			DocID docID = new DocID(collectionID, docNumber);
@@ -449,27 +452,43 @@ public class Field {
 
 		@Override
 		public int compare(byte[] value1, byte[] value2) {
-			if (value1 != null) {
-				if (value2 != null) {
-					// compare document number
-					int diff = Calc.compareInt(value1, 0, value2, 0);
-					if (diff != 0) {
-						return diff;
+			return Calc.compareU(value1, value2);
+		}
+
+		@Override
+		public int compareAsPrefix(byte[] v1, byte[] v2) {
+			// a null value is interpreted as EOF (= highest possible value)
+			if (v1 != null) {
+				if (v2 != null) {
+
+					int len1 = v1.length;
+					int len2 = v2.length;
+					int len = ((len1 <= len2) ? len1 : len2);
+					int pos = -1;
+					while (++pos < len) {
+						int b1 = v1[pos] & 0xFF;
+						int b2 = v2[pos] & 0xFF;
+						int diff = b1 - b2;
+						if (diff != 0) {
+							if (pos == 3 && diff == -1 && (b1 % 2 == 0)) {
+								// this case occurs when we compare the Document
+								// DeweyID with another DeweyID of the same
+								// document. therefore, the prefix property is fulfilled
+								return 0;
+							}
+							return b1 - b2;
+						}
 					}
-
-					// document numbers the same
-					// check whether one or the other key is a document key
-
-					// compare remaining DeweyID
-					int len1 = value1.length - 4;
-					int len2 = value2.length - 4;
-					return Calc.compareU(value1, 4, len1, value2, 4, len2);
+					return (len1 <= len2) ? 0 : 1;
 				} else {
+					// v2 is EOF and definitely greater than v1
 					return -1;
 				}
-			} else if (value2 != null) {
+			} else if (v2 != null) {
+				// v1 is EOF and definitely greater than v2
 				return 1;
 			} else {
+				// both values are EOF
 				return 0;
 			}
 		}
