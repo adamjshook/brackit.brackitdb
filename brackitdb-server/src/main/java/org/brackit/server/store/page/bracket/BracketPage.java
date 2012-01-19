@@ -311,11 +311,10 @@ public final class BracketPage extends BasePage {
 		}
 
 		// while current key has no data reference
-		keyOffset++;
-		while ((page[keyOffset] & 2) > 0) {
+		while ((page[keyOffset] & BracketKey.HAS_DATA_REF_MASK) == 0) {
 			keyOffset += BracketKey.PHYSICAL_LENGTH;
 		}
-		keyOffset += (BracketKey.PHYSICAL_LENGTH_DECREMENTED);
+		keyOffset += BracketKey.PHYSICAL_LENGTH;
 
 		return keyOffset;
 	}
@@ -1977,7 +1976,10 @@ public final class BracketPage extends BasePage {
 	 */
 	public NavigationResult navigateLastCF(DeweyIDBuffer currentDeweyID) {
 
-		if (getRecordCount() == 1) {
+		if (getRecordCount() == 0) {
+			navRes.reset();
+			navRes.status = NavigationStatus.BEFORE_FIRST;
+		} else if (getRecordCount() == 1) {
 			navRes.reset();
 			navRes.status = NavigationStatus.FOUND;
 			navRes.keyOffset = LOW_KEY_OFFSET;
@@ -3766,8 +3768,7 @@ public final class BracketPage extends BasePage {
 		// adjust key area end offset
 		setKeyAreaEndOffset(pageOffset);
 
-		// TODO remove
-		checkPageIntegrity();
+		//checkPageIntegrity();
 
 		currentDeweyID.setTo(lastNodeDeweyID);
 		return returnOffset;

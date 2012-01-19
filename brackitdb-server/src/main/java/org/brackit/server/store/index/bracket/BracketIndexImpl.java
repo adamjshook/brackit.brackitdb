@@ -90,10 +90,9 @@ public class BracketIndexImpl implements BracketIndex {
 	}
 
 	@Override
-	public InsertController openForInsert(BracketLocator locator,
-			OpenMode openMode, XTCdeweyID startInsertKey)
+	public InsertController openForInsert(Tx tx, PageID rootPageID, OpenMode openMode, XTCdeweyID startInsertKey)
 			throws IndexAccessException {
-		return new InsertController(locator, tree, openMode, startInsertKey);
+		return new InsertController(tx, rootPageID, tree, openMode, startInsertKey);
 	}
 
 	@Override

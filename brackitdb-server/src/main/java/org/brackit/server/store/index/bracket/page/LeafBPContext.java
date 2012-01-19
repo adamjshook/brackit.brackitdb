@@ -585,6 +585,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			break;
 		case TO_INSERT_POS:
 		case TO_KEY:
+		case LAST:
 			throw new IllegalArgumentException(String.format(
 					"The NavigationMode %s is a context free operation!",
 					navMode));
@@ -654,6 +655,9 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		case NEXT_ATTRIBUTE:
 			navRes = page.navigateNextAttributeCF(referenceDeweyID,
 					currentDeweyID);
+			break;
+		case LAST:
+			navRes = page.navigateLastCF(currentDeweyID);
 			break;
 		default:
 			throw new RuntimeException("Navigation Mode not supported!");
@@ -1405,6 +1409,12 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 			// fetch record if needed
 			if (record == null) {
+				
+				// fetch key type if needed
+				if (bufferedKeyType == null) {
+					bufferedKeyType = page.getKeyType(currentOffset);
+				}
+				
 				if (bufferedKeyType == Type.DOCUMENT) {
 					record = RecordInterpreter.DOCUMENT_RECORD;
 				} else {

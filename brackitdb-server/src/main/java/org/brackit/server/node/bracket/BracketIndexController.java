@@ -95,10 +95,12 @@ public class BracketIndexController extends IndexControllerImpl<BracketNode> {
 	public void dropIndex(IndexDef idxDefinition) throws DocumentException {
 		try {
 			// Ensure exclusive access to the collection
-			collection.store.mls
-					.lockTreeExclusive(collection.getTX(), XTCdeweyID
-							.newRootID(collection.getID()), collection.getTX()
-							.getIsolationLevel().lockClass(true), false);
+			
+			// TODO exclusive lock on collection
+//			collection.store.mls
+//					.lockTreeExclusive(collection.getTX(), XTCdeweyID
+//							.newRootID(collection.getID()), collection.getTX()
+//							.getIsolationLevel().lockClass(true), false);
 
 			long undoNextLSN = collection.getTX().checkPrevLSN();
 			super.dropIndex(idxDefinition);

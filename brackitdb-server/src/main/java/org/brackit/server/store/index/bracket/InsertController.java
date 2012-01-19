@@ -27,6 +27,8 @@
  */
 package org.brackit.server.store.index.bracket;
 
+import org.brackit.server.io.buffer.PageID;
+import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.BracketLocator;
 import org.brackit.server.store.OpenMode;
@@ -41,32 +43,77 @@ import org.brackit.server.tx.Tx;
  */
 public final class InsertController {
 
-	private final BracketLocator locator;
+	private final PageID rootPageID;
 	private final BracketTree tree;
 	private final Tx tx;
 	private final boolean doLog;
+	private final XTCdeweyID startInsertKey;
 
 	private Leaf page;
 
-	public InsertController(BracketLocator locator, BracketTree tree,
+	/**
+	 * Opens the index for insertion of the given DeweyID. If this DeweyID is
+	 * null, the index will be opened for the insertion of a new document.
+	 */
+	public InsertController(Tx tx, PageID rootPageID, BracketTree tree,
 			OpenMode openMode, XTCdeweyID startInsertKey)
 			throws IndexAccessException {
-		this.locator = locator;
+		this.rootPageID = rootPageID;
 		this.tree = tree;
-		this.tx = locator.collection.getTX();
+		this.tx = tx;
 		if (!openMode.forUpdate()) {
 			throw new IndexAccessException(
 					"InsertController can only be opened for updates.");
 		}
 		this.doLog = openMode.doLog();
 
-		// open index for insertion
-		page = tree.openInternal(tx, locator.rootPageID,
-				NavigationMode.TO_INSERT_POS, startInsertKey, openMode, null,
-				null);
-		if (page == null) {
-			throw new IndexAccessException(
-					"Index could not navigate to the initial insert position.");
+		try {
+
+			// open index for insertion
+			if (startInsertKey != null) {
+				page = tree.openInternal(tx, rootPageID,
+						NavigationMode.TO_INSERT_POS, startInsertKey, openMode,
+						null, null);
+			} else {
+				// open index at the last record
+				// for an empty index, it returns the (empty) root page
+				page = tree.openInternal(tx, rootPageID,
+						NavigationMode.LAST, null, openMode, null, null);
+				
+				int newDocNumber = 0;
+				if (!page.isBeforeFirst()) {
+					// assign new document number
+					newDocNumber = page.getKey().docID.getDocNumber() + 1;
+				}
+				
+				// new DocID assigned
+				startInsertKey = new XTCdeweyID(new DocID(rootPageID.value(), newDocNumber));
+
+				// if there is an empty last page, we have to decide where to
+				// insert (depending on the highkey)
+				if (page.getNextPageID() != null) {
+					
+					if (startInsertKey.compareTo(page.getHighKey()) >= 0) {
+						// insert into next page
+						// load next page and release current page
+						page = tree.getNextPage(tx, rootPageID, page, openMode, true);
+					}
+				}
+			}
+			
+			this.startInsertKey = startInsertKey;
+
+			if (page == null) {
+				throw new IndexAccessException(
+						"Index could not navigate to the initial insert position.");
+			}
+
+		} catch (IndexOperationException e) {
+			if (page != null) {
+				page.cleanup();
+				page = null;
+			}
+			throw new IndexAccessException(e);
 		}
 	}
 
@@ -88,7 +135,7 @@ public final class InsertController {
 				page.bulkLog(false, -1);
 
 				// split + insert
-				page = tree.splitInsert(tx, locator.rootPageID, page,
+				page = tree.splitInsert(tx, rootPageID, page,
 						nodesToInsert, doLog);
 			}
 
@@ -110,5 +157,9 @@ public final class InsertController {
 				page = null;
 			}
 		}
+	}
+
+	public XTCdeweyID getStartInsertKey() {
+		return startInsertKey;
 	}
 }

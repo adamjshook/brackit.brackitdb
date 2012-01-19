@@ -34,7 +34,9 @@ import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.index.IndexController;
 import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.node.txnode.TXCollection;
+import org.brackit.server.store.OpenMode;
 import org.brackit.server.store.index.IndexAccessException;
+import org.brackit.server.store.index.bracket.InsertController;
 import org.brackit.server.tx.Tx;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Una;
@@ -113,7 +115,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 
 			// write document to document container
 			XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(docID);
-			document.store(rootDeweyID, parser, true, false);
+			document.store(rootDeweyID, parser, true, false, true);
 			return document;
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
@@ -185,8 +187,8 @@ public class BracketCollection extends TXCollection<BracketNode> {
 
 	@Override
 	public BracketNode getDocument() throws DocumentException {
-		// TODO Auto-generated method stub
-		return null;
+		// TODO: assumption: docNumber of single document collection is 0
+		return new BracketNode(this, 0);
 	}
 
 	@Override
@@ -206,12 +208,19 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	@Override
 	public BracketNode add(SubtreeParser parser)
 			throws OperationNotSupportedException, DocumentException {
-
-		int docNumber = -1;
 		
-		BracketNode document = new BracketNode(this, docNumber);
-		XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(document.getID());
-		document.store(rootDeweyID, parser, false, false);
+		InsertController insertCtrl = null;
+		try {
+			insertCtrl = store.index.openForInsert(tx, new PageID(collID), OpenMode.BULK, null);
+		} catch (IndexAccessException e) {
+			throw new DocumentException(e);
+		}
+		
+		DocID newDocID = insertCtrl.getStartInsertKey().getDocID();
+		
+		BracketNode document = new BracketNode(this, newDocID.getDocNumber());
+		XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(newDocID);
+		document.store(rootDeweyID, parser, insertCtrl, false, true);
 		return document;
 	}
 }

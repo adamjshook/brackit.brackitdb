@@ -769,38 +769,91 @@ public final class BracketTree extends PageContextFactory {
 						"Error during leaf page scan over index.");
 			}
 		}
+	}
+
+	private class LastScanner extends LeafScanner {
+
+		@Override
+		protected ScanResult indexAccessScan(Tx tx, PageID rootPageID,
+				Leaf leaf, NavigationMode navMode, XTCdeweyID key,
+				boolean forUpdate) throws IndexAccessException {
+
+			Leaf prevPage = null;
+
+			try {
+
+				PageID nextPageID = leaf.getNextPageID();
+
+				while (nextPageID != null) {
+
+					// cleanup previous page
+					if (prevPage != null) {
+						prevPage.cleanup();
+					}
+					prevPage = leaf;
+					leaf = (Leaf) getPage(tx, nextPageID, forUpdate, false);
+				}
+
+				// last page may be empty
+				if (leaf.getEntryCount() == 0) {
+					// leaf is empty -> need previous page
+					if (prevPage != null) {
+						// there it is
+						leaf.cleanup();
+						leaf = null;
+						prevPage.moveLast();
+						return new ScanResult(prevPage);
+					} else {
+						// get previous page and try again
+						PageID previousPageID = leaf.getPrevPageID();
+
+						if (previousPageID == null) {
+							// current page is the only page of the index
+							// -> return page at the BEFORE_LOWKEY position.
+							leaf.moveBeforeFirst();
+							return new ScanResult(leaf);
+						} else {
+							leaf.cleanup();
+							prevPage = (Leaf) getPage(tx, previousPageID,
+									forUpdate, false);
+							prevPage.assignDeweyIDBuffer(leaf);
+							leaf = null;
+							return indexAccessScan(tx, rootPageID, prevPage,
+									navMode, key, forUpdate);
+						}
+					}
+				} else {
+					// leaf has at least one record
+					if (prevPage != null) {
+						prevPage.cleanup();
+						prevPage = null;
+					}
+					leaf.moveLast();
+					return new ScanResult(leaf);
+				}
+
+			} catch (IndexOperationException e) {
+				if (prevPage != null) {
+					prevPage.cleanup();
+				}
+				if (leaf != null) {
+					leaf.cleanup();
+				}
+				throw new IndexAccessException(e,
+						"Error during leaf page scan over index.");
+			}
+		}
 
 		@Override
 		protected ScanResult hintPageScanFailed(Tx tx, PageID rootPageID,
 				Leaf leaf, NavigationMode navMode, XTCdeweyID key,
 				boolean forUpdate, NavigationStatus navStatus)
 				throws IndexAccessException {
-			// determine previous sibling's DeweyID
-			XTCdeweyID lowKey = leaf.getLowKey();
-			if (lowKey.compareReduced(key) < 0) {
 
-				XTCdeweyID targetDeweyID = lowKey.getAncestor(key.getLevel());
-				if (targetDeweyID.isAttributeRoot()) {
-					if (COLLECT_STATS) {
-						internalStats.hintPageHits++;
-					}
-					leaf.cleanup();
-					throw KEY_NOT_EXISTENT;
-				}
-
-				if (COLLECT_STATS) {
-					internalStats.hintPageDeweyIDFound++;
-				}
-				leaf.cleanup();
-				return new ScanResult(targetDeweyID);
-			} else {
-				// access via index
-				if (COLLECT_STATS) {
-					internalStats.hintPageFails++;
-				}
-				leaf.cleanup();
-				return new ScanResult();
-			}
+			// may not happen for this navigation mode
+			leaf.cleanup();
+			throw new IndexAccessException(
+					"LastScanner does not support hint page scans.");
 		}
 	}
 
@@ -858,11 +911,18 @@ public final class BracketTree extends PageContextFactory {
 				Integer.MAX_VALUE));
 		scannerMap.put(NavigationMode.NEXT_SIBLING, new LeafScanner(
 				NEIGHBOR_LEAFS_TO_SCAN));
-		scannerMap.put(NavigationMode.PARENT, new LeafScanner());
 		scannerMap.put(NavigationMode.PREVIOUS_SIBLING,
 				new PreviousSiblingScanner());
-		scannerMap.put(NavigationMode.TO_INSERT_POS, new LeafScanner());
-		scannerMap.put(NavigationMode.TO_KEY, new LeafScanner());
+		scannerMap.put(NavigationMode.LAST, new LastScanner());
+
+		for (NavigationMode navMode : NavigationMode.values()) {
+			// use the default leaf scanner if nothing is defined for this
+			// navigation mode
+			if (scannerMap.get(navMode) == null) {
+				scannerMap.put(navMode, new LeafScanner());
+			}
+		}
+
 	}
 
 	protected long logDummyCLR(Tx tx, long undoNextLSN)
@@ -890,8 +950,9 @@ public final class BracketTree extends PageContextFactory {
 			NavigationMode navMode, XTCdeweyID key,
 			DeweyIDBuffer deweyIDBuffer, LeafScanner scanner, boolean forUpdate)
 			throws IndexAccessException {
-		Leaf leaf = descend(tx, rootPageID, navMode.getSearchMode(), navMode
-				.getSearchKey(key).toBytes(), forUpdate);
+		Leaf leaf = descend(tx, rootPageID, navMode.getSearchMode(),
+				Field.COLLECTIONDEWEYID.encode(navMode.getSearchKey(key)),
+				forUpdate);
 		leaf.assignDeweyIDBuffer(deweyIDBuffer);
 		ScanResult scanRes = scanner.scan(tx, rootPageID, leaf, navMode, key,
 				forUpdate, true);
@@ -952,7 +1013,8 @@ public final class BracketTree extends PageContextFactory {
 					if (log.isTraceEnabled()) {
 						log.trace(String.format(
 								"Reached leaf page %s searching for %s %s.",
-								page, searchMode, Field.COLLECTIONDEWEYID.toString(key)));
+								page, searchMode,
+								Field.COLLECTIONDEWEYID.toString(key)));
 						log.trace(page.dump("leaf page"));
 					}
 
@@ -1043,46 +1105,46 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-//	protected Branch moveNext(Tx tx, PageID rootPageID, Branch page,
-//			OpenMode openMode) throws IndexAccessException {
-//		try {
-//			if (page.moveNext()) {
-//				return page;
-//			}
-//
-//			if (page.isLastInLevel()) {
-//				if (log.isTraceEnabled()) {
-//					log.trace("Reached end of index.");
-//				}
-//				return page;
-//			}
-//
-//			if (log.isTraceEnabled()) {
-//				log.trace(String
-//						.format("Reached end of current page %s. Attempting to proceed to next page %s.",
-//								page, page.getValueAsPageID()));
-//			}
-//
-//			Branch next = (Branch) getPage(tx, page.getValueAsPageID(),
-//					openMode.forUpdate(), false);
-//
-//			if (log.isTraceEnabled()) {
-//				log.trace(String.format("Switching to next page %s.", next));
-//			}
-//			page.cleanup();
-//			try {
-//				next.moveFirst();
-//			} catch (Exception e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//
-//			return next;
-//		} catch (IndexOperationException e) {
-//			page.cleanup();
-//			throw new IndexAccessException(e, "Could not move to next entry");
-//		}
-//	}
+	// protected Branch moveNext(Tx tx, PageID rootPageID, Branch page,
+	// OpenMode openMode) throws IndexAccessException {
+	// try {
+	// if (page.moveNext()) {
+	// return page;
+	// }
+	//
+	// if (page.isLastInLevel()) {
+	// if (log.isTraceEnabled()) {
+	// log.trace("Reached end of index.");
+	// }
+	// return page;
+	// }
+	//
+	// if (log.isTraceEnabled()) {
+	// log.trace(String
+	// .format("Reached end of current page %s. Attempting to proceed to next page %s.",
+	// page, page.getValueAsPageID()));
+	// }
+	//
+	// Branch next = (Branch) getPage(tx, page.getValueAsPageID(),
+	// openMode.forUpdate(), false);
+	//
+	// if (log.isTraceEnabled()) {
+	// log.trace(String.format("Switching to next page %s.", next));
+	// }
+	// page.cleanup();
+	// try {
+	// next.moveFirst();
+	// } catch (Exception e) {
+	// // TODO Auto-generated catch block
+	// e.printStackTrace();
+	// }
+	//
+	// return next;
+	// } catch (IndexOperationException e) {
+	// page.cleanup();
+	// throw new IndexAccessException(e, "Could not move to next entry");
+	// }
+	// }
 
 	protected Leaf movePrevious(Tx tx, PageID rootPageID, Leaf page,
 			OpenMode openMode) throws IndexAccessException {
@@ -1766,7 +1828,8 @@ public final class BracketTree extends PageContextFactory {
 						// nodes still do not fit into left page -> try right
 						// page
 						insertLeft = false;
-						separatorKey = Field.COLLECTIONDEWEYID.encode(firstNode);
+						separatorKey = Field.COLLECTIONDEWEYID
+								.encode(firstNode);
 						if (!left.setHighKeyBytes(separatorKey, logged, -1)) {
 							// not enough space for highkey!
 							// move at least one record to the right page
@@ -2379,7 +2442,8 @@ public final class BracketTree extends PageContextFactory {
 		if (log.isTraceEnabled()) {
 			log.trace(String.format(
 					"Insert separator (%s, %s) in parent page %s.",
-					Field.COLLECTIONDEWEYID.toString(separatorKey), rightPageID, parent));
+					Field.COLLECTIONDEWEYID.toString(separatorKey),
+					rightPageID, parent));
 		}
 
 		parent = insertIntoBranch(tx, rootPageID, parent, separatorKey, value,

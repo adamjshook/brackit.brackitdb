@@ -53,6 +53,8 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 	private final BracketIndex index;
 
 	private final BracketLocator locator;
+	
+	private boolean newDocument;
 
 	private InsertController insertCtrl;
 
@@ -61,13 +63,26 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 	private int ancestorsToInsert;
 
 	public BracketDocIndexListener(BracketLocator locator,
-			ListenMode listenMode, OpenMode openMode) {
+			ListenMode listenMode, OpenMode openMode, boolean newDocument) {
 		this.locator = locator;
 		this.index = locator.collection.store.index;
 		this.listenMode = listenMode;
 		this.openMode = openMode;
 		this.ancestorsToInsert = 0;
 		this.pendingElement = null;
+		this.newDocument = newDocument;
+	}
+
+	public BracketDocIndexListener(ListenMode listenMode,
+			InsertController insertCtrl, boolean newDocument) {
+		this.locator = null;
+		this.index = locator.collection.store.index;
+		this.listenMode = listenMode;
+		this.openMode = null;
+		this.insertCtrl = insertCtrl;
+		this.ancestorsToInsert = 0;
+		this.pendingElement = null;
+		this.newDocument = newDocument;
 	}
 
 	@Override
@@ -160,11 +175,13 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 			XTCdeweyID deweyID = node.getDeweyID();
 
 			if (insertCtrl == null) {
-				insertCtrl = index.openForInsert(locator, openMode, deweyID);
+				insertCtrl = index.openForInsert(locator.collection.getTX(),
+						locator.rootPageID, openMode, deweyID);
 			}
-
-			insertCtrl.insert(deweyID, record, ancestorsToInsert);
+			
+			insertCtrl.insert(deweyID, record, ancestorsToInsert + (newDocument ? 1 : 0));
 			ancestorsToInsert = 0;
+			newDocument = false;
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}
