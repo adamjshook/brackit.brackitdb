@@ -114,7 +114,7 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 	@Override
 	public void beginFragment() throws DocumentException {
 		try {
-			notifyEndFragment();
+			notifyBeginFragment();
 		} catch (DocumentException e) {
 			notifyFail();
 			throw e;

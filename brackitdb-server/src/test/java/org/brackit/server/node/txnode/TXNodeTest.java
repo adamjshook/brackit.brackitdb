@@ -347,8 +347,8 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 			IndexAccessException {
 		TXCollection<E> locator = createDocument(new DocumentParser(DOCUMENT));
 
-		printIndex(((TXQueryContext) ctx).getTX(),
-				"/media/ramdisk/document.dot", locator.getID(), true);
+//		printIndex(((TXQueryContext) ctx).getTX(),
+//				"/media/ramdisk/document.dot", locator.getID(), true);
 	}
 
 	protected void printIndex(Tx transaction, String filename, DocID docID,
