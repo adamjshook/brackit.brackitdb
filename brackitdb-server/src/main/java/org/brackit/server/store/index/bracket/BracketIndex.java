@@ -173,7 +173,7 @@ public interface BracketIndex {
 	/**
 	 * Opens the index for a (bulk) insert operation.
 	 */
-	public InsertController openForInsert(BracketLocator locator,
+	public InsertController openForInsert(Tx tx, PageID rootPageID,
 			OpenMode openMode, XTCdeweyID startInsertKey)
 			throws IndexAccessException;
 

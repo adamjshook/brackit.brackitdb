@@ -89,7 +89,8 @@ public class BracketNode extends TXNode<BracketNode> {
 	}
 
 	public BracketNode(BracketCollection collection, int docNumber) {
-		super(new XTCdeweyID(new DocID(collection.getID(), docNumber)), Kind.DOCUMENT.ID);
+		super(new XTCdeweyID(new DocID(collection.getID(), docNumber)),
+				Kind.DOCUMENT.ID);
 		this.locator = new BracketLocator(collection, deweyID.getDocID());
 	}
 
@@ -236,7 +237,8 @@ public class BracketNode extends TXNode<BracketNode> {
 		notifyUpdate(locator, ListenMode.INSERT, node);
 
 		try {
-			InsertController insertCtrl = r.index.openForInsert(locator,
+			InsertController insertCtrl = r.index.openForInsert(
+					locator.collection.getTX(), locator.rootPageID,
 					OpenMode.UPDATE, childDeweyID);
 			insertCtrl.insert(childDeweyID, physicalRecord, 0);
 			insertCtrl.close();
@@ -250,7 +252,7 @@ public class BracketNode extends TXNode<BracketNode> {
 	@Override
 	public BracketNode insertSubtree(XTCdeweyID deweyID, SubtreeParser parser)
 			throws DocumentException {
-		return store(deweyID, parser, false, true);
+		return store(deweyID, parser, false, true, false);
 	}
 
 	@Override
@@ -386,8 +388,8 @@ public class BracketNode extends TXNode<BracketNode> {
 	public BracketNode getAttributeInternal(QNm name) throws DocumentException {
 
 		// look for the requested attribute PSNode
-		PSNode attributePSNode = locator.pathSynopsis.getChildIfExists(psNode
-				.getPCR(), name, Kind.ATTRIBUTE.ID, null);
+		PSNode attributePSNode = locator.pathSynopsis.getChildIfExists(
+				psNode.getPCR(), name, Kind.ATTRIBUTE.ID, null);
 
 		if (attributePSNode == null) {
 			return null;
@@ -396,10 +398,10 @@ public class BracketNode extends TXNode<BracketNode> {
 		Stream<BracketNode> aStream = locator.collection.store.index
 				.openAttributeStream(locator, deweyID, hintPageInfo,
 						new PSNodeFilter(attributePSNode));
-		
+
 		BracketNode attribute = aStream.next();
 		aStream.close();
-		
+
 		return attribute;
 	}
 
@@ -413,8 +415,8 @@ public class BracketNode extends TXNode<BracketNode> {
 	@Override
 	public BracketNode getFirstChildInternal() throws DocumentException {
 		if (type == Kind.DOCUMENT.ID) {
-			return getNodeGeneric(NavigationMode.TO_KEY, XTCdeweyID
-					.newRootID(locator.docID));
+			return getNodeGeneric(NavigationMode.TO_KEY,
+					XTCdeweyID.newRootID(locator.docID));
 		} else {
 			return getNodeGeneric(NavigationMode.FIRST_CHILD, deweyID);
 		}
@@ -423,8 +425,8 @@ public class BracketNode extends TXNode<BracketNode> {
 	@Override
 	public BracketNode getLastChildInternal() throws DocumentException {
 		if (type == Kind.DOCUMENT.ID) {
-			return getNodeGeneric(NavigationMode.TO_KEY, XTCdeweyID
-					.newRootID(locator.docID));
+			return getNodeGeneric(NavigationMode.TO_KEY,
+					XTCdeweyID.newRootID(locator.docID));
 		} else {
 			return getNodeGeneric(NavigationMode.LAST_CHILD, deweyID);
 		}
@@ -506,22 +508,47 @@ public class BracketNode extends TXNode<BracketNode> {
 	}
 
 	BracketNode store(XTCdeweyID rootDeweyID, SubtreeParser parser,
-			boolean exclusive, boolean updateIndexes) throws DocumentException {
+			boolean exclusive, boolean updateIndexes, boolean newDocument)
+			throws DocumentException {
 		OpenMode openMode = (exclusive) ? OpenMode.LOAD : OpenMode.BULK;
 
 		ArrayList<SubtreeListener<? super BracketNode>> listener = new ArrayList<SubtreeListener<? super BracketNode>>(
 				5);
 		listener.add(new DebugListener());
 		listener.add(new BracketDocIndexListener(locator, ListenMode.INSERT,
-				openMode));
+				openMode, newDocument));
 
 		if (updateIndexes) {
 			listener.addAll(getListener(ListenMode.INSERT));
 		}
 
 		BracketSubtreeHandler subtreeHandler = new BracketSubtreeHandler(
-				locator, this, rootDeweyID, listener
-						.toArray(new SubtreeListener[listener.size()]));
+				locator, this, rootDeweyID,
+				listener.toArray(new SubtreeListener[listener.size()]));
+		parser.parse(subtreeHandler);
+
+		BracketNode root = getNode(rootDeweyID);
+
+		return root;
+	}
+
+	BracketNode store(XTCdeweyID rootDeweyID, SubtreeParser parser,
+			InsertController insertCtrl, boolean updateIndexes,
+			boolean newDocument) throws DocumentException {
+
+		ArrayList<SubtreeListener<? super BracketNode>> listener = new ArrayList<SubtreeListener<? super BracketNode>>(
+				5);
+		listener.add(new DebugListener());
+		listener.add(new BracketDocIndexListener(ListenMode.INSERT, insertCtrl,
+				newDocument));
+
+		if (updateIndexes) {
+			listener.addAll(getListener(ListenMode.INSERT));
+		}
+
+		BracketSubtreeHandler subtreeHandler = new BracketSubtreeHandler(
+				locator, this, rootDeweyID,
+				listener.toArray(new SubtreeListener[listener.size()]));
 		parser.parse(subtreeHandler);
 
 		BracketNode root = getNode(rootDeweyID);
@@ -581,14 +608,12 @@ public class BracketNode extends TXNode<BracketNode> {
 	@Override
 	public String toString() {
 		QNm name = ((type == Kind.ATTRIBUTE.ID) || (type == Kind.ELEMENT.ID)) ? psNode
-				.getName()
-				: null;
+				.getName() : null;
 		int pcr = (psNode != null) ? psNode.getPCR() : -1;
 		return String
-				.format(
-						"%s(doc='%s', docID='%s', type='%s', name='%s', value='%s', pcr='%s')",
-						deweyID, locator.collection.getName(), deweyID
-								.getDocID(), getKind(), name, value, pcr);
+				.format("%s(doc='%s', docID='%s', type='%s', name='%s', value='%s', pcr='%s')",
+						deweyID, locator.collection.getName(),
+						deweyID.getDocID(), getKind(), name, value, pcr);
 	}
 
 	@Override
@@ -613,8 +638,8 @@ public class BracketNode extends TXNode<BracketNode> {
 
 		MetaLockService<?> nls = getNls();
 		if (tx.getIsolationLevel().useReadLocks()) {
-			nls.lockTreeShared(tx, deweyID, tx.getIsolationLevel().lockClass(
-					false), false);
+			nls.lockTreeShared(tx, deweyID,
+					tx.getIsolationLevel().lockClass(false), false);
 		}
 
 		Stream<? extends BracketNode> subtree;

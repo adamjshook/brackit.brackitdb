@@ -27,6 +27,7 @@
  */
 package org.brackit.server.store.index.bracket;
 
+import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.store.SearchMode;
 
@@ -140,6 +141,23 @@ public enum NavigationMode {
 		public XTCdeweyID getSearchKey(XTCdeweyID referenceKey)
 		{
 			return referenceKey;
+		}
+		
+		@Override
+		public boolean isAfterHighKey(XTCdeweyID referenceKey,
+				XTCdeweyID highKey)
+		{
+			return (referenceKey.compareReduced(highKey) >= 0);
+		}
+	},
+	LAST(SearchMode.LAST) {
+		
+		private final XTCdeweyID searchKey = new XTCdeweyID(new DocID(Integer.MAX_VALUE, 0));
+		
+		@Override
+		public XTCdeweyID getSearchKey(XTCdeweyID referenceKey)
+		{
+			return searchKey;
 		}
 		
 		@Override

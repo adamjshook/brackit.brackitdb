@@ -382,7 +382,7 @@ public class Field {
 	 */
 	public static final class CollectionDeweyIDField extends Field {
 
-		private static final int DOCUMENT_FLAG = (1 << 7);
+		private static final int NON_DOCUMENT_FLAG = (1 << 7);
 
 		public byte[] encode(XTCdeweyID deweyID) {
 			byte[] tmp = deweyID.toBytes();
@@ -391,37 +391,32 @@ public class Field {
 			int docNumber = deweyID.docID.getDocNumber();
 
 			if ((docNumber >>> 31) > 0) {
-				// leftmost bit is already in use, but it is maybe needed to
-				// distinguish between DeweyID of Document and root
+				// all bits are already in use, but we need one to distinguish
+				// between DeweyID of Document and root
 				throw new RuntimeException(
-						String
-								.format(
-										"Document Number %s of Collection %s is too large to be encoded!",
-										docNumber, deweyID.docID
-												.getCollectionID()));
+						String.format(
+								"Document Number %s of Collection %s is too large to be encoded!",
+								docNumber, deweyID.docID.getCollectionID()));
 			}
 
-			b[0] = (byte) (((docNumber >>> 24) & 0xFF) | (deweyID.isDocument() ? DOCUMENT_FLAG
-					: 0));
-			b[1] = (byte) ((docNumber >>> 16) & 0xFF);
-			b[2] = (byte) ((docNumber >>> 8) & 0xFF);
-			b[3] = (byte) (docNumber & 0xFF);
+			// basically the docNumber stored as unsigned integer, but the
+			// rightmost bit indicates a document or a non-document node
+			b[0] = (byte) ((docNumber >>> 23) & 0xFF);
+			b[1] = (byte) ((docNumber >>> 15) & 0xFF);
+			b[2] = (byte) ((docNumber >>> 7) & 0xFF);
+			b[3] = (byte) (((docNumber << 1) | (deweyID.isDocument() ? 0 : 1)) & 0xFF);
 
 			System.arraycopy(tmp, 0, b, 4, tmp.length);
 			return b;
 		}
 
 		public XTCdeweyID decode(int collectionID, byte[] b) {
-			
-			int firstByte = b[0] & 0xFF;
-			boolean isDocument = ((firstByte & DOCUMENT_FLAG) > 0);
-			firstByte = firstByte & (~DOCUMENT_FLAG);
 
-			int docNumber = (firstByte << 24) | ((b[1] & 0xFF) << 16)
-					| ((b[2] & 0xFF) << 8) | b[3] & 0xFF;
+			int docNumber = ((b[0] & 0xFF) << 23) | ((b[1] & 0xFF) << 15) | ((b[2] & 0xFF) << 7) | ((b[3] & 0xFF) >>> 1);
+			boolean isDocument = (b[3] & 1) == 0;
 
 			DocID docID = new DocID(collectionID, docNumber);
-			
+
 			if (isDocument) {
 				return new XTCdeweyID(docID);
 			} else {
@@ -431,16 +426,12 @@ public class Field {
 
 		public XTCdeweyID decode(int collectionID, byte[] b, int offset,
 				int length) {
-			
-			int firstByte = b[offset++] & 0xFF;
-			boolean isDocument = ((firstByte & DOCUMENT_FLAG) > 0);
-			firstByte = firstByte & (~DOCUMENT_FLAG);
 
-			int docNumber = (firstByte << 24) | ((b[offset++] & 0xFF) << 16)
-					| ((b[offset++] & 0xFF) << 8) | b[offset++] & 0xFF;
+			int docNumber = ((b[offset++] & 0xFF) << 23) | ((b[offset++] & 0xFF) << 15) | ((b[offset++] & 0xFF) << 7) | ((b[offset] & 0xFF) >>> 1);
+			boolean isDocument = (b[offset++] & 1) == 0;
 
 			DocID docID = new DocID(collectionID, docNumber);
-			
+
 			if (isDocument) {
 				return new XTCdeweyID(docID);
 			} else {
@@ -465,6 +456,10 @@ public class Field {
 					if (diff != 0) {
 						return diff;
 					}
+
+					// document numbers the same
+					// check whether one or the other key is a document key
+
 					// compare remaining DeweyID
 					int len1 = value1.length - 4;
 					int len2 = value2.length - 4;
