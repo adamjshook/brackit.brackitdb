@@ -33,6 +33,7 @@ import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.store.Field;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.BracketTree;
 import org.brackit.server.store.index.bracket.IndexOperationException;
@@ -65,7 +66,7 @@ public class LeafUpdateLogOperation extends BracketIndexLogOperation {
 			XTCdeweyID key, byte[] oldValue, byte[] newValue) {
 		super(LEAF_UPDATE, pageID, rootPageID);
 		this.key = key;
-		this.keyBytes = key.toBytes();
+		this.keyBytes = Field.COLLECTIONDEWEYID.encode(key);
 		this.oldValue = oldValue;
 		this.newValue = newValue;
 	}
@@ -73,7 +74,7 @@ public class LeafUpdateLogOperation extends BracketIndexLogOperation {
 	public LeafUpdateLogOperation(PageID pageID, PageID rootPageID,
 			byte[] keyBytes, byte[] oldValue, byte[] newValue) {
 		super(LEAF_UPDATE, pageID, rootPageID);
-		this.key = new XTCdeweyID(new DocID(rootPageID.value()), keyBytes);
+		this.key = Field.COLLECTIONDEWEYID.decode(rootPageID.value(), keyBytes);
 		this.keyBytes = keyBytes;
 		this.oldValue = oldValue;
 		this.newValue = newValue;

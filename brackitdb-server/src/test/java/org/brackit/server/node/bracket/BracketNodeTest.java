@@ -29,10 +29,13 @@ package org.brackit.server.node.bracket;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintStream;
 
 import org.brackit.server.ServerException;
+import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.node.txnode.TXCollection;
@@ -58,8 +61,10 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 
 	private BracketStore store;
 
+	private static final File smallDocument = new File("xmark5.xml");
 	private static final File mediumDocument = new File("xmark50.xml");
 	private static final File bigDocument = new File("xmark100.xml");
+	private static final boolean COLLECTION_CHECK = true;
 
 	@Ignore
 	@Test
@@ -75,6 +80,23 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		// PrintStream out = new PrintStream(outputFile, false, "UTF-8");
 		// coll.store.index.dump(tx, locator.rootPageID, out);
 		// outputFile.close();
+	}
+
+	@Ignore
+	@Test
+	public void storeCollection() throws ServerException, IOException,
+			DocumentException {
+
+		BracketCollection coll = (BracketCollection) createDocument(new DocumentParser(
+				smallDocument));
+		for (int i = 1; i < 10; i++) {
+			coll.add(new DocumentParser(smallDocument));
+		}
+
+//		FileOutputStream outputFile = new FileOutputStream("leafs.txt");
+//		PrintStream out = new PrintStream(outputFile, false, "UTF-8");
+//		coll.store.index.dump(tx, new PageID(coll.getID()), out);
+//		outputFile.close();
 	}
 
 	@Ignore
@@ -153,14 +175,30 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 	public void traverseBigDocumentInPreorder() throws Exception {
 
 		long start = System.currentTimeMillis();
-		BracketCollection coll = (BracketCollection) createDocument(new DocumentParser(
-				bigDocument));
-		BracketLocator locator = coll.getDocument().locator;
+		BracketCollection coll = null;
+		BracketNode document = null;
+
+		if (COLLECTION_CHECK) {
+
+			// insert one small document before and after the big document
+			coll = (BracketCollection) createDocument(new DocumentParser(
+					smallDocument));
+			document = coll.add(new DocumentParser(bigDocument));
+			coll.add(new DocumentParser(smallDocument));
+
+		} else {
+
+			coll = (BracketCollection) createDocument(new DocumentParser(
+					bigDocument));
+			document = coll.getDocument();
+		}
+
+		BracketLocator locator = document.locator;
 		long end = System.currentTimeMillis();
 		System.out.println("Document created in: " + (end - start) / 1000f);
 
-		BracketNode root = coll.getDocument().getNode(
-				XTCdeweyID.newRootID(locator.docID));
+		BracketNode root = document
+				.getNode(XTCdeweyID.newRootID(locator.docID));
 		Node domRoot = null;
 
 		domRoot = createDomTree(new InputSource(new FileReader(bigDocument)));
@@ -229,14 +267,30 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 	public void traverseBigDocumentInPostorder() throws Exception {
 
 		long start = System.currentTimeMillis();
-		BracketCollection coll = (BracketCollection) createDocument(new DocumentParser(
-				bigDocument));
-		BracketLocator locator = coll.getDocument().locator;
+		BracketCollection coll = null;
+		BracketNode document = null;
+
+		if (COLLECTION_CHECK) {
+
+			// insert one small document before and after the big document
+			coll = (BracketCollection) createDocument(new DocumentParser(
+					smallDocument));
+			document = coll.add(new DocumentParser(bigDocument));
+			coll.add(new DocumentParser(smallDocument));
+
+		} else {
+
+			coll = (BracketCollection) createDocument(new DocumentParser(
+					bigDocument));
+			document = coll.getDocument();
+		}
+
+		BracketLocator locator = document.locator;
 		long end = System.currentTimeMillis();
 		System.out.println("Document created in: " + (end - start) / 1000f);
 
-		BracketNode root = coll.getDocument().getNode(
-				XTCdeweyID.newRootID(locator.docID));
+		BracketNode root = document
+				.getNode(XTCdeweyID.newRootID(locator.docID));
 		Node domRoot = null;
 
 		domRoot = createDomTree(new InputSource(new FileReader(bigDocument)));

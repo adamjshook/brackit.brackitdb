@@ -37,6 +37,7 @@ import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.BracketNode;
+import org.brackit.server.store.Field;
 import org.brackit.server.store.blob.BlobStoreAccessException;
 import org.brackit.server.store.index.bracket.HintPageInformation;
 import org.brackit.server.store.index.bracket.IndexOperationException;
@@ -53,6 +54,7 @@ import org.brackit.server.store.page.BasePage;
 import org.brackit.server.store.page.bracket.BracketKey;
 import org.brackit.server.store.page.bracket.BracketNodeSequence;
 import org.brackit.server.store.page.bracket.BracketPage;
+import org.brackit.server.store.page.bracket.BracketKey.Type;
 import org.brackit.server.store.page.bracket.BracketPage.UnresolvedValue;
 import org.brackit.server.store.page.bracket.BracketPageException;
 import org.brackit.server.store.page.bracket.DeletePreparation;
@@ -337,7 +339,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		initBuffer();
 
 		NavigationResult navRes = page.navigateNext(currentOffset,
-				currentDeweyID, bufferedKeyType);
+				currentDeweyID, bufferedKeyType, false);
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
@@ -347,22 +349,39 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			return false;
 		}
 	}
-
+	
 	@Override
-	public boolean moveNextNonAttr() {
+	public NavigationStatus moveNextInDocument() {
 		initBuffer();
 
-		NavigationResult navRes = page.navigateNextNonAttr(currentOffset,
+		NavigationResult navRes = page.navigateNext(currentOffset,
+				currentDeweyID, bufferedKeyType, true);
+
+		if (navRes.status == NavigationStatus.FOUND) {
+			// adjust current offset
+			setOffset(navRes.keyOffset, navRes.keyType, navRes.levelDiff);
+		} else {
+			moveBeforeFirst();
+		}
+		
+		return navRes.status;
+	}
+
+	@Override
+	public NavigationStatus moveNextNonAttrInDocument() {
+		initBuffer();
+
+		NavigationResult navRes = page.navigateNextNonAttrInDocument(currentOffset,
 				currentDeweyID, bufferedKeyType);
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
 			setOffset(navRes.keyOffset, navRes.keyType, navRes.levelDiff);
-			return true;
 		} else {
 			moveBeforeFirst();
-			return false;
 		}
+		
+		return navRes.status;
 	}
 
 	@Override
@@ -375,6 +394,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
 			setOffset(navRes.keyOffset, navRes.keyType, navRes.levelDiff);
+		} else {
+			moveBeforeFirst();
 		}
 
 		return navRes.status;
@@ -564,6 +585,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			break;
 		case TO_INSERT_POS:
 		case TO_KEY:
+		case LAST:
 			throw new IllegalArgumentException(String.format(
 					"The NavigationMode %s is a context free operation!",
 					navMode));
@@ -634,6 +656,9 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			navRes = page.navigateNextAttributeCF(referenceDeweyID,
 					currentDeweyID);
 			break;
+		case LAST:
+			navRes = page.navigateLastCF(currentDeweyID);
+			break;
 		default:
 			throw new RuntimeException("Navigation Mode not supported!");
 		}
@@ -701,7 +726,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	public boolean setHighKey(XTCdeweyID highKey, boolean logged,
 			long undoNextLSN) throws IndexOperationException {
 
-		byte[] highKeyBytes = (highKey != null) ? highKey.toBytes() : null;
+		byte[] highKeyBytes = (highKey != null) ? Field.COLLECTIONDEWEYID.encode(highKey) : null;
 		LogOperation operation = null;
 		if (logged) {
 			operation = new HighkeyLogOperation(pageID, getRootPageID(),
@@ -1379,15 +1404,29 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		}
 
 		try {
+			
+			RecordInterpreter record = bufferedRecord;
 
-			if (bufferedRecord == null) {
-				// load record from page
-				bufferedRecord = page.getRecordInterpreter(currentOffset,
-						extValueLoader);
+			// fetch record if needed
+			if (record == null) {
+				
+				// fetch key type if needed
+				if (bufferedKeyType == null) {
+					bufferedKeyType = page.getKeyType(currentOffset);
+				}
+				
+				if (bufferedKeyType == Type.DOCUMENT) {
+					record = RecordInterpreter.DOCUMENT_RECORD;
+				} else {
+					// load record from page
+					bufferedRecord = page.getRecordInterpreter(currentOffset,
+							extValueLoader);
+					record = bufferedRecord;
+				}
 			}
 
 			BracketNode node = loader.load(currentDeweyID.getDeweyID(),
-					bufferedRecord);
+					record);
 
 			// set hintpage info
 			node.hintPageInfo = new HintPageInformation(pageID,
@@ -1410,22 +1449,29 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		}
 
 		try {
-
-			// fetch record if needed
-			if (bufferedRecord == null) {
-				// load record from page
-				bufferedRecord = page.getRecordInterpreter(currentOffset,
-						extValueLoader);
-			}
-
+			
 			// fetch key type if needed
 			if (bufferedKeyType == null) {
 				bufferedKeyType = page.getKeyType(currentOffset);
 			}
+			
+			RecordInterpreter record = bufferedRecord;
+
+			// fetch record if needed
+			if (record == null) {
+				if (bufferedKeyType == Type.DOCUMENT) {
+					record = RecordInterpreter.DOCUMENT_RECORD;
+				} else {
+					// load record from page
+					bufferedRecord = page.getRecordInterpreter(currentOffset,
+							extValueLoader);
+					record = bufferedRecord;
+				}
+			}
 
 			// invoke filter
 			return filter.accept(currentDeweyID,
-					bufferedKeyType.hasDataReference, bufferedRecord);
+					bufferedKeyType.hasDataReference, record);
 
 		} catch (ExternalValueException e) {
 			throw new IndexOperationException(e);
@@ -1434,14 +1480,32 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	@Override
 	public RecordInterpreter getRecord() throws IndexOperationException {
-
+		
+		if (bufferedKeyType == Type.DOCUMENT) {
+			// documents do not have a physical record
+			return null;
+		}
+		
 		try {
-			if (bufferedRecord == null) {
-				// load record from page
-				bufferedRecord = page.getRecordInterpreter(currentOffset,
-						extValueLoader);
+			
+			// fetch key type if needed
+			if (bufferedKeyType == null) {
+				bufferedKeyType = page.getKeyType(currentOffset);
 			}
-			return bufferedRecord;
+			
+			RecordInterpreter record = bufferedRecord;
+			
+			if (record == null) {
+				if (bufferedKeyType == Type.DOCUMENT) {
+					record = RecordInterpreter.DOCUMENT_RECORD;
+				} else {
+					// load record from page
+					bufferedRecord = page.getRecordInterpreter(currentOffset,
+							extValueLoader);
+					record = bufferedRecord;
+				}
+			}
+			return record;
 
 		} catch (ExternalValueException e) {
 			throw new IndexOperationException("Error loading the record!", e);

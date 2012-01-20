@@ -151,7 +151,7 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 				assertNotNull(String.format("child node %s of node %s", i,
 						nodeString), child);
 
-				checkSubtreeViaChildStream(child, domChild);
+				checkSubtreePreOrderReduced(child, domChild);
 			}
 
 			assertEquals(
@@ -280,7 +280,7 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 				assertNotNull(String.format("child node %s of node %s", i,
 						nodeString), child);
 
-				checkSubtreePreOrderReduced(child, domChild);
+				checkSubtreeViaChildStream(child, domChild);
 			}
 			childStream.close();
 
@@ -347,15 +347,15 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 			IndexAccessException {
 		TXCollection<E> locator = createDocument(new DocumentParser(DOCUMENT));
 
-		printIndex(((TXQueryContext) ctx).getTX(),
-				"/media/ramdisk/document.dot", locator.getID(), true);
+//		printIndex(((TXQueryContext) ctx).getTX(),
+//				"/media/ramdisk/document.dot", locator.getID(), true);
 	}
 
 	protected void printIndex(Tx transaction, String filename, DocID docID,
 			boolean showValues) throws IndexAccessException {
 		try {
 			PrintStream printer = new PrintStream(new File(filename));
-			index.traverse(transaction, new PageID(docID.value()),
+			index.traverse(transaction, new PageID(docID.getCollectionID()),
 					new DisplayVisitor(printer, showValues));
 			printer.close();
 		} catch (IOException e) {

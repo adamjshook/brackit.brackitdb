@@ -86,7 +86,7 @@ public class BracketTreeTest {
 
 		tx = txMgr.begin(IsolationLevel.SERIALIZABLE, null, false);
 
-		docID = new DocID(99);
+		docID = new DocID(99, XXX);
 
 		// create root
 		root = new BranchBPContext(bufferManager, tx, new SlottedKeyValuePage(

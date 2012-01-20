@@ -53,7 +53,8 @@ import org.brackit.xquery.xdm.Stream;
  */
 public abstract class BaseCollection<E extends TXNode<E>> extends
 		AbstractCollection<E> implements DBCollection<E> {
-	public static final QNm DOCUMENT_TAG = new QNm("doc");
+
+	public static final QNm COLLECTION_TAG = new QNm("coll");
 
 	public static final QNm ID_ATTRIBUTE = new QNm("id");
 
@@ -61,7 +62,7 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 
 	protected DictionaryMgr dictionary;
 
-	protected DocID docID;
+	protected int collID = -1;
 
 	private Map<Class<? extends Materializable>, Materializable> materializables;
 
@@ -72,18 +73,18 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 	protected BaseCollection(BaseCollection<E> collection) {
 		super(collection);
 		this.dictionary = collection.dictionary;
-		this.docID = collection.docID;
+		this.collID = collection.collID;
 		this.materializables = collection.materializables;
 	}
 
-	public BaseCollection(DocID docID, String name, DictionaryMgr dictionary) {
+	public BaseCollection(int collID, String name, DictionaryMgr dictionary) {
 		super(name);
 		this.dictionary = dictionary;
-		this.docID = docID;
+		this.collID = collID;
 	}
 
-	public DocID getID() {
-		return docID;
+	public int getID() {
+		return collID;
 	}
 
 	@Override
@@ -150,8 +151,8 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 	@Override
 	public void init(Node<?> root) throws DocumentException {
 		name = root.getAttribute(NAME_ATTRIBUTE).getValue().stringValue();
-		docID = new DocID(Integer.parseInt(root.getAttribute(ID_ATTRIBUTE)
-				.getValue().stringValue()));
+		collID = Integer.parseInt(root.getAttribute(ID_ATTRIBUTE).getValue()
+				.stringValue());
 
 		Stream<? extends Node<?>> children = root.getChildren();
 
@@ -171,8 +172,9 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 	@Override
 	public Node<?> materialize() throws DocumentException {
 		FragmentHelper helper = new FragmentHelper();
-		helper.openElement(DOCUMENT_TAG).attribute(ID_ATTRIBUTE,
-				new Una(docID.toString())).attribute(NAME_ATTRIBUTE, new Una(name));
+		helper.openElement(COLLECTION_TAG)
+				.attribute(ID_ATTRIBUTE, new Una(Integer.toString(collID)))
+				.attribute(NAME_ATTRIBUTE, new Una(name));
 		if (materializables != null) {
 			for (Materializable materializable : materializables.values()) {
 				helper.insert(materializable.materialize());

@@ -292,9 +292,9 @@ public interface Leaf extends BPContext {
 	public RecordInterpreter getRecord() throws IndexOperationException;
 
 	/**
-	 * Moves to the next non-attribute node.
+	 * Moves to the next non-attribute node within this document.
 	 */
-	public boolean moveNextNonAttr();
+	public NavigationStatus moveNextNonAttrInDocument();
 
 	/**
 	 * Moves to the next attribute (of the current element node). Can return
@@ -302,6 +302,13 @@ public interface Leaf extends BPContext {
 	 * there may be another attribute in the next page)
 	 */
 	public NavigationStatus moveNextAttribute();
+
+	/**
+	 * Creates a new leaf context for this page in READ mode (e.g. shared
+	 * latch). The corresponding page handle will therefore be fixed and latched
+	 * again.
+	 */
+	public NavigationStatus moveNextInDocument();
 
 	/**
 	 * Creates a new leaf context for this page in READ mode (e.g. shared

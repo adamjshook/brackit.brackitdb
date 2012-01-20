@@ -66,7 +66,7 @@ public class Field {
 	public static final StringField STRING = new StringField();
 
 	public static final QVocIDField QVOCID = new QVocIDField();
-	
+
 	/**
 	 * Standard byte array
 	 */
@@ -110,6 +110,11 @@ public class Field {
 	public static final ElRecordField EL_REC = new ElRecordField();
 
 	public static final PSRecordField PS_REC = new PSRecordField();
+
+	/**
+	 * DocumentNumber (within collection) | {@link XTCdeweyID}
+	 */
+	public static final CollectionDeweyIDField COLLECTIONDEWEYID = new CollectionDeweyIDField();
 
 	/**
 	 * Positive {@link Integer} (1 - 4 bytes)
@@ -256,10 +261,10 @@ public class Field {
 			return Calc.compareAsPrefix(v1, v2);
 		}
 	}
-	
+
 	/**
 	 * {@link QNm}
-	 *
+	 * 
 	 */
 	public static class QVocIDField extends Field {
 		// TODO Need customized compare methods?
@@ -326,15 +331,17 @@ public class Field {
 
 		public byte[] encode(XTCdeweyID deweyID) {
 			byte[] tmp = deweyID.toBytes();
-			byte[] b = new byte[4 + tmp.length];
+			byte[] b = new byte[DocID.getSize() + tmp.length];
 			deweyID.docID.toBytes(b, 0);
-			System.arraycopy(tmp, 0, b, 4, tmp.length);
+			System.arraycopy(tmp, 0, b, DocID.getSize(), tmp.length);
 			return b;
 		}
 
 		public XTCdeweyID decodeDeweyID(byte[] b) {
 			DocID docID = DocID.fromBytes(b, 0);
-			return new XTCdeweyID(docID, Arrays.copyOfRange(b, 4, b.length - 3));
+			// TODO wrong end index? b.length
+			return new XTCdeweyID(docID, Arrays.copyOfRange(b, DocID.getSize(),
+					b.length - 3));
 		}
 
 		@Override
@@ -350,20 +357,138 @@ public class Field {
 			if (value1 != null) {
 				if (value2 != null) {
 					// compare DocID
-					int diff = Calc.compareInt(value1, 0, value2, 0);
+					int diff = Calc.compareLong(value1, 0, value2, 0);
 					if (diff != 0) {
 						return diff;
 					}
 					// compare remaining DeweyID
-					int len1 = value1.length - 4;
-					int len2 = value2.length - 4;
-					return Calc.compareU(value1, 4, len1, value2, 4, len2);
+					int len1 = value1.length - 8;
+					int len2 = value2.length - 8;
+					return Calc.compareU(value1, 8, len1, value2, 8, len2);
 				} else {
 					return -1;
 				}
 			} else if (value2 != null) {
 				return 1;
 			} else {
+				return 0;
+			}
+		}
+	}
+
+	/**
+	 * This field includes a DeweyID together with its document number (within a
+	 * certain collection).
+	 */
+	public static final class CollectionDeweyIDField extends Field {
+
+		public byte[] encode(XTCdeweyID deweyID) {
+			byte[] tmp = deweyID.toBytes();
+			byte[] b = new byte[4 + tmp.length];
+
+			int docNumber = deweyID.docID.getDocNumber();
+
+			if ((docNumber >>> 31) > 0) {
+				// all bits are already in use, but we need one to distinguish
+				// between DeweyID of Document and root
+				throw new RuntimeException(
+						String
+								.format(
+										"Document Number %s of Collection %s is too large to be encoded!",
+										docNumber, deweyID.docID
+												.getCollectionID()));
+			}
+
+			// basically the docNumber stored as unsigned integer, but the
+			// rightmost bit indicates a document or a non-document node
+			b[0] = (byte) ((docNumber >>> 23) & 0xFF);
+			b[1] = (byte) ((docNumber >>> 15) & 0xFF);
+			b[2] = (byte) ((docNumber >>> 7) & 0xFF);
+			b[3] = (byte) (((docNumber << 1) | (deweyID.isDocument() ? 0 : 1)) & 0xFF);
+
+			System.arraycopy(tmp, 0, b, 4, tmp.length);
+			return b;
+		}
+
+		public XTCdeweyID decode(int collectionID, byte[] b) {
+
+			int docNumber = ((b[0] & 0xFF) << 23) | ((b[1] & 0xFF) << 15)
+					| ((b[2] & 0xFF) << 7) | ((b[3] & 0xFF) >>> 1);
+			boolean isDocument = (b[3] & 1) == 0;
+
+			DocID docID = new DocID(collectionID, docNumber);
+
+			if (isDocument) {
+				return new XTCdeweyID(docID);
+			} else {
+				return new XTCdeweyID(docID, Arrays.copyOfRange(b, 4, b.length));
+			}
+		}
+
+		public XTCdeweyID decode(int collectionID, byte[] b, int offset,
+				int length) {
+
+			int docNumber = ((b[offset++] & 0xFF) << 23)
+					| ((b[offset++] & 0xFF) << 15)
+					| ((b[offset++] & 0xFF) << 7) | ((b[offset] & 0xFF) >>> 1);
+			boolean isDocument = (b[offset++] & 1) == 0;
+
+			DocID docID = new DocID(collectionID, docNumber);
+
+			if (isDocument) {
+				return new XTCdeweyID(docID);
+			} else {
+				return new XTCdeweyID(docID, b, offset, length - 4);
+			}
+		}
+
+		@Override
+		public String toString(byte[] value) {
+			if (value == null) {
+				return null;
+			}
+			return decode(0, value).toString();
+		}
+
+		@Override
+		public int compare(byte[] value1, byte[] value2) {
+			return Calc.compareU(value1, value2);
+		}
+
+		@Override
+		public int compareAsPrefix(byte[] v1, byte[] v2) {
+			// a null value is interpreted as EOF (= highest possible value)
+			if (v1 != null) {
+				if (v2 != null) {
+
+					int len1 = v1.length;
+					int len2 = v2.length;
+					int len = ((len1 <= len2) ? len1 : len2);
+					int pos = -1;
+					while (++pos < len) {
+						int b1 = v1[pos] & 0xFF;
+						int b2 = v2[pos] & 0xFF;
+						int diff = b1 - b2;
+						if (diff != 0) {
+							if (pos == 3 && diff == -1 && (b1 % 2 == 0)) {
+								// this case occurs when we compare the Document
+								// DeweyID with another DeweyID of the same
+								// document. therefore, the prefix property is fulfilled
+								return 0;
+							}
+							return b1 - b2;
+						}
+					}
+					return (len1 <= len2) ? 0 : 1;
+				} else {
+					// v2 is EOF and definitely greater than v1
+					return -1;
+				}
+			} else if (v2 != null) {
+				// v1 is EOF and definitely greater than v2
+				return 1;
+			} else {
+				// both values are EOF
 				return 0;
 			}
 		}
@@ -379,6 +504,7 @@ public class Field {
 		}
 
 		public XTCdeweyID decodeDeweyID(DocID docID, byte[] b) {
+			// TODO wrong end index? b.length - 4
 			return new XTCdeweyID(docID, Arrays.copyOfRange(b, 0, b.length - 3));
 		}
 
@@ -417,16 +543,18 @@ public class Field {
 	public static class FullDeweyIDPCRField extends Field {
 		public byte[] encode(XTCdeweyID deweyID, int PCR) {
 			byte[] tmp = deweyID.toBytes();
-			byte[] b = new byte[8 + tmp.length];
+			byte[] b = new byte[4 + DocID.getSize() + tmp.length];
 			deweyID.docID.toBytes(b, 0);
-			System.arraycopy(tmp, 0, b, 4, tmp.length);
-			Calc.fromInt(PCR, b, 4 + tmp.length);
+			System.arraycopy(tmp, 0, b, DocID.getSize(), tmp.length);
+			Calc.fromInt(PCR, b, DocID.getSize() + tmp.length);
 			return b;
 		}
 
 		public XTCdeweyID decodeDeweyID(byte[] b) {
 			DocID docID = DocID.fromBytes(b, 0);
-			return new XTCdeweyID(docID, Arrays.copyOfRange(b, 4, b.length - 3));
+			// TODO wrong end index? b.length - 4
+			return new XTCdeweyID(docID, Arrays.copyOfRange(b, DocID.getSize(),
+					b.length - 3));
 		}
 
 		public int decodePCR(byte[] b) {
@@ -448,14 +576,14 @@ public class Field {
 			if (value1 != null) {
 				if (value2 != null) {
 					// first compare docID
-					int diff = Calc.compareInt(value1, 0, value2, 0);
+					int diff = Calc.compareLong(value1, 0, value2, 0);
 					if (diff != 0) {
 						return diff;
 					}
 					// compare remaining deweyID
-					int len1 = value1.length - 8;
-					int len2 = value2.length - 8;
-					return Calc.compareU(value1, 4, len1, value2, 4, len2);
+					int len1 = value1.length - 12;
+					int len2 = value2.length - 12;
+					return Calc.compareU(value1, 8, len1, value2, 8, len2);
 					// no need to compare trailing PCR
 				} else {
 					return -1;
@@ -520,15 +648,17 @@ public class Field {
 	public static final class PCRFullDeweyIDField extends Field {
 		public byte[] encode(XTCdeweyID deweyID, int PCR) {
 			byte[] tmp = deweyID.toBytes();
-			byte[] b = new byte[8 + tmp.length];
+			byte[] b = new byte[4 + DocID.getSize() + tmp.length];
 			Calc.fromInt(PCR, b, 0);
 			deweyID.docID.toBytes(b, 4);
-			System.arraycopy(tmp, 0, b, 8, tmp.length - 8);
+			System.arraycopy(tmp, 0, b, 4 + DocID.getSize(), tmp.length - 4
+					- DocID.getSize());
 			return b;
 		}
 
 		public XTCdeweyID decodeDeweyID(byte[] b) {
 			DocID docID = DocID.fromBytes(b, 4);
+			// TODO wrong start index? 4 + DocID.getSize()
 			return new XTCdeweyID(docID, Arrays.copyOfRange(b, 4, b.length));
 		}
 
@@ -599,9 +729,9 @@ public class Field {
 
 	static {
 		mapping = new Field[] { NULL, UINTEGER, INTEGER, LONG, FLOAT, DOUBLE,
-				BIGINTEGER, BIGDECIMAL, STRING, QVOCID, BYTEARRAY, PAGEID, DEWEYID,
-				FULLDEWEYID, DEWEYIDPCR, FULLDEWEYIDPCR, PCRDEWEYID,
-				PCRFULLDEWEYID, EL_REC, PS_REC, };
+				BIGINTEGER, BIGDECIMAL, STRING, QVOCID, BYTEARRAY, PAGEID,
+				DEWEYID, FULLDEWEYID, DEWEYIDPCR, FULLDEWEYIDPCR, PCRDEWEYID,
+				PCRFULLDEWEYID, EL_REC, PS_REC, COLLECTIONDEWEYID };
 		for (int i = 0; i < mapping.length; i++) {
 			if (mapping[i].ID != i)
 				throw new RuntimeException("Field: " + mapping[i].getClass()

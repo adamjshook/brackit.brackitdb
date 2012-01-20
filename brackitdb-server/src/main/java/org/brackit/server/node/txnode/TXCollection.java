@@ -30,24 +30,10 @@ package org.brackit.server.node.txnode;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
-import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.metadata.BaseCollection;
-import org.brackit.server.node.DocID;
-import org.brackit.server.store.Field;
-import org.brackit.server.store.OpenMode;
-import org.brackit.server.store.SearchMode;
-import org.brackit.server.store.index.Index;
-import org.brackit.server.store.index.IndexAccessException;
-import org.brackit.server.store.index.IndexIterator;
 import org.brackit.server.tx.Tx;
-import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.node.SubtreePrinter;
-import org.brackit.xquery.node.parser.SubtreeParser;
-import org.brackit.xquery.node.stream.AtomStream;
-import org.brackit.xquery.node.stream.TransformerStream;
 import org.brackit.xquery.xdm.DocumentException;
-import org.brackit.xquery.xdm.Node;
 import org.brackit.xquery.xdm.OperationNotSupportedException;
 import org.brackit.xquery.xdm.Stream;
 
@@ -57,11 +43,8 @@ import org.brackit.xquery.xdm.Stream;
  */
 public abstract class TXCollection<E extends TXNode<E>> extends
 		BaseCollection<E> {
-	public static final QNm COLLECTION_FLAG_ATTRIBUTE = new QNm("collection");
 
 	protected final Tx tx;
-
-	protected E document;
 
 	protected Persistor persistor;
 
@@ -82,169 +65,23 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 		return tx;
 	}
 
-	public abstract E store(SubtreeParser parser) throws DocumentException;
-
-	public abstract void delete(DocID docID) throws DocumentException;
-
-	public abstract E getDocument(DocID decodeDocID) throws DocumentException;
-
-	public abstract Index getIndex();
-
 	@Override
 	public void serialize(OutputStream out) throws DocumentException {
-		if (document != null) {
-			new SubtreePrinter(new PrintStream(out)).print(document);
-		} else {
-			Stream<? extends E> docs = getDocuments();
-			E doc;
-			try {
-				while ((doc = docs.next()) != null) {
-					new SubtreePrinter(new PrintStream(out)).print(doc);
-				}
-			} finally {
-				docs.close();
+
+		Stream<? extends E> docs = getDocuments();
+		E doc;
+		try {
+			while ((doc = docs.next()) != null) {
+				new SubtreePrinter(new PrintStream(out)).print(doc);
 			}
+		} finally {
+			docs.close();
 		}
-	}
-
-	@Override
-	public Stream<? extends E> getDocuments() throws DocumentException {
-		if (document != null) {
-			return new AtomStream<E>(document);
-		}
-
-		return new TransformerStream<DocID, E>(
-				getDocumentReferenceIndexStream()) {
-			@Override
-			protected E transform(DocID next) throws DocumentException {
-				return getDocument(next);
-			}
-		};
-	}
-
-	public void setDocument(E document) throws DocumentException {
-		if (this.document != null) {
-			throw new DocumentException("Document node already set.");
-		}
-		this.document = document;
-	}
-
-	@Override
-	public E getDocument() throws DocumentException {
-		if (document == null) {
-			throw new DocumentException(
-					"Operation not allowed for collections.");
-		}
-
-		return document;
-	}
-
-	@Override
-	public E add(SubtreeParser parser) throws DocumentException {
-		if (document != null) {
-			throw new DocumentException(
-					"Adding documents to a single collection not allowed.");
-		}
-
-		E document = store(parser);
-		addDocument(document);
-		return document;
-	}
-
-	@Override
-	public void remove(long documentID) throws DocumentException {
-		if (document != null) {
-			throw new DocumentException(
-					"Removing documents from a single collection not allowed.");
-		}
-
-		DocID docID = new DocID((int) documentID);
-		deleteDocument(docID);
-		delete(docID);
 	}
 
 	@Override
 	public void calculateStatistics() throws DocumentException {
 		super.calculateStatistics();
-	}
-
-	@Override
-	public void delete() throws DocumentException {
-		super.delete();
-
-		if (document != null) {
-			delete(document.getDeweyID().getDocID());
-		} else {
-			Stream<DocID> documentPageIDs = getDocumentReferenceIndexStream();
-
-			try {
-				DocID docID;
-				while ((docID = documentPageIDs.next()) != null) {
-					delete(docID);
-				}
-			} finally {
-				documentPageIDs.close();
-			}
-
-			deleteDocumentReferenceIndex(new PageID(docID.value()));
-		}
-	}
-
-	private void deleteDocumentReferenceIndex(PageID rootPageID)
-			throws DocumentException {
-		try {
-			getIndex().dropIndex(tx, rootPageID);
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
-		}
-	}
-
-	protected PageID createDocumentReferenceIndex(Tx transaction,
-			int containerNo) throws DocumentException {
-		try {
-			return getIndex().createIndex(tx, containerNo, Field.PAGEID,
-					Field.NULL, true);
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
-		}
-	}
-
-	private void addDocument(E document) throws DocumentException {
-		try {
-			getIndex().insert(tx, new PageID(docID.value()),
-					document.getDeweyID().getDocID().getBytes(), new byte[0]);
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
-		}
-	}
-
-	private void deleteDocument(DocID docID) throws DocumentException {
-		try {
-			getIndex().delete(tx, new PageID(docID.value()), docID.getBytes(),
-					new byte[0]);
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
-		}
-	}
-
-	private Stream<DocID> getDocumentReferenceIndexStream()
-			throws DocumentException {
-		try {
-			IndexIterator iterator = getIndex().open(tx,
-					new PageID(docID.value()), SearchMode.FIRST, null, null,
-					OpenMode.READ);
-			return new DocRefIndexStream(iterator);
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
-		}
-	}
-
-	@Override
-	public Node<?> materialize() throws DocumentException {
-		Node<?> root = super.materialize();
-		root.setAttribute(COLLECTION_FLAG_ATTRIBUTE,
-				new Una(Boolean.toString(document == null)));
-		return root;
 	}
 
 	public Persistor getPersistor() {
@@ -267,6 +104,6 @@ public abstract class TXCollection<E extends TXNode<E>> extends
 
 	@Override
 	public String toString() {
-		return String.format("%s(%s)", docID, name);
+		return String.format("%s(%s)", collID, name);
 	}
 }

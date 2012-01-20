@@ -32,6 +32,7 @@ import org.brackit.server.node.bracket.BracketLocator;
 import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
+import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 import org.brackit.xquery.xdm.DocumentException;
 
 /**
@@ -42,6 +43,8 @@ public final class SubtreeStream extends StreamIterator {
 
 	private int subtreeRootLevel = -1;
 	private final boolean self;
+	
+	private NavigationStatus navStat = null;
 
 	public SubtreeStream(BracketLocator locator, BracketTree tree,
 			XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo,
@@ -91,22 +94,43 @@ public final class SubtreeStream extends StreamIterator {
 	@Override
 	protected void nextInternal() throws IndexOperationException,
 			IndexAccessException {
-
-		if (!page.moveNext()) {
+		
+		navStat = page.moveNextInDocument();
+		
+		if (navStat == NavigationStatus.NOT_EXISTENT) {
+			// reached end of document
+			page.cleanup();
+			page = null;
+		} else if (navStat == NavigationStatus.AFTER_LAST) {
 			// use BracketTree to load next page
-			page = tree.getNextPage(tx, locator.rootPageID, page, OPEN_MODE, true);
-			if (page != null && !page.moveFirst()) {
+			page = tree.getNextPage(tx, locator.rootPageID, page, OPEN_MODE, true);			
+			if (page != null && page.moveNextInDocument() != NavigationStatus.FOUND) {
 				page.cleanup();
 				page = null;
 			}
 		}
 
-		if (page != null && page.getLevel() <= subtreeRootLevel
-				&& !page.isAttribute()) {
+		if (page != null && page.getLevel() <= subtreeRootLevel && !page.isAttribute()) {
 			// reached end of subtree
 			page.cleanup();
 			page = null;
 		}
+
+//		if (!page.moveNext()) {
+//			// use BracketTree to load next page
+//			page = tree.getNextPage(tx, locator.rootPageID, page, OPEN_MODE, true);
+//			if (page != null && !page.moveFirst()) {
+//				page.cleanup();
+//				page = null;
+//			}
+//		}
+//
+//		if (page != null && page.getLevel() <= subtreeRootLevel
+//				&& !page.isAttribute()) {
+//			// reached end of subtree
+//			page.cleanup();
+//			page = null;
+//		}
 	}
 
 	@Override

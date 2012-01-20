@@ -34,6 +34,8 @@ import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.el.ElRecordAccess;
 import org.brackit.server.node.el.index.ElPlaceHolderHelper;
+import org.brackit.server.store.Field;
+import org.brackit.server.store.Field.CollectionDeweyIDField;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.page.LeafBPContext;
 import org.brackit.server.store.page.BasePage;
@@ -43,6 +45,7 @@ import org.brackit.server.store.page.bracket.navigation.NavigationProperties;
 import org.brackit.server.store.page.bracket.navigation.NavigationProperties.NavigationTarget;
 import org.brackit.server.store.page.bracket.navigation.NavigationResult;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
+import org.brackit.server.util.Calc;
 
 /**
  * Page class that is used for the leaf pages of the document index. DeweyIDs of
@@ -204,7 +207,7 @@ public final class BracketPage extends BasePage {
 	 */
 	public void clearData(boolean preserveContextData) {
 		// buffer context data
-		byte[] contextData = getContextData();
+		byte[] contextData = preserveContextData ? getContextData() : null;
 
 		// BasePage.clear()
 		clear();
@@ -256,15 +259,12 @@ public final class BracketPage extends BasePage {
 
 		int lowIDLength = page[LOW_KEY_LENGTH_FIELD_NO] & 255;
 
-		// load DocID
-		DocID docID = DocID.fromBytes(page, BASE_PAGE_NO_OFFSET);
+		// load CollectionID
+		int collectionID = Calc.toInt(page, BASE_PAGE_NO_OFFSET);
 
-		// load lowID from page
-		byte[] lowIDBytes = new byte[lowIDLength];
-		System.arraycopy(page, LOW_KEY_START_FIELD_NO, lowIDBytes, 0,
-				lowIDLength);
-
-		return new XTCdeweyID(docID, lowIDBytes);
+		// decode lowKey from page
+		return Field.COLLECTIONDEWEYID.decode(collectionID, page,
+				LOW_KEY_START_FIELD_NO, lowIDLength);
 	}
 
 	/**
@@ -311,11 +311,10 @@ public final class BracketPage extends BasePage {
 		}
 
 		// while current key has no data reference
-		keyOffset++;
-		while ((page[keyOffset] & 2) > 0) {
+		while ((page[keyOffset] & BracketKey.HAS_DATA_REF_MASK) == 0) {
 			keyOffset += BracketKey.PHYSICAL_LENGTH;
 		}
-		keyOffset += (BracketKey.PHYSICAL_LENGTH_DECREMENTED);
+		keyOffset += BracketKey.PHYSICAL_LENGTH;
 
 		return keyOffset;
 	}
@@ -392,7 +391,7 @@ public final class BracketPage extends BasePage {
 	 * @return value the value as byte array
 	 * @throws ExternalValueException
 	 */
-	public byte[] getValue(int keyOffset, ExternalValueLoader extValueLoader)
+	private byte[] getValue(int keyOffset, ExternalValueLoader extValueLoader)
 			throws ExternalValueException {
 
 		int valueOffset = getValueOffset(getNextValueRefOffset(keyOffset));
@@ -436,9 +435,8 @@ public final class BracketPage extends BasePage {
 
 			if (byte1 == 255 && byte2 == 255) {
 				// external value!
-				return new RecordInterpreter(
-						extValueLoader.loadExternalValue(PageID.fromBytes(page,
-								valueOffset)));
+				return new RecordInterpreter(extValueLoader
+						.loadExternalValue(PageID.fromBytes(page, valueOffset)));
 			} else {
 				valueLength = (byte1 << 8) | byte2;
 			}
@@ -711,18 +709,24 @@ public final class BracketPage extends BasePage {
 			if (currentKeyType != BracketKey.Type.ATTRIBUTE
 					|| !prop.ignoreAttributes) {
 
+				if (currentKeyType.isDocument) {
+					// document node
+					levelDiff -= currentDeweyID.getLevel();
+				} else {
+					// decrease level difference
+					levelDiff -= currentKey.roundBrackets;
+
+					// increment level difference
+					if (currentKeyType.opensNewSubtree) {
+						// increment level difference (-> opening bracket at the
+						// end
+						// of the bracket key)
+						levelDiff++;
+					}
+				}
+
 				// refresh DeweyID
 				currentDeweyID.update(currentKey, prop.ignoreAttributes);
-
-				// decrease level difference
-				levelDiff -= currentKey.roundBrackets;
-
-				// increment level difference
-				if (currentKeyType.opensNewSubtree) {
-					// increment level difference (-> opening bracket at the end
-					// of the bracket key)
-					levelDiff++;
-				}
 
 				if (currentKeyType != BracketKey.Type.OVERFLOW
 						|| considerOverflowNodes) {
@@ -1105,10 +1109,10 @@ public final class BracketPage extends BasePage {
 
 		byte[] value = getValueInternal(contextDataOffset);
 
-		// load DocID
-		DocID docID = DocID.fromBytes(page, BASE_PAGE_NO_OFFSET);
+		// load CollectionID
+		int collectionID = Calc.toInt(page, BASE_PAGE_NO_OFFSET);
 
-		return new XTCdeweyID(docID, value);
+		return Field.COLLECTIONDEWEYID.decode(collectionID, value);
 	}
 
 	@Override
@@ -1246,10 +1250,29 @@ public final class BracketPage extends BasePage {
 	 * @return the navigation result
 	 */
 	public NavigationResult navigateNext(int currentOffset,
-			DeweyIDBuffer currentDeweyID, BracketKey.Type currentKeyType) {
+			DeweyIDBuffer currentDeweyID, BracketKey.Type currentKeyType,
+			boolean documentScope) {
+		
+		navRes.reset();
 
 		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
-			return navigateFirstCF(currentDeweyID);
+			
+			if (getRecordCount() == 0) {
+				return navRes;
+			}
+			
+			BracketKey.Type lowKeyType = getLowKeyType();
+			if (documentScope && lowKeyType.isDocument) {
+				return navRes;
+			}
+
+			navRes.status = NavigationStatus.FOUND;
+			navRes.keyOffset = LOW_KEY_OFFSET;
+			navRes.keyType = lowKeyType;
+
+			currentDeweyID.setTo(getLowKey());
+			return navRes;
+			
 		} else {
 
 			int keyAreaEndOffset = getKeyAreaEndOffset();
@@ -1265,20 +1288,27 @@ public final class BracketPage extends BasePage {
 				currentOffset += BracketKey.PHYSICAL_LENGTH
 						+ currentKeyType.dataReferenceLength;
 			}
-
-			navRes.reset();
+			
 			int levelDiff = 0;
 			while (currentOffset < keyAreaEndOffset) {
 
-				currentKey.load(page, currentOffset);
-				currentKeyType = currentKey.type;
-
-				currentDeweyID.update(currentKey, false);
-
-				levelDiff -= currentKey.roundBrackets;
-				if (currentKeyType.opensNewSubtree) {
-					levelDiff++;
+				// load key, adjust levelDiff
+				if (!currentKey.load(page, currentOffset)) {
+					// document key
+					if (documentScope) {
+						// return NOT EXISTENT
+						return navRes;
+					}
+					levelDiff -= currentDeweyID.getLevel();
+				} else {
+					levelDiff -= currentKey.roundBrackets;
+					if (currentKeyType.opensNewSubtree) {
+						levelDiff++;
+					}
 				}
+
+				currentKeyType = currentKey.type;
+				currentDeweyID.update(currentKey, false);
 
 				if (currentKeyType != BracketKey.Type.OVERFLOW) {
 					navRes.status = NavigationStatus.FOUND;
@@ -1296,7 +1326,7 @@ public final class BracketPage extends BasePage {
 	}
 
 	/**
-	 * Navigates to the next non-attribute node in this page.
+	 * Navigates to the next non-attribute node in this document.
 	 * 
 	 * @param currentOffset
 	 *            the offset of the reference node
@@ -1307,7 +1337,7 @@ public final class BracketPage extends BasePage {
 	 *            optimization and may be null, if not known.
 	 * @return the navigation result
 	 */
-	public NavigationResult navigateNextNonAttr(int currentOffset,
+	public NavigationResult navigateNextNonAttrInDocument(int currentOffset,
 			DeweyIDBuffer currentDeweyID, BracketKey.Type currentKeyType) {
 
 		navRes.reset();
@@ -1359,11 +1389,15 @@ public final class BracketPage extends BasePage {
 		int levelDiff = 0;
 		while (currentOffset < keyAreaEndOffset) {
 
-			currentKey.load(page, currentOffset);
+			if (!currentKey.load(page, currentOffset)) {
+				// document key
+				navRes.status = NavigationStatus.NOT_EXISTENT;
+				return navRes;
+			}
 			currentKeyType = currentKey.type;
 
 			if (currentKeyType != BracketKey.Type.ATTRIBUTE) {
-				currentDeweyID.update(currentKey, true);
+				currentDeweyID.updateOptimized(currentKey);
 
 				levelDiff -= currentKey.roundBrackets;
 				if (currentKeyType.opensNewSubtree) {
@@ -1433,11 +1467,21 @@ public final class BracketPage extends BasePage {
 			return navRes;
 		}
 
+		// initialize buffer
+		currentDeweyID.setTo(getLowKey());
+
 		// determine navigation properties
 		NavigationProperties prop = NavigationProfiles
 				.getPreviousByKeyOffset(currentOffset);
 
-		navigateGeneric(currentDeweyID, BEFORE_LOW_KEY_OFFSET, prop, false);
+		navigateGeneric(currentDeweyID, LOW_KEY_OFFSET, prop, false);
+
+		if (navRes.status != NavigationStatus.FOUND) {
+			// previous key is the low key
+			navRes.status = NavigationStatus.FOUND;
+			navRes.keyOffset = LOW_KEY_OFFSET;
+			navRes.keyType = getLowKeyType();
+		}
 
 		return navRes;
 	}
@@ -1471,7 +1515,7 @@ public final class BracketPage extends BasePage {
 					+ getLowKeyType().dataReferenceLength;
 		} else {
 			if (currentKeyType == null) {
-				currentKeyType = Type.reverseMap[page[currentOffset + 1] & 3];
+				currentKeyType = Type.reverseMap[(page[currentOffset] & 0xFF) >>> 5];
 			}
 			currentOffset += BracketKey.PHYSICAL_LENGTH
 					+ currentKeyType.dataReferenceLength;
@@ -1487,12 +1531,21 @@ public final class BracketPage extends BasePage {
 		while (currentOffset < keyAreaEndOffset) {
 
 			// load next key from keyStorage
-			// load round brackets
-			currentKey.roundBrackets = page[currentOffset++] & 0xFF;
+
 			// load angle brackets and type
 			temp = page[currentOffset++] & 0xFF;
-			currentKey.angleBrackets = temp >>> 2;
-			currentKeyType = Type.reverseMap[temp & 3];
+			currentKeyType = Type.reverseMap[temp >>> 5];
+
+			if (currentKeyType.isDocument) {
+				// no next sibling
+				navRes.status = NavigationStatus.NOT_EXISTENT;
+				return navRes;
+			}
+
+			currentKey.angleBrackets = temp & BracketKey.ANGLE_BRACKETS_MASK;
+
+			// load round brackets
+			currentKey.roundBrackets = page[currentOffset++] & 0xFF;
 
 			if (currentKeyType != BracketKey.Type.ATTRIBUTE) {
 
@@ -1513,7 +1566,7 @@ public final class BracketPage extends BasePage {
 						firstUpdate = true;
 					}
 					currentKey.type = currentKeyType;
-					currentDeweyID.update(currentKey, true);
+					currentDeweyID.updateOptimized(currentKey);
 				}
 
 				if (currentKeyType == BracketKey.Type.OVERFLOW) {
@@ -1591,8 +1644,8 @@ public final class BracketPage extends BasePage {
 			DeweyIDBuffer currentDeweyID) {
 
 		NavigationResult parentOrSibling = navigateGeneric(currentDeweyID,
-				BEFORE_LOW_KEY_OFFSET,
-				NavigationProfiles.getParentOrSibling(currentOffset), false);
+				BEFORE_LOW_KEY_OFFSET, NavigationProfiles
+						.getParentOrSibling(currentOffset), false);
 
 		if (parentOrSibling.status == NavigationStatus.FOUND) {
 
@@ -1671,7 +1724,7 @@ public final class BracketPage extends BasePage {
 					+ getLowKeyType().dataReferenceLength;
 		} else {
 			if (currentKeyType == null) {
-				currentKeyType = Type.reverseMap[page[currentOffset + 1] & 3];
+				currentKeyType = Type.reverseMap[(page[currentOffset] & 0xFF) >>> 5];
 			}
 			currentOffset += BracketKey.PHYSICAL_LENGTH
 					+ currentKeyType.dataReferenceLength;
@@ -1687,17 +1740,16 @@ public final class BracketPage extends BasePage {
 		while (currentOffset < keyAreaEndOffset) {
 
 			// load type from keyStorage
-			temp = page[++currentOffset] & 0xFF;
-			currentKeyType = Type.reverseMap[temp & 3];
+			currentKeyType = Type.reverseMap[(page[currentOffset] & 0xFF) >>> 5];
 
 			if (currentKeyType == BracketKey.Type.ATTRIBUTE) {
 
-				currentOffset += BracketKey.TOTAL_LENGTH_DECREMENTED;
+				currentOffset += BracketKey.TOTAL_LENGTH;
 
 			} else if (currentKeyType.opensNewSubtree) {
 
 				// load brackets
-				currentKey.roundBrackets = page[--currentOffset] & 0xFF;
+				currentKey.roundBrackets = page[currentOffset + 1] & 0xFF;
 
 				// check closing brackets
 				if (currentKey.roundBrackets == 0) {
@@ -1708,7 +1760,7 @@ public final class BracketPage extends BasePage {
 					currentKey.idGaps = page[currentOffset + 2] & 0xFF;
 					currentKey.type = currentKeyType;
 
-					currentDeweyID.update(currentKey, true);
+					currentDeweyID.updateOptimized(currentKey);
 					navRes.status = NavigationStatus.FOUND;
 					navRes.keyOffset = currentOffset;
 					navRes.keyType = currentKeyType;
@@ -1719,9 +1771,15 @@ public final class BracketPage extends BasePage {
 				}
 				break;
 
+			} else if (currentKeyType.isDocument) {
+
+				// no child exists
+				navRes.status = NavigationStatus.NOT_EXISTENT;
+				break;
+
 			} else {
 				// overflow key
-				currentKey.roundBrackets = page[currentOffset - 1] & 0xFF;
+				currentKey.roundBrackets = page[++currentOffset] & 0xFF;
 
 				if (currentKey.roundBrackets > 0) {
 					// no child exists
@@ -1733,7 +1791,7 @@ public final class BracketPage extends BasePage {
 				currentKey.idGaps = page[++currentOffset] & 0xFF;
 				currentKey.type = currentKeyType;
 
-				currentDeweyID.update(currentKey, true);
+				currentDeweyID.updateOptimized(currentKey);
 				currentOffset++;
 			}
 		}
@@ -1918,7 +1976,10 @@ public final class BracketPage extends BasePage {
 	 */
 	public NavigationResult navigateLastCF(DeweyIDBuffer currentDeweyID) {
 
-		if (getRecordCount() == 1) {
+		if (getRecordCount() == 0) {
+			navRes.reset();
+			navRes.status = NavigationStatus.BEFORE_FIRST;
+		} else if (getRecordCount() == 1) {
 			navRes.reset();
 			navRes.status = NavigationStatus.FOUND;
 			navRes.keyOffset = LOW_KEY_OFFSET;
@@ -1972,8 +2033,7 @@ public final class BracketPage extends BasePage {
 			if (currentKey.type.hasDataReference) {
 
 				// check whether this record is the last one in this page
-				if (currentOffset + BracketKey.PHYSICAL_LENGTH
-						+ BracketKey.DATA_REF_LENGTH >= keyAreaEndOffset) {
+				if (currentOffset + BracketKey.TOTAL_LENGTH >= keyAreaEndOffset) {
 					break;
 				}
 
@@ -2007,24 +2067,52 @@ public final class BracketPage extends BasePage {
 	 */
 	public NavigationResult navigateToInsertPos(XTCdeweyID key,
 			DeweyIDBuffer currentDeweyID) {
-		
-		navRes.reset();
-		
+
+		boolean beforeFirst = false;
 		if (getRecordCount() == 0) {
-			navRes.status = NavigationStatus.FOUND;
-			navRes.keyOffset = BEFORE_LOW_KEY_OFFSET;
+			beforeFirst = true;
+		} else {
+
+			currentDeweyID.setTo(getLowKey());
+			currentDeweyID.enableCompareMode(key);
+
+			if (currentDeweyID.compare() == 0) {
+				// key is low key
+				// duplicate detected
+				currentDeweyID.disableCompareMode();
+				navRes.reset();
+				return navRes;
+			} else if (currentDeweyID.compare() > 0) {
+				beforeFirst = true;
+			} else {
+
+				// look for correct insertion position
+				navigateGeneric(currentDeweyID, LOW_KEY_OFFSET,
+						NavigationProfiles.TO_INSERT_POS, true);
+
+				if (navRes.status != NavigationStatus.FOUND) {
+					// new record has to be inserted after the lowKey
+					navRes.status = NavigationStatus.FOUND;
+					navRes.keyOffset = LOW_KEY_OFFSET;
+					navRes.keyType = getLowKeyType();
+				} else {
+					// insertion position found
+
+					if (currentDeweyID.compare() == 0) {
+						// duplicate detected
+						currentDeweyID.disableCompareMode();
+						navRes.reset();
+						return navRes;
+					}
+				}
+			}
+
+			currentDeweyID.disableCompareMode();
 		}
-		
-		currentDeweyID.setTo(getLowKey());
-		currentDeweyID.enableCompareMode(key);
-		
-		navigateGeneric(currentDeweyID, BEFORE_LOW_KEY_OFFSET,
-				NavigationProfiles.TO_INSERT_POS, true);
-		
-		currentDeweyID.disableCompareMode();
-		
-		if (navRes.status != NavigationStatus.FOUND) {
-			// new record has to be inserted before the lowkey
+
+		if (beforeFirst) {
+			// key has to be inserted before the low key
+			navRes.reset();
 			navRes.status = NavigationStatus.FOUND;
 			navRes.keyOffset = BEFORE_LOW_KEY_OFFSET;
 		}
@@ -2049,7 +2137,7 @@ public final class BracketPage extends BasePage {
 		// determine currentKeyType & set currentOffset to the value reference
 		BracketKey.Type currentKeyType = null;
 		if (currentOffset != BEFORE_LOW_KEY_OFFSET) {
-			
+
 			if (currentOffset == LOW_KEY_OFFSET) {
 				currentKeyType = getLowKeyType();
 				currentOffset = getKeyAreaStartOffset();
@@ -2061,7 +2149,8 @@ public final class BracketPage extends BasePage {
 
 		// check validity of key type
 		if (currentKeyType == null || currentKeyType == BracketKey.Type.NODATA
-				|| currentKeyType == BracketKey.Type.OVERFLOW) {
+				|| currentKeyType == BracketKey.Type.OVERFLOW
+				|| currentKeyType == BracketKey.Type.DOCUMENT) {
 			throw new RuntimeException(
 					"Update not possible at the given offset!");
 		}
@@ -2101,7 +2190,8 @@ public final class BracketPage extends BasePage {
 			}
 
 			// check whether a defragmentation is needed
-			if (valueLengthField.length + newValue.length > getFreeSpaceOffset() - getKeyAreaEndOffset()) {
+			if (valueLengthField.length + newValue.length > getFreeSpaceOffset()
+					- getKeyAreaEndOffset()) {
 				// defragmentation
 				defragment(currentOffset);
 			}
@@ -2129,7 +2219,7 @@ public final class BracketPage extends BasePage {
 	public boolean isLast(int currentOffset) {
 		return (currentOffset == BEFORE_LOW_KEY_OFFSET && getRecordCount() == 0
 				|| currentOffset == LOW_KEY_OFFSET && getRecordCount() == 1 || currentOffset
-				+ BracketKey.TOTAL_LENGTH == getKeyAreaEndOffset());
+				+ BracketKey.TOTAL_LENGTH >= getKeyAreaEndOffset());
 	}
 
 	/**
@@ -2154,11 +2244,11 @@ public final class BracketPage extends BasePage {
 		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
 			// either the first node is an attribute or there is no next
 			// attribute
-			
+
 			if (getRecordCount() == 0) {
 				return navRes;
 			}
-			
+
 			if (getLowKeyType() == BracketKey.Type.ATTRIBUTE) {
 				currentDeweyID.setTo(getLowKey());
 				navRes.status = NavigationStatus.FOUND;
@@ -2184,17 +2274,20 @@ public final class BracketPage extends BasePage {
 					+ currentKeyType.dataReferenceLength;
 		}
 
+		// if there is still a BracketKey left
 		if (currentOffset < keyAreaEndOffset) {
 
-			currentKey.load(page, currentOffset);
-			currentKeyType = currentKey.type;
-
-			if (currentKeyType == BracketKey.Type.ATTRIBUTE) {
-				currentDeweyID.update(currentKey, false);
-				navRes.status = NavigationStatus.FOUND;
-				navRes.keyOffset = currentOffset;
-				navRes.keyType = currentKeyType;
-				navRes.levelDiff = 0;
+			// if the loaded key is not a document key
+			if (currentKey.load(page, currentOffset)) {
+				currentKeyType = currentKey.type;
+	
+				if (currentKeyType == BracketKey.Type.ATTRIBUTE) {
+					currentDeweyID.update(currentKey, false);
+					navRes.status = NavigationStatus.FOUND;
+					navRes.keyOffset = currentOffset;
+					navRes.keyType = currentKeyType;
+					navRes.levelDiff = 0;
+				}
 			}
 		} else {
 			navRes.status = NavigationStatus.AFTER_LAST;
@@ -2316,7 +2409,7 @@ public final class BracketPage extends BasePage {
 			return new BracketNodeSequence();
 		}
 
-		byte[] lowIDBytes = startDeweyID.toBytes();
+		byte[] lowIDBytes = Field.COLLECTIONDEWEYID.encode(startDeweyID);
 		int lowIDLength = lowIDBytes.length;
 
 		if (lowIDLength > 255) {
@@ -2445,7 +2538,8 @@ public final class BracketPage extends BasePage {
 			}
 		}
 
-		return new BracketNodeSequence(result, numberDataRecords);
+		return new BracketNodeSequence(getBasePageID().value(), result,
+				numberDataRecords);
 	}
 
 	/**
@@ -2495,9 +2589,9 @@ public final class BracketPage extends BasePage {
 		boolean checkRightNeighbor = false;
 
 		// check whether left border is (possibly) included in this page
-		int compareLeftToLowKey = leftBorderDeweyID.compareDivisions(lowKey);
+		int compareLeftToLowKey = leftBorderDeweyID.compareReduced(lowKey);
 		boolean leftIncluded = (compareLeftToLowKey >= 0);
-		int compareRightToLowKey = rightBorderDeweyID.compareDivisions(lowKey);
+		int compareRightToLowKey = rightBorderDeweyID.compareReduced(lowKey);
 		boolean rightIncluded = (compareRightToLowKey >= 0);
 
 		// both the left and the right border are located in one of the previous
@@ -2617,7 +2711,7 @@ public final class BracketPage extends BasePage {
 				numberOfNodes++;
 				finalOverflowKeys = 0;
 
-				if (currentType != BracketKey.Type.NODATA) {
+				if (currentType.hasDataReference) {
 					numberOfDataRecords++;
 					dataRecordSize += getValueLength(
 							getValueOffset(currentOffset), true);
@@ -2638,8 +2732,8 @@ public final class BracketPage extends BasePage {
 			}
 		} else if (!rightBorderFound) {
 			// right border DeweyID does not exist!
-			throw new BracketPageException(
-					String.format("RightBorderDeweyID %s does not exist!",
+			throw new BracketPageException(String
+					.format("RightBorderDeweyID %s does not exist!",
 							rightBorderDeweyID));
 		}
 
@@ -2707,8 +2801,8 @@ public final class BracketPage extends BasePage {
 			loadInternalValue(currentValue, getValueOffset(currentOffset));
 			dataRecordSize += currentValue.totalValueLength;
 			if (currentValue.externalized) {
-				delPrepLis.externalNode(startDeleteDeweyID,
-						PageID.fromBytes(currentValue.value), levelDiff);
+				delPrepLis.externalNode(startDeleteDeweyID, PageID
+						.fromBytes(currentValue.value), levelDiff);
 			} else {
 				delPrepLis.node(startDeleteDeweyID, currentValue.value,
 						levelDiff);
@@ -2748,15 +2842,15 @@ public final class BracketPage extends BasePage {
 				numberOfNodes++;
 				finalOverflowKeys = 0;
 
-				if (currentType != BracketKey.Type.NODATA) {
+				if (currentType.hasDataReference) {
 					numberOfDataRecords++;
 					loadInternalValue(currentValue,
 							getValueOffset(currentOffset));
 					dataRecordSize += currentValue.totalValueLength;
 					if (currentValue.externalized) {
 						delPrepLis
-								.externalNode(tempDeweyID.getDeweyID(),
-										PageID.fromBytes(currentValue.value),
+								.externalNode(tempDeweyID.getDeweyID(), PageID
+										.fromBytes(currentValue.value),
 										levelDiff);
 					} else {
 						delPrepLis.node(tempDeweyID.getDeweyID(),
@@ -2845,8 +2939,8 @@ public final class BracketPage extends BasePage {
 			loadInternalValue(currentValue, getValueOffset(currentOffset));
 			dataRecordSize += currentValue.totalValueLength;
 			if (currentValue.externalized) {
-				delPrepLis.externalNode(startDeleteDeweyID,
-						PageID.fromBytes(currentValue.value), 0);
+				delPrepLis.externalNode(startDeleteDeweyID, PageID
+						.fromBytes(currentValue.value), 0);
 			} else {
 				delPrepLis.node(startDeleteDeweyID, currentValue.value, 0);
 			}
@@ -2873,8 +2967,8 @@ public final class BracketPage extends BasePage {
 				loadInternalValue(currentValue, getValueOffset(currentOffset));
 				dataRecordSize += currentValue.totalValueLength;
 				if (currentValue.externalized) {
-					delPrepLis.externalNode(startDeleteDeweyID,
-							PageID.fromBytes(currentValue.value), levelDiff);
+					delPrepLis.externalNode(startDeleteDeweyID, PageID
+							.fromBytes(currentValue.value), levelDiff);
 				} else {
 					delPrepLis.node(startDeleteDeweyID, currentValue.value,
 							levelDiff);
@@ -2916,15 +3010,15 @@ public final class BracketPage extends BasePage {
 					numberOfNodes++;
 					finalOverflowKeys = 0;
 
-					if (currentType != BracketKey.Type.NODATA) {
+					if (currentType.hasDataReference) {
 						numberOfDataRecords++;
 						loadInternalValue(currentValue,
 								getValueOffset(currentOffset));
 						dataRecordSize += currentValue.totalValueLength;
 						if (currentValue.externalized) {
 							delPrepLis.externalNode(
-									currentDeweyID.getDeweyID(),
-									PageID.fromBytes(currentValue.value),
+									currentDeweyID.getDeweyID(), PageID
+											.fromBytes(currentValue.value),
 									levelDiff);
 						} else {
 							delPrepLis.node(currentDeweyID.getDeweyID(),
@@ -3073,11 +3167,12 @@ public final class BracketPage extends BasePage {
 				return;
 			}
 
-			byte[] newLowID = delPrep.endDeleteDeweyID.toBytes();
+			byte[] newLowID = Field.COLLECTIONDEWEYID
+					.encode(delPrep.endDeleteDeweyID);
 			int releasedSpace = (page[LOW_KEY_LENGTH_FIELD_NO] & 255) // old
-																		// lowID
+					// lowID
 					+ (delPrep.endDeleteOffset + BracketKey.PHYSICAL_LENGTH - getKeyAreaStartOffset()) // deleted
-																										// keys
+					// keys
 					+ delPrep.dataRecordSize // deleted records
 					- newLowID.length; // new lowID
 
@@ -3124,9 +3219,9 @@ public final class BracketPage extends BasePage {
 				newKeys = BracketKey.generateBracketKeys(
 						delPrep.previousDeweyID, delPrep.endDeleteDeweyID);
 				// update key type
-				BracketKey.updateType(
-						BracketKey.loadType(page, delPrep.endDeleteOffset),
-						newKeys, newKeys.length - BracketKey.PHYSICAL_LENGTH);
+				BracketKey.updateType(BracketKey.loadType(page,
+						delPrep.endDeleteOffset), newKeys, newKeys.length
+						- BracketKey.PHYSICAL_LENGTH);
 
 				releasedKeySpace += BracketKey.PHYSICAL_LENGTH /* old key */
 						- newKeys.length /* new key(s) */;
@@ -3182,8 +3277,8 @@ public final class BracketPage extends BasePage {
 							delPrep.previousOffset);
 				}
 				// write value
-				writeValueReference(startDeleteOffset,
-						storeValue(placeholderLength, placeholder));
+				writeValueReference(startDeleteOffset, storeValue(
+						placeholderLength, placeholder));
 				startDeleteOffset += BracketKey.DATA_REF_LENGTH;
 			}
 
@@ -3200,7 +3295,9 @@ public final class BracketPage extends BasePage {
 						keyBuffer.length);
 
 				// write new keys
-				System.arraycopy(newKeys, 0, page, newEndOffset, newKeys.length);
+				System
+						.arraycopy(newKeys, 0, page, newEndOffset,
+								newKeys.length);
 				newEndOffset += newKeys.length;
 
 				// shift remaining keys
@@ -3336,7 +3433,7 @@ public final class BracketPage extends BasePage {
 			currentOffset += BracketKey.PHYSICAL_LENGTH;
 			if (currentType != BracketKey.Type.OVERFLOW) {
 				numberOfNodes++;
-				if (currentType != BracketKey.Type.NODATA) {
+				if (currentType.hasDataReference) {
 					dataSize += BracketKey.DATA_REF_LENGTH
 							+ getValueLength(getValueOffset(currentOffset),
 									true);
@@ -3534,7 +3631,7 @@ public final class BracketPage extends BasePage {
 		// reservedSpace for the highKey
 		int reservedSpace = 0;
 		if (afterKeys == null) {
-			reservedSpace = lastNodeDeweyID.toBytes().length
+			reservedSpace = Field.COLLECTIONDEWEYID.encode(lastNodeDeweyID).length
 					* ((getContextDataOffset() == 0) ? 2 : 1);
 		}
 		// allocate required space
@@ -3571,10 +3668,13 @@ public final class BracketPage extends BasePage {
 		int pageOffset = 0;
 		int returnOffset = 0;
 		if (insertAtBeginning) {
-			BracketKey.Type newLowIDType = (removeLastDataRecord && lastNodeOffset == BracketNodeSequence.LOW_KEY_OFFSET) ? BracketKey.Type.NODATA
+			BracketKey.Type newLowIDType = (removeLastDataRecord && lastNodeOffset == BracketNodeSequence.LOW_KEY_OFFSET) ? (lastNodeDeweyID
+					.isDocument() ? BracketKey.Type.DOCUMENT
+					: BracketKey.Type.NODATA)
 					: dataLowIDType;
 			// write lowID
-			initializeLowKey(newLowIDType, dataLowID.toBytes(), dataLowID);
+			initializeLowKey(newLowIDType, Field.COLLECTIONDEWEYID
+					.encode(dataLowID), dataLowID);
 			pageOffset = getKeyAreaStartOffset();
 			returnOffset = LOW_KEY_OFFSET;
 			addRecord(); /* LowID added */
@@ -3593,7 +3693,9 @@ public final class BracketPage extends BasePage {
 			}
 
 			// write beforeKeys
-			System.arraycopy(beforeKeys, 0, page, pageOffset, beforeKeys.length);
+			System
+					.arraycopy(beforeKeys, 0, page, pageOffset,
+							beforeKeys.length);
 			pageOffset += beforeKeys.length;
 
 			returnOffset = pageOffset - BracketKey.PHYSICAL_LENGTH;
@@ -3615,8 +3717,8 @@ public final class BracketPage extends BasePage {
 				dataOffset = data.length;
 			} else {
 				int valueLength = getValueLength(dataOffset, true, data);
-				writeValueReference(pageOffset,
-						copyValue(data, dataOffset, valueLength));
+				writeValueReference(pageOffset, copyValue(data, dataOffset,
+						valueLength));
 				pageOffset += BracketKey.DATA_REF_LENGTH;
 				dataOffset += valueLength;
 			}
@@ -3633,7 +3735,7 @@ public final class BracketPage extends BasePage {
 			dataOffset += BracketKey.PHYSICAL_LENGTH;
 			if (keyType != BracketKey.Type.OVERFLOW) {
 				addRecord();
-				if (keyType != BracketKey.Type.NODATA) {
+				if (keyType.hasDataReference) {
 					// write data record
 					if (removeLastDataRecord && lastNodeOffset <= dataOffset) {
 						// do not copy record; update last written key to NODATA
@@ -3642,8 +3744,8 @@ public final class BracketPage extends BasePage {
 						dataOffset = data.length;
 					} else {
 						int valueLength = getValueLength(dataOffset, true, data);
-						writeValueReference(pageOffset,
-								copyValue(data, dataOffset, valueLength));
+						writeValueReference(pageOffset, copyValue(data,
+								dataOffset, valueLength));
 						pageOffset += BracketKey.DATA_REF_LENGTH;
 						dataOffset += valueLength;
 					}
@@ -3665,6 +3767,8 @@ public final class BracketPage extends BasePage {
 
 		// adjust key area end offset
 		setKeyAreaEndOffset(pageOffset);
+
+		//checkPageIntegrity();
 
 		currentDeweyID.setTo(lastNodeDeweyID);
 		return returnOffset;

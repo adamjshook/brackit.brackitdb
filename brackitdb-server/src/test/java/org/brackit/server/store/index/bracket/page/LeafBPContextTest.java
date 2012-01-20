@@ -77,7 +77,7 @@ public class LeafBPContextTest {
 		
 		tx = txMgr.begin(IsolationLevel.SERIALIZABLE, null, false);
 		
-		docID = new DocID(99);
+		docID = new DocID(99, XXX);
 		
 		// create two sample leafs
 		leaf1 = new LeafBPContext(bufferManager, tx, new BracketPage(buffer, buffer.allocatePage(tx, new PageID(1), true, -1)));

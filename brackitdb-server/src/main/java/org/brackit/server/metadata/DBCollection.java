@@ -43,7 +43,7 @@ import org.brackit.xquery.xdm.DocumentException;
  */
 public interface DBCollection<E extends TXNode<E>> extends Materializable,
 		DBItem<DBCollection<E>>, Collection<E>, TXObject<DBCollection<E>> {
-	public DocID getID();
+	public int getID();
 
 	public DictionaryMgr getDictionary();
 

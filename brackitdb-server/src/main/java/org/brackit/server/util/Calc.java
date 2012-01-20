@@ -524,6 +524,26 @@ public final class Calc {
 			return 0;
 		}
 	}
+	
+	public static int compareLong(byte[] v1, int off1, byte[] v2, int off2) {
+		// a null value is interpreted as EOF (= highest possible value)
+		if (v1 != null) {
+			if (v2 != null) {
+				long i1 = toLong(v1, off1);
+				long i2 = toLong(v2, off2);
+				return (i1 < i2) ? -1 : (i1 == i2) ? 0 : 1;
+			} else {
+				// v2 is EOF and definitely greater than v1
+				return -1;
+			}
+		} else if (v2 != null) {
+			// v1 is EOF and definitely greater than v2
+			return 1;
+		} else {
+			// both values are EOF
+			return 0;
+		}
+	}
 
 	public static int compareDouble(byte[] v1, byte[] v2) {
 		// a null value is interpreted as EOF (= highest possible value)
