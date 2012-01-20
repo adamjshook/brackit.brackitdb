@@ -1416,8 +1416,7 @@ public class XTCdeweyID implements java.io.Serializable,
 	}
 
 	/**
-	 * Checks whether this DeweyID is a prefix of the other. The DocID is not
-	 * considered here.
+	 * Checks whether this DeweyID is a prefix of the other.
 	 * 
 	 * @param other
 	 *            the other DeweyID
@@ -1429,6 +1428,11 @@ public class XTCdeweyID implements java.io.Serializable,
 			return false;
 		}
 
+		// check DocID
+		if (this.docID.compareTo(other.docID) != 0) {
+			return false;
+		}
+		
 		for (int i = 0; i < this.divisionValues.length; i++) {
 			if (this.divisionValues[i] != other.divisionValues[i]) {
 				return false;
@@ -1521,6 +1525,14 @@ public class XTCdeweyID implements java.io.Serializable,
 	 *         DeweyID
 	 */
 	public boolean isPrefixOrGreater(XTCdeweyID other) {
+		
+		// check DocID
+		int diff = this.docID.compareTo(other.docID);
+		if (diff < 0) {
+			return false;
+		} else if (diff > 0) {
+			return true;
+		}
 
 		int upperBound = (this.divisionValues.length <= other.divisionValues.length) ? this.divisionValues.length
 				: other.divisionValues.length;
@@ -1544,6 +1556,14 @@ public class XTCdeweyID implements java.io.Serializable,
 	 *         greater than the other DeweyID
 	 */
 	public boolean isPrefixOrGreater(int extraDivision, XTCdeweyID other) {
+		
+		// check DocID
+		int diff = this.docID.compareTo(other.docID);
+		if (diff < 0) {
+			return false;
+		} else if (diff > 0) {
+			return true;
+		}
 
 		boolean isShorter = (this.divisionValues.length < other.divisionValues.length);
 		int upperBound = (isShorter ? this.divisionValues.length
