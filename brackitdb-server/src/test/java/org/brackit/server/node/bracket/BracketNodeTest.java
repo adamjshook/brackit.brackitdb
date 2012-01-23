@@ -35,15 +35,12 @@ import java.io.IOException;
 import java.io.PrintStream;
 
 import org.brackit.server.ServerException;
-import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.node.txnode.TXCollection;
 import org.brackit.server.node.txnode.TXNodeTest;
 import org.brackit.server.node.util.NavigationStatistics;
 import org.brackit.server.node.util.Traverser;
-import org.brackit.server.store.index.bracket.BracketTree;
-import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.tx.IsolationLevel;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.xdm.DocumentException;
@@ -76,10 +73,10 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		BracketNode root = coll.getDocument().getNode(
 				XTCdeweyID.newRootID(locator.docID));
 
-		// FileOutputStream outputFile = new FileOutputStream("leafs.txt");
-		// PrintStream out = new PrintStream(outputFile, false, "UTF-8");
-		// coll.store.index.dump(tx, locator.rootPageID, out);
-		// outputFile.close();
+		FileOutputStream outputFile = new FileOutputStream("leafs.txt");
+		PrintStream out = new PrintStream(outputFile, false, "UTF-8");
+		coll.store.index.dump(tx, locator.rootPageID, out);
+		outputFile.close();
 	}
 
 	@Ignore
@@ -93,10 +90,10 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 			coll.add(new DocumentParser(smallDocument));
 		}
 
-//		FileOutputStream outputFile = new FileOutputStream("leafs.txt");
-//		PrintStream out = new PrintStream(outputFile, false, "UTF-8");
-//		coll.store.index.dump(tx, new PageID(coll.getID()), out);
-//		outputFile.close();
+		// FileOutputStream outputFile = new FileOutputStream("leafs.txt");
+		// PrintStream out = new PrintStream(outputFile, false, "UTF-8");
+		// coll.store.index.dump(tx, new PageID(coll.getID()), out);
+		// outputFile.close();
 	}
 
 	@Ignore
@@ -173,148 +170,31 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 	@Ignore
 	@Test
 	public void traverseBigDocumentInPreorder() throws Exception {
-
-		long start = System.currentTimeMillis();
-		BracketCollection coll = null;
-		BracketNode document = null;
-
-		if (COLLECTION_CHECK) {
-
-			// insert one small document before and after the big document
-			coll = (BracketCollection) createDocument(new DocumentParser(
-					smallDocument));
-			document = coll.add(new DocumentParser(bigDocument));
-			coll.add(new DocumentParser(smallDocument));
-
-		} else {
-
-			coll = (BracketCollection) createDocument(new DocumentParser(
-					bigDocument));
-			document = coll.getDocument();
-		}
-
-		BracketLocator locator = document.locator;
-		long end = System.currentTimeMillis();
-		System.out.println("Document created in: " + (end - start) / 1000f);
-
-		BracketNode root = document
-				.getNode(XTCdeweyID.newRootID(locator.docID));
-		Node domRoot = null;
-
-		domRoot = createDomTree(new InputSource(new FileReader(bigDocument)));
-		System.out.println("DOM-Tree created!");
-
-		start = System.currentTimeMillis();
-		checkSubtreePreOrderReduced(root, domRoot); // check document index
-		end = System.currentTimeMillis();
-		System.out.println("Preorder Traversal: " + (end - start) / 1000f);
-
-		if (BracketTree.COLLECT_STATS) {
-			System.out
-					.println("\nLeafScannerStats for NextAttribute:\n\n"
-							+ locator.collection.store.index
-									.printLeafScannerStats(NavigationMode.NEXT_ATTRIBUTE));
-			System.out.println("\nLeafScannerStats for FirstChild:\n\n"
-					+ locator.collection.store.index
-							.printLeafScannerStats(NavigationMode.FIRST_CHILD));
-			System.out
-					.println("\nLeafScannerStats for NextSibling:\n\n"
-							+ locator.collection.store.index
-									.printLeafScannerStats(NavigationMode.NEXT_SIBLING));
-		}
+		verifyAgainstDOM(CheckType.PREORDER);
 	}
 
 	@Ignore
 	@Test
 	public void traverseBigDocumentViaChildStream() throws Exception {
+		verifyAgainstDOM(CheckType.CHILDSTREAM);
+	}
 
-		long start = System.currentTimeMillis();
-		BracketCollection coll = (BracketCollection) createDocument(new DocumentParser(
-				bigDocument));
-		BracketLocator locator = coll.getDocument().locator;
-		long end = System.currentTimeMillis();
-		System.out.println("Document created in: " + (end - start) / 1000f);
+	@Ignore
+	@Test
+	public void scanSubtree() throws Exception {
+		verifyAgainstDOM(CheckType.SUBTREE);
+	}
 
-		BracketNode root = coll.getDocument().getNode(
-				XTCdeweyID.newRootID(locator.docID));
-		Node domRoot = null;
-
-		domRoot = createDomTree(new InputSource(new FileReader(bigDocument)));
-		System.out.println("DOM-Tree created!");
-
-		start = System.currentTimeMillis();
-		checkSubtreeViaChildStream(root, domRoot); // check document index
-		end = System.currentTimeMillis();
-		System.out.println("Preorder Traversal: " + (end - start) / 1000f);
-
-		if (BracketTree.COLLECT_STATS) {
-			System.out
-					.println("\nLeafScannerStats for NextAttribute:\n\n"
-							+ locator.collection.store.index
-									.printLeafScannerStats(NavigationMode.NEXT_ATTRIBUTE));
-			System.out.println("\nLeafScannerStats for FirstChild:\n\n"
-					+ locator.collection.store.index
-							.printLeafScannerStats(NavigationMode.FIRST_CHILD));
-			System.out
-					.println("\nLeafScannerStats for NextSibling:\n\n"
-							+ locator.collection.store.index
-									.printLeafScannerStats(NavigationMode.NEXT_SIBLING));
-		}
+	@Ignore
+	@Test
+	public void scanSubtreeSkipAttributes() throws Exception {
+		verifyAgainstDOM(CheckType.SUBTREE_NOATTR);
 	}
 
 	@Ignore
 	@Test
 	public void traverseBigDocumentInPostorder() throws Exception {
-
-		long start = System.currentTimeMillis();
-		BracketCollection coll = null;
-		BracketNode document = null;
-
-		if (COLLECTION_CHECK) {
-
-			// insert one small document before and after the big document
-			coll = (BracketCollection) createDocument(new DocumentParser(
-					smallDocument));
-			document = coll.add(new DocumentParser(bigDocument));
-			coll.add(new DocumentParser(smallDocument));
-
-		} else {
-
-			coll = (BracketCollection) createDocument(new DocumentParser(
-					bigDocument));
-			document = coll.getDocument();
-		}
-
-		BracketLocator locator = document.locator;
-		long end = System.currentTimeMillis();
-		System.out.println("Document created in: " + (end - start) / 1000f);
-
-		BracketNode root = document
-				.getNode(XTCdeweyID.newRootID(locator.docID));
-		Node domRoot = null;
-
-		domRoot = createDomTree(new InputSource(new FileReader(bigDocument)));
-		System.out.println("DOM-Tree created!");
-
-		start = System.currentTimeMillis();
-		checkSubtreePostOrderReduced(root, domRoot); // check document
-		// index
-		end = System.currentTimeMillis();
-		System.out.println("Postorder Traversal: " + (end - start) / 1000f);
-
-		if (BracketTree.COLLECT_STATS) {
-			System.out
-					.println("\nLeafScannerStats for NextAttribute:\n\n"
-							+ locator.collection.store.index
-									.printLeafScannerStats(NavigationMode.NEXT_ATTRIBUTE));
-			System.out.println("\nLeafScannerStats for LastChild:\n\n"
-					+ locator.collection.store.index
-							.printLeafScannerStats(NavigationMode.LAST_CHILD));
-			System.out
-					.println("\nLeafScannerStats for PreviousSibling:\n\n"
-							+ locator.collection.store.index
-									.printLeafScannerStats(NavigationMode.PREVIOUS_SIBLING));
-		}
+		verifyAgainstDOM(CheckType.POSTORDER);
 	}
 
 	@Override
@@ -374,5 +254,90 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 			traverseViaChildStreamAtomic(currentChild);
 		}
 		children.close();
+	}
+
+	private enum CheckType {
+		PREORDER {
+			@Override
+			public void doCheck(BracketNode root, Node domRoot,
+					BracketNodeTest testInstance) throws Exception {
+				testInstance.checkSubtreePreOrderReduced(root, domRoot);
+			}
+		},
+		POSTORDER {
+			@Override
+			public void doCheck(BracketNode root, Node domRoot,
+					BracketNodeTest testInstance) throws Exception {
+				testInstance.checkSubtreePostOrderReduced(root, domRoot);
+			}
+		},
+		CHILDSTREAM {
+			@Override
+			public void doCheck(BracketNode root, Node domRoot,
+					BracketNodeTest testInstance) throws Exception {
+				testInstance.checkSubtreeViaChildStream(root, domRoot);
+			}
+		},
+		SUBTREE {
+			@Override
+			public void doCheck(BracketNode root, Node domRoot,
+					BracketNodeTest testInstance) throws Exception {
+				Stream<? extends BracketNode> nodes = root.getSubtree();
+				BracketNode first = nodes.next();
+				testInstance.checkSubtree(first, nodes, domRoot, false);
+				nodes.close();
+			}
+		},
+		SUBTREE_NOATTR {
+			@Override
+			public void doCheck(BracketNode root, Node domRoot,
+					BracketNodeTest testInstance) throws Exception {
+				Stream<? extends BracketNode> nodes = root.getSubtree();
+				BracketNode first = nodes.next();
+				testInstance.checkSubtree(first, nodes, domRoot, true);
+				nodes.close();
+			}
+		};
+
+		public abstract void doCheck(BracketNode root, Node domRoot,
+				BracketNodeTest testInstance) throws Exception;
+	}
+
+	private void verifyAgainstDOM(CheckType type) throws Exception {
+
+		long start = System.currentTimeMillis();
+		BracketCollection coll = null;
+		BracketNode document = null;
+
+		if (COLLECTION_CHECK) {
+
+			// insert one small document before and after the big document
+			coll = (BracketCollection) createDocument(new DocumentParser(
+					smallDocument));
+			document = coll.add(new DocumentParser(bigDocument));
+			coll.add(new DocumentParser(smallDocument));
+
+		} else {
+
+			coll = (BracketCollection) createDocument(new DocumentParser(
+					bigDocument));
+			document = coll.getDocument();
+		}
+
+		BracketLocator locator = document.locator;
+		long end = System.currentTimeMillis();
+		System.out.println("Document created in: " + (end - start) / 1000f);
+
+		BracketNode root = document
+				.getNode(XTCdeweyID.newRootID(locator.docID));
+		Node domRoot = null;
+
+		domRoot = createDomTree(new InputSource(new FileReader(bigDocument)));
+		System.out.println("DOM-Tree created!");
+
+		start = System.currentTimeMillis();
+		type.doCheck(root, domRoot, this);
+		end = System.currentTimeMillis();
+		System.out.println("Verification succeeded: " + (end - start) / 1000f);
 	}
 }

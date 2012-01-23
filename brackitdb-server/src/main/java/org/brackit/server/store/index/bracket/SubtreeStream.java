@@ -115,22 +115,6 @@ public final class SubtreeStream extends StreamIterator {
 			page.cleanup();
 			page = null;
 		}
-
-//		if (!page.moveNext()) {
-//			// use BracketTree to load next page
-//			page = tree.getNextPage(tx, locator.rootPageID, page, OPEN_MODE, true);
-//			if (page != null && !page.moveFirst()) {
-//				page.cleanup();
-//				page = null;
-//			}
-//		}
-//
-//		if (page != null && page.getLevel() <= subtreeRootLevel
-//				&& !page.isAttribute()) {
-//			// reached end of subtree
-//			page.cleanup();
-//			page = null;
-//		}
 	}
 
 	@Override

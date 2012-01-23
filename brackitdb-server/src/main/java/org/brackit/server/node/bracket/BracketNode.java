@@ -439,6 +439,8 @@ public class BracketNode extends TXNode<BracketNode> {
 
 	@Override
 	public BracketNode getParentInternal() throws DocumentException {
+		
+		// TODO: remove
 		if (deweyID.isRoot()) {
 			return new BracketNode(locator);
 		}
