@@ -29,11 +29,13 @@ package org.brackit.server.node.txnode;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -45,11 +47,13 @@ import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.metadata.TXQueryContext;
 import org.brackit.server.node.DocID;
+import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.aries.BPlusIndex;
 import org.brackit.server.store.index.aries.display.DisplayVisitor;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.NodeTest;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.xdm.DocumentException;
@@ -58,8 +62,10 @@ import org.brackit.xquery.xdm.Stream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import org.xml.sax.InputSource;
@@ -301,7 +307,103 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 					domNode.getClass());
 		}
 	}
+	
+	protected void checkSubtree(E node, Stream<? extends E> nodes, org.w3c.dom.Node domNode, boolean skipAttributes) throws Exception {
+		E child = null;
+		String nodeString = node.toString();
 
+		if (domNode instanceof Element) {
+			Element element = (Element) domNode;
+			assertEquals(nodeString + " is of type element", Kind.ELEMENT,
+					node.getKind());
+
+			// System.out.println("Checking name of element " +
+			// node.getDeweyID() + " level " + node.getDeweyID().getLevel() +
+			// " is " + element.getNodeName());
+
+			assertEquals(String.format("Name of node %s", nodeString),
+					element.getNodeName(), node.getName().toString());
+			
+			if (!skipAttributes) {
+				compareAttributes(node, nodes, element);
+			}
+
+			NodeList domChildNodes = element.getChildNodes();
+
+			for (int i = 0; i < domChildNodes.getLength(); i++) {
+				org.w3c.dom.Node domChild = domChildNodes.item(i);
+				// System.out.println("Checking if child  " + ((domChild
+				// instanceof Element) ? domChild.getNodeName() :
+				// domChild.getNodeValue()) + " exists under " + node);
+
+				child = nodes.next();
+
+				assertNotNull(String.format("child node %s of node %s", i,
+						nodeString), child);
+
+				checkSubtree(child, nodes, domChild, skipAttributes);
+			}
+
+		} else if (domNode instanceof Text) {
+			Text text = (Text) domNode;
+
+			assertEquals(
+					nodeString + " is of type text : \"" + text.getNodeValue()
+							+ "\"", Kind.TEXT, node.getKind());
+			assertEquals(String.format("Text of node %s", nodeString), text
+					.getNodeValue().trim(), node.getValue().stringValue());
+		} else {
+			throw new DocumentException("Unexpected dom node: %s",
+					domNode.getClass());
+		}
+	}
+	
+	protected void compareAttributes(E node, Stream<? extends E> nodes, Element element) throws Exception {
+		NamedNodeMap domAttributes = element.getAttributes();
+		int count = domAttributes.getLength();
+		HashMap<QNm, E> map = new HashMap<QNm, E>();
+
+		E c;
+		for (int i = 0; i < count; i++) {
+			c = nodes.next();
+			
+			int ancestorLevel = 0;
+			for (E ancestor = node; ancestor != null; ancestor = ancestor
+					.getParent()) {
+				if (ancestorLevel == 0) {
+					try {
+						assertTrue(String.format("node %s is attribute of %s",
+								c, ancestor), c.isAttributeOf(ancestor));
+					} catch (AssertionError e) {
+						c.isAttributeOf(ancestor);
+						throw e;
+					}
+					assertTrue(String.format("node %s is parent of %s",
+							ancestor, c), ancestor.isParentOf(c));
+				}
+				assertTrue(String.format("node %s is ancestor of %s", ancestor,
+						c), ancestor.isAncestorOf(c));
+				ancestorLevel++;
+			}
+			
+			map.put(c.getName(), c);
+		}
+
+		// check if all stored attributes really exist
+		for (int i = 0; i < count; i++) {
+			Attr domAttribute = (Attr) domAttributes.item(i);
+			E attribute = map.get(new QNm(domAttribute.getName()));
+			assertNotNull(String.format("Attribute \"%s\" of node %s",
+					domAttribute.getName(), node), attribute);
+			assertEquals(attribute + " is of type attribute", Kind.ATTRIBUTE,
+					attribute.getKind());
+			assertEquals(String.format(
+					"Value of attribute \"%s\" (%s) of node %s", domAttribute
+							.getName(), attribute, node), domAttribute
+					.getValue(), attribute.getValue().stringValue());
+		}
+	}
+	
 	protected org.w3c.dom.Node createDomTree(InputSource source)
 			throws Exception {
 		try {

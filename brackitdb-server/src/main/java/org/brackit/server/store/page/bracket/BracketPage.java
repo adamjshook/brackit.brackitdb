@@ -1254,6 +1254,7 @@ public final class BracketPage extends BasePage {
 			boolean documentScope) {
 		
 		navRes.reset();
+		navRes.status = NavigationStatus.AFTER_LAST;
 
 		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
 			
@@ -1293,10 +1294,14 @@ public final class BracketPage extends BasePage {
 			while (currentOffset < keyAreaEndOffset) {
 
 				// load key, adjust levelDiff
-				if (!currentKey.load(page, currentOffset)) {
+				boolean document = !currentKey.load(page, currentOffset);
+				currentKeyType = currentKey.type;
+				
+				if (document) {
 					// document key
 					if (documentScope) {
 						// return NOT EXISTENT
+						navRes.status = NavigationStatus.NOT_EXISTENT;
 						return navRes;
 					}
 					levelDiff -= currentDeweyID.getLevel();
@@ -1307,7 +1312,6 @@ public final class BracketPage extends BasePage {
 					}
 				}
 
-				currentKeyType = currentKey.type;
 				currentDeweyID.update(currentKey, false);
 
 				if (currentKeyType != BracketKey.Type.OVERFLOW) {
@@ -1341,6 +1345,7 @@ public final class BracketPage extends BasePage {
 			DeweyIDBuffer currentDeweyID, BracketKey.Type currentKeyType) {
 
 		navRes.reset();
+		navRes.status = NavigationStatus.AFTER_LAST;
 
 		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
 
