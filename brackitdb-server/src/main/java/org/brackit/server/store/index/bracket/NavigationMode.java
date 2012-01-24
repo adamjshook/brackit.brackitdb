@@ -166,6 +166,20 @@ public enum NavigationMode {
 		{
 			return (referenceKey.compareReduced(highKey) >= 0);
 		}
+	},
+	NEXT_DOCUMENT(SearchMode.GREATER) {
+		@Override
+		public XTCdeweyID getSearchKey(XTCdeweyID referenceKey)
+		{
+			return new XTCdeweyID(new DocID(referenceKey.docID.getCollectionID(), referenceKey.docID.getDocNumber() + 1));
+		}
+
+		@Override
+		public boolean isAfterHighKey(XTCdeweyID referenceKey,
+				XTCdeweyID highKey)
+		{
+			return referenceKey.docID.compareTo(highKey.docID) >= 0;
+		}
 	};
 	
 	private SearchMode searchMode;

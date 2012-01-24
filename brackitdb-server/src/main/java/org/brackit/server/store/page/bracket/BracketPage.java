@@ -1328,6 +1328,69 @@ public final class BracketPage extends BasePage {
 			return navRes;
 		}
 	}
+	
+	/**
+	 * Navigates to the next Document node.
+	 * The returned levelDiff is always Zero.
+	 */
+	public NavigationResult navigateNextDocument(int currentOffset,
+			DeweyIDBuffer currentDeweyID, BracketKey.Type currentKeyType) {
+
+		navRes.reset();
+		navRes.status = NavigationStatus.AFTER_LAST;
+
+		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
+
+			if (getRecordCount() == 0) {
+				return navRes;
+			}
+
+			currentDeweyID.setTo(getLowKey());
+			currentOffset = LOW_KEY_OFFSET;
+			currentKeyType = getLowKeyType();
+
+			if (currentKeyType.isDocument) {
+				navRes.status = NavigationStatus.FOUND;
+				navRes.keyOffset = currentOffset;
+				navRes.keyType = currentKeyType;
+				return navRes;
+			}
+
+			currentOffset = getKeyAreaStartOffset()
+					+ currentKeyType.dataReferenceLength;
+
+		} else {
+
+			if (currentOffset == LOW_KEY_OFFSET) {
+				currentOffset = getKeyAreaStartOffset()
+						+ getLowKeyType().dataReferenceLength;
+			} else {
+				if (currentKeyType == null) {
+					currentKeyType = BracketKey.loadType(page, currentOffset);
+				}
+				currentOffset += BracketKey.PHYSICAL_LENGTH
+						+ currentKeyType.dataReferenceLength;
+			}
+		}
+
+		int keyAreaEndOffset = getKeyAreaEndOffset();
+		BracketKey currentKey = new BracketKey();
+
+		while (currentOffset < keyAreaEndOffset) {
+
+			if (!currentKey.load(page, currentOffset)) {
+				// document key
+				currentDeweyID.update(currentKey, false);
+				navRes.status = NavigationStatus.FOUND;
+				navRes.keyOffset = currentOffset;
+				navRes.keyType = currentKeyType;
+				return navRes;
+			}
+
+			currentOffset += BracketKey.PHYSICAL_LENGTH + currentKey.type.dataReferenceLength;
+		}
+		return navRes;
+	}
 
 	/**
 	 * Navigates to the next non-attribute node in this document.
