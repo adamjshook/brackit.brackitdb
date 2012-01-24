@@ -58,7 +58,7 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 
 	private BracketStore store;
 
-	private static final File smallDocument = new File("xmark5.xml");
+	private static final File smallDocument = new File("xmark10.xml");
 	private static final File mediumDocument = new File("xmark50.xml");
 	private static final File bigDocument = new File("xmark100.xml");
 	private static final boolean COLLECTION_CHECK = true;
@@ -94,6 +94,15 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		// PrintStream out = new PrintStream(outputFile, false, "UTF-8");
 		// coll.store.index.dump(tx, new PageID(coll.getID()), out);
 		// outputFile.close();
+		
+		// iterate over documents
+		Stream<? extends BracketNode> docs = coll.getDocuments();
+		BracketNode doc = null;
+		while ((doc = docs.next()) != null) {
+			System.out.println(doc);
+			System.out.println(doc.hintPageInfo);
+		}
+		docs.close();
 	}
 
 	@Ignore

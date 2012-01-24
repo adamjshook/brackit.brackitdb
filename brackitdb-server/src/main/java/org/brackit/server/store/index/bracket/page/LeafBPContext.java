@@ -349,7 +349,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			return false;
 		}
 	}
-	
+
 	@Override
 	public NavigationStatus moveNextInDocument() {
 		initBuffer();
@@ -363,7 +363,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		} else {
 			moveBeforeFirst();
 		}
-		
+
 		return navRes.status;
 	}
 
@@ -371,8 +371,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	public NavigationStatus moveNextNonAttrInDocument() {
 		initBuffer();
 
-		NavigationResult navRes = page.navigateNextNonAttrInDocument(currentOffset,
-				currentDeweyID, bufferedKeyType);
+		NavigationResult navRes = page.navigateNextNonAttrInDocument(
+				currentOffset, currentDeweyID, bufferedKeyType);
 
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
@@ -380,7 +380,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		} else {
 			moveBeforeFirst();
 		}
-		
+
 		return navRes.status;
 	}
 
@@ -583,6 +583,10 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			navRes = page.navigateNextAttribute(currentOffset, currentDeweyID,
 					bufferedKeyType);
 			break;
+		case NEXT_DOCUMENT:
+			navRes = page.navigateNextDocument(currentOffset, currentDeweyID,
+					bufferedKeyType);
+			break;
 		case TO_INSERT_POS:
 		case TO_KEY:
 		case LAST:
@@ -659,6 +663,10 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		case LAST:
 			navRes = page.navigateLastCF(currentDeweyID);
 			break;
+		case NEXT_DOCUMENT:
+			navRes = page.navigateNextDocument(currentOffset, currentDeweyID,
+					bufferedKeyType);
+			break;
 		default:
 			throw new RuntimeException("Navigation Mode not supported!");
 		}
@@ -726,7 +734,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	public boolean setHighKey(XTCdeweyID highKey, boolean logged,
 			long undoNextLSN) throws IndexOperationException {
 
-		byte[] highKeyBytes = (highKey != null) ? Field.COLLECTIONDEWEYID.encode(highKey) : null;
+		byte[] highKeyBytes = (highKey != null) ? Field.COLLECTIONDEWEYID
+				.encode(highKey) : null;
 		LogOperation operation = null;
 		if (logged) {
 			operation = new HighkeyLogOperation(pageID, getRootPageID(),
@@ -1404,17 +1413,17 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		}
 
 		try {
-			
+
 			RecordInterpreter record = bufferedRecord;
 
 			// fetch record if needed
 			if (record == null) {
-				
+
 				// fetch key type if needed
 				if (bufferedKeyType == null) {
 					bufferedKeyType = page.getKeyType(currentOffset);
 				}
-				
+
 				if (bufferedKeyType == Type.DOCUMENT) {
 					record = RecordInterpreter.DOCUMENT_RECORD;
 				} else {
@@ -1425,8 +1434,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 				}
 			}
 
-			BracketNode node = loader.load(currentDeweyID.getDeweyID(),
-					record);
+			BracketNode node = loader.load(currentDeweyID.getDeweyID(), record);
 
 			// set hintpage info
 			node.hintPageInfo = new HintPageInformation(pageID,
@@ -1449,12 +1457,12 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		}
 
 		try {
-			
+
 			// fetch key type if needed
 			if (bufferedKeyType == null) {
 				bufferedKeyType = page.getKeyType(currentOffset);
 			}
-			
+
 			RecordInterpreter record = bufferedRecord;
 
 			// fetch record if needed
@@ -1480,22 +1488,19 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 	@Override
 	public RecordInterpreter getRecord() throws IndexOperationException {
-		
-		if (bufferedKeyType == Type.DOCUMENT) {
-			// documents do not have a physical record
-			return null;
-		}
-		
+
 		try {
-			
-			// fetch key type if needed
-			if (bufferedKeyType == null) {
-				bufferedKeyType = page.getKeyType(currentOffset);
-			}
-			
+
 			RecordInterpreter record = bufferedRecord;
-			
+
+			// fetch record if needed
 			if (record == null) {
+
+				// fetch key type if needed
+				if (bufferedKeyType == null) {
+					bufferedKeyType = page.getKeyType(currentOffset);
+				}
+
 				if (bufferedKeyType == Type.DOCUMENT) {
 					record = RecordInterpreter.DOCUMENT_RECORD;
 				} else {

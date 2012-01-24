@@ -914,6 +914,8 @@ public final class BracketTree extends PageContextFactory {
 		scannerMap.put(NavigationMode.PREVIOUS_SIBLING,
 				new PreviousSiblingScanner());
 		scannerMap.put(NavigationMode.LAST, new LastScanner());
+		scannerMap.put(NavigationMode.NEXT_DOCUMENT, new LeafScanner(
+				NEIGHBOR_LEAFS_TO_SCAN));
 
 		for (NavigationMode navMode : NavigationMode.values()) {
 			// use the default leaf scanner if nothing is defined for this
@@ -965,7 +967,7 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-	private Leaf descend(Tx tx, PageID rootPageID, SearchMode searchMode,
+	protected Leaf descend(Tx tx, PageID rootPageID, SearchMode searchMode,
 			byte[] key, boolean forUpdate) throws IndexAccessException {
 		return (Leaf) descend(tx, rootPageID, searchMode, key, 0, forUpdate);
 	}

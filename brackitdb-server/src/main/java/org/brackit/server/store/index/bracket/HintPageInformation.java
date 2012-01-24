@@ -46,4 +46,10 @@ public class HintPageInformation {
 		this.pageLSN = pageLSN;
 		this.currentOffset = currentOffset;
 	}
+
+	@Override
+	public String toString() {
+		return "HintPageInformation [pageID=" + pageID + ", pageLSN=" + pageLSN
+				+ ", currentOffset=" + currentOffset + "]";
+	}
 }

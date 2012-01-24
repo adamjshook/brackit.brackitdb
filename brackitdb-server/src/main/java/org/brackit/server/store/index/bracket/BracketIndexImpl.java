@@ -90,9 +90,11 @@ public class BracketIndexImpl implements BracketIndex {
 	}
 
 	@Override
-	public InsertController openForInsert(Tx tx, PageID rootPageID, OpenMode openMode, XTCdeweyID startInsertKey)
+	public InsertController openForInsert(Tx tx, PageID rootPageID,
+			OpenMode openMode, XTCdeweyID startInsertKey)
 			throws IndexAccessException {
-		return new InsertController(tx, rootPageID, tree, openMode, startInsertKey);
+		return new InsertController(tx, rootPageID, tree, openMode,
+				startInsertKey);
 	}
 
 	@Override
@@ -144,7 +146,14 @@ public class BracketIndexImpl implements BracketIndex {
 		return new ChildStream(locator, tree, parentDeweyID, hintPageInfo,
 				filter);
 	}
-	
+
+	@Override
+	public StreamIterator openDocumentStream(BracketLocator locator,
+			BracketFilter filter) {
+		return new DocumentStream(locator, tree, null, null,
+				filter);
+	}
+
 	@Override
 	public StreamIterator forkChildStream(StreamIterator origin,
 			BracketFilter filter) throws DocumentException {
@@ -177,7 +186,7 @@ public class BracketIndexImpl implements BracketIndex {
 					filter, self);
 		}
 	}
-	
+
 	@Override
 	public StreamIterator forkSubtreeStream(StreamIterator origin,
 			BracketFilter filter, boolean self, boolean skipAttributes)

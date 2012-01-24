@@ -58,8 +58,7 @@ public class BracketLocator {
 				RecordInterpreter record) throws DocumentException {
 
 			if (deweyID.isDocument()) {
-				// TODO
-				throw new RuntimeException("TODO: Create document node.");
+				return new BracketNode(collection, deweyID.docID.getDocNumber());
 			}
 			
 			PSNode psn = record.getPsNode();
@@ -89,8 +88,7 @@ public class BracketLocator {
 				throws DocumentException {
 			
 			if (deweyID.isDocument()) {
-				// TODO
-				throw new RuntimeException("TODO: Create document node.");
+				return new BracketNode(collection, deweyID.docID.getDocNumber());
 			}
 
 			int pcr = ElRecordAccess.getPCR(record);

@@ -205,4 +205,12 @@ public interface BracketIndex {
 	public StreamIterator forkSubtreeStream(StreamIterator origin,
 			BracketFilter filter, boolean self, boolean skipAttributes)
 			throws DocumentException;
+
+	/**
+	 * @param locator
+	 * @param filter
+	 * @return
+	 */
+	public StreamIterator openDocumentStream(BracketLocator locator,
+			BracketFilter filter);
 }

@@ -132,8 +132,11 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	}
 
 	public BracketNode getSingleDocument() {
-		// TODO: assumption: docNumber of single document collection is 0
-		return new BracketNode(this, 0);
+		try {
+			return getDocument();
+		} catch (DocumentException e) {
+			return null;
+		}
 	}
 
 	public BracketNode getDocument(DocID docID) throws DocumentException {
@@ -187,8 +190,10 @@ public class BracketCollection extends TXCollection<BracketNode> {
 
 	@Override
 	public BracketNode getDocument() throws DocumentException {
-		// TODO: assumption: docNumber of single document collection is 0
-		return new BracketNode(this, 0);
+		Stream<BracketNode> docs = store.index.openDocumentStream(new BracketLocator(this, new DocID(collID, 0)), null);
+		BracketNode doc = docs.next();
+		docs.close();
+		return doc;
 	}
 
 	@Override
@@ -201,8 +206,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	@Override
 	public Stream<? extends BracketNode> getDocuments()
 			throws DocumentException {
-		// TODO Auto-generated method stub
-		return null;
+		return store.index.openDocumentStream(new BracketLocator(this, new DocID(collID, 0)), null);
 	}
 
 	@Override
