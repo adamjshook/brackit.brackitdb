@@ -40,17 +40,18 @@ import org.brackit.xquery.xdm.Node;
  * @author Sebastian Baechle
  * 
  */
-public class Document extends Item<Directory> implements Persistor {
-	private final DocID docID;
+public class Collection extends Item<Directory> implements Persistor {
+	
+	private final int collID;
 
-	public Document(DocID docID, String name, Directory parent,
+	public Collection(int collID, String name, Directory parent,
 			TXNode<?> masterDocNode) {
 		super(name, parent, masterDocNode);
-		this.docID = docID;
+		this.collID = collID;
 	}
 
-	public DocID getID() {
-		return docID;
+	public int getID() {
+		return collID;
 	}
 
 	@Override
@@ -74,7 +75,7 @@ public class Document extends Item<Directory> implements Persistor {
 		} else {
 			if (parent == null) {
 				throw new DocumentException(
-						"Cannot persist document that is not in a directory");
+						"Cannot persist collection that is not in a directory");
 			}
 			TXNode<?> myParent = parent.getMasterDocNode().copyFor(tx);
 			TXNode<?> newMasterDocNode = myParent.append(toMaterialize);
