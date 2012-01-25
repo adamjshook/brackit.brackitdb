@@ -53,7 +53,7 @@ public interface MetaDataMgr {
 
 	public void drop(Tx tx, String name) throws DocumentException;
 
-	public Collection<?> lookup(Tx tx, DocID docID)
+	public Collection<?> lookup(Tx tx, int collID)
 			throws ItemNotFoundException, DocumentException;
 
 	public void mv(Tx tx, String path, String newPath) throws DocumentException;
@@ -68,7 +68,7 @@ public interface MetaDataMgr {
 	public BlobHandle getBlob(Tx tx, String path) throws ItemNotFoundException,
 			DocumentException;
 
-	public BlobHandle getBlob(Tx tx, DocID id) throws ItemNotFoundException,
+	public BlobHandle getBlob(Tx tx, int collID) throws ItemNotFoundException,
 			DocumentException;
 
 	public void start(Tx tx, boolean install) throws ServerException;

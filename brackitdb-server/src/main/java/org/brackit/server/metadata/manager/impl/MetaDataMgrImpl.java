@@ -105,9 +105,9 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 	private final HookedCache<String, Item<Directory>> itemCache;
 
-	private final HookedCache<DocID, DBCollection<?>> collectionCache;
+	private final HookedCache<Integer, DBCollection<?>> collectionCache;
 
-	private final HookedCache<DocID, BlobHandle> blobCache;
+	private final HookedCache<Integer, BlobHandle> blobCache;
 	
 	private final BracketStore bracketStore;
 
@@ -128,8 +128,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	public MetaDataMgrImpl(TxMgr taMgr) {
 		BufferMgr bufferMgr = taMgr.getBufferManager();
 		itemCache = new HookedCache<String, Item<Directory>>();
-		collectionCache = new HookedCache<DocID, DBCollection<?>>();
-		blobCache = new HookedCache<DocID, BlobHandle>();
+		collectionCache = new HookedCache<Integer, DBCollection<?>>();
+		blobCache = new HookedCache<Integer, BlobHandle>();
 		defaultDictionary = new DictionaryMgr03(bufferMgr);
 		int maxTransactions = Cfg.asInt(TxMgr.MAX_TX, 100);
 		int maxLocks = Cfg.asInt(TxMgr.MAX_LOCKS, 200000);
@@ -140,15 +140,15 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	}
 
 	@Override
-	public DBCollection<?> lookup(Tx tx, DocID id)
+	public DBCollection<?> lookup(Tx tx, int id)
 			throws ItemNotFoundException, DocumentException {
-		Item<Directory> item = getItemByID(tx, id.getCollectionID(), false);
+		Item<Directory> item = getItemByID(tx, id, false);
 
-		if (!(item instanceof Document)) {
-			throw new MetaDataException("%s is not a document.", id);
+		if (!(item instanceof Collection)) {
+			throw new MetaDataException("%s is not a collection.", id);
 		}
 
-		Document document = (Document) item;
+		Collection document = (Collection) item;
 		return getCollectionInternal(tx, document, false);
 	}
 
@@ -157,15 +157,15 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			throws ItemNotFoundException, DocumentException {
 		// check for temporary document
 		if (storedNamePath.contains("://")) {
-			Document document = (Document) itemCache.get(tx, storedNamePath
+			Collection coll = (Collection) itemCache.get(tx, storedNamePath
 					.toLowerCase());
 
-			if (document == null) {
+			if (coll == null) {
 				throw new ItemNotFoundException(
 						"Temporary document not found: %s", storedNamePath);
 			}
 
-			DBCollection<?> collection = collectionCache.get(tx, document
+			DBCollection<?> collection = collectionCache.get(tx, coll
 					.getID());
 
 			if (collection == null) {
@@ -180,11 +180,11 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		Path<QNm> path = asPath(storedNamePath);
 		Item<Directory> item = getItemByPath(tx, path, false);
 
-		if (!(item instanceof Document)) {
+		if (!(item instanceof Collection)) {
 			throw new MetaDataException("%s is not a document.", path);
 		}
 
-		Document document = (Document) item;
+		Collection document = (Collection) item;
 		return getCollectionInternal(tx, document, false);
 	}
 
@@ -193,8 +193,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		Path<QNm> path = asPath(storedNamePath);
 		Item<Directory> item = getItemByPath(tx, path, true); // pick item on DB
 
-		if (item instanceof Document) {
-			return lookup(tx, ((Document) item).getID());
+		if (item instanceof Collection) {
+			return lookup(tx, ((Collection) item).getID());
 		} else if (item instanceof Blob) {
 			return getBlob(tx, ((Blob) item).getID());
 		} else {
@@ -228,7 +228,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		bracketCollection.create(spec, parser);
 
 		collection = bracketCollection;
-		Document document = new Document(collection.getID(), name, directory,
+		Collection document = new Collection(collection.getID(), name, directory,
 				null);
 		collection.setPersistor(document);
 
@@ -264,7 +264,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		bracketCollection.create(spec);
 
 		collection = bracketCollection;
-		Document document = new Document(collection.getID(), name, directory,
+		Collection document = new Collection(collection.getID(), name, directory,
 				null);
 		collection.setPersistor(document);
 
@@ -324,17 +324,17 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 	}
 
-	private DBCollection<?> getCollectionInternal(Tx tx, Document document,
+	private DBCollection<?> getCollectionInternal(Tx tx, Collection coll,
 			boolean forUpdate) throws MetaDataException, DocumentException {
-		DBCollection<?> collection = collectionCache.get(tx, document.getID());
+		DBCollection<?> collection = collectionCache.get(tx, coll.getID());
 
 		if (collection == null) {
-			collection = buildCollection(tx, document);
+			collection = buildCollection(tx, coll);
 		}
 
 		// Put locator in cache and re-assign item because it could have
 		// been loaded by another thread concurrently.
-		collection = collectionCache.putIfAbsent(tx, document.getID(),
+		collection = collectionCache.putIfAbsent(tx, coll.getID(),
 				collection);
 
 		// Ensure that collection is bound to requesting tx
@@ -347,7 +347,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		return collection;
 	}
 
-	private DBCollection<?> buildCollection(Tx tx, Document document)
+	private DBCollection<?> buildCollection(Tx tx, Collection document)
 			throws DocumentException {
 
 		TXCollection<?> collection = new BracketCollection(tx, bracketStore);
@@ -497,10 +497,10 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 		if (BaseCollection.COLLECTION_TAG.equals(itemRootTag)) {
 			// SubtreePrinter.print(transaction, itemRoot, System.out);
-			DocID docID = new DocID(Integer.parseInt(itemRoot
+			int collID = Integer.parseInt(itemRoot
 					.getAttribute(BaseCollection.ID_ATTRIBUTE)
-					.getValue().stringValue()), XXX);
-			item = new Document(docID, name, parent, itemRoot);
+					.getValue().stringValue());
+			item = new Collection(collID, name, parent, itemRoot);
 		} else if (DIR_TAG.equals(itemRootTag)) {
 			Directory directory = new Directory(name, parent, itemRoot);
 
@@ -516,10 +516,10 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			}
 			item = directory;
 		} else if (BaseBlobHandle.BLOB_TAG.equals(itemRootTag)) {
-			DocID docID = new DocID(Integer.parseInt(itemRoot
+			int collID = Integer.parseInt(itemRoot
 					.getAttribute(BaseBlobHandle.ID_ATTRIBUTE)
-					.getValue().stringValue()), XXX);
-			item = new Blob(docID, name, parent, itemRoot);
+					.getValue().stringValue());
+			item = new Blob(collID, name, parent, itemRoot);
 		} else {
 			throw new MetaDataException("Unknown item tag: %s.", itemRootTag);
 		}
@@ -559,8 +559,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 	private void deleteItem(Tx tx, Item<?> item) throws MetaDataException,
 			DocumentException {
-		if (item instanceof Document) {
-			Document document = (Document) item;
+		if (item instanceof Collection) {
+			Collection document = (Collection) item;
 			deleteCollection(tx, document);
 		} else if (item instanceof Directory) {
 			Directory directory = (Directory) item;
@@ -611,7 +611,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		directory.delete();
 	}
 
-	private void deleteCollection(final Tx tx, Document document)
+	private void deleteCollection(final Tx tx, Collection document)
 			throws DocumentException {
 		if (log.isDebugEnabled()) {
 			log.debug(String.format("Deleting collection %s.", document
@@ -629,8 +629,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 
 		// object cast is a hack for a sun compiler bug
-		if (cachedCollection.getID()
-				.equals(new DocID(MASTERDOC_PAGEID.value(), XXX)))
+		if (cachedCollection.getID() == MASTERDOC_PAGEID.value())
 			throw new DocumentException(
 					"Deletion of master document forbidden.");
 
@@ -679,11 +678,11 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	}
 
 	@Override
-	public BlobHandle getBlob(Tx tx, DocID id) throws DocumentException {
-		Item<Directory> item = getItemByID(tx, id.getCollectionID(), false);
+	public BlobHandle getBlob(Tx tx, int collID) throws DocumentException {
+		Item<Directory> item = getItemByID(tx, collID, false);
 
 		if (!(item instanceof Blob)) {
-			throw new MetaDataException("%s is not a blob.", id);
+			throw new MetaDataException("%s is not a blob.", collID);
 		}
 
 		Blob blob = (Blob) item;
@@ -858,7 +857,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		Path<String> rootPath = new Path<String>();
 
 		// create master document for cache
-		Document document = new Document(mdCollection.getID(), MASTERDOC_NAME,
+		Collection document = new Collection(mdCollection.getID(), MASTERDOC_NAME,
 				mdRootDir, mdDocNode);
 		mdCollection.setPersistor(document);
 
@@ -886,7 +885,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		Path<String> rootPath = new Path<String>();
 
 		// create master document for cache
-		Document document = new Document(mdCollection.getID(), MASTERDOC_NAME,
+		Collection document = new Collection(mdCollection.getID(), MASTERDOC_NAME,
 				mdRootDir, null);
 		mdCollection.setPersistor(document);
 
