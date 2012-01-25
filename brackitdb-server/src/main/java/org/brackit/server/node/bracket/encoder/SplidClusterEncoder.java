@@ -118,7 +118,7 @@ public class SplidClusterEncoder implements IndexEncoder<BracketNode> {
 
 	@Override
 	public int getUnitID() {
-		return collection.getID().getCollectionID();
+		return collection.getID();
 	}
 
 	@Override

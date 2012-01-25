@@ -69,7 +69,7 @@ public abstract class RecordGenerator extends DefaultHandler {
 	protected XTCdeweyID lastAttributeDeweyID;
 
 	public RecordGenerator() {
-		subtreeRootDeweyID = new XTCdeweyID(new DocID(4711, XXX));
+		subtreeRootDeweyID = new XTCdeweyID(new DocID(4711, 0));
 		stack = new Record[20];
 		stackSize = 0;
 		level = 0;

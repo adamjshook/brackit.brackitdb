@@ -45,15 +45,15 @@ public class XTCdeweyIDJTest {
 
 	@Test
 	public void testToBytes() throws DocumentException {
-		XTCdeweyID nameNodeDeweyID = new XTCdeweyID("4711:1.3.3.0");
+		XTCdeweyID nameNodeDeweyID = new XTCdeweyID("4711[0]:1.3.3.0");
 		assertEquals("Equal reconstructed deweyID with virtual name node",
-				nameNodeDeweyID, new XTCdeweyID(new DocID(4711, XXX),
+				nameNodeDeweyID, new XTCdeweyID(new DocID(4711, 0),
 						nameNodeDeweyID.toBytes()));
 
 		int runs = 100000;
 		for (int run = 0; run < runs; run++) {
 			// random docID
-			DocID docID = new DocID(this.rand.nextInt(999999999), XXX);
+			DocID docID = new DocID(this.rand.nextInt(999999999), 0);
 			// random number of divisions
 			int numberOfDivisions = this.rand.nextInt(25) + 1;
 			// create and fill array with divisions
@@ -80,7 +80,7 @@ public class XTCdeweyIDJTest {
 	@Test
 	public void testLevel() throws DocumentException {
 		assertEquals("Incorrect level.", new XTCdeweyID("123456").getLevel(), 0);
-		assertEquals("Incorrect level.", new XTCdeweyID(new DocID(123456, XXX))
+		assertEquals("Incorrect level.", new XTCdeweyID(new DocID(123456, 0))
 				.getLevel(), 0);
 		assertEquals("Incorrect level.", new XTCdeweyID("123456:1").getLevel(),
 				1);
