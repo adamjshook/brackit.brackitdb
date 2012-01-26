@@ -42,7 +42,7 @@ import org.brackit.xquery.xdm.Type;
 
 /**
  * @author Karsten Schmidt
- *
+ * 
  */
 public class PCRClusterEncoder implements IndexEncoder<BracketNode> {
 
@@ -60,19 +60,14 @@ public class PCRClusterEncoder implements IndexEncoder<BracketNode> {
 	}
 
 	@Override
-	public BracketNode decode(byte[] key, byte[] value) throws DocumentException {
-		BracketNode document = collection.getSingleDocument();
-		XTCdeweyID deweyID;
-		int pcr;
+	public BracketNode decode(byte[] key, byte[] value)
+			throws DocumentException {
 
-		if (document == null) {
-			deweyID = Field.PCRFULLDEWEYID.decodeDeweyID(value);
-			pcr = Field.PCRFULLDEWEYID.decodePCR(value);
-			document = collection.getDocument(deweyID.getDocID());
-		} else {
-			deweyID = Field.PCRDEWEYID.decodeDeweyID(document.getID(), value);
-			pcr = Field.PCRDEWEYID.decodePCR(value);
-		}
+		XTCdeweyID deweyID = Field.PCRCOLLECTIONDEWEYID.decodeDeweyID(
+				collection.getID(), value);
+		int pcr = Field.PCRCOLLECTIONDEWEYID.decodePCR(value);
+		BracketNode document = collection.getDocument(deweyID.getDocID());
+
 		Atomic content = decodeContent(key, value);
 		byte type = (deweyID.isAttribute()) ? Kind.ATTRIBUTE.ID
 				: Kind.ELEMENT.ID;
@@ -90,12 +85,8 @@ public class PCRClusterEncoder implements IndexEncoder<BracketNode> {
 
 	@Override
 	public byte[] encodeValue(BracketNode node) throws DocumentException {
-		if (collection.getSingleDocument() == null) {
-			return Field.PCRFULLDEWEYID
-					.encode(node.getDeweyID(), node.getPCR());
-		} else {
-			return Field.PCRDEWEYID.encode(node.getDeweyID(), node.getPCR());
-		}
+		return Field.PCRCOLLECTIONDEWEYID.encode(node.getDeweyID(), node
+				.getPCR());
 	}
 
 	private Atomic decodeContent(byte[] key, byte[] value)
@@ -105,8 +96,7 @@ public class PCRClusterEncoder implements IndexEncoder<BracketNode> {
 
 	@Override
 	public Field getValueType() {
-		return (collection.getSingleDocument() != null) ? Field.PCRDEWEYID
-				: Field.PCRFULLDEWEYID;
+		return Field.PCRCOLLECTIONDEWEYID;
 	}
 
 	@Override

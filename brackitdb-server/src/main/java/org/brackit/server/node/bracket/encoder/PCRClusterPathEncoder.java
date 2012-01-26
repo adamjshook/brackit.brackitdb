@@ -53,18 +53,11 @@ public class PCRClusterPathEncoder implements IndexEncoder<BracketNode> {
 
 	@Override
 	public BracketNode decode(byte[] key, byte[] value) throws DocumentException {
-		BracketNode document = collection.getSingleDocument();
-		XTCdeweyID deweyID;
-		int pcr;
-
-		if (document == null) {
-			deweyID = Field.PCRFULLDEWEYID.decodeDeweyID(key);
-			pcr = Field.PCRFULLDEWEYID.decodePCR(key);
-			document = collection.getDocument(deweyID.getDocID());
-		} else {
-			deweyID = Field.PCRDEWEYID.decodeDeweyID(document.getID(), key);
-			pcr = Field.PCRDEWEYID.decodePCR(key);
-		}
+		
+		XTCdeweyID deweyID = Field.PCRCOLLECTIONDEWEYID.decodeDeweyID(
+				collection.getID(), key);
+		int pcr = Field.PCRCOLLECTIONDEWEYID.decodePCR(key);
+		BracketNode document = collection.getDocument(deweyID.getDocID());
 
 		if (deweyID.isAttribute()) {
 			return document.getNode(deweyID);
@@ -80,12 +73,8 @@ public class PCRClusterPathEncoder implements IndexEncoder<BracketNode> {
 
 	@Override
 	public byte[] encodeKey(BracketNode node) throws DocumentException {
-		if (collection.getSingleDocument() == null) {
-			return Field.PCRFULLDEWEYID
-					.encode(node.getDeweyID(), node.getPCR());
-		} else {
-			return Field.PCRDEWEYID.encode(node.getDeweyID(), node.getPCR());
-		}
+		return Field.PCRCOLLECTIONDEWEYID.encode(node.getDeweyID(), node
+				.getPCR());
 	}
 
 	@Override
@@ -95,8 +84,7 @@ public class PCRClusterPathEncoder implements IndexEncoder<BracketNode> {
 
 	@Override
 	public Field getKeyType() {
-		return (collection.getSingleDocument() != null) ? Field.PCRDEWEYID
-				: Field.PCRFULLDEWEYID;
+		return Field.PCRCOLLECTIONDEWEYID;
 	}
 
 	@Override

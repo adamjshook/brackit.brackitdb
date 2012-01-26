@@ -341,8 +341,9 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		collection = collection.copyFor(tx);
 
 		// Announce shared access to the collection
-		mls.lockNodeShared(tx, XTCdeweyID.newRootID(collection.getID()), tx
-				.getIsolationLevel().lockClass(true), false);
+		// TODO: shared lock on collection
+//		mls.lockNodeShared(tx, XTCdeweyID.newRootID(collection.getID()), tx
+//				.getIsolationLevel().lockClass(true), false);
 
 		return collection;
 	}

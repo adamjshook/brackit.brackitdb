@@ -58,33 +58,25 @@ public final class ChildStream extends StreamIterator {
 	@Override
 	protected void first() throws IndexOperationException, IndexAccessException {
 
-		if (startDeweyID.isDocument()) {
-			page = tree.openInternal(tx, locator.rootPageID,
-					NavigationMode.TO_KEY,
-					XTCdeweyID.newRootID(startDeweyID.getDocID()), OPEN_MODE,
-					null, deweyIDBuffer);
-		} else {
-
-			if (page != null) {
-				// hint page was already loaded
-				NavigationStatus navStatus = page.navigateFirstChild();
-				if (navStatus == NavigationStatus.FOUND) {
-					return;
-				} else if ((navStatus == NavigationStatus.NOT_EXISTENT)) {
-					page.cleanup();
-					page = null;
-					return;
-				}
-				page = tree.navigateAfterHintPageFail(tx, locator.rootPageID,
-						NavigationMode.FIRST_CHILD, startDeweyID, OPEN_MODE,
-						page, deweyIDBuffer, navStatus);
+		if (page != null) {
+			// hint page was already loaded
+			NavigationStatus navStatus = page.navigateFirstChild();
+			if (navStatus == NavigationStatus.FOUND) {
+				return;
+			} else if ((navStatus == NavigationStatus.NOT_EXISTENT)) {
+				page.cleanup();
+				page = null;
 				return;
 			}
-
-			page = tree.navigateViaIndexAccess(tx, locator.rootPageID,
+			page = tree.navigateAfterHintPageFail(tx, locator.rootPageID,
 					NavigationMode.FIRST_CHILD, startDeweyID, OPEN_MODE,
-					deweyIDBuffer);
+					page, deweyIDBuffer, navStatus);
+			return;
 		}
+
+		page = tree.navigateViaIndexAccess(tx, locator.rootPageID,
+				NavigationMode.FIRST_CHILD, startDeweyID, OPEN_MODE,
+				deweyIDBuffer);
 	}
 
 	/**

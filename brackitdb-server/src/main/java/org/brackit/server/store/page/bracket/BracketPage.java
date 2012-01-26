@@ -263,7 +263,7 @@ public final class BracketPage extends BasePage {
 		int collectionID = Calc.toInt(page, BASE_PAGE_NO_OFFSET);
 
 		// decode lowKey from page
-		return Field.COLLECTIONDEWEYID.decode(collectionID, page,
+		return Field.CollectionDeweyIDField.decode(collectionID, page,
 				LOW_KEY_START_FIELD_NO, lowIDLength);
 	}
 
