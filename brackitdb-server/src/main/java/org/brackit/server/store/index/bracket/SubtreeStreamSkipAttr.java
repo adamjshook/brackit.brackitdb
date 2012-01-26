@@ -64,26 +64,17 @@ public final class SubtreeStreamSkipAttr extends StreamIterator {
 	@Override
 	protected void first() throws IndexOperationException, IndexAccessException {
 
-		if (startDeweyID.isDocument()) {
-			page = tree.openInternal(tx, locator.rootPageID,
-					NavigationMode.TO_KEY,
-					XTCdeweyID.newRootID(startDeweyID.getDocID()), OPEN_MODE,
-					null, deweyIDBuffer);
-			subtreeRootLevel = 1;
-		} else {
-
-			if (page == null) {
-				// hint page could not be loaded
-				page = tree.navigateViaIndexAccess(tx, locator.rootPageID,
-						NavigationMode.TO_KEY, startDeweyID, OPEN_MODE,
-						deweyIDBuffer);
-			}
-			subtreeRootLevel = page.getLevel();
-			
-			if (!self) {
-				// move to next node
-				nextInternal();
-			}
+		if (page == null) {
+			// hint page could not be loaded
+			page = tree.navigateViaIndexAccess(tx, locator.rootPageID,
+					NavigationMode.TO_KEY, startDeweyID, OPEN_MODE,
+					deweyIDBuffer);
+		}
+		subtreeRootLevel = page.getLevel();
+		
+		if (!self) {
+			// move to next node
+			nextInternal();
 		}
 	}
 

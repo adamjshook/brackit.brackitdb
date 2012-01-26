@@ -215,7 +215,7 @@ public final class BracketNodeSequence {
 	private XTCdeweyID readLowKey() {
 
 		int lowIDLength = data[0] & 255;
-		return Field.COLLECTIONDEWEYID.decode(collectionID, data, 1, lowIDLength);
+		return Field.CollectionDeweyIDField.decode(collectionID, data, 1, lowIDLength);
 	}
 
 	/**

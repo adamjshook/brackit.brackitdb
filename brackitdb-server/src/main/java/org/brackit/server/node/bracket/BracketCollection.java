@@ -190,10 +190,11 @@ public class BracketCollection extends TXCollection<BracketNode> {
 
 	@Override
 	public BracketNode getDocument() throws DocumentException {
-		Stream<BracketNode> docs = store.index.openDocumentStream(new BracketLocator(this, new DocID(collID, 0)), null);
-		BracketNode doc = docs.next();
-		docs.close();
-		return doc;
+//		Stream<BracketNode> docs = store.index.openDocumentStream(new BracketLocator(this, new DocID(collID, 0)), null);
+//		BracketNode doc = docs.next();
+//		docs.close();
+//		return doc;
+		return new BracketNode(this, 0);
 	}
 
 	@Override
