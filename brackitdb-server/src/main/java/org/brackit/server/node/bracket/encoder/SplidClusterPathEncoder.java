@@ -53,15 +53,10 @@ public class SplidClusterPathEncoder implements IndexEncoder<BracketNode> {
 
 	@Override
 	public BracketNode decode(byte[] key, byte[] value) throws DocumentException {
-		BracketNode document = collection.getSingleDocument();
-		XTCdeweyID deweyID;
-
-		if (document == null) {
-			deweyID = Field.FULLDEWEYID.decodeDeweyID(key);
-			document = collection.getDocument(deweyID.getDocID());
-		} else {
-			deweyID = new XTCdeweyID(document.getID(), key);
-		}
+		
+		XTCdeweyID deweyID = Field.COLLECTIONDEWEYID.decode(
+				collection.getID(), key);
+		BracketNode document = collection.getDocument(deweyID.getDocID());
 
 		int pcr = Calc.toInt(value);
 
@@ -78,13 +73,7 @@ public class SplidClusterPathEncoder implements IndexEncoder<BracketNode> {
 
 	@Override
 	public byte[] encodeKey(BracketNode node) throws DocumentException {
-		XTCdeweyID deweyID = node.getDeweyID();
-
-		if (collection.getSingleDocument() != null) {
-			return deweyID.toBytes();
-		} else {
-			return Field.FULLDEWEYID.encode(deweyID);
-		}
+		return Field.COLLECTIONDEWEYID.encode(node.getDeweyID());
 	}
 
 	@Override
@@ -95,8 +84,7 @@ public class SplidClusterPathEncoder implements IndexEncoder<BracketNode> {
 
 	@Override
 	public Field getKeyType() {
-		return (collection.getSingleDocument() != null) ? Field.DEWEYID
-				: Field.FULLDEWEYID;
+		return Field.COLLECTIONDEWEYID;
 	}
 
 	@Override

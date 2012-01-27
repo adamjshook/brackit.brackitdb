@@ -63,18 +63,11 @@ public class SplidClusterEncoder implements IndexEncoder<BracketNode> {
 
 	@Override
 	public BracketNode decode(byte[] key, byte[] value) throws DocumentException {
-		BracketNode document = collection.getSingleDocument();
-		XTCdeweyID deweyID;
-		int pcr;
-
-		if (document == null) {
-			deweyID = Field.FULLDEWEYIDPCR.decodeDeweyID(value);
-			pcr = Field.FULLDEWEYIDPCR.decodePCR(value);
-			document = collection.getDocument(deweyID.getDocID());
-		} else {
-			deweyID = Field.DEWEYIDPCR.decodeDeweyID(document.getID(), value);
-			pcr = Field.DEWEYIDPCR.decodePCR(value);
-		}
+		
+		XTCdeweyID deweyID = Field.COLLECTIONDEWEYIDPCR.decodeDeweyID(
+				collection.getID(), value);
+		int pcr = Field.COLLECTIONDEWEYIDPCR.decodePCR(value);
+		BracketNode document = collection.getDocument(deweyID.getDocID());
 
 		Atomic content = decodeContent(key, value);
 		BracketLocator locator = document.getLocator();
@@ -92,12 +85,8 @@ public class SplidClusterEncoder implements IndexEncoder<BracketNode> {
 
 	@Override
 	public byte[] encodeValue(BracketNode node) throws DocumentException {
-		if (collection.getSingleDocument() == null) {
-			return Field.FULLDEWEYIDPCR
-					.encode(node.getDeweyID(), node.getPCR());
-		} else {
-			return Field.DEWEYIDPCR.encode(node.getDeweyID(), node.getPCR());
-		}
+		return Field.COLLECTIONDEWEYIDPCR.encode(node.getDeweyID(), node
+				.getPCR());
 	}
 
 	private Atomic decodeContent(byte[] key, byte[] value)
@@ -107,8 +96,7 @@ public class SplidClusterEncoder implements IndexEncoder<BracketNode> {
 
 	@Override
 	public Field getValueType() {
-		return (collection.getSingleDocument() != null) ? Field.DEWEYIDPCR
-				: Field.FULLDEWEYIDPCR;
+		return Field.COLLECTIONDEWEYIDPCR;
 	}
 
 	@Override
