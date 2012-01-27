@@ -30,7 +30,6 @@ package org.brackit.server.node.bracket;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.encoder.BracketCASFilter;
 import org.brackit.server.node.bracket.encoder.BracketPathFilter;
 import org.brackit.server.node.bracket.encoder.PCRClusterEncoder;
@@ -174,12 +173,10 @@ public class BracketIndexController extends IndexControllerImpl<BracketNode> {
 	@Override
 	public IndexEncoder<BracketNode> getCasIndexEncoder(Type contentType,
 			Field keyType, Field valueType) throws DocumentException {
-		if ((valueType == Field.DEWEYIDPCR)
-				|| (valueType == Field.FULLDEWEYIDPCR)) {
+		if (valueType == Field.COLLECTIONDEWEYIDPCR) {
 			return new SplidClusterEncoder(collection, contentType);
 		}
-		if ((valueType == Field.PCRDEWEYID)
-				|| (valueType == Field.PCRFULLDEWEYID)) {
+		if (valueType == Field.PCRCOLLECTIONDEWEYID) {
 			return new PCRClusterEncoder(collection, contentType);
 		}
 		throw new DocumentException("Unsupported case index value type: %s",
@@ -195,10 +192,10 @@ public class BracketIndexController extends IndexControllerImpl<BracketNode> {
 	@Override
 	public IndexEncoder<BracketNode> getPathIndexEncoder(Field keyType,
 			Field valueType) throws DocumentException {
-		if ((keyType == Field.DEWEYID) || (keyType == Field.FULLDEWEYID)) {
+		if (keyType == Field.COLLECTIONDEWEYID) {
 			return new SplidClusterPathEncoder(collection);
 		}
-		if ((keyType == Field.PCRDEWEYID) || (keyType == Field.PCRFULLDEWEYID)) {
+		if (keyType == Field.PCRCOLLECTIONDEWEYID) {
 			return new PCRClusterPathEncoder(collection);
 		}
 		throw new DocumentException("Unsupported path index key type: %s",

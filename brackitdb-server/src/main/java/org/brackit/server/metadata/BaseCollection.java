@@ -54,7 +54,7 @@ import org.brackit.xquery.xdm.Stream;
 public abstract class BaseCollection<E extends TXNode<E>> extends
 		AbstractCollection<E> implements DBCollection<E> {
 
-	public static final QNm COLLECTION_TAG = new QNm("coll");
+	public static final QNm COLLECTION_TAG = new QNm("collection");
 
 	public static final QNm ID_ATTRIBUTE = new QNm("id");
 
