@@ -644,7 +644,7 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 		Field valueType = getValueType();
 		int recordCount = page.getRecordCount();
 		int minSlotNo = 0;
-		int maxSlotNo = recordCount - 1;
+		int maxSlotNo = recordCount - (isLastInLevel() ? 1 : 2);
 		int result = 0;
 
 		if (BufferedPage.DEVEL_MODE && log.isTraceEnabled()) {

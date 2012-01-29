@@ -92,6 +92,8 @@ public class BlinkTree extends PageContextFactory {
 					}
 					return leaf;
 				} else {
+					// move to high key
+					leaf.moveNext(); 
 					// reached end of current page -> continue in next page
 					PageContext next = getPage(tx, leaf.getValueAsPageID(),
 							forUpdate, false);
