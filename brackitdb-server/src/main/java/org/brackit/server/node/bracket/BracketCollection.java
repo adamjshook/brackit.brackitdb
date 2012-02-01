@@ -216,8 +216,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 		
 		InsertController insertCtrl = null;
 		try {
-			// TODO OpenMode.BULK
-			insertCtrl = store.index.openForInsert(tx, new PageID(collID), OpenMode.LOAD, null);
+			insertCtrl = store.index.openForInsert(tx, new PageID(collID), OpenMode.BULK, null);
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}

@@ -843,42 +843,6 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			DeletePreparation delPrep = page.deleteSubtreeStartPrepare(
 					currentOffset, currentDeweyID, delPrepListener);
 
-			// if (currentOffset == BracketPage.LOW_KEY_OFFSET) {
-			// // maybe the page has to be deleted completely / unchained
-			// // -> DeleteListener's callback invocations should not be
-			// // propagated to the outside yet
-			//
-			// DelayedSubtreeDeleteListener delayedListener = new
-			// DelayedSubtreeDeleteListener(
-			// deleteListener);
-			// List<PageID> tempExternalPageIDs = deleteExternalValues ?
-			// externalPageIDs
-			// : new ArrayList<PageID>();
-			// DeletePrepareListener delPrepListener = new
-			// DeletePrepareListenerImpl(
-			// tempExternalPageIDs, delayedListener);
-			// delPrep = page.deleteSubtreeStartPrepare(currentOffset,
-			// currentDeweyID, delPrepListener);
-			//
-			// if (delPrep.endDeleteOffset == BracketPage.KEY_AREA_END_OFFSET) {
-			// // leaf needs to be unchained
-			// throw EmptyLeafException.EMPTY_LEAF_EXCEPTION;
-			// }
-			//
-			// // propagate DeleteListener's callback methods
-			// delayedListener.flush();
-			// if (!deleteExternalValues) {
-			// externalPageIDs.addAll(tempExternalPageIDs);
-			// }
-			//
-			// } else {
-			// DeletePrepareListener delPrepListener = new
-			// DeletePrepareListenerImpl(
-			// externalPageIDs, deleteListener);
-			// delPrep = page.deleteSubtreeStartPrepare(currentOffset,
-			// currentDeweyID, delPrepListener);
-			// }
-
 			// delete external values
 			if (deleteExternalValues) {
 				deleteExternalized(externalPageIDs);

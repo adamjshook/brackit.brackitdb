@@ -431,6 +431,16 @@ public class ElNode extends TXNode<ElNode> {
 
 	@Override
 	public void deleteInternal() throws DocumentException {
+		
+		if (type == Kind.DOCUMENT.ID) {
+			throw new OperationNotSupportedException(
+					"Document nodes must not be deleted.");
+		}
+		if (isRoot()) {
+			throw new OperationNotSupportedException(
+					"Root nodes must not be deleted.");
+		}
+		
 		List<SubtreeListener<? super ElNode>> listeners = getListener(
 				ListenMode.DELETE, locator);
 		Stream<ElNode> scanner = createScanner(locator, deweyID, deweyID, true);

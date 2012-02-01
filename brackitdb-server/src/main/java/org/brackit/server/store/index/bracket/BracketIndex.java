@@ -213,4 +213,11 @@ public interface BracketIndex {
 	 */
 	public StreamIterator openDocumentStream(BracketLocator locator,
 			BracketFilter filter);
+
+	/**
+	 * Used to delete whole subtrees from the collection. Documents can also be
+	 * removed by this method.
+	 */
+	public void deleteSubtree(BracketLocator locator, XTCdeweyID key,
+			HintPageInformation hintPageInfo, SubtreeDeleteListener listener) throws DocumentException;
 }

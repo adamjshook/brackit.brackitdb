@@ -1521,8 +1521,7 @@ public final class BracketPage extends BasePage {
 	public NavigationResult navigatePrevious(int currentOffset,
 			DeweyIDBuffer currentDeweyID) {
 
-		if (currentOffset == BEFORE_LOW_KEY_OFFSET
-				|| currentDeweyID.getNumberOfDivisions() == 1) {
+		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
 			// current node is root or current offset is an invalid position
 			navRes.reset();
 			return navRes;
@@ -2887,16 +2886,23 @@ public final class BracketPage extends BasePage {
 			// load next key from keyStorage
 			currentKey.load(page, currentOffset);
 			currentType = currentKey.type;
+			
+			if (currentType.isDocument) {
+				// document key
+				levelDiff -= tempDeweyID.getLevel();
+			} else {
+				// decrease level difference
+				levelDiff -= currentKey.roundBrackets;
+				// increment level difference
+				if (currentType.opensNewSubtree) {
+					// increment level difference (-> opening bracket at the end
+					// of the bracket key)
+					levelDiff++;
+				}
+			}
+			
 			// refresh DeweyID
 			tempDeweyID.update(currentKey, false);
-			// decrease level difference
-			levelDiff -= currentKey.roundBrackets;
-			// increment level difference
-			if (currentType.opensNewSubtree) {
-				// increment level difference (-> opening bracket at the end of
-				// the bracket key)
-				levelDiff++;
-			}
 
 			if (currentType != BracketKey.Type.OVERFLOW) {
 				// check success condition
@@ -3054,16 +3060,23 @@ public final class BracketPage extends BasePage {
 				// load next key from keyStorage
 				currentKey.load(page, currentOffset);
 				currentType = currentKey.type;
+				
+				if (currentType.isDocument) {
+					// document key
+					levelDiff -= currentDeweyID.getLevel();
+				} else {
+					// decrease level difference
+					levelDiff -= currentKey.roundBrackets;
+					// increment level difference
+					if (currentType.opensNewSubtree) {
+						// increment level difference (-> opening bracket at the end
+						// of the bracket key)
+						levelDiff++;
+					}
+				}
+				
 				// refresh DeweyID
 				currentDeweyID.update(currentKey, false);
-				// decrease level difference
-				levelDiff -= currentKey.roundBrackets;
-				// increment level difference
-				if (currentType.opensNewSubtree) {
-					// increment level difference (-> opening bracket at the end
-					// of the bracket key)
-					levelDiff++;
-				}
 
 				if (currentType != BracketKey.Type.OVERFLOW) {
 					// check success condition
