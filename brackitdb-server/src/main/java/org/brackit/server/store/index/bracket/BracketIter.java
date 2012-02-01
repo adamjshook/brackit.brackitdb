@@ -47,9 +47,6 @@ public interface BracketIter {
 
 	public BracketNode load(BracketNodeLoader loader) throws IndexAccessException;
 
-	public void deleteSubtree(SubtreeDeleteListener deleteListener)
-			throws IndexAccessException;
-
 	public void update(byte[] newValue) throws IndexAccessException;
 
 	public void close() throws IndexAccessException;

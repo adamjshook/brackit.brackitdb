@@ -180,10 +180,6 @@ public class BracketNode extends TXNode<BracketNode> {
 			return this;
 		}
 
-		if (deweyID.isDocument()) {
-			return new BracketNode(locator);
-		}
-
 		try {
 			BracketIter iterator = locator.collection.store.index.open(getTX(),
 					locator.rootPageID, NavigationMode.TO_KEY, deweyID,
@@ -367,21 +363,13 @@ public class BracketNode extends TXNode<BracketNode> {
 	public void deleteInternal() throws DocumentException {
 
 		BracketStore r = locator.collection.store;
-		PageID rootPageID = locator.rootPageID;
 		List<SubtreeListener<? super BracketNode>> listeners = getListener(ListenMode.DELETE);
-
-		try {
-			BracketIter iterator = r.index.open(getTX(), rootPageID,
-					NavigationMode.TO_KEY, deweyID, OpenMode.UPDATE,
-					hintPageInfo);
-			iterator.deleteSubtree(new SubtreeDeleteListenerImpl(locator,
+		listeners.add(new DebugListener());
+		
+		r.index.deleteSubtree(locator, deweyID, hintPageInfo, new SubtreeDeleteListenerImpl(locator,
 					listeners.toArray(new SubtreeListener[listeners.size()])));
-			iterator.close();
-
-			hintPageInfo = null;
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
-		}
+		
+		hintPageInfo = null;
 	}
 
 	@Override
@@ -516,7 +504,6 @@ public class BracketNode extends TXNode<BracketNode> {
 
 		ArrayList<SubtreeListener<? super BracketNode>> listener = new ArrayList<SubtreeListener<? super BracketNode>>(
 				5);
-		listener.add(new DebugListener());
 		listener.add(new BracketDocIndexListener(locator, ListenMode.INSERT,
 				openMode, newDocument));
 
@@ -540,7 +527,6 @@ public class BracketNode extends TXNode<BracketNode> {
 
 		ArrayList<SubtreeListener<? super BracketNode>> listener = new ArrayList<SubtreeListener<? super BracketNode>>(
 				5);
-		listener.add(new DebugListener());
 		listener.add(new BracketDocIndexListener(ListenMode.INSERT, insertCtrl,
 				newDocument));
 
@@ -613,7 +599,7 @@ public class BracketNode extends TXNode<BracketNode> {
 				.getName() : null;
 		int pcr = (psNode != null) ? psNode.getPCR() : -1;
 		return String
-				.format("%s(doc='%s', docID='%s', type='%s', name='%s', value='%s', pcr='%s')",
+				.format("%s(collection='%s', docID='%s', type='%s', name='%s', value='%s', pcr='%s')",
 						deweyID, locator.collection.getName(),
 						deweyID.getDocID(), getKind(), name, value, pcr);
 	}

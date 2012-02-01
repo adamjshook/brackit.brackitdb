@@ -312,14 +312,6 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 
 	@Override
 	public final void delete() throws DocumentException {
-		if (type == Kind.DOCUMENT.ID) {
-			throw new OperationNotSupportedException(
-					"Document nodes must not be deleted.");
-		}
-		if (isRoot()) {
-			throw new OperationNotSupportedException(
-					"Root nodes must not be deleted.");
-		}
 
 		// TODO cleanup locking
 		Tx tx = getTX();

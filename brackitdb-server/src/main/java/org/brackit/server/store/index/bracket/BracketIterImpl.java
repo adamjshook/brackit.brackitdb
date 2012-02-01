@@ -208,29 +208,6 @@ public final class BracketIterImpl implements BracketIter {
 		return hintPageInfo;
 	}
 
-	@Override
-	public void deleteSubtree(SubtreeDeleteListener deleteListener)
-			throws IndexAccessException {
-
-		if (!openMode.forUpdate()) {
-			close();
-			throw new IndexAccessException("Index %s not opened for update.",
-					rootPageID);
-		}
-
-		assureContextValidity();
-
-		try {
-			tree.deleteSubtree(tx, rootPageID, page, deleteListener,
-					openMode.doLog());
-			page = null;
-		} catch (IndexAccessException e) {
-			page = null;
-			close();
-			throw e;
-		}
-	}
-
 	private void assureContextValidity() throws IndexAccessException {
 		if (page == null) {
 			// no page context exists due to failed navigation

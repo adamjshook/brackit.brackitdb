@@ -326,4 +326,23 @@ public class BracketIndexImpl implements BracketIndex {
 			throw new IndexAccessException(e);
 		}
 	}
+	
+	@Override
+	public void deleteSubtree(BracketLocator locator, XTCdeweyID key, HintPageInformation hintPageInfo, SubtreeDeleteListener listener) throws DocumentException {
+		
+		Tx tx = locator.collection.getTX();
+		
+		try {
+			
+			Leaf leaf =	tree.openInternal(tx, locator.rootPageID, NavigationMode.TO_KEY, key, OpenMode.UPDATE, hintPageInfo, null);
+			if (leaf == null) {
+				throw new DocumentException("The specified node does not exist and can not be deleted.");
+			}
+			
+			tree.deleteSubtree(tx, locator.rootPageID, leaf, listener);
+			
+		} catch (IndexAccessException e) {
+			throw new DocumentException(e);
+		}
+	}
 }

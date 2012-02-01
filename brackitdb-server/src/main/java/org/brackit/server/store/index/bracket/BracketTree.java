@@ -3372,13 +3372,12 @@ public final class BracketTree extends PageContextFactory {
 	}
 
 	public void deleteSubtree(Tx tx, PageID rootPageID, Leaf leaf,
-			SubtreeDeleteListener deleteListener, boolean logged)
+			SubtreeDeleteListener deleteListener)
 			throws IndexAccessException {
 
 		Leaf next = null;
 
 		try {
-
 			XTCdeweyID subtreeRoot = leaf.getKey();
 			XTCdeweyID descendKey = subtreeRoot;
 
@@ -3416,11 +3415,11 @@ public final class BracketTree extends PageContextFactory {
 				// delete nodes from this page
 				if (firstPage) {
 					finished = leaf.deleteSubtreeStart(delayedListener,
-							localExternalPageIDs, logged);
+							localExternalPageIDs, true);
 					emptyPage = (leaf.isFirst() && !finished);
 				} else {
 					finished = leaf.deleteSubtreeEnd(subtreeRoot,
-							delayedListener, localExternalPageIDs, logged);
+							delayedListener, localExternalPageIDs, true);
 					emptyPage = !finished;
 				}
 
@@ -3431,13 +3430,13 @@ public final class BracketTree extends PageContextFactory {
 						delayedListener.flush();
 						finished = true;
 						deleteListener.subtreeEnd();
-						leaf.clearData(false, logged, -1);
+						leaf.clearData(false, true, -1);
 					} else {
 
 						// delete this page
 						try {
 							next = handleLeafUnderflow(tx, rootPageID, leaf,
-									logged);
+									true);
 							leaf = null;
 							externalPageIDs.addAll(localExternalPageIDs);
 							delayedListener.flush();
