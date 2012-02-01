@@ -670,7 +670,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 				currentBuffer = newBuffer;
 			}
 
-			currentBuffer[currentLength] = 3;
+			currentBuffer[currentLength] = (currentLength == 0) ? 1 : 3;
 			lastDivisionIndex = currentLength;
 			currentLength++;
 

@@ -394,8 +394,6 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		if (navRes.status == NavigationStatus.FOUND) {
 			// adjust current offset
 			setOffset(navRes.keyOffset, navRes.keyType, navRes.levelDiff);
-		} else {
-			moveBeforeFirst();
 		}
 
 		return navRes.status;
