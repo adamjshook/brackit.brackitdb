@@ -68,6 +68,8 @@ import org.brackit.xquery.xdm.Stream;
  */
 public class ElNode extends TXNode<ElNode> {
 
+	public static final int NODE_CLASS_ID = 3;
+	
 	private class AttributeStream implements Stream<ElNode> {
 		private IndexIterator it;
 
@@ -160,6 +162,11 @@ public class ElNode extends TXNode<ElNode> {
 				locator.rootPageID);
 		ElNode copyNode = new ElNode(copyLoc, deweyID, type, value, psNode);
 		return copyNode;
+	}
+	
+	@Override
+	public int getNodeClassID() {
+		return NODE_CLASS_ID;
 	}
 
 	public DocID getID() {
