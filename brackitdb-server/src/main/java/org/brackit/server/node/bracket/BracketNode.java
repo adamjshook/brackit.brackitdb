@@ -72,6 +72,8 @@ import org.brackit.xquery.xdm.Stream;
  * 
  */
 public class BracketNode extends TXNode<BracketNode> {
+	
+	public static final int NODE_CLASS_ID = 2;
 
 	protected final BracketLocator locator;
 
@@ -117,6 +119,11 @@ public class BracketNode extends TXNode<BracketNode> {
 		BracketNode copyNode = new BracketNode(copyLoc, deweyID, type, value,
 				psNode);
 		return copyNode;
+	}
+
+	@Override
+	public int getNodeClassID() {
+		return NODE_CLASS_ID;
 	}
 
 	public DocID getID() {
