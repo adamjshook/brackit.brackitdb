@@ -453,11 +453,11 @@ public abstract class TXNodeTest<E extends TXNode<E>> extends NodeTest<E> {
 //				"/media/ramdisk/document.dot", locator.getID(), true);
 	}
 
-	protected void printIndex(Tx transaction, String filename, DocID docID,
+	protected void printIndex(Tx transaction, String filename, PageID rootPageID,
 			boolean showValues) throws IndexAccessException {
 		try {
 			PrintStream printer = new PrintStream(new File(filename));
-			index.traverse(transaction, new PageID(docID.getCollectionID()),
+			index.traverse(transaction, rootPageID,
 					new DisplayVisitor(printer, showValues));
 			printer.close();
 		} catch (IOException e) {

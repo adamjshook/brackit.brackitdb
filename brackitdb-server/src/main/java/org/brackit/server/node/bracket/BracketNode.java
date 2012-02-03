@@ -126,10 +126,6 @@ public class BracketNode extends TXNode<BracketNode> {
 		return NODE_CLASS_ID;
 	}
 
-	public DocID getID() {
-		return locator.docID;
-	}
-
 	public BracketLocator getLocator() {
 		return locator;
 	}

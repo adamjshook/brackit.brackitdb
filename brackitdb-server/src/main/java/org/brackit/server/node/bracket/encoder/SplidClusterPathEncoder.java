@@ -56,7 +56,7 @@ public class SplidClusterPathEncoder implements IndexEncoder<BracketNode> {
 		
 		XTCdeweyID deweyID = Field.COLLECTIONDEWEYID.decode(
 				collection.getID(), key);
-		BracketNode document = collection.getDocument(deweyID.getDocID());
+		BracketNode document = collection.getDocument(deweyID.getDocID().getDocNumber());
 
 		int pcr = Calc.toInt(value);
 

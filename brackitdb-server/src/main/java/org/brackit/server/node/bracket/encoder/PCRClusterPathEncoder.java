@@ -57,7 +57,7 @@ public class PCRClusterPathEncoder implements IndexEncoder<BracketNode> {
 		XTCdeweyID deweyID = Field.PCRCOLLECTIONDEWEYID.decodeDeweyID(
 				collection.getID(), key);
 		int pcr = Field.PCRCOLLECTIONDEWEYID.decodePCR(key);
-		BracketNode document = collection.getDocument(deweyID.getDocID());
+		BracketNode document = collection.getDocument(deweyID.getDocID().getDocNumber());
 
 		if (deweyID.isAttribute()) {
 			return document.getNode(deweyID);

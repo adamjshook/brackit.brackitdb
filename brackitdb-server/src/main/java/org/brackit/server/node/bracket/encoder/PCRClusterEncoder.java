@@ -66,7 +66,7 @@ public class PCRClusterEncoder implements IndexEncoder<BracketNode> {
 		XTCdeweyID deweyID = Field.PCRCOLLECTIONDEWEYID.decodeDeweyID(
 				collection.getID(), value);
 		int pcr = Field.PCRCOLLECTIONDEWEYID.decodePCR(value);
-		BracketNode document = collection.getDocument(deweyID.getDocID());
+		BracketNode document = collection.getDocument(deweyID.getDocID().getDocNumber());
 
 		Atomic content = decodeContent(key, value);
 		byte type = (deweyID.isAttribute()) ? Kind.ATTRIBUTE.ID

@@ -57,9 +57,9 @@ public class SplidClusterPathEncoder implements IndexEncoder<ElNode> {
 
 		if (document == null) {
 			deweyID = Field.FULLDEWEYID.decodeDeweyID(key);
-			document = collection.getDocument(deweyID.getDocID());
+			document = collection.getDocument(deweyID.getDocID().getDocNumber());
 		} else {
-			deweyID = new XTCdeweyID(document.getID(), key);
+			deweyID = new XTCdeweyID(document.getDocID(), key);
 		}
 
 		int pcr = Calc.toInt(value);
@@ -105,7 +105,7 @@ public class SplidClusterPathEncoder implements IndexEncoder<ElNode> {
 
 	@Override
 	public int getUnitID() {
-		return collection.getID().getCollectionID();
+		return collection.getID();
 	}
 
 	@Override

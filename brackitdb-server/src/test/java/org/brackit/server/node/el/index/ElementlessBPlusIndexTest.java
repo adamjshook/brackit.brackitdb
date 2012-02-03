@@ -1038,7 +1038,7 @@ public class ElementlessBPlusIndexTest extends AbstractBPlusIndexTest {
 		while (iterator.getCurrentPageID().equals(currentLeafPageID)) {
 			iterator.previous();
 		}
-		element = new XTCdeweyID(new DocID(4711, XXX), iterator.getKey());
+		element = new XTCdeweyID(new DocID(4711, 0), iterator.getKey());
 		iterator.close();
 
 		printIndex(t1, rootPageID,

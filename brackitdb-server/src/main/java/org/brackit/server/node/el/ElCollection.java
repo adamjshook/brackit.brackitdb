@@ -67,7 +67,7 @@ import org.brackit.xquery.xdm.Stream;
  */
 public class ElCollection extends TXCollection<ElNode> {
 
-	public static final QNm COLLECTION_FLAG_ATTRIBUTE = new QNm("collection");
+	public static final QNm MULTIDOC_FLAG_ATTRIBUTE = new QNm("multidoc");
 
 	public static final QNm PATHSYNOPSIS_ID_ATTRIBUTE = new QNm("pathSynopsis");
 	
@@ -213,8 +213,10 @@ public class ElCollection extends TXCollection<ElNode> {
 			PageID rootPageID = store.index.createIndex(tx,
 					new PageID(collID).getContainerNo(), Field.DEWEYID,
 					Field.EL_REC, true, true, -1);
-			ElNode document = new ElNode(this, rootPageID);
+			
 			DocID docID = new DocID(collID, rootPageID.value());
+			
+			ElNode document = new ElNode(this, docID.getDocNumber());
 			XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(docID);
 			document.store(rootDeweyID, parser, true, false);
 			return document;
@@ -254,7 +256,7 @@ public class ElCollection extends TXCollection<ElNode> {
 			dictionary = spec.getDictionary();
 			pathSynopsis = store.pathSynopsisMgrFactory.create(tx,
 					spec.getDictionary(), spec.getContainerID());
-			document = new ElNode(this, rootPageID);
+			document = new ElNode(this, docID.getDocNumber());
 
 			// write document to document container
 			XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(docID);
@@ -272,7 +274,7 @@ public class ElCollection extends TXCollection<ElNode> {
 		dictionary = store.dictionary;
 		pathSynopsis = store.pathSynopsisMgrFactory.load(tx, dictionary,
 				psPageID);
-		document = new ElNode(this, rootPageID);
+		document = new ElNode(this, rootPageID.value());
 	}
 
 	public Index getIndex() {
@@ -284,15 +286,15 @@ public class ElCollection extends TXCollection<ElNode> {
 	}
 
 	public ElNode getDocument(int docNumber) throws DocumentException {
-		return new ElNode(new ElLocator(this, docID, new PageID(
-				docID.getCollectionID())), new XTCdeweyID(docID),
+		DocID docID = new DocID(collID, docNumber);
+		return new ElNode(new ElLocator(this, docID), new XTCdeweyID(docID),
 				Kind.DOCUMENT.ID, null, null);
 	}
 
 	@Override
 	public Node<?> materialize() throws DocumentException {
 		Node<?> root = super.materialize();
-		root.setAttribute(COLLECTION_FLAG_ATTRIBUTE,
+		root.setAttribute(MULTIDOC_FLAG_ATTRIBUTE,
 				new Una(Boolean.toString(document == null)));
 		root.setAttribute(PATHSYNOPSIS_ID_ATTRIBUTE,
 				new Una(Integer.toString(pathSynopsis.getPathSynopsisNo())));
@@ -312,9 +314,9 @@ public class ElCollection extends TXCollection<ElNode> {
 					psID);
 		}
 
-		if (!Boolean.parseBoolean(root.getAttribute(COLLECTION_FLAG_ATTRIBUTE)
+		if (!Boolean.parseBoolean(root.getAttribute(MULTIDOC_FLAG_ATTRIBUTE)
 				.getValue().stringValue())) {
-			document = new ElNode(this, new PageID(docID.getCollectionID()));
+			document = new ElNode(this, collID);
 		}
 	}
 
@@ -323,7 +325,7 @@ public class ElCollection extends TXCollection<ElNode> {
 		super.calculateStatistics();
 		try {
 			IndexStatisticsVisitor visitor = new IndexStatisticsVisitor();
-			store.index.traverse(tx, new PageID(docID.getCollectionID()),
+			store.index.traverse(tx, new PageID(collID),
 					visitor);
 			set(visitor.getIndexStatistics());
 
