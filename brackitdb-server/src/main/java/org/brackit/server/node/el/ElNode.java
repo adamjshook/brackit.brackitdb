@@ -134,9 +134,9 @@ public class ElNode extends TXNode<ElNode> {
 		this.locator = locator;
 	}
 
-	public ElNode(ElCollection collection, PageID rootPageID) {
-		super(new XTCdeweyID(new DocID(rootPageID.value(), XXX)), Kind.DOCUMENT.ID);
-		this.locator = new ElLocator(collection, deweyID.getDocID(), rootPageID);
+	public ElNode(ElCollection collection, int docNumber) {
+		super(new XTCdeweyID(new DocID(collection.getID(), docNumber)), Kind.DOCUMENT.ID);
+		this.locator = new ElLocator(collection, deweyID.getDocID());
 	}
 
 	public ElNode(ElLocator locator, XTCdeweyID deweyID, byte type,
@@ -158,8 +158,7 @@ public class ElNode extends TXNode<ElNode> {
 		if (copyCol == locator.collection) {
 			return this;
 		}
-		ElLocator copyLoc = new ElLocator(copyCol, locator.docID,
-				locator.rootPageID);
+		ElLocator copyLoc = new ElLocator(copyCol, locator.docID);
 		ElNode copyNode = new ElNode(copyLoc, deweyID, type, value, psNode);
 		return copyNode;
 	}
@@ -169,7 +168,7 @@ public class ElNode extends TXNode<ElNode> {
 		return NODE_CLASS_ID;
 	}
 
-	public DocID getID() {
+	public DocID getDocID() {
 		return locator.docID;
 	}
 

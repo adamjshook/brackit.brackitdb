@@ -35,6 +35,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.StringReader;
 
+import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.node.txnode.TXCollection;
@@ -67,16 +68,16 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 	public void testFromBytes() throws Exception {
 		Collection<ElNode> coll = createDocument(new DocumentParser(DOCUMENT));
 		ElNode root = coll.getDocument();
-		XTCdeweyID deweyID = new XTCdeweyID(root.getID(), new int[]{1,3});
+		XTCdeweyID deweyID = new XTCdeweyID(root.getDocID(), new int[]{1,3});
 		ElNode department = root.getNode(deweyID);
 		check(department, deweyID, Kind.ELEMENT, "Department", "KurtMayer1.4.1963Dr.-Ing.HansMettmann12.9.1974Dipl.-Inf");
-		XTCdeweyID deweyID2 = new XTCdeweyID(root.getID(), new int[]{1,3,3});
+		XTCdeweyID deweyID2 = new XTCdeweyID(root.getDocID(), new int[]{1,3,3});
 		ElNode member = root.getNode(deweyID2);
 		check(member, deweyID2, Kind.ELEMENT, "Member", "KurtMayer1.4.1963Dr.-Ing.");
-		XTCdeweyID deweyID3 = new XTCdeweyID(root.getID(), new int[]{1,3,3,3});
+		XTCdeweyID deweyID3 = new XTCdeweyID(root.getDocID(), new int[]{1,3,3,3});
 		ElNode firstname = root.getNode(deweyID3);
 		check(firstname, deweyID3, Kind.ELEMENT, "Firstname", "Kurt");
-		XTCdeweyID deweyID4 = new XTCdeweyID(root.getID(), new int[]{1,3,3,3,3});
+		XTCdeweyID deweyID4 = new XTCdeweyID(root.getDocID(), new int[]{1,3,3,3,3});
 		ElNode firstnameT = root.getNode(deweyID4);
 		check(firstnameT, deweyID4, Kind.TEXT, "", "Kurt");
 	}
@@ -95,29 +96,30 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		TXCollection<ElNode> locator = createDocument(new DocumentParser(
 				ROOT_ONLY_DOCUMENT));
 		ElNode root = locator.getDocument().getFirstChild();
+		PageID rootPageID = new PageID(locator.getID());
 		
 		tx.commit();
 		tx = sm.taMgr.begin();
 		root = root.copyFor(tx);
 
 		printIndex(tx, "/media/ramdisk/testEmptyElementUnderRollback1_1.dot",
-				locator.getID(), true);
+				rootPageID, true);
 
 		root.setAttribute(new QNm("att"), new Una("test"));
 
 		printIndex(tx, "/media/ramdisk/testEmptyElementUnderRollback1_2.dot",
-				locator.getID(), true);
+				rootPageID, true);
 
 		root.insertRecord(root.getDeweyID().getNewChildID(), Kind.ELEMENT,
 				new QNm("child"), null);
 
 		printIndex(tx, "/media/ramdisk/testEmptyElementUnderRollback1_3.dot",
-				locator.getID(), true);
+				rootPageID, true);
 
 		tx.rollback();
 
 		printIndex(tx, "/media/ramdisk/testEmptyElementUnderRollback1_4.dot",
-				locator.getID(), true);
+				rootPageID, true);
 	}
 
 	@Ignore
@@ -152,8 +154,9 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 	public void testReplace() throws TxException, DocumentException {
 		TXCollection<ElNode> locator = createDocument(new DocumentParser(
 				"<xtc><users></users><dir><doc id=\"2\" name=\"_master.xml\" pathSynopsis=\"3\"><indexes></indexes></doc><doc id=\"6\" name=\"/sample.xml\" pathSynopsis=\"7\"><indexes></indexes></doc><doc id=\"8\" name=\"/index.html\" pathSynopsis=\"9\"><indexes></indexes></doc></dir></xtc>"));
-		ElNode root = locator.getDocument().getFirstChild().getNode(
-				XTCdeweyID.newRootID(locator.getID()));
+		ElNode doc = locator.getDocument();
+		ElNode root = doc.getNode(
+				XTCdeweyID.newRootID(doc.getDocID()));
 		root.getFirstChild();
 
 		FragmentHelper helper = new FragmentHelper();
@@ -177,11 +180,11 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 
 		tx.checkPrevLSN();
 
-		ElNode doc = root.getLastChild().getFirstChild();
+		ElNode node = root.getLastChild().getFirstChild();
 
 		System.out.println("Doc before");
 		SubtreePrinter.print(root, System.out);
-		doc.replaceWith(helper.getRoot());
+		node.replaceWith(helper.getRoot());
 		System.out.println("Doc after");
 		SubtreePrinter.print(root, System.out);
 		ElNode checkRoot = locator.getDocument().getFirstChild().getNode(
@@ -220,8 +223,9 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 	public void testDeleteRecord() throws Exception {
 		TXCollection<ElNode> locator = createDocument(new DocumentParser(
 				DOCUMENT));
-		ElNode root = locator.getDocument().getFirstChild().getNode(
-				XTCdeweyID.newRootID(locator.getID()));
+		ElNode doc = locator.getDocument();
+		ElNode root = doc.getNode(
+				XTCdeweyID.newRootID(doc.getDocID()));
 		Node domRoot = createDomTree(new InputSource(new StringReader(
 				DOCUMENT)));
 
@@ -260,8 +264,9 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 	public void testDeleteAttribute() throws TxException, DocumentException {
 		TXCollection<ElNode> locator = createDocument(new DocumentParser(
 				"<element test=\"aha\"/>"));
-		ElNode root = locator.getDocument().getFirstChild().getNode(
-				XTCdeweyID.newRootID(locator.getID()));
+		ElNode doc = locator.getDocument();
+		ElNode root = doc.getNode(
+				XTCdeweyID.newRootID(doc.getDocID()));
 		root.getFirstChild();
 
 		tx.checkPrevLSN();

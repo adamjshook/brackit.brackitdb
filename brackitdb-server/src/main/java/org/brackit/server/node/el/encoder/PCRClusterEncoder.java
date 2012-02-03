@@ -69,9 +69,9 @@ public class PCRClusterEncoder implements IndexEncoder<ElNode> {
 		if (document == null) {
 			deweyID = Field.PCRFULLDEWEYID.decodeDeweyID(value);
 			pcr = Field.PCRFULLDEWEYID.decodePCR(value);
-			document = collection.getDocument(deweyID.getDocID());
+			document = collection.getDocument(deweyID.getDocID().getDocNumber());
 		} else {
-			deweyID = Field.PCRDEWEYID.decodeDeweyID(document.getID(), value);
+			deweyID = Field.PCRDEWEYID.decodeDeweyID(document.getDocID(), value);
 			pcr = Field.PCRDEWEYID.decodePCR(value);
 		}
 		Atomic content = decodeContent(key, value);
@@ -117,7 +117,7 @@ public class PCRClusterEncoder implements IndexEncoder<ElNode> {
 
 	@Override
 	public int getUnitID() {
-		return collection.getID().getCollectionID();
+		return collection.getID();
 	}
 
 	@Override

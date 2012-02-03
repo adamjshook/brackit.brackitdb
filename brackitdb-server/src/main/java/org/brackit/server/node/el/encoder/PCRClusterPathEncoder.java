@@ -59,9 +59,9 @@ public class PCRClusterPathEncoder implements IndexEncoder<ElNode> {
 		if (document == null) {
 			deweyID = Field.PCRFULLDEWEYID.decodeDeweyID(key);
 			pcr = Field.PCRFULLDEWEYID.decodePCR(key);
-			document = collection.getDocument(deweyID.getDocID());
+			document = collection.getDocument(deweyID.getDocID().getDocNumber());
 		} else {
-			deweyID = Field.PCRDEWEYID.decodeDeweyID(document.getID(), key);
+			deweyID = Field.PCRDEWEYID.decodeDeweyID(document.getDocID(), key);
 			pcr = Field.PCRDEWEYID.decodePCR(key);
 		}
 
@@ -105,7 +105,7 @@ public class PCRClusterPathEncoder implements IndexEncoder<ElNode> {
 
 	@Override
 	public int getUnitID() {
-		return collection.getID().getCollectionID();
+		return collection.getID();
 	}
 
 	@Override

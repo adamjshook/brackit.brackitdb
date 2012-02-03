@@ -31,6 +31,7 @@ import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
 import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
+import org.brackit.server.node.el.ElNode;
 import org.brackit.server.node.index.IndexController;
 import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.node.txnode.TXCollection;
@@ -139,8 +140,8 @@ public class BracketCollection extends TXCollection<BracketNode> {
 		}
 	}
 
-	public BracketNode getDocument(DocID docID) throws DocumentException {
-		return new BracketNode(this, docID.getDocNumber());
+	public BracketNode getDocument(int docNumber) throws DocumentException {
+		return new BracketNode(this, docNumber);
 	}
 
 	@Override
