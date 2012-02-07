@@ -100,10 +100,4 @@ public final class ChildStream extends StreamIterator {
 				NavigationMode.NEXT_SIBLING, currentKey, OPEN_MODE, page,
 				deweyIDBuffer, navStatus);
 	}
-
-	@Override
-	protected BracketNode preFirst() throws IndexOperationException,
-			IndexAccessException {
-		return null;
-	}
 }

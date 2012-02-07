@@ -93,10 +93,4 @@ public class DocumentStream extends StreamIterator {
 				NavigationMode.NEXT_DOCUMENT, currentKey, OPEN_MODE, page,
 				deweyIDBuffer, navStatus);
 	}
-
-	@Override
-	protected BracketNode preFirst() throws IndexOperationException,
-			IndexAccessException {
-		return null;
-	}
 }
