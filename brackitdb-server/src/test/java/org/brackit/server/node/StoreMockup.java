@@ -36,6 +36,7 @@ import org.brackit.server.io.manager.impl.SlimBufferMgr;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr03;
 import org.brackit.server.node.bracket.BracketCollection;
+import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.node.txnode.TXCollection;
 import org.brackit.server.node.txnode.TXNode;
@@ -53,7 +54,7 @@ import org.brackit.xquery.xdm.DocumentException;
 
 /**
  * @author Martin Hiller
- *
+ * 
  */
 public abstract class StoreMockup<E extends TXNode<E>> {
 
@@ -68,30 +69,31 @@ public abstract class StoreMockup<E extends TXNode<E>> {
 	protected static final int BLOCK_SIZE = 8192;
 
 	protected static final int INITIAL_SIZE = 250;
-	
+
 	protected final String LOGFILE_DIRECTORY;
-	
+
 	protected static final String LOGFILE_BASENAME = "tx";
-	
+
 	protected static final long LOGFILE_SEGMENTSIZE = 10000;
-	
+
 	protected Buffer buffer;
 
 	protected DictionaryMgr dictionary;
 
 	protected MetaLockService<?> mls;
-	
+
 	protected TxMgr taMgr;
 
 	protected Log transactionLog;
 
 	protected BufferMgr bufferMgr;
-	
+
 	public StoreMockup() throws Exception {
 		this("sys", "log");
 	}
-	
-	public StoreMockup(String containerName, String logfileDir) throws Exception {
+
+	public StoreMockup(String containerName, String logfileDir)
+			throws Exception {
 		this.CONTAINER_NAME = containerName;
 		this.LOGFILE_DIRECTORY = logfileDir;
 		create();
@@ -99,36 +101,46 @@ public abstract class StoreMockup<E extends TXNode<E>> {
 
 	protected void create() throws Exception {
 
-		transactionLog = new DefaultLog(LOGFILE_DIRECTORY, LOGFILE_BASENAME, LOGFILE_SEGMENTSIZE);
+		transactionLog = new DefaultLog(LOGFILE_DIRECTORY, LOGFILE_BASENAME,
+				LOGFILE_SEGMENTSIZE);
 		bufferMgr = new SlimBufferMgr(transactionLog);
 		taMgr = new TaMgrImpl(transactionLog, bufferMgr);
-		
-		bufferMgr.createBuffer(BUFFER_SIZE, BLOCK_SIZE,
-				CONTAINER_NO, CONTAINER_NAME, INITIAL_SIZE, EXTEND_SIZE);
+
+		bufferMgr.createBuffer(BUFFER_SIZE, BLOCK_SIZE, CONTAINER_NO,
+				CONTAINER_NAME, INITIAL_SIZE, EXTEND_SIZE);
 		transactionLog.clear();
 		transactionLog.open();
-		
+
 		buffer = bufferMgr.getBuffer(CONTAINER_NO);
 		dictionary = new DictionaryMgr03(bufferMgr);
 		mls = new UnifiedMetaLockService();
-		
+
 		Tx tx = taMgr.begin();
 		dictionary.create(tx);
 		tx.commit();
 	}
-	
+
 	public void shutdown() throws TxException, BufferException {
 		taMgr.shutdown();
 		bufferMgr.shutdown();
 	}
-	
-	public abstract TXCollection<E> createDocument(String name, SubtreeParser parser) throws DocumentException, TxException;
-	
-	public abstract TXCollection<E> createDocument(Tx tx, String name, SubtreeParser parser) throws DocumentException;
-	
-	public TXCollection<E> newTXforDocument(TXCollection<E> coll, boolean readOnly) throws TxException {
-		return (TXCollection<E>) coll.copyFor(taMgr.begin(IsolationLevel.NONE, null, readOnly));
+
+	public abstract TXCollection<E> createDocument(String name,
+			SubtreeParser parser) throws DocumentException, TxException;
+
+	public abstract TXCollection<E> createDocument(Tx tx, String name,
+			SubtreeParser parser) throws DocumentException, TxException;
+
+	public abstract TXCollection<E> createCollection(String name)
+			throws DocumentException, TxException;
+
+	public abstract TXCollection<E> createCollection(Tx tx, String name)
+			throws DocumentException, TxException;
+
+	public TXCollection<E> newTXforDocument(TXCollection<E> coll,
+			boolean readOnly) throws TxException {
+		return (TXCollection<E>) coll.copyFor(taMgr.begin(IsolationLevel.NONE,
+				null, readOnly));
 	}
-	
-	
+
 }

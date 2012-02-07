@@ -122,9 +122,18 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 	}
 
 	public static void main(String[] args) throws Exception {
-		BracketNodeTest test = new BracketNodeTest();
-		test.setUp();
-		test.traverse(true, 1);
+//		BracketNodeTest test = new BracketNodeTest();
+//		test.setUp();
+//		test.storeCollection();
+		
+		BracketMockup mockup = new BracketMockup();
+		TXCollection<BracketNode> coll = mockup.createCollection("testCollection");
+		
+		coll.add(new DocumentParser(smallDocument));
+		
+//		for (int i = 0; i < 10; i++) {
+//			coll.add(new DocumentParser(smallDocument));
+//		}
 	}
 
 	@Ignore

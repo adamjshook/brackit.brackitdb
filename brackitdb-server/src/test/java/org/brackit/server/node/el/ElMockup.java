@@ -64,5 +64,21 @@ public class ElMockup extends StoreMockup<ElNode> {
 		Tx tx = taMgr.begin(IsolationLevel.NONE, null, false);
 		return createDocument(tx, name, parser);
 	}
+
+	@Override
+	public TXCollection<ElNode> createCollection(String name)
+			throws DocumentException, TxException {
+		Tx tx = taMgr.begin(IsolationLevel.NONE, null, false);
+		return createCollection(tx, name);
+	}
+
+	@Override
+	public TXCollection<ElNode> createCollection(Tx tx, String name)
+			throws DocumentException, TxException {
+		StorageSpec spec = new StorageSpec(name, dictionary);
+		ElCollection collection = new ElCollection(tx, store);
+		collection.create(spec);
+		return collection;
+	}
 	
 }

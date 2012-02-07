@@ -64,4 +64,18 @@ public class BracketMockup extends StoreMockup<BracketNode> {
 		Tx tx = taMgr.begin(IsolationLevel.NONE, null, false);
 		return createDocument(tx, name, parser);
 	}
+	
+	@Override
+	public TXCollection<BracketNode> createCollection(Tx tx, String name) throws DocumentException {
+		StorageSpec spec = new StorageSpec(name, dictionary);
+		BracketCollection collection = new BracketCollection(tx, store);
+		collection.create(spec);
+		return collection;
+	}
+	
+	@Override
+	public TXCollection<BracketNode> createCollection(String name) throws DocumentException, TxException {
+		Tx tx = taMgr.begin(IsolationLevel.NONE, null, false);
+		return createCollection(tx, name);
+	}
 }
