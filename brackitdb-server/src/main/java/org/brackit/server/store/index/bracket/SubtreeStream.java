@@ -107,15 +107,4 @@ public final class SubtreeStream extends StreamIterator {
 			page = null;
 		}
 	}
-
-	@Override
-	protected BracketNode preFirst() throws IndexOperationException,
-			IndexAccessException {
-		if (self && startDeweyID.isDocument()) {
-			return new BracketNode(locator);
-		} else {
-			return null;
-		}
-	}
-
 }

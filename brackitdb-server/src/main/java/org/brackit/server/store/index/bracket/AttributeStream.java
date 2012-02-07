@@ -88,11 +88,4 @@ public class AttributeStream extends StreamIterator {
 			page = null;
 		}		
 	}
-
-	@Override
-	protected BracketNode preFirst() throws IndexOperationException,
-			IndexAccessException {
-		return null;
-	}
-
 }

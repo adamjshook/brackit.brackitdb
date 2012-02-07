@@ -58,8 +58,6 @@ public abstract class StreamIterator implements Stream<BracketNode> {
 	protected final HintPageInformation hintPageInfo;
 	protected final BracketFilter filter;
 
-	private BracketNode preFirstNode;
-	private boolean preFirst;
 	private boolean firstUsage;
 
 	public StreamIterator(BracketLocator locator, BracketTree tree,
@@ -73,7 +71,6 @@ public abstract class StreamIterator implements Stream<BracketNode> {
 		this.tx = locator.collection.getTX();
 		this.deweyIDBuffer = new DeweyIDBuffer();
 		this.firstUsage = true;
-		this.preFirst = true;
 	}
 
 	public StreamIterator(StreamIterator other, BracketFilter filter)
@@ -100,7 +97,6 @@ public abstract class StreamIterator implements Stream<BracketNode> {
 		this.tx = other.tx;
 		this.deweyIDBuffer = page.getDeweyIDBuffer();
 		this.firstUsage = true;
-		this.preFirst = true;
 	}
 
 	/**
@@ -134,13 +130,6 @@ public abstract class StreamIterator implements Stream<BracketNode> {
 	 */
 	public BracketNode loadCurrent() throws DocumentException {
 
-		// special handling for document node
-		if (preFirstNode != null) {
-			BracketNode out = preFirstNode;
-			preFirstNode = null;
-			return out;
-		}
-
 		// assertion: page != null
 
 		try {
@@ -166,17 +155,6 @@ public abstract class StreamIterator implements Stream<BracketNode> {
 			while (true) {
 
 				if (firstUsage) {
-
-					if (preFirst) {
-						preFirst = false;
-						preFirstNode = preFirst();
-						if (preFirstNode != null
-								&& (filter == null || filter
-										.accept(preFirstNode))) {
-							return true;
-						}
-					}
-
 					firstUsage = false;
 					// try to load the hint page
 					if (hintPageInfo != null) {
@@ -212,9 +190,6 @@ public abstract class StreamIterator implements Stream<BracketNode> {
 			throw new DocumentException("Error navigating to next node.", e);
 		}
 	}
-
-	protected abstract BracketNode preFirst() throws IndexOperationException,
-			IndexAccessException;
 
 	protected abstract void first() throws IndexOperationException,
 			IndexAccessException;
