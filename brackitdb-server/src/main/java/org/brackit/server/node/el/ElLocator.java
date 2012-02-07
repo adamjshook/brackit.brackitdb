@@ -52,7 +52,7 @@ public final class ElLocator {
 
 	public ElLocator(ElCollection collection, DocID docID) {
 		this.docID = docID;
-		this.rootPageID = new PageID(collection.getID());
+		this.rootPageID = new PageID(docID.getDocNumber());
 		this.collection = collection;
 		this.pathSynopsis = collection.getPathSynopsis();
 	}

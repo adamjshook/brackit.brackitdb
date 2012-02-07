@@ -33,13 +33,16 @@ import static org.junit.Assert.assertNotNull;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.StringReader;
 
+import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.node.txnode.TXCollection;
 import org.brackit.server.node.txnode.TXNodeTest;
+import org.brackit.server.tx.IsolationLevel;
 import org.brackit.server.tx.TxException;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Una;
@@ -49,6 +52,7 @@ import org.brackit.xquery.node.parser.FragmentHelper;
 import org.brackit.xquery.xdm.Collection;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
+import org.brackit.xquery.xdm.Stream;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -62,6 +66,7 @@ import org.xml.sax.InputSource;
 public class ElNodeTest extends TXNodeTest<ElNode> {
 	protected ElStore elStore;
 	
+	private static final File smallDocument = new File("xmark10.xml");
 	private static final File bigDocument = new File("xmark100.xml");
 
 	@Test
@@ -281,6 +286,7 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 	@Override
 	public void setUp() throws Exception {
 		super.setUp();
+		tx = sm.taMgr.begin(IsolationLevel.NONE, null, false);
 		elStore = new ElStore(sm.bufferManager, sm.dictionary, sm.mls);
 	}
 
@@ -291,5 +297,26 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		ElCollection collection = new ElCollection(tx, elStore);
 		collection.create(spec, documentParser);
 		return collection;
+	}
+	
+	@Ignore
+	@Test
+	public void storeCollection() throws ServerException, IOException,
+			DocumentException {
+
+		ElCollection coll = new ElCollection(tx, elStore);
+		coll.create(new StorageSpec("test", sm.dictionary));
+
+		for (int i = 0; i < 10; i++) {
+			coll.add(new DocumentParser(smallDocument));
+		}
+		
+		// iterate over documents
+		Stream<? extends ElNode> docs = coll.getDocuments();
+		ElNode doc = null;
+		while ((doc = docs.next()) != null) {
+			System.out.println(doc);
+		}
+		docs.close();
 	}
 }
