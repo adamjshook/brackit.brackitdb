@@ -46,9 +46,7 @@ import org.brackit.xquery.xdm.DocumentException;
 public interface MetaDataMgr {
 	public Collection<?> lookup(Tx tx, String name) throws DocumentException;
 
-	public Collection<?> create(Tx tx, String name) throws DocumentException;
-
-	public Collection<?> create(Tx tx, String name, SubtreeParser parser)
+	public Collection<?> create(Tx tx, String name, SubtreeParser... parsers)
 			throws DocumentException;
 
 	public void drop(Tx tx, String name) throws DocumentException;

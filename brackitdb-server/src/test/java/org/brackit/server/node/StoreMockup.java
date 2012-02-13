@@ -78,11 +78,11 @@ public abstract class StoreMockup<E extends TXNode<E>> {
 
 	protected Buffer buffer;
 
-	protected DictionaryMgr dictionary;
+	public DictionaryMgr dictionary;
 
 	protected MetaLockService<?> mls;
 
-	protected TxMgr taMgr;
+	public TxMgr taMgr;
 
 	protected Log transactionLog;
 

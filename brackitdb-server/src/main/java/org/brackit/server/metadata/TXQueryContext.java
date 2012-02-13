@@ -53,16 +53,11 @@ public class TXQueryContext extends QueryContext {
 			this.tx = tx;
 			this.mdm = mdm;
 		}
-
+		
 		@Override
-		public Collection<?> create(String name) throws DocumentException {
-			return mdm.create(tx, name);
-		}
-
-		@Override
-		public Collection<?> create(String name, SubtreeParser parser)
+		public Collection<?> create(String name, SubtreeParser... parsers)
 				throws DocumentException {
-			return mdm.create(tx, name, parser);
+			return mdm.create(tx, name, parsers);
 		}
 
 		@Override

@@ -42,7 +42,7 @@ import org.brackit.xquery.xdm.DocumentException;
  */
 public class BracketMockup extends StoreMockup<BracketNode> {
 
-	private final BracketStore store;
+	public final BracketStore store;
 	
 	public BracketMockup() throws Exception {
 		super("bracket", "bracket-log");		

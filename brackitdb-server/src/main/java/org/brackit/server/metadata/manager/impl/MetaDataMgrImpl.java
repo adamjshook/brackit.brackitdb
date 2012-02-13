@@ -204,10 +204,10 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	}
 
 	@Override
-	public DBCollection<?> create(Tx tx, String name, SubtreeParser parser)
+	public DBCollection<?> create(Tx tx, String name, SubtreeParser... parsers)
 			throws DocumentException {
 		if (log.isDebugEnabled()) {
-			log.debug(String.format("Storing document %s.", name));
+			log.debug(String.format("Storing collection %s.", name));
 		}
 
 		// store persistent document
@@ -225,51 +225,13 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 		StorageSpec spec = new StorageSpec(name, defaultDictionary);
 		BracketCollection bracketCollection = new BracketCollection(tx, bracketStore);
-		bracketCollection.create(spec, parser);
+		bracketCollection.create(spec, parsers);
 
 		collection = bracketCollection;
 		Collection document = new Collection(collection.getID(), name, directory,
 				null);
 		collection.setPersistor(document);
 
-		// Finally persist and put into cache to make it available for others
-		collection.persist();
-		itemCache.putIfAbsent(tx, name, document);
-		collectionCache.putIfAbsent(tx, document.getID(), collection);
-
-		return collection;
-	}
-
-	@Override
-	public DBCollection<?> create(Tx tx, String name) throws DocumentException {
-		if (log.isDebugEnabled()) {
-			log.debug(String.format("Creating collection %s.", name));
-		}
-
-		// store persistent document
-		Path<QNm> path = asPath(name);
-		name = path.toString();
-		Item<Directory> item = getItemByPath(tx, path.leading(), false);
-
-		if (!(item instanceof Directory)) {
-			throw new MetaDataException("%s is not a directory", path.leading());
-		}
-
-		Directory directory = (Directory) item;
-		assertInsertion(tx, path, directory);
-		TXCollection<?> collection = null;
-
-		StorageSpec spec = new StorageSpec(name, defaultDictionary);
-		BracketCollection bracketCollection = new BracketCollection(tx, bracketStore);
-		bracketCollection.create(spec);
-
-		collection = bracketCollection;
-		Collection document = new Collection(collection.getID(), name, directory,
-				null);
-		collection.setPersistor(document);
-
-		// Finally put into cache and persist to make document available for
-		// others
 		// Finally persist and put into cache to make it available for others
 		collection.persist();
 		itemCache.putIfAbsent(tx, name, document);
