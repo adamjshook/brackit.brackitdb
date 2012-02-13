@@ -83,42 +83,48 @@ public class BracketCollection extends TXCollection<BracketNode> {
 		return copyCol;
 	}
 
-	public int create(StorageSpec spec) throws DocumentException {
-		try {
-			name = spec.getDocumentName();
-			dictionary = spec.getDictionary();
-			// create a path synopsis and document reference container
-			pathSynopsis = store.pathSynopsisMgrFactory.create(tx, spec
-					.getDictionary(), spec.getContainerID());
-			PageID rootPageID = store.index.createIndex(tx, spec
-					.getContainerID());
-			collID = rootPageID.value();
-			return collID;
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
-		}
-	}
-
-	public BracketNode create(StorageSpec spec, SubtreeParser parser)
+	public int create(StorageSpec spec, SubtreeParser... parsers)
 			throws DocumentException {
+		
+		InsertController insertCtrl = null;
 		try {
-			PageID rootPageID = store.index.createIndex(tx, spec
-					.getContainerID());
+			PageID rootPageID = store.index.createIndex(tx,
+					spec.getContainerID());
 
 			collID = rootPageID.value();
-			DocID docID = new DocID(collID, 0);
 			name = spec.getDocumentName();
 			dictionary = spec.getDictionary();
-			pathSynopsis = store.pathSynopsisMgrFactory.create(tx, spec
-					.getDictionary(), spec.getContainerID());
+			pathSynopsis = store.pathSynopsisMgrFactory.create(tx,
+					spec.getDictionary(), spec.getContainerID());
 
-			BracketNode document = new BracketNode(this, docID.getDocNumber());
-
-			// write document to document container
-			XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(docID);
-			document.store(rootDeweyID, parser, true, false, true);
-			return document;
+			if (parsers.length > 0) {
+				
+				// open index in LOAD mode
+				insertCtrl = store.index.openForInsert(tx, new PageID(collID),
+						OpenMode.LOAD, null);
+				
+				// load documents into collection
+				for (int i = 0; i < parsers.length; i++) {
+					
+					DocID docID = new DocID(collID, i);
+					BracketNode document = new BracketNode(this, i);
+					XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(docID);
+					document.store(rootDeweyID, parsers[i], insertCtrl, false, true);
+				}
+				
+				// close index
+				insertCtrl.close();
+			}
+			
+			return collID;
+			
 		} catch (IndexAccessException e) {
+			if (insertCtrl != null) {
+				try {
+					insertCtrl.close();
+				} catch (Exception e1) {
+				}
+			}
 			throw new DocumentException(e);
 		}
 	}
@@ -147,8 +153,8 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	@Override
 	public Node<?> materialize() throws DocumentException {
 		Node<?> root = super.materialize();
-		root.setAttribute(PATHSYNOPSIS_ID_ATTRIBUTE, new Una(Integer
-				.toString(pathSynopsis.getPathSynopsisNo())));
+		root.setAttribute(PATHSYNOPSIS_ID_ATTRIBUTE,
+				new Una(Integer.toString(pathSynopsis.getPathSynopsisNo())));
 		return root;
 	}
 
@@ -158,8 +164,9 @@ public class BracketCollection extends TXCollection<BracketNode> {
 		dictionary = store.dictionary;
 
 		if (pathSynopsis == null) {
-			PageID psID = PageID.fromString(root.getAttribute(
-					PATHSYNOPSIS_ID_ATTRIBUTE).getValue().stringValue());
+			PageID psID = PageID.fromString(root
+					.getAttribute(PATHSYNOPSIS_ID_ATTRIBUTE).getValue()
+					.stringValue());
 			pathSynopsis = store.pathSynopsisMgrFactory.load(tx, dictionary,
 					psID);
 		}
@@ -169,8 +176,8 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	public void delete() throws DocumentException {
 		try {
 			store.index.dropIndex(tx, new PageID(collID));
-			store.index.dropIndex(tx, new PageID(pathSynopsis
-					.getPathSynopsisNo()));
+			store.index.dropIndex(tx,
+					new PageID(pathSynopsis.getPathSynopsisNo()));
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -191,10 +198,11 @@ public class BracketCollection extends TXCollection<BracketNode> {
 
 	@Override
 	public BracketNode getDocument() throws DocumentException {
-//		Stream<BracketNode> docs = store.index.openDocumentStream(new BracketLocator(this, new DocID(collID, 0)), null);
-//		BracketNode doc = docs.next();
-//		docs.close();
-//		return doc;
+		// Stream<BracketNode> docs = store.index.openDocumentStream(new
+		// BracketLocator(this, new DocID(collID, 0)), null);
+		// BracketNode doc = docs.next();
+		// docs.close();
+		// return doc;
 		return new BracketNode(this, 0);
 	}
 
@@ -208,25 +216,28 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	@Override
 	public Stream<? extends BracketNode> getDocuments()
 			throws DocumentException {
-		return store.index.openDocumentStream(new BracketLocator(this, new DocID(collID, 0)), null);
+		return store.index.openDocumentStream(new BracketLocator(this,
+				new DocID(collID, 0)), null);
 	}
 
 	@Override
 	public BracketNode add(SubtreeParser parser)
-			throws OperationNotSupportedException, DocumentException {
-		
-		InsertController insertCtrl = null;
+			throws DocumentException {
+
 		try {
-			insertCtrl = store.index.openForInsert(tx, new PageID(collID), OpenMode.BULK, null);
+			InsertController insertCtrl = store.index.openForInsert(tx, new PageID(collID),
+					OpenMode.BULK, null);
+			
+			DocID newDocID = insertCtrl.getStartInsertKey().getDocID();
+
+			BracketNode document = new BracketNode(this, newDocID.getDocNumber());
+			XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(newDocID);
+			document.store(rootDeweyID, parser, insertCtrl, false, true);
+			insertCtrl.close();
+			return document;
+			
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}
-		
-		DocID newDocID = insertCtrl.getStartInsertKey().getDocID();
-		
-		BracketNode document = new BracketNode(this, newDocID.getDocNumber());
-		XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(newDocID);
-		document.store(rootDeweyID, parser, insertCtrl, false, true);
-		return document;
 	}
 }

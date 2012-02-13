@@ -72,7 +72,7 @@ import org.brackit.xquery.xdm.Stream;
  * 
  */
 public class BracketNode extends TXNode<BracketNode> {
-	
+
 	public static final int NODE_CLASS_ID = 2;
 
 	protected final BracketLocator locator;
@@ -102,11 +102,6 @@ public class BracketNode extends TXNode<BracketNode> {
 		this.locator = locator;
 		this.value = value;
 		this.psNode = psNode;
-	}
-
-	public BracketNode(BracketCollection collection, BracketNode document) {
-		super(document.deweyID, document.type);
-		this.locator = new BracketLocator(collection, document.locator);
 	}
 
 	@Override
@@ -251,7 +246,8 @@ public class BracketNode extends TXNode<BracketNode> {
 	@Override
 	public BracketNode insertSubtree(XTCdeweyID deweyID, SubtreeParser parser)
 			throws DocumentException {
-		return store(deweyID, parser, false, true, false);
+		store(deweyID, parser, false, true, false);
+		return getNode(deweyID);
 	}
 
 	@Override
@@ -367,11 +363,15 @@ public class BracketNode extends TXNode<BracketNode> {
 
 		BracketStore r = locator.collection.store;
 		List<SubtreeListener<? super BracketNode>> listeners = getListener(ListenMode.DELETE);
-		listeners.add(new DebugListener());
-		
-		r.index.deleteSubtree(locator, deweyID, hintPageInfo, new SubtreeDeleteListenerImpl(locator,
-					listeners.toArray(new SubtreeListener[listeners.size()])));
-		
+		// listeners.add(new DebugListener());
+
+		r.index.deleteSubtree(
+				locator,
+				deweyID,
+				hintPageInfo,
+				new SubtreeDeleteListenerImpl(locator, listeners
+						.toArray(new SubtreeListener[listeners.size()])));
+
 		hintPageInfo = null;
 	}
 
@@ -430,7 +430,7 @@ public class BracketNode extends TXNode<BracketNode> {
 
 	@Override
 	public BracketNode getParentInternal() throws DocumentException {
-		
+
 		// TODO: remove
 		if (deweyID.isRoot()) {
 			return new BracketNode(locator);
@@ -500,8 +500,8 @@ public class BracketNode extends TXNode<BracketNode> {
 		}
 	}
 
-	BracketNode store(XTCdeweyID rootDeweyID, SubtreeParser parser,
-			boolean exclusive, boolean updateIndexes, boolean newDocument)
+	void store(XTCdeweyID rootDeweyID, SubtreeParser parser, boolean exclusive,
+			boolean updateIndexes, boolean newDocument)
 			throws DocumentException {
 		OpenMode openMode = (exclusive) ? OpenMode.LOAD : OpenMode.BULK;
 
@@ -518,13 +518,9 @@ public class BracketNode extends TXNode<BracketNode> {
 				locator, this, rootDeweyID,
 				listener.toArray(new SubtreeListener[listener.size()]));
 		parser.parse(subtreeHandler);
-
-		BracketNode root = getNode(rootDeweyID);
-
-		return root;
 	}
 
-	BracketNode store(XTCdeweyID rootDeweyID, SubtreeParser parser,
+	void store(XTCdeweyID rootDeweyID, SubtreeParser parser,
 			InsertController insertCtrl, boolean updateIndexes,
 			boolean newDocument) throws DocumentException {
 
@@ -542,9 +538,8 @@ public class BracketNode extends TXNode<BracketNode> {
 				listener.toArray(new SubtreeListener[listener.size()]));
 		parser.parse(subtreeHandler);
 
-		BracketNode root = getNode(rootDeweyID);
-
-		return root;
+		// remark: at this point, the insertCtrl is still open for further
+		// inserts
 	}
 
 	private String getText() throws DocumentException {

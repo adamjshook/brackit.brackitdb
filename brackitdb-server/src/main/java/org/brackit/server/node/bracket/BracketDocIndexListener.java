@@ -54,7 +54,9 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 
 	private final BracketLocator locator;
 	
-	private boolean newDocument;
+	private final boolean newDocument;
+	
+	private final boolean externalInsertCtrl;
 
 	private InsertController insertCtrl;
 
@@ -71,6 +73,7 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 		this.ancestorsToInsert = 0;
 		this.pendingElement = null;
 		this.newDocument = newDocument;
+		this.externalInsertCtrl = false;
 	}
 
 	public BracketDocIndexListener(ListenMode listenMode,
@@ -83,11 +86,12 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 		this.ancestorsToInsert = 0;
 		this.pendingElement = null;
 		this.newDocument = newDocument;
+		this.externalInsertCtrl = true;
 	}
 
 	@Override
 	public void end() throws DocumentException {
-		if (insertCtrl != null) {
+		if (!externalInsertCtrl && insertCtrl != null) {
 			throw new DocumentException("End before endFragment");
 		}
 	}
@@ -118,12 +122,14 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 
 	@Override
 	public void fail() throws DocumentException {
-		if (insertCtrl != null) {
+		if (!externalInsertCtrl && insertCtrl != null) {
 			try {
 				insertCtrl.close();
 			} catch (IndexAccessException e) {
 				throw new DocumentException(e);
 			}
+			
+			insertCtrl = null;
 		}
 	}
 
@@ -175,13 +181,15 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 			XTCdeweyID deweyID = node.getDeweyID();
 
 			if (insertCtrl == null) {
+				if (externalInsertCtrl) {
+					throw new DocumentException("External InsertController is null!");
+				}
 				insertCtrl = index.openForInsert(locator.collection.getTX(),
 						locator.rootPageID, openMode, deweyID);
 			}
 			
-			insertCtrl.insert(deweyID, record, ancestorsToInsert + (newDocument ? 1 : 0));
+			insertCtrl.insert(deweyID, record, ancestorsToInsert);
 			ancestorsToInsert = 0;
-			newDocument = false;
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}
@@ -221,7 +229,7 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 
 	public void beginFragment() throws DocumentException {
 		this.pendingElement = null;
-		this.ancestorsToInsert = 0;
+		this.ancestorsToInsert = newDocument ? 1 : 0;
 	}
 
 	public void endFragment() throws DocumentException {
@@ -229,7 +237,7 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 			writeEmptyElement();
 		}
 
-		if (insertCtrl != null) {
+		if (!externalInsertCtrl && insertCtrl != null) {
 			try {
 				insertCtrl.close();
 			} catch (IndexAccessException e) {
