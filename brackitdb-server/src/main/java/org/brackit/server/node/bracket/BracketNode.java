@@ -246,7 +246,7 @@ public class BracketNode extends TXNode<BracketNode> {
 	@Override
 	public BracketNode insertSubtree(XTCdeweyID deweyID, SubtreeParser parser)
 			throws DocumentException {
-		store(deweyID, parser, false, true, false);
+		storeSubtree(deweyID, parser, false, true);
 		return getNode(deweyID);
 	}
 
@@ -500,15 +500,14 @@ public class BracketNode extends TXNode<BracketNode> {
 		}
 	}
 
-	void store(XTCdeweyID rootDeweyID, SubtreeParser parser, boolean exclusive,
-			boolean updateIndexes, boolean newDocument)
-			throws DocumentException {
+	void storeSubtree(XTCdeweyID rootDeweyID, SubtreeParser parser,
+			boolean exclusive, boolean updateIndexes) throws DocumentException {
 		OpenMode openMode = (exclusive) ? OpenMode.LOAD : OpenMode.BULK;
 
 		ArrayList<SubtreeListener<? super BracketNode>> listener = new ArrayList<SubtreeListener<? super BracketNode>>(
 				5);
 		listener.add(new BracketDocIndexListener(locator, ListenMode.INSERT,
-				openMode, newDocument));
+				openMode));
 
 		if (updateIndexes) {
 			listener.addAll(getListener(ListenMode.INSERT));
@@ -520,19 +519,18 @@ public class BracketNode extends TXNode<BracketNode> {
 		parser.parse(subtreeHandler);
 	}
 
-	void store(XTCdeweyID rootDeweyID, SubtreeParser parser,
-			InsertController insertCtrl, boolean updateIndexes,
-			boolean newDocument) throws DocumentException {
+	void storeDocuments(XTCdeweyID rootDeweyID, SubtreeParser parser,
+			InsertController insertCtrl, boolean updateIndexes)
+			throws DocumentException {
 
 		ArrayList<SubtreeListener<? super BracketNode>> listener = new ArrayList<SubtreeListener<? super BracketNode>>(
 				5);
-		listener.add(new BracketDocIndexListener(ListenMode.INSERT, insertCtrl,
-				newDocument));
+		listener.add(new BracketDocIndexListener(ListenMode.INSERT, insertCtrl));
 
 		if (updateIndexes) {
 			listener.addAll(getListener(ListenMode.INSERT));
 		}
-
+		
 		BracketSubtreeBuilder subtreeHandler = new BracketSubtreeBuilder(
 				locator, this, rootDeweyID,
 				listener.toArray(new SubtreeListener[listener.size()]));

@@ -27,6 +27,8 @@
  */
 package org.brackit.server.node.bracket;
 
+import java.util.ArrayList;
+
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
 import org.brackit.server.node.DocID;
@@ -41,6 +43,8 @@ import org.brackit.server.store.index.bracket.InsertController;
 import org.brackit.server.tx.Tx;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Una;
+import org.brackit.xquery.node.parser.ListenMode;
+import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.node.parser.SubtreeParser;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Node;
@@ -85,7 +89,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 
 	public int create(StorageSpec spec, SubtreeParser... parsers)
 			throws DocumentException {
-		
+
 		InsertController insertCtrl = null;
 		try {
 			PageID rootPageID = store.index.createIndex(tx,
@@ -98,26 +102,27 @@ public class BracketCollection extends TXCollection<BracketNode> {
 					spec.getDictionary(), spec.getContainerID());
 
 			if (parsers.length > 0) {
-				
+
 				// open index in LOAD mode
 				insertCtrl = store.index.openForInsert(tx, new PageID(collID),
 						OpenMode.LOAD, null);
-				
+
 				// load documents into collection
 				for (int i = 0; i < parsers.length; i++) {
-					
+
 					DocID docID = new DocID(collID, i);
 					BracketNode document = new BracketNode(this, i);
 					XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(docID);
-					document.store(rootDeweyID, parsers[i], insertCtrl, false, true);
+					document.storeDocuments(rootDeweyID, parsers[i],
+							insertCtrl, false);
 				}
-				
+
 				// close index
 				insertCtrl.close();
 			}
-			
+
 			return collID;
-			
+
 		} catch (IndexAccessException e) {
 			if (insertCtrl != null) {
 				try {
@@ -221,23 +226,41 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	}
 
 	@Override
-	public BracketNode add(SubtreeParser parser)
-			throws DocumentException {
+	public BracketNode add(SubtreeParser parser) throws DocumentException {
 
 		try {
-			InsertController insertCtrl = store.index.openForInsert(tx, new PageID(collID),
-					OpenMode.BULK, null);
+			InsertController insertCtrl = store.index.openForInsert(tx,
+					new PageID(collID), OpenMode.BULK, null);
 			
-			DocID newDocID = insertCtrl.getStartInsertKey().getDocID();
-
-			BracketNode document = new BracketNode(this, newDocID.getDocNumber());
-			XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(newDocID);
-			document.store(rootDeweyID, parser, insertCtrl, false, true);
+			int nextDocNumber = insertCtrl.getStartInsertKey().getDocID().getDocNumber();
+			storeDocuments(nextDocNumber, parser, insertCtrl, true);
 			insertCtrl.close();
-			return document;
 			
+			return new BracketNode(this, nextDocNumber);
+
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}
+	}
+
+	private void storeDocuments(int nextDocNumber, SubtreeParser parser,
+			InsertController insertCtrl, boolean updateIndexes)
+			throws DocumentException {
+
+		ArrayList<SubtreeListener<? super BracketNode>> listener = new ArrayList<SubtreeListener<? super BracketNode>>(
+				5);
+		listener.add(new BracketDocIndexListener(ListenMode.INSERT, insertCtrl));
+
+		if (updateIndexes) {
+			listener.addAll(indexController.getIndexListener(ListenMode.INSERT));
+		}
+
+		BracketSubtreeBuilder subtreeHandler = new BracketSubtreeBuilder(this,
+				nextDocNumber, listener.toArray(new SubtreeListener[listener
+						.size()]));
+		parser.parse(subtreeHandler);
+
+		// remark: at this point, the insertCtrl is still open for further
+		// inserts
 	}
 }

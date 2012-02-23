@@ -54,8 +54,6 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 
 	private final BracketLocator locator;
 	
-	private final boolean newDocument;
-	
 	private final boolean externalInsertCtrl;
 
 	private InsertController insertCtrl;
@@ -65,19 +63,18 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 	private int ancestorsToInsert;
 
 	public BracketDocIndexListener(BracketLocator locator,
-			ListenMode listenMode, OpenMode openMode, boolean newDocument) {
+			ListenMode listenMode, OpenMode openMode) {
 		this.locator = locator;
 		this.index = locator.collection.store.index;
 		this.listenMode = listenMode;
 		this.openMode = openMode;
 		this.ancestorsToInsert = 0;
 		this.pendingElement = null;
-		this.newDocument = newDocument;
 		this.externalInsertCtrl = false;
 	}
 
 	public BracketDocIndexListener(ListenMode listenMode,
-			InsertController insertCtrl, boolean newDocument) {
+			InsertController insertCtrl) {
 		this.locator = null;
 		this.index = null;
 		this.listenMode = listenMode;
@@ -85,7 +82,6 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 		this.insertCtrl = insertCtrl;
 		this.ancestorsToInsert = 0;
 		this.pendingElement = null;
-		this.newDocument = newDocument;
 		this.externalInsertCtrl = true;
 	}
 
@@ -229,12 +225,13 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 
 	public void beginFragment() throws DocumentException {
 		this.pendingElement = null;
-		this.ancestorsToInsert = newDocument ? 1 : 0;
+		this.ancestorsToInsert = 0;
 	}
 
 	public void endFragment() throws DocumentException {
 		if (pendingElement != null) {
 			writeEmptyElement();
+			pendingElement = null;
 		}
 
 		if (!externalInsertCtrl && insertCtrl != null) {
@@ -245,6 +242,19 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 			}
 
 			insertCtrl = null;
+		}
+	}
+	
+	@Override
+	public void startDocument() throws DocumentException {
+		this.ancestorsToInsert++;
+	}
+	
+	@Override
+	public void endDocument() throws DocumentException {
+		if (pendingElement != null) {
+			writeEmptyElement();
+			pendingElement = null;
 		}
 	}
 }

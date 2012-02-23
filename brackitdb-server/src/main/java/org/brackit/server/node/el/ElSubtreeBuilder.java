@@ -134,4 +134,9 @@ public class ElSubtreeBuilder extends SubtreeBuilder<ElNode> {
 	@Override
 	public void endMapping(String prefix) throws DocumentException {
 	}
+
+	@Override
+	protected ElNode buildDocument(XTCdeweyID deweyID) throws DocumentException {
+		return new ElNode(locator);
+	}
 }

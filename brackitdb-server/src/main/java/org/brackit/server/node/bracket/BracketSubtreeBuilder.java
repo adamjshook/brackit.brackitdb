@@ -46,7 +46,9 @@ import org.brackit.xquery.xdm.Kind;
  */
 public class BracketSubtreeBuilder extends SubtreeBuilder<BracketNode> {
 
-	private final BracketLocator locator;
+	private final BracketCollection collection;
+
+	private BracketLocator locator;
 
 	private final DictionaryMgr dictionary;
 
@@ -60,8 +62,20 @@ public class BracketSubtreeBuilder extends SubtreeBuilder<BracketNode> {
 			XTCdeweyID rootDeweyID, SubtreeListener<BracketNode>[] listener)
 			throws DocumentException {
 		super(parent, rootDeweyID, listener);
+		this.collection = locator.collection;
 		this.locator = locator;
-		this.tx = locator.collection.getTX();
+		this.tx = collection.getTX();
+		this.dictionary = locator.collection.getDictionary();
+		this.psMgr = locator.pathSynopsis.spawnBulkPsManager();
+	}
+
+	public BracketSubtreeBuilder(BracketCollection collection,
+			int nextDocNumber, SubtreeListener<BracketNode>[] listener)
+			throws DocumentException {
+		super(collection.getID(), nextDocNumber, listener);
+		this.collection = collection;
+		this.locator = null;
+		this.tx = collection.getTX();
 		this.dictionary = locator.collection.getDictionary();
 		this.psMgr = locator.pathSynopsis.spawnBulkPsManager();
 	}
@@ -74,14 +88,15 @@ public class BracketSubtreeBuilder extends SubtreeBuilder<BracketNode> {
 				nsMapping);
 		nsMapping = null;
 
-		return new BracketNode(locator, deweyID, Kind.ELEMENT.ID, null, psNode);
+		return new BracketNode(locator, deweyID,
+				Kind.ELEMENT.ID, null, psNode);
 	}
 
 	@Override
 	protected BracketNode buildText(BracketNode parent, Atomic text,
 			XTCdeweyID deweyID) throws DocumentException {
-		return new BracketNode(locator, deweyID, Kind.TEXT.ID, text,
-				parent.psNode);
+		return new BracketNode(locator, deweyID, Kind.TEXT.ID,
+				text, parent.psNode);
 	}
 
 	@Override
@@ -93,32 +108,32 @@ public class BracketSubtreeBuilder extends SubtreeBuilder<BracketNode> {
 		}
 		PSNode psNode = psMgr.getChild(parent.getPCR(), name,
 				Kind.ATTRIBUTE.ID, null);
-		
-		return new BracketNode(locator, deweyID, Kind.ATTRIBUTE.ID, value,
-				psNode);
+
+		return new BracketNode(locator, deweyID,
+				Kind.ATTRIBUTE.ID, value, psNode);
 	}
 
 	@Override
 	protected BracketNode buildComment(BracketNode parent, Atomic text,
 			XTCdeweyID deweyID) throws DocumentException {
-		return new BracketNode(locator, deweyID, Kind.COMMENT.ID, text,
-				parent.psNode);
+		return new BracketNode(locator, deweyID,
+				Kind.COMMENT.ID, text, parent.psNode);
 	}
 
 	@Override
-	protected BracketNode buildProcessingInstruction(BracketNode parent, QNm name,
-			Atomic text, XTCdeweyID deweyID) throws DocumentException {
-		
+	protected BracketNode buildProcessingInstruction(BracketNode parent,
+			QNm name, Atomic text, XTCdeweyID deweyID) throws DocumentException {
+
 		if (nsMapping != null) {
 			throw new RuntimeException();
 		}
 		PSNode psNode = psMgr.getChild(parent.getPCR(), name,
 				Kind.PROCESSING_INSTRUCTION.ID, null);
-		
+
 		return new BracketNode(locator, deweyID,
 				Kind.PROCESSING_INSTRUCTION.ID, text, psNode);
 	}
-	
+
 	@Override
 	public void startMapping(String prefix, String uri)
 			throws DocumentException {
@@ -136,5 +151,12 @@ public class BracketSubtreeBuilder extends SubtreeBuilder<BracketNode> {
 
 	@Override
 	public void endMapping(String prefix) throws DocumentException {
+	}
+
+	@Override
+	protected BracketNode buildDocument(XTCdeweyID deweyID)
+			throws DocumentException {
+		locator = new BracketLocator(collection, deweyID.getDocID());
+		return new BracketNode(locator);
 	}
 }
