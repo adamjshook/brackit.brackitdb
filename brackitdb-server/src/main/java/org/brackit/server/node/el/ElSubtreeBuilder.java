@@ -44,7 +44,7 @@ import org.brackit.xquery.xdm.Kind;
  * @author Sebastian Baechle
  * 
  */
-public class ElSubtreeHandler extends SubtreeBuilder<ElNode> {
+public class ElSubtreeBuilder extends SubtreeBuilder<ElNode> {
 	private final ElLocator locator;
 
 	private final DictionaryMgr dictionary;
@@ -55,7 +55,7 @@ public class ElSubtreeHandler extends SubtreeBuilder<ElNode> {
 
 	private NsMapping nsMapping;
 
-	public ElSubtreeHandler(ElLocator locator, ElNode parent,
+	public ElSubtreeBuilder(ElLocator locator, ElNode parent,
 			XTCdeweyID rootDeweyID, SubtreeListener<ElNode>[] listener)
 			throws DocumentException {
 		super(parent, rootDeweyID, listener);

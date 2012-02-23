@@ -771,7 +771,7 @@ public class ElNode extends TXNode<ElNode> {
 			listener.addAll(getListener(ListenMode.INSERT, locator));
 		}
 
-		ElSubtreeHandler subtreeHandler = new ElSubtreeHandler(locator, this,
+		ElSubtreeBuilder subtreeHandler = new ElSubtreeBuilder(locator, this,
 				rootDeweyID, listener.toArray(new SubtreeListener[listener
 						.size()]));
 		parser.parse(subtreeHandler);

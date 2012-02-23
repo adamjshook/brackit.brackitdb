@@ -514,7 +514,7 @@ public class BracketNode extends TXNode<BracketNode> {
 			listener.addAll(getListener(ListenMode.INSERT));
 		}
 
-		BracketSubtreeHandler subtreeHandler = new BracketSubtreeHandler(
+		BracketSubtreeBuilder subtreeHandler = new BracketSubtreeBuilder(
 				locator, this, rootDeweyID,
 				listener.toArray(new SubtreeListener[listener.size()]));
 		parser.parse(subtreeHandler);
@@ -533,7 +533,7 @@ public class BracketNode extends TXNode<BracketNode> {
 			listener.addAll(getListener(ListenMode.INSERT));
 		}
 
-		BracketSubtreeHandler subtreeHandler = new BracketSubtreeHandler(
+		BracketSubtreeBuilder subtreeHandler = new BracketSubtreeBuilder(
 				locator, this, rootDeweyID,
 				listener.toArray(new SubtreeListener[listener.size()]));
 		parser.parse(subtreeHandler);
