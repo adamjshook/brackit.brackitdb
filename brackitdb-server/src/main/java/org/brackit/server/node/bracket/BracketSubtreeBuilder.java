@@ -44,7 +44,7 @@ import org.brackit.xquery.xdm.Kind;
  * @author Martin Hiller
  * 
  */
-public class BracketSubtreeHandler extends SubtreeBuilder<BracketNode> {
+public class BracketSubtreeBuilder extends SubtreeBuilder<BracketNode> {
 
 	private final BracketLocator locator;
 
@@ -56,7 +56,7 @@ public class BracketSubtreeHandler extends SubtreeBuilder<BracketNode> {
 
 	private NsMapping nsMapping;
 
-	public BracketSubtreeHandler(BracketLocator locator, BracketNode parent,
+	public BracketSubtreeBuilder(BracketLocator locator, BracketNode parent,
 			XTCdeweyID rootDeweyID, SubtreeListener<BracketNode>[] listener)
 			throws DocumentException {
 		super(parent, rootDeweyID, listener);

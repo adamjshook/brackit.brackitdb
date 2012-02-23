@@ -69,6 +69,11 @@ public class TXQueryContext extends QueryContext {
 		public Collection<?> lookup(String name) throws DocumentException {
 			return mdm.lookup(tx, name);
 		}
+
+		@Override
+		public void makeDir(String path) throws DocumentException {
+			mdm.mkdir(tx, path);
+		}
 	}
 
 	public TXQueryContext(Tx tx, MetaDataMgr mdm) {
