@@ -28,6 +28,7 @@
 package org.brackit.server.node.txnode;
 
 import org.brackit.xquery.util.log.Logger;
+import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.atomic.QNm;
@@ -50,24 +51,50 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 
 	protected final XTCdeweyID rootDeweyID;
 
+	protected final boolean docMode;
+
+	protected final int collectionID;
+
+	protected int nextDocNumber;
+
 	protected TXNode[] stack;
 
 	protected int stackSize;
 
 	protected int level;
 
-	protected E subtreeRoot;
-
 	protected XTCdeweyID lastAttributeDeweyID;
 
+	/**
+	 * Use this constructor if this builder is used to build a subtree.
+	 */
 	public SubtreeBuilder(E parent, XTCdeweyID rootDeweyID,
 			SubtreeListener<? super E>[] listeners) throws DocumentException {
 		super(listeners);
 		this.parent = parent;
 		this.rootDeweyID = rootDeweyID;
+		this.collectionID = rootDeweyID.getDocID().getCollectionID();
+		this.docMode = false;
+	}
+
+	/**
+	 * Use this constructor if this builder is used to build one or more
+	 * documents.
+	 */
+	public SubtreeBuilder(int collectionID, int nextDocNumber,
+			SubtreeListener<? super E>[] listeners) throws DocumentException {
+		super(listeners);
+		this.parent = null;
+		this.rootDeweyID = null;
+		this.collectionID = collectionID;
+		this.nextDocNumber = nextDocNumber;
+		this.docMode = true;
 	}
 
 	protected abstract E buildElement(E parent, QNm name, XTCdeweyID deweyID)
+			throws DocumentException;
+
+	protected abstract E buildDocument(XTCdeweyID deweyID)
 			throws DocumentException;
 
 	protected abstract E buildAttribute(E parent, QNm name, Atomic value,
@@ -80,34 +107,43 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 			throws DocumentException;
 
 	// TODO check params for PI's
-	protected abstract E buildProcessingInstruction(E parent, QNm name, 
+	protected abstract E buildProcessingInstruction(E parent, QNm name,
 			Atomic text, XTCdeweyID deweyID) throws DocumentException;
-
-	public E getSubtreeRoot() throws DocumentException {
-		if (subtreeRoot == null) {
-			throw new DocumentException("No subtree has been build.");
-		}
-
-		return subtreeRoot;
-	}
 
 	@Override
 	public void startDocument() throws DocumentException {
-		try {
-			notifyBeginDocument();
-		} catch (DocumentException e) {
-			notifyFail();
-			throw e;
+		
+		if (docMode) {
+			try {
+				level++;
+				lastAttributeDeweyID = null;
+				pushNode(Kind.DOCUMENT, null, null);
+				
+				notifyBeginDocument();
+			} catch (DocumentException e) {
+				notifyFail();
+				throw e;
+			}
 		}
 	}
 
 	@Override
 	public void endDocument() throws DocumentException {
-		try {
-			notifyEndDocument();
-		} catch (DocumentException e) {
-			notifyFail();
-			throw e;
+		
+		if (docMode) {
+			try {
+				notifyEndDocument();
+				level--;
+				lastAttributeDeweyID = null;
+				
+				if (level > 0) {
+					throw new DocumentException("Invalid Parser State!");
+				}
+				
+			} catch (DocumentException e) {
+				notifyFail();
+				throw e;
+			}
 		}
 	}
 
@@ -186,13 +222,13 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 	}
 
 	@Override
-	public void processingInstruction(QNm name, Atomic content) 
+	public void processingInstruction(QNm name, Atomic content)
 			throws DocumentException {
 		try {
 			// processing instructions not working yet
-//			if (true) {
-//				return;
-//			}
+			// if (true) {
+			// return;
+			// }
 
 			level++;
 			lastAttributeDeweyID = null;
@@ -249,22 +285,37 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 		E node = null;
 		XTCdeweyID deweyID = null;
 
-		if (rootDeweyID != null) {
+		if (kind == Kind.DOCUMENT) {
+			if (stackSize > 1) {
+				throw new DocumentException("Invalid Parser State!");
+			}
+
+			deweyID = new XTCdeweyID(new DocID(collectionID, nextDocNumber));
+			nextDocNumber++;
+			
+			stack[0] = null;
+			stackSize = 0;
+			
+		} else {
+			// non document nodes
 			if (stackSize == 0) {
 				deweyID = rootDeweyID;
 			} else {
 				if (stackSize == level) // new sibling at this level
 				{
-					deweyID = XTCdeweyID.newBetween(stack[--stackSize]
-							.getDeweyID(), null);
+					if (docMode && stackSize == 2) {
+						// sibling of root node requested
+						throw new DocumentException("Invalid Parser State!");
+					}
+					
+					deweyID = XTCdeweyID.newBetween(
+							stack[--stackSize].getDeweyID(), null);
 					stack[stackSize] = null;
 				} else // first child at this level
 				{
 					deweyID = stack[stackSize - 1].getDeweyID().getNewChildID();
 				}
 			}
-		} else if (stackSize == level) {
-			stack[--stackSize] = null;
 		}
 
 		E parent = (E) ((stackSize > 0) ? stack[stackSize - 1] : this.parent);
@@ -277,10 +328,8 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 			node = buildComment(parent, text, deweyID);
 		} else if (kind == Kind.PROCESSING_INSTRUCTION) {
 			node = buildProcessingInstruction(parent, name, text, deweyID);
-		}
-
-		if (stackSize == 0) {
-			subtreeRoot = node;
+		} else if (kind == Kind.DOCUMENT) {
+			node = buildDocument(deweyID);
 		}
 
 		if (++stackSize == stack.length) {
