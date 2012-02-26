@@ -140,6 +140,10 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 					throw new DocumentException("Invalid Parser State!");
 				}
 				
+				if (level < (stackSize - 1)) {
+					stack[--stackSize] = null;
+				}
+				
 			} catch (DocumentException e) {
 				notifyFail();
 				throw e;
@@ -264,15 +268,13 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 	public void attribute(QNm name, Atomic value) throws DocumentException {
 		XTCdeweyID deweyID = lastAttributeDeweyID;
 
-		if (rootDeweyID != null) {
-			if (deweyID == null) {
-				XTCdeweyID elementDeweyID = stack[stackSize - 1].getDeweyID();
-				deweyID = elementDeweyID.getAttributeRootID().getNewChildID();
-			} else {
-				deweyID = XTCdeweyID.newBetween(deweyID, null);
-			}
-			lastAttributeDeweyID = deweyID;
+		if (deweyID == null) {
+			XTCdeweyID elementDeweyID = stack[stackSize - 1].getDeweyID();
+			deweyID = elementDeweyID.getAttributeRootID().getNewChildID();
+		} else {
+			deweyID = XTCdeweyID.newBetween(deweyID, null);
 		}
+		lastAttributeDeweyID = deweyID;
 
 		E node = buildAttribute((E) ((stackSize > 0) ? stack[stackSize - 1]
 				: null), name, value, deweyID);
@@ -345,7 +347,7 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 	@Override
 	public void endElement(QNm name) throws DocumentException {
 		try {
-			notifyEndElement((E) stack[stackSize - 1]);
+			notifyEndElement((E) stack[level - 1]);
 
 			level--;
 			lastAttributeDeweyID = null;

@@ -508,6 +508,7 @@ public class BracketNode extends TXNode<BracketNode> {
 				5);
 		listener.add(new BracketDocIndexListener(locator, ListenMode.INSERT,
 				openMode));
+		//listener.add(new DebugListener());
 
 		if (updateIndexes) {
 			listener.addAll(getListener(ListenMode.INSERT));
@@ -517,27 +518,6 @@ public class BracketNode extends TXNode<BracketNode> {
 				locator, this, rootDeweyID,
 				listener.toArray(new SubtreeListener[listener.size()]));
 		parser.parse(subtreeHandler);
-	}
-
-	void storeDocuments(XTCdeweyID rootDeweyID, SubtreeParser parser,
-			InsertController insertCtrl, boolean updateIndexes)
-			throws DocumentException {
-
-		ArrayList<SubtreeListener<? super BracketNode>> listener = new ArrayList<SubtreeListener<? super BracketNode>>(
-				5);
-		listener.add(new BracketDocIndexListener(ListenMode.INSERT, insertCtrl));
-
-		if (updateIndexes) {
-			listener.addAll(getListener(ListenMode.INSERT));
-		}
-		
-		BracketSubtreeBuilder subtreeHandler = new BracketSubtreeBuilder(
-				locator, this, rootDeweyID,
-				listener.toArray(new SubtreeListener[listener.size()]));
-		parser.parse(subtreeHandler);
-
-		// remark: at this point, the insertCtrl is still open for further
-		// inserts
 	}
 
 	private String getText() throws DocumentException {

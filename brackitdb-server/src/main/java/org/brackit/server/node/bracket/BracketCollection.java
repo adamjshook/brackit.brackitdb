@@ -35,6 +35,7 @@ import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.el.ElNode;
 import org.brackit.server.node.index.IndexController;
+import org.brackit.server.node.txnode.DebugListener;
 import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.node.txnode.TXCollection;
 import org.brackit.server.store.OpenMode;
@@ -43,6 +44,7 @@ import org.brackit.server.store.index.bracket.InsertController;
 import org.brackit.server.tx.Tx;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Una;
+import org.brackit.xquery.node.parser.CollectionParser;
 import org.brackit.xquery.node.parser.ListenMode;
 import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.node.parser.SubtreeParser;
@@ -87,7 +89,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 		return copyCol;
 	}
 
-	public int create(StorageSpec spec, SubtreeParser... parsers)
+	public int create(StorageSpec spec, SubtreeParser parser)
 			throws DocumentException {
 
 		InsertController insertCtrl = null;
@@ -101,21 +103,13 @@ public class BracketCollection extends TXCollection<BracketNode> {
 			pathSynopsis = store.pathSynopsisMgrFactory.create(tx,
 					spec.getDictionary(), spec.getContainerID());
 
-			if (parsers.length > 0) {
+			if (parser != null) {
 
 				// open index in LOAD mode
 				insertCtrl = store.index.openForInsert(tx, new PageID(collID),
 						OpenMode.LOAD, null);
-
-				// load documents into collection
-				for (int i = 0; i < parsers.length; i++) {
-
-					DocID docID = new DocID(collID, i);
-					BracketNode document = new BracketNode(this, i);
-					XTCdeweyID rootDeweyID = XTCdeweyID.newRootID(docID);
-					document.storeDocuments(rootDeweyID, parsers[i],
-							insertCtrl, false);
-				}
+				
+				storeDocuments(0, parser, insertCtrl, false);
 
 				// close index
 				insertCtrl.close();
@@ -250,9 +244,15 @@ public class BracketCollection extends TXCollection<BracketNode> {
 		ArrayList<SubtreeListener<? super BracketNode>> listener = new ArrayList<SubtreeListener<? super BracketNode>>(
 				5);
 		listener.add(new BracketDocIndexListener(ListenMode.INSERT, insertCtrl));
+		//listener.add(new DebugListener());
 
 		if (updateIndexes) {
 			listener.addAll(indexController.getIndexListener(ListenMode.INSERT));
+		}
+		
+		// make sure the CollectionParser is used
+		if (!(parser instanceof CollectionParser)) {
+			parser = new CollectionParser(parser);
 		}
 
 		BracketSubtreeBuilder subtreeHandler = new BracketSubtreeBuilder(this,

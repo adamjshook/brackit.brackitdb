@@ -69,7 +69,7 @@ public class BracketMockup extends StoreMockup<BracketNode> {
 	public TXCollection<BracketNode> createCollection(Tx tx, String name) throws DocumentException {
 		StorageSpec spec = new StorageSpec(name, dictionary);
 		BracketCollection collection = new BracketCollection(tx, store);
-		collection.create(spec);
+		collection.create(spec, null);
 		return collection;
 	}
 	

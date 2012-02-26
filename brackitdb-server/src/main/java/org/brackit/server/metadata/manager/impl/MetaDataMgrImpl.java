@@ -204,7 +204,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	}
 
 	@Override
-	public DBCollection<?> create(Tx tx, String name, SubtreeParser... parsers)
+	public DBCollection<?> create(Tx tx, String name, SubtreeParser parser)
 			throws DocumentException {
 		if (log.isDebugEnabled()) {
 			log.debug(String.format("Storing collection %s.", name));
@@ -225,7 +225,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 		StorageSpec spec = new StorageSpec(name, defaultDictionary);
 		BracketCollection bracketCollection = new BracketCollection(tx, bracketStore);
-		bracketCollection.create(spec, parsers);
+		bracketCollection.create(spec, parser);
 
 		collection = bracketCollection;
 		Collection document = new Collection(collection.getID(), name, directory,

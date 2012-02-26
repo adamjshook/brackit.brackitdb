@@ -55,9 +55,9 @@ public class TXQueryContext extends QueryContext {
 		}
 		
 		@Override
-		public Collection<?> create(String name, SubtreeParser... parsers)
+		public Collection<?> create(String name, SubtreeParser parser)
 				throws DocumentException {
-			return mdm.create(tx, name, parsers);
+			return mdm.create(tx, name, parser);
 		}
 
 		@Override

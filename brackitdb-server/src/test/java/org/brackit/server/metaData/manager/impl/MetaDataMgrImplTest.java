@@ -138,7 +138,7 @@ public class MetaDataMgrImplTest {
 		mdm.start(tx, true);
 		List<Node<?>> documents = new ArrayList<Node<?>>();
 		int docCount = 3;
-		DBCollection<?> collection = mdm.create(tx, "/test.col");
+		DBCollection<?> collection = mdm.create(tx, "/test.col", null);
 
 		for (int i = 0; i < docCount; i++) {
 			Node<?> doc = collection.add(new DocumentParser(DOCUMENT));
