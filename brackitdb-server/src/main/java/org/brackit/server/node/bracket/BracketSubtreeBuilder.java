@@ -76,8 +76,8 @@ public class BracketSubtreeBuilder extends SubtreeBuilder<BracketNode> {
 		this.collection = collection;
 		this.locator = null;
 		this.tx = collection.getTX();
-		this.dictionary = locator.collection.getDictionary();
-		this.psMgr = locator.pathSynopsis.spawnBulkPsManager();
+		this.dictionary = collection.getDictionary();
+		this.psMgr = collection.pathSynopsis.spawnBulkPsManager();
 	}
 
 	@Override

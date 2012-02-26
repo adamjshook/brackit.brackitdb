@@ -42,7 +42,10 @@ import org.brackit.server.node.txnode.TXNodeTest;
 import org.brackit.server.node.util.NavigationStatistics;
 import org.brackit.server.node.util.Traverser;
 import org.brackit.server.tx.IsolationLevel;
+import org.brackit.xquery.node.parser.CollectionParser;
 import org.brackit.xquery.node.parser.DocumentParser;
+import org.brackit.xquery.node.parser.SubtreeParser;
+import org.brackit.xquery.node.stream.ArrayStream;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Stream;
 import org.junit.Ignore;
@@ -73,22 +76,43 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		BracketNode root = coll.getDocument().getNode(
 				XTCdeweyID.newRootID(locator.docID));
 
-		FileOutputStream outputFile = new FileOutputStream("leafs.txt");
-		PrintStream out = new PrintStream(outputFile, false, "UTF-8");
-		coll.store.index.dump(tx, locator.rootPageID, out);
-		outputFile.close();
+//		FileOutputStream outputFile = new FileOutputStream("leafs.txt");
+//		PrintStream out = new PrintStream(outputFile, false, "UTF-8");
+//		coll.store.index.dump(tx, locator.rootPageID, out);
+//		outputFile.close();
 	}
 
 	@Ignore
 	@Test
 	public void storeCollection() throws ServerException, IOException,
 			DocumentException {
-
-		BracketCollection coll = (BracketCollection) createDocument(new DocumentParser(
-				smallDocument));
-		for (int i = 1; i < 10; i++) {
-			coll.add(new DocumentParser(smallDocument));
-		}
+		
+		CollectionParser parser = new CollectionParser(new Stream<SubtreeParser>() {
+			
+			private final int MAX = 10;
+			private int count = 0;
+			
+			@Override
+			public SubtreeParser next() throws DocumentException {
+				try {
+					SubtreeParser parser = null;
+					if (count < MAX) {
+						parser = new DocumentParser(smallDocument);
+						count++;
+					}
+					return parser;
+				} catch (FileNotFoundException e) {
+					throw new DocumentException(e);
+				}
+			}
+			
+			@Override
+			public void close() {
+			}
+			
+		});
+		
+		BracketCollection coll = createCollection(parser);
 
 		// FileOutputStream outputFile = new FileOutputStream("leafs.txt");
 		// PrintStream out = new PrintStream(outputFile, false, "UTF-8");
@@ -230,6 +254,14 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		collection.create(spec, documentParser);
 		return collection;
 	}
+	
+	private BracketCollection createCollection(
+			SubtreeParser parser) throws DocumentException {
+		StorageSpec spec = new StorageSpec("test", sm.dictionary);
+		BracketCollection collection = new BracketCollection(tx, store);
+		collection.create(spec, parser);
+		return collection;
+	}
 
 	private void traverse(boolean preorder, int times)
 			throws DocumentException, FileNotFoundException {
@@ -330,10 +362,16 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		if (COLLECTION_CHECK) {
 
 			// insert one small document before and after the big document
-			coll = (BracketCollection) createDocument(new DocumentParser(
-					smallDocument));
-			document = coll.add(new DocumentParser(bigDocument));
-			coll.add(new DocumentParser(smallDocument));
+			coll = createCollection(new CollectionParser(new SubtreeParser[] {
+					new DocumentParser(smallDocument),
+					new DocumentParser(bigDocument),
+					new DocumentParser(smallDocument)
+			}));
+			
+			Stream<? extends BracketNode> docs = coll.getDocuments();
+			docs.next();
+			document = docs.next();
+			docs.close();
 
 		} else {
 
