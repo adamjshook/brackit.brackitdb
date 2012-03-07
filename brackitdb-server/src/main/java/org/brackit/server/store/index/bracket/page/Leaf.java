@@ -40,6 +40,7 @@ import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.page.bracket.BracketNodeSequence;
 import org.brackit.server.store.page.bracket.DeleteSequenceInfo;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
+import org.brackit.server.store.page.bracket.ExternalValueLoader;
 import org.brackit.server.store.page.bracket.RecordInterpreter;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 
@@ -322,4 +323,9 @@ public interface Leaf extends BPContext {
 	 * the given filter.
 	 */
 	public boolean accept(BracketFilter filter) throws IndexOperationException;
+
+	/**
+	 * Returns the external value loader of this page.
+	 */
+	public ExternalValueLoader getExternalValueLoader();
 }

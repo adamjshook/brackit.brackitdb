@@ -41,7 +41,7 @@ public interface ExternalValueLoader {
 	 * Loads an external value by its PageID.
 	 * @param externalPageID the external PageID
 	 * @return the external value
-	 * @throws BracketPageException
+	 * @throws ExternalValueException
 	 */
 	public byte[] loadExternalValue(PageID externalPageID) throws ExternalValueException;
 	

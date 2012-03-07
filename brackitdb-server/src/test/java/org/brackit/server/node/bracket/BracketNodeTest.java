@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 
 import org.brackit.server.ServerException;
+import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.node.txnode.TXCollection;
@@ -42,14 +43,17 @@ import org.brackit.server.node.txnode.TXNodeTest;
 import org.brackit.server.node.util.NavigationStatistics;
 import org.brackit.server.node.util.Traverser;
 import org.brackit.server.tx.IsolationLevel;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.parser.CollectionParser;
 import org.brackit.xquery.node.parser.DocumentParser;
+import org.brackit.xquery.node.parser.StreamSubtreeParser;
 import org.brackit.xquery.node.parser.SubtreeParser;
-import org.brackit.xquery.node.stream.ArrayStream;
 import org.brackit.xquery.xdm.DocumentException;
+import org.brackit.xquery.xdm.Kind;
 import org.brackit.xquery.xdm.Stream;
 import org.junit.Ignore;
 import org.junit.Test;
+import static org.junit.Assert.*;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
@@ -395,5 +399,51 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		type.doCheck(root, domRoot, this);
 		end = System.currentTimeMillis();
 		System.out.println("Verification succeeded: " + (end - start) / 1000f);
+	}
+	
+	@Ignore
+	@Test
+	public void testReplace() throws DocumentException, FileNotFoundException {
+		
+		BracketCollection coll = createCollection(new DocumentParser(
+				bigDocument));
+		BracketNode root = coll.getDocument().getFirstChild();
+		
+		BracketCollection ref = createCollection(new StreamSubtreeParser(root.getSubtree()));
+		
+		BracketNode toBeReplaced = root.getNode(new XTCdeweyID(root.getDeweyID().docID, "1.7"));
+		BracketNode replacement = ref.getDocument().getNode(new XTCdeweyID(root.getDeweyID().docID, "1.7"));
+		
+		toBeReplaced.replaceWith(replacement);
+		
+		indexLookup(ref.getDocument().getFirstChild(), root);
+	}
+	
+	private static void indexLookup(BracketNode ref, BracketNode test) throws DocumentException {
+		
+		DocID docID = test.getDeweyID().getDocID();
+		
+		Stream<? extends BracketNode> stream = ref.getSubtree();
+		BracketNode current = null;
+		while ((current = stream.next()) != null) {
+			
+			XTCdeweyID deweyID = new XTCdeweyID(docID, current.getDeweyID().getDivisionValues());
+			
+			BracketNode node = test.getNode(deweyID);
+			if (node == null) {
+				throw new RuntimeException("Node not found!");
+			}
+			
+			QNm name1 = current.getName();
+			QNm name2 = node.getName();
+			assertEquals(name1, name2);
+			
+			if (current.getKind().ID != Kind.ELEMENT.ID) {
+				String value1 = (current.getValue() != null ? current.getValue().stringValue() : null);
+				String value2 = (node.getValue() != null ? node.getValue().stringValue() : null);
+				assertEquals(value1, value2);
+			}	
+		}
+		stream.close();
 	}
 }

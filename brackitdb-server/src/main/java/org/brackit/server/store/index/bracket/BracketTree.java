@@ -32,7 +32,6 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.buffer.BufferException;
@@ -65,6 +64,7 @@ import org.brackit.server.tx.PostCommitHook;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.TxStats;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * @author Martin Hiller
