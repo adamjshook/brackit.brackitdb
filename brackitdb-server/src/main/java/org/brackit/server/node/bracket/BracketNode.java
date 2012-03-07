@@ -506,7 +506,7 @@ public class BracketNode extends TXNode<BracketNode> {
 
 		ArrayList<SubtreeListener<? super BracketNode>> listener = new ArrayList<SubtreeListener<? super BracketNode>>(
 				5);
-		listener.add(new BracketDocIndexListener(locator, ListenMode.INSERT,
+		listener.add(new BracketDocIndexListener(locator, rootDeweyID, ListenMode.INSERT,
 				openMode));
 		//listener.add(new DebugListener());
 

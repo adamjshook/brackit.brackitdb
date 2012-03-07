@@ -55,6 +55,8 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 	private final BracketLocator locator;
 	
 	private final boolean externalInsertCtrl;
+	
+	private final XTCdeweyID rootDeweyID;
 
 	private InsertController insertCtrl;
 
@@ -62,7 +64,7 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 
 	private int ancestorsToInsert;
 
-	public BracketDocIndexListener(BracketLocator locator,
+	public BracketDocIndexListener(BracketLocator locator, XTCdeweyID rootDeweyID,
 			ListenMode listenMode, OpenMode openMode) {
 		this.locator = locator;
 		this.index = locator.collection.store.index;
@@ -71,6 +73,7 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 		this.ancestorsToInsert = 0;
 		this.pendingElement = null;
 		this.externalInsertCtrl = false;
+		this.rootDeweyID = rootDeweyID;
 	}
 
 	public BracketDocIndexListener(ListenMode listenMode,
@@ -83,6 +86,7 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 		this.ancestorsToInsert = 0;
 		this.pendingElement = null;
 		this.externalInsertCtrl = true;
+		this.rootDeweyID = insertCtrl.getStartInsertKey();
 	}
 
 	@Override
@@ -181,7 +185,7 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 					throw new DocumentException("External InsertController is null!");
 				}
 				insertCtrl = index.openForInsert(locator.collection.getTX(),
-						locator.rootPageID, openMode, deweyID);
+						locator.rootPageID, openMode, rootDeweyID);
 			}
 			
 			insertCtrl.insert(deweyID, record, ancestorsToInsert);

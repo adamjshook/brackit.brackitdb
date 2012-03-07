@@ -52,9 +52,9 @@ import org.brackit.server.store.index.bracket.log.PointerLogOperation;
 import org.brackit.server.store.index.bracket.log.PointerLogOperation.PointerField;
 import org.brackit.server.store.page.BasePage;
 import org.brackit.server.store.page.bracket.BracketKey;
+import org.brackit.server.store.page.bracket.BracketKey.Type;
 import org.brackit.server.store.page.bracket.BracketNodeSequence;
 import org.brackit.server.store.page.bracket.BracketPage;
-import org.brackit.server.store.page.bracket.BracketKey.Type;
 import org.brackit.server.store.page.bracket.BracketPage.UnresolvedValue;
 import org.brackit.server.store.page.bracket.BracketPageException;
 import org.brackit.server.store.page.bracket.DeletePreparation;
@@ -70,7 +70,6 @@ import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.log.LogOperation;
-import org.brackit.server.tx.thread.Latch;
 import org.brackit.xquery.xdm.DocumentException;
 
 /**
@@ -1509,5 +1508,10 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			throw new IndexOperationException(e,
 					"Could not fix requested page %s.", pageID);
 		}
+	}
+	
+	@Override
+	public ExternalValueLoader getExternalValueLoader() {
+		return extValueLoader;
 	}
 }
