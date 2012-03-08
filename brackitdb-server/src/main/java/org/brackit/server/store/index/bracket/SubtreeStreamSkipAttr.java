@@ -29,7 +29,6 @@ package org.brackit.server.store.index.bracket;
 
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.BracketLocator;
-import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
@@ -43,6 +42,7 @@ public final class SubtreeStreamSkipAttr extends StreamIterator {
 	
 	private int subtreeRootLevel = -1;
 	private final boolean self;
+	
 	private NavigationStatus navStat = null;
 
 	public SubtreeStreamSkipAttr(BracketLocator locator, BracketTree tree,
