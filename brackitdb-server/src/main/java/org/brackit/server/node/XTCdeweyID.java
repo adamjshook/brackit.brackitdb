@@ -1297,7 +1297,7 @@ public class XTCdeweyID implements java.io.Serializable,
 			}
 
 			XTCdeweyID newID = new XTCdeweyID(deweyID1.getDocID(),
-					divisionValues, divisions);
+					divisionValues, deweyID1.level);
 			return newID;
 		}
 	}

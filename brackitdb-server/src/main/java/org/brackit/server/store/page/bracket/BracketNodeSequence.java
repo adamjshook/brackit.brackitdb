@@ -312,7 +312,7 @@ public final class BracketNodeSequence {
 			lastNodeOffset = currentOffset;
 
 			currentKey.load(data, currentOffset);
-			deweyIDbuffer.update(currentKey, false);
+			deweyIDbuffer.updateReduced(currentKey);
 
 			currentOffset += BracketKey.PHYSICAL_LENGTH;
 
@@ -393,7 +393,7 @@ public final class BracketNodeSequence {
 			if (!firstRun) {
 				currentKey.load(data, currentOffset);
 				currentKeyType = currentKey.type;
-				currentDeweyID.update(currentKey, false);
+				currentDeweyID.updateReduced(currentKey);
 				currentOffset += BracketKey.PHYSICAL_LENGTH;
 			} else {
 				firstRun = false;
@@ -541,7 +541,7 @@ public final class BracketNodeSequence {
 		int dataRecords2 = 0;
 		while (true) {
 			currentKey.load(data, currentOffset);
-			deweyIDbuffer.update(currentKey, false);
+			deweyIDbuffer.updateReduced(currentKey);
 
 			currentOffset += BracketKey.PHYSICAL_LENGTH;
 
@@ -566,7 +566,7 @@ public final class BracketNodeSequence {
 		// determine second part's lowkey
 		while (true) {
 			currentKey.load(data, currentOffset);
-			deweyIDbuffer.update(currentKey, false);
+			deweyIDbuffer.updateReduced(currentKey);
 
 			currentOffset += BracketKey.PHYSICAL_LENGTH;
 

@@ -131,10 +131,10 @@ public abstract class StoreMockup<E extends TXNode<E>> {
 	public abstract TXCollection<E> createDocument(Tx tx, String name,
 			SubtreeParser parser) throws DocumentException, TxException;
 
-	public abstract TXCollection<E> createCollection(String name)
+	public abstract TXCollection<E> createCollection(String name, SubtreeParser parser)
 			throws DocumentException, TxException;
 
-	public abstract TXCollection<E> createCollection(Tx tx, String name)
+	public abstract TXCollection<E> createCollection(Tx tx, String name, SubtreeParser parser)
 			throws DocumentException, TxException;
 
 	public TXCollection<E> newTXforDocument(TXCollection<E> coll,

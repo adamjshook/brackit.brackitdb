@@ -649,10 +649,10 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	}
 
 	/**
-	 * This update method is faster but has some limitations/requirements: 1.
-	 * Neither this buffer's content nor the given key represents an attribute.
-	 * 2. The key is not of type DOCUMENT. 3. Compare value is not maintained
-	 * (no problem if compare mode is disabled anyway)
+	 * This update method is the fastest but has some limitations/requirements:
+	 * 1. Neither this buffer's content nor the given key represents an
+	 * attribute. 2. The key is not of type DOCUMENT. 3. Compare value is not
+	 * maintained (no problem if compare mode is disabled anyway)
 	 */
 	public void updateOptimized(final BracketKey key) {
 
@@ -691,6 +691,91 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 		// if this bracket key represents an overflow area
 		if (keyType.isOverflow) {
 			currentBuffer[lastDivisionIndex]--;
+		}
+
+		bufferedKey = null;
+	}
+
+	/**
+	 * This update method is faster but has some limitations/requirements:
+	 * Compare value is not maintained (no problem if compare mode is disabled
+	 * anyway)
+	 */
+	public void updateReduced(final BracketKey key) {
+
+		BracketKey.Type keyType = key.type;
+
+		if (keyType.isDocument) {
+			// reset divisions
+			currentLength = 0;
+			// increase document number
+			docNumber += (key.idGaps + 1);
+			bufferedKey = null;
+			return;
+		}
+
+		final boolean previousIsAttribute = isAttribute();
+		final boolean currentIsAttribute = (keyType == Type.ATTRIBUTE);
+
+		if (previousIsAttribute && currentIsAttribute) {
+			// previous node and current node are attributes for the same
+			// node
+			currentBuffer[currentLength - 1] += ((currentBuffer[currentLength - 1] & 1) + 1);
+		} else {
+
+			if (previousIsAttribute) {
+				// remove currentBuffer used for the attribute
+				currentLength -= 2;
+			}
+
+			if (key.roundBrackets == 0) {
+				// this is the first attribute/child node of the current
+				// subtree
+				if (currentIsAttribute) {
+					// first append the attribute division 1
+
+					// check whether the division buffer has to be extended
+					if (currentLength == currentBuffer.length) {
+						int[] newBuffer = new int[(currentBuffer.length * 3) / 2 + 1];
+						System.arraycopy(currentBuffer, 0, newBuffer, 0,
+								currentBuffer.length);
+						currentBuffer = newBuffer;
+					}
+
+					currentBuffer[currentLength] = 1;
+					currentLength++;
+				}
+
+				// check whether the division buffer has to be extended
+				if (currentLength == currentBuffer.length) {
+					int[] newBuffer = new int[(currentBuffer.length * 3) / 2 + 1];
+					System.arraycopy(currentBuffer, 0, newBuffer, 0,
+							currentBuffer.length);
+					currentBuffer = newBuffer;
+				}
+
+				// TODO remove hard coding of root element
+				if (currentLength == 0) {
+					// step from Document Key to its root element
+					currentBuffer[currentLength] = 1;
+				} else {
+					currentBuffer[currentLength] = 3;
+				}
+				currentLength++;
+
+			} else {
+
+				currentLength -= (key.roundBrackets + key.angleBrackets - 1);
+				currentBuffer[currentLength - 1] += ((currentBuffer[currentLength - 1] & 1) + 1);
+			}
+		}
+
+		// increase last division due to DeweyID gaps
+		currentBuffer[currentLength - 1] += (2 * key.idGaps);
+
+		// if this bracket key represents an overflow area
+		if (keyType.isOverflow) {
+			currentBuffer[currentLength - 1]--;
 		}
 
 		bufferedKey = null;
@@ -914,5 +999,9 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	@Override
 	public DocID getDocID() {
 		return new DocID(collectionID, docNumber);
+	}
+	
+	public boolean isInitialized() {
+		return currentBuffer != null;
 	}
 }

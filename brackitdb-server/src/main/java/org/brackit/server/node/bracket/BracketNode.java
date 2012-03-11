@@ -594,7 +594,7 @@ public class BracketNode extends TXNode<BracketNode> {
 		Tx tx = getTX();
 		if (tx.getLockDepth() <= 0) {
 			if (getKind() != Kind.ATTRIBUTE) {
-				return getDescendant(true, null);
+				return getDescendants(true, null);
 			} else {
 				return new AtomStream<BracketNode>(this);
 			}
@@ -608,7 +608,7 @@ public class BracketNode extends TXNode<BracketNode> {
 
 		Stream<? extends BracketNode> subtree;
 		if (getKind() != Kind.ATTRIBUTE) {
-			subtree = getDescendant(true, null);
+			subtree = getDescendants(true, null);
 		} else {
 			subtree = new AtomStream<BracketNode>(this);
 		}
@@ -620,7 +620,7 @@ public class BracketNode extends TXNode<BracketNode> {
 		return subtree;
 	}
 
-	protected Stream<? extends BracketNode> getDescendant(boolean self,
+	protected Stream<? extends BracketNode> getDescendants(boolean self,
 			BracketFilter filter) {
 		return locator.collection.store.index.openSubtreeStream(locator,
 				deweyID, hintPageInfo, filter, self, true);
