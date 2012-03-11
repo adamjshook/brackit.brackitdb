@@ -60,7 +60,7 @@ public final class ChildStream extends StreamIterator {
 
 		if (page != null) {
 			// hint page was already loaded
-			NavigationStatus navStatus = page.navigateFirstChild();
+			NavigationStatus navStatus = page.navigateFirstChild(false);
 			if (navStatus == NavigationStatus.FOUND) {
 				return;
 			} else if ((navStatus == NavigationStatus.NOT_EXISTENT)) {
@@ -86,7 +86,7 @@ public final class ChildStream extends StreamIterator {
 	protected void nextInternal() throws IndexOperationException,
 			IndexAccessException {
 		// try to find node without BracketTree
-		NavigationStatus navStatus = page.navigateNextSibling();
+		NavigationStatus navStatus = page.navigateNextSibling(false);
 		if (navStatus == NavigationStatus.FOUND) {
 			return;
 		} else if ((navStatus == NavigationStatus.NOT_EXISTENT)) {
