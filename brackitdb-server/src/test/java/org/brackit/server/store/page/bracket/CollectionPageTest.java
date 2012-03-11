@@ -147,7 +147,8 @@ public class CollectionPageTest {
 						docID, node.deweyID.divisionValues), deweyIDBuffer);
 
 				NavigationResult navRes = page.navigateFirstChild(
-						refNode.keyOffset, deweyIDBuffer, refNode.keyType);
+						refNode.keyOffset, deweyIDBuffer, refNode.keyType,
+						false);
 
 				XMLNode firstChild = (node.getChildren().isEmpty() ? null
 						: node.getChildren().get(0));
@@ -175,39 +176,41 @@ public class CollectionPageTest {
 			}
 		}
 	}
-	
+
 	@Test
 	public void navigateNextTest() throws DocumentException {
 
 		DeweyIDBuffer deweyIDBuffer = new DeweyIDBuffer();
-		
+
 		// init navigation result
 		NavigationResult navRes = new NavigationResult();
 		navRes.status = NavigationStatus.FOUND;
 		navRes.keyOffset = BracketPage.BEFORE_LOW_KEY_OFFSET;
-		
+
 		Iterator<XMLNode> iter = null;
-		
+
 		int docNumber = -1;
-		
+
 		while (true) {
-			
-			navRes = page.navigateNext(navRes.keyOffset, deweyIDBuffer, navRes.keyType, false);
-			
-			if (navRes.status != NavigationStatus.FOUND || navRes.keyType == Type.DOCUMENT) {
+
+			navRes = page.navigateNext(navRes.keyOffset, deweyIDBuffer,
+					navRes.keyType, false);
+
+			if (navRes.status != NavigationStatus.FOUND
+					|| navRes.keyType == Type.DOCUMENT) {
 				// iterator has to be empty
 				assertTrue(iter == null || !iter.hasNext());
-				
+
 				// check value
 				if (navRes.status == NavigationStatus.FOUND) {
 					byte[] value = page.getValueUnresolved(navRes.keyOffset).value;
 					assertNull(value);
 				}
-				
+
 				// reset iterator
 				iter = document.getNodes().iterator();
 				docNumber++;
-				
+
 				if (navRes.status != NavigationStatus.FOUND) {
 					break;
 				}
@@ -215,10 +218,10 @@ public class CollectionPageTest {
 				// non document node found
 				assertTrue(iter.hasNext());
 				XMLNode next = iter.next();
-				
+
 				// check deweyID
-				XTCdeweyID expected = new XTCdeweyID(new DocID(collectionID, docIDs[docNumber]),
-						next.deweyID.divisionValues);
+				XTCdeweyID expected = new XTCdeweyID(new DocID(collectionID,
+						docIDs[docNumber]), next.deweyID.divisionValues);
 				assertEquals(expected, deweyIDBuffer.getDeweyID());
 
 				// check value
@@ -232,26 +235,28 @@ public class CollectionPageTest {
 			}
 		}
 	}
-	
+
 	@Test
 	public void navigateNextInDocumentTest() throws DocumentException {
 
 		DeweyIDBuffer deweyIDBuffer = new DeweyIDBuffer();
-		
+
 		for (int docNumber : docIDs) {
 			DocID docID = new DocID(collectionID, docNumber);
-		
+
 			Iterator<XMLNode> iter = document.getNodes().iterator();
-			
+
 			// navigate to document key
-			NavigationResult navRes = page.navigateToKey(new XTCdeweyID(docID), deweyIDBuffer);
-			
+			NavigationResult navRes = page.navigateToKey(new XTCdeweyID(docID),
+					deweyIDBuffer);
+
 			while (iter.hasNext()) {
 				XMLNode next = iter.next();
-				navRes = page.navigateNext(navRes.keyOffset, deweyIDBuffer, navRes.keyType, true);
-				
+				navRes = page.navigateNext(navRes.keyOffset, deweyIDBuffer,
+						navRes.keyType, true);
+
 				assertEquals(NavigationStatus.FOUND, navRes.status);
-				
+
 				// check deweyID
 				XTCdeweyID expected = new XTCdeweyID(docID,
 						next.deweyID.divisionValues);
@@ -266,13 +271,14 @@ public class CollectionPageTest {
 					assertNull(value);
 				}
 			}
-			
+
 			// iterator closed
-			navRes = page.navigateNext(navRes.keyOffset, deweyIDBuffer, navRes.keyType, true);
+			navRes = page.navigateNext(navRes.keyOffset, deweyIDBuffer,
+					navRes.keyType, true);
 			assertFalse(navRes.status == NavigationStatus.FOUND);
 		}
 	}
-	
+
 	@Test
 	public void navigateNextAttributeTest() throws DocumentException {
 
@@ -319,7 +325,7 @@ public class CollectionPageTest {
 			}
 		}
 	}
-	
+
 	@Test
 	public void navigateParentTest() throws DocumentException {
 
@@ -341,11 +347,11 @@ public class CollectionPageTest {
 				if (parent == null) {
 					// DOCUMENT node is found
 					assertEquals(NavigationStatus.FOUND, navRes.status);
-					
+
 					// check deweyID
 					XTCdeweyID expected = new XTCdeweyID(docID);
 					assertEquals(expected, deweyIDBuffer.getDeweyID());
-					
+
 					// check value
 					byte[] value = page.getValueUnresolved(navRes.keyOffset).value;
 					assertNull(value);
@@ -369,7 +375,7 @@ public class CollectionPageTest {
 			}
 		}
 	}
-	
+
 	@Test
 	public void navigatePreviousSiblingTest() throws DocumentException {
 
@@ -416,7 +422,7 @@ public class CollectionPageTest {
 			}
 		}
 	}
-	
+
 	@Test
 	public void navigateNextSiblingTest() throws DocumentException {
 
@@ -436,7 +442,8 @@ public class CollectionPageTest {
 						docID, node.deweyID.divisionValues), deweyIDBuffer);
 
 				NavigationResult navRes = page.navigateNextSibling(
-						refNode.keyOffset, deweyIDBuffer, refNode.keyType);
+						refNode.keyOffset, deweyIDBuffer, refNode.keyType,
+						false);
 
 				XMLNode nextSibling = node.getNextSibling();
 
@@ -456,6 +463,108 @@ public class CollectionPageTest {
 					if (nextSibling.value != null) {
 						assertNotNull(value);
 						assertEquals(nextSibling.value, new String(value));
+					} else {
+						assertNull(value);
+					}
+				}
+			}
+		}
+	}
+
+	@Test
+	public void navigateNextSiblingOrNextTest() throws DocumentException {
+
+		DeweyIDBuffer deweyIDBuffer = new DeweyIDBuffer();
+
+		for (int docNumber : docIDs) {
+			DocID docID = new DocID(collectionID, docNumber);
+
+			for (XMLNode node : document.getNodes()) {
+
+				// do not check attributes
+				if (node.deweyID.isAttribute()) {
+					continue;
+				}
+
+				NavigationResult refNode = page.navigateToKey(new XTCdeweyID(
+						docID, node.deweyID.divisionValues), deweyIDBuffer);
+
+				NavigationResult navRes = page
+						.navigateNextSibling(refNode.keyOffset, deweyIDBuffer,
+								refNode.keyType, true);
+
+				XMLNode nextSibling = node.getNextSiblingOrNext();
+
+				// check status
+				if (nextSibling == null) {
+					// next sibling does not exist, but the next node in the
+					// store may be a document node
+					assertTrue(navRes.status != NavigationStatus.FOUND
+							|| navRes.keyType.isDocument);
+				} else {
+					// assertEquals(NavigationStatus.FOUND, navRes.status);
+
+					// check deweyID
+					XTCdeweyID expected = new XTCdeweyID(docID,
+							nextSibling.deweyID.divisionValues);
+					assertEquals(expected, deweyIDBuffer.getDeweyID());
+
+					// check value
+					byte[] value = page.getValueUnresolved(navRes.keyOffset).value;
+					if (nextSibling.value != null) {
+						assertNotNull(value);
+						assertEquals(nextSibling.value, new String(value));
+					} else {
+						assertNull(value);
+					}
+				}
+			}
+		}
+	}
+	
+	@Test
+	public void navigateFirstChildOrNextTest() throws DocumentException {
+
+		DeweyIDBuffer deweyIDBuffer = new DeweyIDBuffer();
+
+		for (int docNumber : docIDs) {
+			DocID docID = new DocID(collectionID, docNumber);
+
+			for (XMLNode node : document.getNodes()) {
+
+				// do not check attributes
+				if (node.deweyID.isAttribute()) {
+					continue;
+				}
+
+				NavigationResult refNode = page.navigateToKey(new XTCdeweyID(
+						docID, node.deweyID.divisionValues), deweyIDBuffer);
+
+				NavigationResult navRes = page
+						.navigateFirstChild(refNode.keyOffset, deweyIDBuffer,
+								refNode.keyType, true);
+
+				XMLNode firstChild = node.getFirstChildOrNext();
+
+				// check status
+				if (firstChild == null) {
+					// first child does not exist, but the next node in the
+					// store may be a document node
+					assertTrue(navRes.status != NavigationStatus.FOUND
+							|| navRes.keyType.isDocument);
+				} else {
+					// assertEquals(NavigationStatus.FOUND, navRes.status);
+
+					// check deweyID
+					XTCdeweyID expected = new XTCdeweyID(docID,
+							firstChild.deweyID.divisionValues);
+					assertEquals(expected, deweyIDBuffer.getDeweyID());
+
+					// check value
+					byte[] value = page.getValueUnresolved(navRes.keyOffset).value;
+					if (firstChild.value != null) {
+						assertNotNull(value);
+						assertEquals(firstChild.value, new String(value));
 					} else {
 						assertNull(value);
 					}
@@ -488,8 +597,8 @@ public class CollectionPageTest {
 					navRes.status = NavigationStatus.FOUND;
 				}
 
-				XMLNode lastChild = (node.getChildren().isEmpty() ? null
-						: node.getChildren().get(node.getChildren().size() - 1));
+				XMLNode lastChild = (node.getChildren().isEmpty() ? null : node
+						.getChildren().get(node.getChildren().size() - 1));
 
 				// check status
 				if (lastChild == null) {
@@ -551,11 +660,12 @@ public class CollectionPageTest {
 				new Record(new XTCdeweyID(docID, "1.3.5"), 0, "someText1"),
 				new Record(new XTCdeweyID(docID, "1.7.1.5"), 1,
 						"attribute3=value3"),
+				new Record(new XTCdeweyID(docID, "1.7.3"), 0, "someText2"),
 				new Record(new XTCdeweyID(docID, "1.8.3.1.3"), 1,
 						"attribute4=value4"),
 				new Record(new XTCdeweyID(docID, "1.8.3.1.5"), 0,
 						"attribute5=value5"),
-				new Record(new XTCdeweyID(docID, "1.8.3.3"), 0, "someText2"),
+				new Record(new XTCdeweyID(docID, "1.8.3.3"), 0, "someText3"),
 				new Record(new XTCdeweyID(docID, "1.9.1.3"), 1,
 						"attribute6=value6") };
 

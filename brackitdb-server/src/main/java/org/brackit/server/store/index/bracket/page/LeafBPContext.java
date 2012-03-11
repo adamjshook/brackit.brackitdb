@@ -560,11 +560,11 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		switch (navMode) {
 		case NEXT_SIBLING:
 			navRes = page.navigateNextSibling(currentOffset, currentDeweyID,
-					bufferedKeyType);
+					bufferedKeyType, false);
 			break;
 		case FIRST_CHILD:
 			navRes = page.navigateFirstChild(currentOffset, currentDeweyID,
-					bufferedKeyType);
+					bufferedKeyType, false);
 			break;
 		case LAST_CHILD:
 			navRes = page.navigateLastChild(currentOffset, currentDeweyID);
@@ -1090,8 +1090,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		if (returnVal == BracketPage.INSERTION_DUPLICATE) {
 			throw new IndexOperationException(
-					"Insertion key %s already exists in the index!",
-					nodes.getLowKey());
+					"Insertion key %s already exists in the index!", nodes
+							.getLowKey());
 		} else if (returnVal == BracketPage.INSERTION_NO_SPACE) {
 			return false;
 		} else {
@@ -1134,8 +1134,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		if (returnVal == BracketPage.INSERTION_DUPLICATE) {
 			throw new IndexOperationException(
-					"Insertion key %s already exists in the index!",
-					nodes.getLowKey());
+					"Insertion key %s already exists in the index!", nodes
+							.getLowKey());
 		} else if (returnVal == BracketPage.INSERTION_NO_SPACE) {
 			return false;
 		} else {
@@ -1223,21 +1223,22 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	}
 
 	/**
-	 * @see org.brackit.server.store.index.bracket.page.Leaf#navigateFirstChild()
+	 * @see org.brackit.server.store.index.bracket.page.Leaf#navigateFirstChild(boolean)
 	 */
 	@Override
-	public NavigationStatus navigateFirstChild() {
+	public NavigationStatus navigateFirstChild(boolean returnNodeOnFailure) {
 
 		if (CHECK_OFFSET_INTEGRITY) {
 			declareContextSensitive();
 		}
 
 		NavigationResult navRes = page.navigateFirstChild(currentOffset,
-				currentDeweyID, bufferedKeyType);
+				currentDeweyID, bufferedKeyType, returnNodeOnFailure);
 
-		if (navRes.status == NavigationStatus.FOUND) {
+		if (navRes.status == NavigationStatus.FOUND || returnNodeOnFailure
+				&& navRes.status == NavigationStatus.NOT_EXISTENT) {
 			// adjust current offset
-			setOffset(navRes.keyOffset, navRes.keyType, 1);
+			setOffset(navRes.keyOffset, navRes.keyType, navRes.levelDiff);
 		} else {
 			moveBeforeFirst();
 		}
@@ -1246,21 +1247,22 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	}
 
 	/**
-	 * @see org.brackit.server.store.index.bracket.page.Leaf#navigateNextSibling()
+	 * @see org.brackit.server.store.index.bracket.page.Leaf#navigateNextSibling(boolean)
 	 */
 	@Override
-	public NavigationStatus navigateNextSibling() {
+	public NavigationStatus navigateNextSibling(boolean returnNodeOnFailure) {
 
 		if (CHECK_OFFSET_INTEGRITY) {
 			declareContextSensitive();
 		}
 
 		NavigationResult navRes = page.navigateNextSibling(currentOffset,
-				currentDeweyID, bufferedKeyType);
+				currentDeweyID, bufferedKeyType, returnNodeOnFailure);
 
-		if (navRes.status == NavigationStatus.FOUND) {
+		if (navRes.status == NavigationStatus.FOUND || returnNodeOnFailure
+				&& navRes.status == NavigationStatus.NOT_EXISTENT) {
 			// adjust current offset
-			setOffset(navRes.keyOffset, navRes.keyType, 0);
+			setOffset(navRes.keyOffset, navRes.keyType, navRes.levelDiff);
 		} else {
 			moveBeforeFirst();
 		}
@@ -1398,8 +1400,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			BracketNode node = loader.load(currentDeweyID.getDeweyID(), record);
 
 			// set hintpage info
-			node.hintPageInfo = new HintPageInformation(pageID,
-					pageHandle.getLSN(), currentOffset);
+			node.hintPageInfo = new HintPageInformation(pageID, pageHandle
+					.getLSN(), currentOffset);
 
 			return node;
 
@@ -1509,7 +1511,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 					"Could not fix requested page %s.", pageID);
 		}
 	}
-	
+
 	@Override
 	public ExternalValueLoader getExternalValueLoader() {
 		return extValueLoader;

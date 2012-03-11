@@ -35,11 +35,12 @@ import org.brackit.server.node.DocID;
  * 
  * <p>
  * The physical storage format looks as follows:<br />
- * <b>Byte 0:</b> #roundBrackets<br />
- * <b>Byte 1:</b><br />
- * <div style="margin-left:2em"> <b>Bit 0-5:</b> #angleBrackets<br />
- * <b>Bit 6-7:</b> key type<br />
- * </div> <b>Byte 2:</b> #idGaps
+ * <b>Byte 0:</b><br />
+ * <div style="margin-left:2em"> <b>Bit 0-2:</b> key type<br />
+ * <b>Bit 3-7:</b> #angleBrackets<br />
+ * </div> 
+ * <b>Byte 1:</b> #roundBrackets<br />
+ * <b>Byte 2:</b> #idGaps
  * </p>
  * 
  * @author Martin Hiller
