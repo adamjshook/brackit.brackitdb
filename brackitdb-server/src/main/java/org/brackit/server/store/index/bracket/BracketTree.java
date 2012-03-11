@@ -769,6 +769,39 @@ public final class BracketTree extends PageContextFactory {
 						"Error during leaf page scan over index.");
 			}
 		}
+		
+		@Override
+		protected ScanResult hintPageScanFailed(Tx tx, PageID rootPageID,
+				Leaf leaf, NavigationMode navMode, XTCdeweyID key,
+				boolean forUpdate, NavigationStatus navStatus)
+				throws IndexAccessException {
+			// determine previous sibling's DeweyID
+			XTCdeweyID lowKey = leaf.getLowKey();
+			if (lowKey.compareReduced(key) < 0) {
+
+				XTCdeweyID targetDeweyID = lowKey.getAncestor(key.getLevel());
+				if (targetDeweyID.isAttributeRoot()) {
+					if (COLLECT_STATS) {
+						internalStats.hintPageHits++;
+					}
+					leaf.cleanup();
+					throw KEY_NOT_EXISTENT;
+				}
+
+				if (COLLECT_STATS) {
+					internalStats.hintPageDeweyIDFound++;
+				}
+				leaf.cleanup();
+				return new ScanResult(targetDeweyID);
+			} else {
+				// access via index
+				if (COLLECT_STATS) {
+					internalStats.hintPageFails++;
+				}
+				leaf.cleanup();
+				return new ScanResult();
+			}
+		}
 	}
 
 	private class LastScanner extends LeafScanner {
@@ -952,6 +985,13 @@ public final class BracketTree extends PageContextFactory {
 			NavigationMode navMode, XTCdeweyID key,
 			DeweyIDBuffer deweyIDBuffer, LeafScanner scanner, boolean forUpdate)
 			throws IndexAccessException {
+		
+		if (navMode == NavigationMode.FIRST_CHILD && key.isDocument()) {
+			// special handling for FIRST CHILD of document nodes: retrieve root node
+			navMode = NavigationMode.TO_KEY;
+			key = XTCdeweyID.newRootID(key.getDocID());
+		}
+		
 		Leaf leaf = descend(tx, rootPageID, navMode.getSearchMode(),
 				Field.COLLECTIONDEWEYID.encode(navMode.getSearchKey(key)),
 				forUpdate);

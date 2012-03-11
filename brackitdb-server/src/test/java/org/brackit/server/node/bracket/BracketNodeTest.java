@@ -33,6 +33,10 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 
 import org.brackit.server.ServerException;
 import org.brackit.server.node.DocID;
@@ -42,8 +46,11 @@ import org.brackit.server.node.txnode.TXCollection;
 import org.brackit.server.node.txnode.TXNodeTest;
 import org.brackit.server.node.util.NavigationStatistics;
 import org.brackit.server.node.util.Traverser;
+import org.brackit.server.store.page.bracket.BracketNodeSequence;
 import org.brackit.server.tx.IsolationLevel;
 import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.node.d2linked.D2Node;
+import org.brackit.xquery.node.d2linked.D2NodeFactory;
 import org.brackit.xquery.node.parser.CollectionParser;
 import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.node.parser.StreamSubtreeParser;
@@ -68,6 +75,7 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 	private static final File smallDocument = new File("xmark10.xml");
 	private static final File mediumDocument = new File("xmark50.xml");
 	private static final File bigDocument = new File("xmark100.xml");
+
 	private static final boolean COLLECTION_CHECK = true;
 
 	@Ignore
@@ -80,49 +88,50 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		BracketNode root = coll.getDocument().getNode(
 				XTCdeweyID.newRootID(locator.docID));
 
-//		FileOutputStream outputFile = new FileOutputStream("leafs.txt");
-//		PrintStream out = new PrintStream(outputFile, false, "UTF-8");
-//		coll.store.index.dump(tx, locator.rootPageID, out);
-//		outputFile.close();
+		// FileOutputStream outputFile = new FileOutputStream("leafs.txt");
+		// PrintStream out = new PrintStream(outputFile, false, "UTF-8");
+		// coll.store.index.dump(tx, locator.rootPageID, out);
+		// outputFile.close();
 	}
 
 	@Ignore
 	@Test
 	public void storeCollection() throws ServerException, IOException,
 			DocumentException {
-		
-		CollectionParser parser = new CollectionParser(new Stream<SubtreeParser>() {
-			
-			private final int MAX = 10;
-			private int count = 0;
-			
-			@Override
-			public SubtreeParser next() throws DocumentException {
-				try {
-					SubtreeParser parser = null;
-					if (count < MAX) {
-						parser = new DocumentParser(smallDocument);
-						count++;
+
+		CollectionParser parser = new CollectionParser(
+				new Stream<SubtreeParser>() {
+
+					private final int MAX = 10;
+					private int count = 0;
+
+					@Override
+					public SubtreeParser next() throws DocumentException {
+						try {
+							SubtreeParser parser = null;
+							if (count < MAX) {
+								parser = new DocumentParser(smallDocument);
+								count++;
+							}
+							return parser;
+						} catch (FileNotFoundException e) {
+							throw new DocumentException(e);
+						}
 					}
-					return parser;
-				} catch (FileNotFoundException e) {
-					throw new DocumentException(e);
-				}
-			}
-			
-			@Override
-			public void close() {
-			}
-			
-		});
-		
+
+					@Override
+					public void close() {
+					}
+
+				});
+
 		BracketCollection coll = createCollection(parser);
 
 		// FileOutputStream outputFile = new FileOutputStream("leafs.txt");
 		// PrintStream out = new PrintStream(outputFile, false, "UTF-8");
 		// coll.store.index.dump(tx, new PageID(coll.getID()), out);
 		// outputFile.close();
-		
+
 		// iterate over documents
 		Stream<? extends BracketNode> docs = coll.getDocuments();
 		BracketNode doc = null;
@@ -150,18 +159,17 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 	}
 
 	public static void main(String[] args) throws Exception {
-//		BracketNodeTest test = new BracketNodeTest();
-//		test.setUp();
-//		test.storeCollection();
-		
+		// BracketNodeTest test = new BracketNodeTest();
+		// test.setUp();
+		// test.storeCollection();
+
 		BracketMockup mockup = new BracketMockup();
-		TXCollection<BracketNode> coll = mockup.createCollection("testCollection");
-		
-		coll.add(new DocumentParser(smallDocument));
-		
-//		for (int i = 0; i < 10; i++) {
-//			coll.add(new DocumentParser(smallDocument));
-//		}
+		TXCollection<BracketNode> coll = mockup.createCollection(
+				"testCollection", new DocumentParser(smallDocument));
+
+		// for (int i = 0; i < 10; i++) {
+		// coll.add(new DocumentParser(smallDocument));
+		// }
 	}
 
 	@Ignore
@@ -216,31 +224,31 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 	@Ignore
 	@Test
 	public void traverseBigDocumentInPreorder() throws Exception {
-		verifyAgainstDOM(CheckType.PREORDER);
+		verifyAgainstDOM(bigDocument, CheckType.PREORDER);
 	}
 
 	@Ignore
 	@Test
 	public void traverseBigDocumentViaChildStream() throws Exception {
-		verifyAgainstDOM(CheckType.CHILDSTREAM);
+		verifyAgainstDOM(bigDocument, CheckType.CHILDSTREAM);
 	}
 
 	@Ignore
 	@Test
 	public void scanSubtree() throws Exception {
-		verifyAgainstDOM(CheckType.SUBTREE);
+		verifyAgainstDOM(bigDocument, CheckType.SUBTREE);
 	}
 
 	@Ignore
 	@Test
 	public void scanSubtreeSkipAttributes() throws Exception {
-		verifyAgainstDOM(CheckType.SUBTREE_NOATTR);
+		verifyAgainstDOM(bigDocument, CheckType.SUBTREE_NOATTR);
 	}
 
 	@Ignore
 	@Test
 	public void traverseBigDocumentInPostorder() throws Exception {
-		verifyAgainstDOM(CheckType.POSTORDER);
+		verifyAgainstDOM(bigDocument, CheckType.POSTORDER);
 	}
 
 	@Override
@@ -258,9 +266,9 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		collection.create(spec, documentParser);
 		return collection;
 	}
-	
-	private BracketCollection createCollection(
-			SubtreeParser parser) throws DocumentException {
+
+	private BracketCollection createCollection(SubtreeParser parser)
+			throws DocumentException {
 		StorageSpec spec = new StorageSpec("test", sm.dictionary);
 		BracketCollection collection = new BracketCollection(tx, store);
 		collection.create(spec, parser);
@@ -346,7 +354,8 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 			@Override
 			public void doCheck(BracketNode root, Node domRoot,
 					BracketNodeTest testInstance) throws Exception {
-				Stream<? extends BracketNode> nodes = root.getSubtree();
+				Stream<? extends BracketNode> nodes = root
+						.getDescendantOrSelf();
 				BracketNode first = nodes.next();
 				testInstance.checkSubtree(first, nodes, domRoot, true);
 				nodes.close();
@@ -357,7 +366,8 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 				BracketNodeTest testInstance) throws Exception;
 	}
 
-	private void verifyAgainstDOM(CheckType type) throws Exception {
+	private void verifyAgainstDOM(File docFile, CheckType... types)
+			throws Exception {
 
 		long start = System.currentTimeMillis();
 		BracketCollection coll = null;
@@ -368,10 +378,9 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 			// insert one small document before and after the big document
 			coll = createCollection(new CollectionParser(new SubtreeParser[] {
 					new DocumentParser(smallDocument),
-					new DocumentParser(bigDocument),
-					new DocumentParser(smallDocument)
-			}));
-			
+					new DocumentParser(docFile),
+					new DocumentParser(smallDocument) }));
+
 			Stream<? extends BracketNode> docs = coll.getDocuments();
 			docs.next();
 			document = docs.next();
@@ -380,7 +389,7 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		} else {
 
 			coll = (BracketCollection) createDocument(new DocumentParser(
-					bigDocument));
+					docFile));
 			document = coll.getDocument();
 		}
 
@@ -390,60 +399,266 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 
 		BracketNode root = document
 				.getNode(XTCdeweyID.newRootID(locator.docID));
-		Node domRoot = null;
 
-		domRoot = createDomTree(new InputSource(new FileReader(bigDocument)));
+		verifyAgainstDOM(docFile, root, types);
+	}
+
+	private void verifyAgainstDOM(File docFile, BracketNode root,
+			CheckType... types) throws Exception {
+
+		Node domRoot = null;
+		long start = 0;
+		long end = 0;
+
+		domRoot = createDomTree(new InputSource(new FileReader(docFile)));
 		System.out.println("DOM-Tree created!");
 
-		start = System.currentTimeMillis();
-		type.doCheck(root, domRoot, this);
-		end = System.currentTimeMillis();
-		System.out.println("Verification succeeded: " + (end - start) / 1000f);
+		Throwable[] failures = new Throwable[types.length];
+
+		for (int i = 0; i < types.length; i++) {
+			try {
+				start = System.currentTimeMillis();
+				types[i].doCheck(root, domRoot, this);
+				end = System.currentTimeMillis();
+				System.out.println(String.format("%s successful in: "
+						+ (end - start) / 1000f, types[i].name()));
+			} catch (Throwable e) {
+				failures[i] = e;
+				System.out.println(String.format("%s failed after: "
+						+ (System.currentTimeMillis() - start) / 1000f,
+						types[i].name()));
+			}
+		}
+
+		System.out.println();
+
+		boolean passed = true;
+		for (int i = 0; i < failures.length; i++) {
+			if (failures[i] != null) {
+				// assertion error or exception
+				passed = false;
+				System.out.println(failures[i]);
+			}
+		}
+
+		assertTrue(passed);
 	}
-	
+
 	@Ignore
 	@Test
 	public void testReplace() throws DocumentException, FileNotFoundException {
-		
+
 		BracketCollection coll = createCollection(new DocumentParser(
 				bigDocument));
 		BracketNode root = coll.getDocument().getFirstChild();
-		
-		BracketCollection ref = createCollection(new StreamSubtreeParser(root.getSubtree()));
-		
-		BracketNode toBeReplaced = root.getNode(new XTCdeweyID(root.getDeweyID().docID, "1.7"));
-		BracketNode replacement = ref.getDocument().getNode(new XTCdeweyID(root.getDeweyID().docID, "1.7"));
-		
+
+		BracketCollection ref = createCollection(new StreamSubtreeParser(root
+				.getSubtree()));
+
+		BracketNode toBeReplaced = root.getNode(new XTCdeweyID(root
+				.getDeweyID().docID, "1.9"));
+		BracketNode replacement = ref.getDocument().getNode(
+				new XTCdeweyID(root.getDeweyID().docID, "1.9"));
+
 		toBeReplaced.replaceWith(replacement);
-		
+
 		indexLookup(ref.getDocument().getFirstChild(), root);
 	}
-	
-	private static void indexLookup(BracketNode ref, BracketNode test) throws DocumentException {
-		
+
+	private static void indexLookup(BracketNode ref, BracketNode test)
+			throws DocumentException {
+
 		DocID docID = test.getDeweyID().getDocID();
-		
+
 		Stream<? extends BracketNode> stream = ref.getSubtree();
 		BracketNode current = null;
 		while ((current = stream.next()) != null) {
-			
-			XTCdeweyID deweyID = new XTCdeweyID(docID, current.getDeweyID().getDivisionValues());
-			
+
+			XTCdeweyID deweyID = new XTCdeweyID(docID, current.getDeweyID()
+					.getDivisionValues());
+
 			BracketNode node = test.getNode(deweyID);
 			if (node == null) {
 				throw new RuntimeException("Node not found!");
 			}
-			
+
 			QNm name1 = current.getName();
 			QNm name2 = node.getName();
 			assertEquals(name1, name2);
-			
+
 			if (current.getKind().ID != Kind.ELEMENT.ID) {
-				String value1 = (current.getValue() != null ? current.getValue().stringValue() : null);
-				String value2 = (node.getValue() != null ? node.getValue().stringValue() : null);
+				String value1 = (current.getValue() != null ? current
+						.getValue().stringValue() : null);
+				String value2 = (node.getValue() != null ? node.getValue()
+						.stringValue() : null);
 				assertEquals(value1, value2);
-			}	
+			}
 		}
 		stream.close();
+	}
+
+	@Ignore
+	@Test
+	public void ultimateNavigationTest() throws Exception {
+		verifyAgainstDOM(bigDocument, CheckType.values());
+	}
+
+	@Ignore
+	@Test
+	public void testReplaceNavigate() throws Exception {
+
+		BracketCollection coll = createCollection(new DocumentParser(
+				bigDocument));
+		BracketNode root = coll.getDocument().getFirstChild();
+
+		BracketNode toBeReplaced = root.getNode(new XTCdeweyID(root
+				.getDeweyID().docID, "1.9"));
+
+		BracketCollection backup = createCollection(new StreamSubtreeParser(
+				toBeReplaced.getSubtree()));
+		BracketNode backupRoot = backup.getDocument().getFirstChild();
+
+		toBeReplaced.replaceWith(backupRoot);
+
+		System.out.println("Replacing finished.");
+
+		verifyAgainstDOM(bigDocument, root, CheckType.PREORDER,
+				CheckType.POSTORDER);
+	}
+
+	@Ignore
+	@Test
+	public void testOverflowNavigate() throws Exception {
+
+		File docFile = bigDocument;
+		int avgNumberOfSubtrees = 2500;
+		int maxLevel = 5;
+
+		D2NodeFactory fac = new D2NodeFactory();
+		long seed = System.currentTimeMillis();
+
+		System.out
+				.println(String.format("Seed for Random generator: %s", seed));
+
+		Random ran = new Random(seed);
+
+		List<int[]> toMove = new ArrayList<int[]>();
+		List<Integer> prefixList = new ArrayList<Integer>();
+
+		BracketCollection coll = createCollection(new DocumentParser(docFile));
+		BracketNode root = coll.getDocument().getFirstChild();
+		DocID docID = root.getDeweyID().docID;
+
+		int numberOfRelevantNodes = 0;
+		Stream<? extends BracketNode> s = root.getDescendantOrSelf();
+		BracketNode current = s.next();
+		while ((current = s.next()) != null) {
+			if (current.getKind().ID == Kind.ELEMENT.ID
+					&& current.getDeweyID().getLevel() <= maxLevel) {
+				numberOfRelevantNodes++;
+			}
+		}
+		s.close();
+
+		int moveRate = numberOfRelevantNodes / avgNumberOfSubtrees;
+
+		s = root.getDescendantOrSelf();
+		current = s.next();
+		while ((current = s.next()) != null) {
+			if (current.getKind().ID == Kind.ELEMENT.ID
+					&& current.getDeweyID().getLevel() <= maxLevel
+					&& ran.nextInt(moveRate) == 0) {
+				// remember this subtree
+				int[] currentDivisions = current.getDeweyID().divisionValues;
+				int prefixIndex = -1;
+
+				int[] tempDivisions = null;
+
+				for (int i = toMove.size() - 1; i >= 0; i--) {
+
+					ArrayList<int[]> chain = new ArrayList<int[]>();
+					int length = 0;
+					for (int j = i; j >= 0; j = prefixList.get(j)) {
+						int[] div = toMove.get(j);
+						chain.add(div);
+						length += div.length;
+					}
+					tempDivisions = new int[length];
+					int index = 0;
+					for (int j = chain.size() - 1; j >= 0; j--) {
+						int[] div = chain.get(j);
+						System.arraycopy(div, 0, tempDivisions, index,
+								div.length);
+						index += div.length;
+					}
+
+					if (tempDivisions.length >= currentDivisions.length) {
+						continue;
+					}
+
+					boolean prefix = true;
+					for (int j = 0; j < tempDivisions.length; j++) {
+						if (tempDivisions[j] != currentDivisions[j]) {
+							prefix = false;
+							break;
+						}
+					}
+
+					if (prefix) {
+						prefixIndex = i;
+						break;
+					}
+				}
+
+				int[] toStore = currentDivisions;
+				if (prefixIndex >= 0) {
+					toStore = Arrays.copyOfRange(currentDivisions,
+							tempDivisions.length, currentDivisions.length);
+				}
+
+				toMove.add(toStore);
+				prefixList.add(prefixIndex);
+
+				// if (maxSubtrees >= 0 && toMove.size() >= maxSubtrees) {
+				// break;
+				// }
+			}
+		}
+		s.close();
+
+		System.out.println(String.format("Number of subtrees to be moved: %s",
+				toMove.size()));
+
+		int[] divisions = null;
+		int[] empty = new int[0];
+
+		// subtrees to move determined
+		for (int i = 0; i < toMove.size(); i++) {
+			int[] d1 = empty;
+			int[] d2 = toMove.get(i);
+			int prefixIndex = prefixList.get(i);
+			if (prefixIndex >= 0) {
+				d1 = toMove.get(prefixIndex);
+			}
+
+			divisions = new int[d1.length + d2.length];
+			System.arraycopy(d1, 0, divisions, 0, d1.length);
+			System.arraycopy(d2, 0, divisions, d1.length, d2.length);
+
+			XTCdeweyID deweyID = new XTCdeweyID(docID, divisions);
+
+			// move subtree
+			BracketNode node = root.getNodeInternal(deweyID);
+			D2Node backup = fac
+					.build(new StreamSubtreeParser(node.getSubtree()));
+			BracketNode newNode = node.insertAfter(backup);
+			node.delete();
+
+			toMove.set(i, newNode.getDeweyID().divisionValues);
+		}
+
+		System.out.println("Moving finished.");
+
+		verifyAgainstDOM(docFile, root, CheckType.values());
 	}
 }
