@@ -32,10 +32,7 @@ import java.util.ArrayList;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
 import org.brackit.server.node.DocID;
-import org.brackit.server.node.XTCdeweyID;
-import org.brackit.server.node.el.ElNode;
 import org.brackit.server.node.index.IndexController;
-import org.brackit.server.node.txnode.DebugListener;
 import org.brackit.server.node.txnode.StorageSpec;
 import org.brackit.server.node.txnode.TXCollection;
 import org.brackit.server.store.OpenMode;
@@ -197,19 +194,13 @@ public class BracketCollection extends TXCollection<BracketNode> {
 
 	@Override
 	public BracketNode getDocument() throws DocumentException {
-		// Stream<BracketNode> docs = store.index.openDocumentStream(new
-		// BracketLocator(this, new DocID(collID, 0)), null);
-		// BracketNode doc = docs.next();
-		// docs.close();
-		// return doc;
 		return new BracketNode(this, 0);
 	}
 
 	@Override
 	public void remove(long documentID) throws OperationNotSupportedException,
 			DocumentException {
-		// TODO Auto-generated method stub
-
+		// TODO this method is not used anywhere. No support for single document deletions?
 	}
 
 	@Override
