@@ -32,7 +32,7 @@ import java.io.PrintStream;
 
 import org.brackit.server.metadata.BaseCollection;
 import org.brackit.server.tx.Tx;
-import org.brackit.xquery.node.SubtreePrinter;
+import org.brackit.xquery.util.serialize.SubtreePrinter;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.OperationNotSupportedException;
 import org.brackit.xquery.xdm.Stream;

@@ -112,42 +112,23 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 
 	@Override
 	public void startDocument() throws DocumentException {
-		
-		if (docMode) {
-			try {
-				level++;
-				lastAttributeDeweyID = null;
-				pushNode(Kind.DOCUMENT, null, null);
-				
-				notifyBeginDocument();
-			} catch (DocumentException e) {
-				notifyFail();
-				throw e;
-			}
+
+		try {
+			notifyBeginDocument();
+		} catch (DocumentException e) {
+			notifyFail();
+			throw e;
 		}
 	}
 
 	@Override
 	public void endDocument() throws DocumentException {
-		
-		if (docMode) {
-			try {
-				notifyEndDocument();
-				level--;
-				lastAttributeDeweyID = null;
-				
-				if (level > 0) {
-					throw new DocumentException("Invalid Parser State!");
-				}
-				
-				if (level < (stackSize - 1)) {
-					stack[--stackSize] = null;
-				}
-				
-			} catch (DocumentException e) {
-				notifyFail();
-				throw e;
-			}
+
+		try {
+			notifyEndDocument();
+		} catch (DocumentException e) {
+			notifyFail();
+			throw e;
 		}
 	}
 
@@ -155,6 +136,13 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 	public void beginFragment() throws DocumentException {
 		try {
 			notifyBeginFragment();
+
+			if (docMode) {
+				level++;
+				lastAttributeDeweyID = null;
+				pushNode(Kind.DOCUMENT, null, null);
+			}
+
 		} catch (DocumentException e) {
 			notifyFail();
 			throw e;
@@ -165,6 +153,20 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 	public void endFragment() throws DocumentException {
 		try {
 			notifyEndFragment();
+
+			if (docMode) {
+				level--;
+				lastAttributeDeweyID = null;
+
+				if (level > 0) {
+					throw new DocumentException("Invalid Parser State!");
+				}
+
+				if (level < (stackSize - 1)) {
+					stack[--stackSize] = null;
+				}
+			}
+
 		} catch (DocumentException e) {
 			notifyFail();
 			throw e;
@@ -294,10 +296,10 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 
 			deweyID = new XTCdeweyID(new DocID(collectionID, nextDocNumber));
 			nextDocNumber++;
-			
+
 			stack[0] = null;
 			stackSize = 0;
-			
+
 		} else {
 			// non document nodes
 			if (stackSize == 0) {
@@ -309,7 +311,7 @@ public abstract class SubtreeBuilder<E extends TXNode<E>> extends
 						// sibling of root node requested
 						throw new DocumentException("Invalid Parser State!");
 					}
-					
+
 					deweyID = XTCdeweyID.newBetween(
 							stack[--stackSize].getDeweyID(), null);
 					stack[stackSize] = null;

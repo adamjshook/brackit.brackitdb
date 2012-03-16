@@ -91,8 +91,15 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 
 	@Override
 	public void end() throws DocumentException {
+		
 		if (!externalInsertCtrl && insertCtrl != null) {
-			throw new DocumentException("End before endFragment");
+			try {
+				insertCtrl.close();
+			} catch (IndexAccessException e) {
+				throw new DocumentException(e);
+			}
+
+			insertCtrl = null;
 		}
 	}
 
@@ -230,32 +237,13 @@ public class BracketDocIndexListener extends DefaultListener<BracketNode>
 	public void beginFragment() throws DocumentException {
 		this.pendingElement = null;
 		this.ancestorsToInsert = 0;
+		if (rootDeweyID.isDocument()) {
+			// store each fragment as new document
+			ancestorsToInsert++;
+		}
 	}
 
 	public void endFragment() throws DocumentException {
-		if (pendingElement != null) {
-			writeEmptyElement();
-			pendingElement = null;
-		}
-
-		if (!externalInsertCtrl && insertCtrl != null) {
-			try {
-				insertCtrl.close();
-			} catch (IndexAccessException e) {
-				throw new DocumentException(e);
-			}
-
-			insertCtrl = null;
-		}
-	}
-	
-	@Override
-	public void startDocument() throws DocumentException {
-		this.ancestorsToInsert++;
-	}
-	
-	@Override
-	public void endDocument() throws DocumentException {
 		if (pendingElement != null) {
 			writeEmptyElement();
 			pendingElement = null;

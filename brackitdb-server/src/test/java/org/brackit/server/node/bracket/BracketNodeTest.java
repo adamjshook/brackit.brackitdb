@@ -424,8 +424,9 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 						+ (end - start) / 1000f, types[i].name()));
 			} catch (Throwable e) {
 				failures[i] = e;
-				System.out.println(String.format("%s failed after: "
-						+ (System.currentTimeMillis() - start) / 1000f,
+				System.out.println(String.format(
+						"%s failed after: "
+								+ (System.currentTimeMillis() - start) / 1000f,
 						types[i].name()));
 			}
 		}
@@ -452,8 +453,8 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 				bigDocument));
 		BracketNode root = coll.getDocument().getFirstChild();
 
-		BracketCollection ref = createCollection(new StreamSubtreeParser(root
-				.getSubtree()));
+		BracketCollection ref = createCollection(new StreamSubtreeParser(
+				root.getSubtree()));
 
 		BracketNode toBeReplaced = root.getNode(new XTCdeweyID(root
 				.getDeweyID().docID, "1.9"));
@@ -545,8 +546,20 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		List<int[]> toMove = new ArrayList<int[]>();
 		List<Integer> prefixList = new ArrayList<Integer>();
 
-		BracketCollection coll = createCollection(new DocumentParser(docFile));
-		BracketNode root = coll.getDocument().getFirstChild();
+		SubtreeParser parser = null;
+		int docNumber = 0;
+		if (COLLECTION_CHECK) {
+			parser = new CollectionParser(new SubtreeParser[] {
+					new DocumentParser(smallDocument),
+					new DocumentParser(docFile),
+					new DocumentParser(smallDocument) });
+			docNumber = 1;
+		} else {
+			parser = new DocumentParser(docFile);
+		}
+
+		BracketCollection coll = createCollection(parser);
+		BracketNode root = (new BracketNode(coll, docNumber)).getFirstChild();
 		DocID docID = root.getDeweyID().docID;
 
 		int numberOfRelevantNodes = 0;

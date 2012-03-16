@@ -30,10 +30,12 @@ package org.brackit.server.metadata;
 import org.brackit.server.metadata.manager.MetaDataMgr;
 import org.brackit.server.tx.Tx;
 import org.brackit.xquery.QueryContext;
+import org.brackit.xquery.node.parser.CollectionParser;
 import org.brackit.xquery.node.parser.SubtreeParser;
 import org.brackit.xquery.xdm.Collection;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Store;
+import org.brackit.xquery.xdm.Stream;
 
 /**
  * 
@@ -53,12 +55,6 @@ public class TXQueryContext extends QueryContext {
 			this.tx = tx;
 			this.mdm = mdm;
 		}
-		
-		@Override
-		public Collection<?> create(String name, SubtreeParser parser)
-				throws DocumentException {
-			return mdm.create(tx, name, parser);
-		}
 
 		@Override
 		public void drop(String name) throws DocumentException {
@@ -73,6 +69,23 @@ public class TXQueryContext extends QueryContext {
 		@Override
 		public void makeDir(String path) throws DocumentException {
 			mdm.mkdir(tx, path);
+		}
+
+		@Override
+		public Collection<?> create(String name) throws DocumentException {
+			return mdm.create(tx, name, null);
+		}
+
+		@Override
+		public Collection<?> create(String name, SubtreeParser parser)
+				throws DocumentException {
+			return mdm.create(tx, name, parser);
+		}
+
+		@Override
+		public Collection<?> create(String name, Stream<SubtreeParser> parsers)
+				throws DocumentException {
+			return mdm.create(tx, name, new CollectionParser(parsers));
 		}
 	}
 

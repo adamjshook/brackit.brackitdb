@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.brackit.xquery.util.log.Logger;
+import org.brackit.xquery.util.serialize.SubtreePrinter;
 import org.brackit.server.metadata.TXQueryContext;
 import org.brackit.server.procedure.buffer.ClearBuffers;
 import org.brackit.server.procedure.buffer.StartBuffer;
@@ -57,7 +58,6 @@ import org.brackit.server.procedure.xmark.XMark;
 import org.brackit.server.procedure.xmark.XMarkQuery1;
 import org.brackit.xquery.ErrorCode;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.node.SubtreePrinter;
 import org.brackit.xquery.xdm.Item;
 import org.brackit.xquery.xdm.Iter;
 import org.brackit.xquery.xdm.Kind;

@@ -37,11 +37,11 @@ import java.util.TreeSet;
 import junit.framework.Assert;
 
 import org.brackit.xquery.util.log.Logger;
+import org.brackit.xquery.util.serialize.SubtreePrinter;
 import org.brackit.server.XQueryBaseTest;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.expr.Accessor;
-import org.brackit.xquery.node.SubtreePrinter;
 import org.brackit.xquery.node.stream.StreamUtil;
 import org.brackit.xquery.node.stream.filter.Filter;
 import org.brackit.xquery.node.stream.filter.FilteredStream;
