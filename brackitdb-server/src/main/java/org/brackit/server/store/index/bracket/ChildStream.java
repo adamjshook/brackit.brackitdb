@@ -29,7 +29,6 @@ package org.brackit.server.store.index.bracket;
 
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.BracketLocator;
-import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
@@ -60,7 +59,7 @@ public final class ChildStream extends StreamIterator {
 
 		if (page != null) {
 			// hint page was already loaded
-			NavigationStatus navStatus = page.navigateFirstChild();
+			NavigationStatus navStatus = page.navigateFirstChild(false);
 			if (navStatus == NavigationStatus.FOUND) {
 				return;
 			} else if ((navStatus == NavigationStatus.NOT_EXISTENT)) {
@@ -86,7 +85,7 @@ public final class ChildStream extends StreamIterator {
 	protected void nextInternal() throws IndexOperationException,
 			IndexAccessException {
 		// try to find node without BracketTree
-		NavigationStatus navStatus = page.navigateNextSibling();
+		NavigationStatus navStatus = page.navigateNextSibling(false);
 		if (navStatus == NavigationStatus.FOUND) {
 			return;
 		} else if ((navStatus == NavigationStatus.NOT_EXISTENT)) {

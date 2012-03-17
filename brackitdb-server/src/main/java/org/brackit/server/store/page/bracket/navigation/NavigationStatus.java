@@ -48,15 +48,10 @@ public enum NavigationStatus {
 	POSSIBLY_FOUND,
 
 	/**
-	 * The requested node was not found, but also the break condition is not
-	 * fulfilled yet. If the node exists, it is located in the next page(s).
+	 * The node could not be found, but it is not clear whether the requested
+	 * node exists in another page.
 	 */
-	AFTER_LAST,
-
-	/**
-	 * The requested node is located in the previous page(s).
-	 */
-	BEFORE_FIRST,
+	NOT_FOUND,
 
 	/**
 	 * The break condition was reached before a node qualified.

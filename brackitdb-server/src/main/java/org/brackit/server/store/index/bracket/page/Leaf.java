@@ -65,9 +65,21 @@ public interface Leaf extends BPContext {
 	 */
 	public NavigationStatus navigate(NavigationMode navMode);
 
-	public NavigationStatus navigateFirstChild();
+	/**
+	 * Navigates to the first child. If it is clear that there is no first
+	 * child (NOT_EXISTENT) and the 'returnNodeOnFailure' flag is set, we will
+	 * however step to the next node that does not belong to the current
+	 * subtree (i.e. the node where we expected to be the first child).
+	 */
+	public NavigationStatus navigateFirstChild(boolean returnNodeOnFailure);
 
-	public NavigationStatus navigateNextSibling();
+	/**
+	 * Navigates to the next sibling. If it is clear that there is no next
+	 * sibling (NOT_EXISTENT) and the 'returnNodeOnFailure' flag is set, we will
+	 * however step to the next node that does not belong to the current
+	 * subtree (i.e. the node where we expected to be the next sibling).
+	 */
+	public NavigationStatus navigateNextSibling(boolean returnNodeOnFailure);
 
 	/**
 	 * Navigates along the navigation axis specified in the NavigationMode

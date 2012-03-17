@@ -80,6 +80,20 @@ public class XMLNode {
 	public XMLNode getNextSibling() {
 		return nextSibling;
 	}
+	
+	public XMLNode getNextSiblingOrNext() {
+		
+		XMLNode current = this;
+		while (current != null) {
+			if (current.nextSibling != null) {
+				return current.nextSibling;
+			}
+			current = current.parent;
+		}
+		
+		// no next node availabe		
+		return null;
+	}
 
 	public void setNextSibling(XMLNode nextSibling) {
 		this.nextSibling = nextSibling;
@@ -91,6 +105,24 @@ public class XMLNode {
 
 	public List<XMLNode> getChildren() {
 		return children;
+	}
+	
+	public XMLNode getFirstChildOrNext() {
+		
+		if (children.size() > 0) {
+			return children.get(0);
+		}
+		
+		XMLNode current = this;
+		while (current != null) {
+			if (current.nextSibling != null) {
+				return current.nextSibling;
+			}
+			current = current.parent;
+		}
+		
+		// no next node availabe		
+		return null;
 	}
 
 	@Override
