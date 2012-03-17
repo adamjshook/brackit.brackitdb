@@ -105,7 +105,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 				// open index in LOAD mode
 				insertCtrl = store.index.openForInsert(tx, new PageID(collID),
 						OpenMode.LOAD, null);
-				
+
 				storeDocuments(0, parser, insertCtrl, false);
 
 				// close index
@@ -172,7 +172,7 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	public void delete() throws DocumentException {
 		try {
 			store.index.dropIndex(tx, new PageID(collID));
-			store.index.dropIndex(tx,
+			store.stdIndex.dropIndex(tx,
 					new PageID(pathSynopsis.getPathSynopsisNo()));
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
@@ -200,7 +200,8 @@ public class BracketCollection extends TXCollection<BracketNode> {
 	@Override
 	public void remove(long documentID) throws OperationNotSupportedException,
 			DocumentException {
-		// TODO this method is not used anywhere. No support for single document deletions?
+		// TODO this method is not used anywhere. No support for single document
+		// deletions?
 	}
 
 	@Override
@@ -216,11 +217,12 @@ public class BracketCollection extends TXCollection<BracketNode> {
 		try {
 			InsertController insertCtrl = store.index.openForInsert(tx,
 					new PageID(collID), OpenMode.BULK, null);
-			
-			int nextDocNumber = insertCtrl.getStartInsertKey().getDocID().getDocNumber();
+
+			int nextDocNumber = insertCtrl.getStartInsertKey().getDocID()
+					.getDocNumber();
 			storeDocuments(nextDocNumber, parser, insertCtrl, true);
 			insertCtrl.close();
-			
+
 			return new BracketNode(this, nextDocNumber);
 
 		} catch (IndexAccessException e) {
@@ -235,12 +237,12 @@ public class BracketCollection extends TXCollection<BracketNode> {
 		ArrayList<SubtreeListener<? super BracketNode>> listener = new ArrayList<SubtreeListener<? super BracketNode>>(
 				5);
 		listener.add(new BracketDocIndexListener(ListenMode.INSERT, insertCtrl));
-		//listener.add(new DebugListener());
+		// listener.add(new DebugListener());
 
 		if (updateIndexes) {
 			listener.addAll(indexController.getIndexListener(ListenMode.INSERT));
 		}
-		
+
 		// make sure the CollectionParser is used
 		if (!(parser instanceof CollectionParser)) {
 			parser = new CollectionParser(parser);

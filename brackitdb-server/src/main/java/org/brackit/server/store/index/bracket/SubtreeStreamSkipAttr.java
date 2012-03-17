@@ -91,7 +91,7 @@ public final class SubtreeStreamSkipAttr extends StreamIterator {
 			// reached end of document
 			page.cleanup();
 			page = null;
-		} else if (navStat == NavigationStatus.AFTER_LAST) {
+		} else if (navStat == NavigationStatus.NOT_FOUND) {
 			// use BracketTree to load next page
 			page = tree.getNextPage(tx, locator.rootPageID, page, OPEN_MODE, true);			
 			if (page != null && page.moveNextNonAttrInDocument() != NavigationStatus.FOUND) {
