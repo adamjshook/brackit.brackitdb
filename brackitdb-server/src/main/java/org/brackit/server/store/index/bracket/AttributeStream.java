@@ -75,7 +75,7 @@ public class AttributeStream extends StreamIterator {
 		navStat = page.moveNextAttribute();
 		if (navStat == NavigationStatus.FOUND) {
 			return;
-		} else if(navStat == NavigationStatus.AFTER_LAST) {
+		} else if(navStat == NavigationStatus.NOT_FOUND) {
 			// load next page
 			page = tree.getNextPage(tx, locator.rootPageID, page, OPEN_MODE, true);
 			if (page != null) {

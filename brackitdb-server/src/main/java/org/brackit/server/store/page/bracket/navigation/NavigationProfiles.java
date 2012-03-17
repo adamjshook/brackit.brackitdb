@@ -27,7 +27,6 @@
  */
 package org.brackit.server.store.page.bracket.navigation;
 
-import org.brackit.server.store.page.bracket.BracketKey;
 import org.brackit.server.store.page.bracket.BracketKey.Type;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
 import org.brackit.server.store.page.bracket.navigation.NavigationProperties.NavigationTarget;
@@ -115,25 +114,6 @@ public class NavigationProfiles {
 					return deweyID.compare() > 0;
 				}
 			});
-	
-	public static final NavigationProperties GREATER_OR_EQUAL = new NavigationProperties(
-			NavigationTarget.FIRST, false, new NavigationCondition() {
-				@Override
-				public boolean checkCondition(int levelDiff,
-						DeweyIDBuffer deweyID, Type type, int keyOffset) {
-					return deweyID.compare() >= 0;
-				}
-			}, FALSE_CONDITION);
-
-	public static final NavigationProperties NEXT_ATTRIBUTE = new NavigationProperties(
-			NavigationTarget.FIRST, false, TRUE_CONDITION,
-			new NavigationCondition() {
-				@Override
-				public boolean checkCondition(int levelDiff,
-						DeweyIDBuffer deweyID, Type type, int keyOffset) {
-					return type != BracketKey.Type.ATTRIBUTE;
-				}
-			});
 
 	public static final NavigationProperties TO_INSERT_POS = new NavigationProperties(
 			NavigationTarget.LAST, false, TRUE_CONDITION,
@@ -144,9 +124,6 @@ public class NavigationProfiles {
 					return deweyID.compare() > 0;
 				}
 			});
-
-	public static final NavigationProperties NEXT_NODE = new NavigationProperties(
-			NavigationTarget.FIRST, false, TRUE_CONDITION, FALSE_CONDITION);
 
 	public static final NavigationProperties LAST_NODE = new NavigationProperties(
 			NavigationTarget.LAST, false, TRUE_CONDITION, FALSE_CONDITION);

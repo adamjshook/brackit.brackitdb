@@ -619,7 +619,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 						"Only the last leaf page may be empty!");
 			}
 			if (navMode != NavigationMode.TO_INSERT_POS) {
-				return NavigationStatus.BEFORE_FIRST;
+				return NavigationStatus.NOT_FOUND;
 			} else {
 				return NavigationStatus.FOUND;
 			}

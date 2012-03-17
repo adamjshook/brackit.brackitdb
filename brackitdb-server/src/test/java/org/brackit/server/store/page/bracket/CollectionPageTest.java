@@ -675,5 +675,64 @@ public class CollectionPageTest {
 			document.addRecord(record);
 		}
 	}
-
+	
+	@Test
+	public void emptyPageTest() throws DocumentException {
+		
+		page.clearData(false);	
+		NavigationResult navRes = null;
+		DeweyIDBuffer currentDeweyID = new DeweyIDBuffer();
+		XTCdeweyID referenceDeweyID = new XTCdeweyID("99[0]:1.3.7.9");
+		
+		// test empty page behaviour for all (context-free) navigation steps
+		
+		// NOT_EXISTENT
+		
+		navRes = page.navigateFirstCF(currentDeweyID);
+		assertEquals(NavigationStatus.NOT_EXISTENT, navRes.status);
+		
+		navRes = page.navigateLastCF(currentDeweyID);
+		assertEquals(NavigationStatus.NOT_EXISTENT, navRes.status);
+		
+		navRes = page.navigateNextToLastCF(currentDeweyID);
+		assertEquals(NavigationStatus.NOT_EXISTENT, navRes.status);
+		
+		// NOT_FOUND
+		
+		navRes = page.navigateFirstChildCF(referenceDeweyID, currentDeweyID);
+		assertEquals(NavigationStatus.NOT_FOUND, navRes.status);
+		
+		navRes = page.navigateLastChildCF(referenceDeweyID, currentDeweyID);
+		assertEquals(NavigationStatus.NOT_FOUND, navRes.status);
+		
+		navRes = page.navigateNext(BracketPage.BEFORE_LOW_KEY_OFFSET, currentDeweyID, null, false);
+		assertEquals(NavigationStatus.NOT_FOUND, navRes.status);
+		
+		navRes = page.navigateNextAttribute(BracketPage.BEFORE_LOW_KEY_OFFSET, currentDeweyID, null);
+		assertEquals(NavigationStatus.NOT_FOUND, navRes.status);
+		
+		navRes = page.navigateNextAttributeCF(referenceDeweyID, currentDeweyID);
+		assertEquals(NavigationStatus.NOT_FOUND, navRes.status);
+		
+		navRes = page.navigateNextDocument(BracketPage.BEFORE_LOW_KEY_OFFSET, currentDeweyID, null);
+		assertEquals(NavigationStatus.NOT_FOUND, navRes.status);
+		
+		navRes = page.navigateNextNonAttrInDocument(BracketPage.BEFORE_LOW_KEY_OFFSET, currentDeweyID, null);
+		assertEquals(NavigationStatus.NOT_FOUND, navRes.status);
+		
+		navRes = page.navigateNextSiblingCF(referenceDeweyID, currentDeweyID);
+		assertEquals(NavigationStatus.NOT_FOUND, navRes.status);
+		
+		navRes = page.navigateParent(currentDeweyID);
+		assertEquals(NavigationStatus.NOT_FOUND, navRes.status);
+		
+		navRes = page.navigateParentCF(referenceDeweyID, currentDeweyID);
+		assertEquals(NavigationStatus.NOT_FOUND, navRes.status);
+		
+		navRes = page.navigatePreviousSiblingCF(referenceDeweyID, currentDeweyID);
+		assertEquals(NavigationStatus.NOT_FOUND, navRes.status);
+		
+		navRes = page.navigateToKey(referenceDeweyID, currentDeweyID);
+		assertEquals(NavigationStatus.NOT_FOUND, navRes.status);
+	}
 }

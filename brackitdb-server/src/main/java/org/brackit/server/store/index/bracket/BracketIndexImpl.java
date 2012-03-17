@@ -29,9 +29,6 @@ package org.brackit.server.store.index.bracket;
 
 import java.io.PrintStream;
 
-import org.brackit.xquery.atomic.Atomic;
-import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
@@ -47,6 +44,8 @@ import org.brackit.server.store.index.bracket.page.Leaf;
 import org.brackit.server.store.page.bracket.RecordInterpreter;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
 
@@ -56,7 +55,7 @@ import org.brackit.xquery.xdm.Kind;
  */
 public class BracketIndexImpl implements BracketIndex {
 
-	private static final Logger log = Logger.getLogger(BracketIndexImpl.class);
+	private static final boolean USE_HINTPAGE = true;
 
 	protected final BracketTree tree;
 
@@ -124,8 +123,9 @@ public class BracketIndexImpl implements BracketIndex {
 	public BracketIter open(Tx tx, PageID rootPageID, NavigationMode navMode,
 			XTCdeweyID key, OpenMode openMode, HintPageInformation hintPageInfo)
 			throws IndexAccessException {
+
 		Leaf leaf = tree.openInternal(tx, rootPageID, navMode, key, openMode,
-				hintPageInfo, null);
+				(USE_HINTPAGE ? hintPageInfo : null), null);
 		if (leaf != null) {
 			return new BracketIterImpl(tx, tree, rootPageID, leaf, openMode);
 		} else {
@@ -150,8 +150,7 @@ public class BracketIndexImpl implements BracketIndex {
 	@Override
 	public StreamIterator openDocumentStream(BracketLocator locator,
 			BracketFilter filter) {
-		return new DocumentStream(locator, tree, null, null,
-				filter);
+		return new DocumentStream(locator, tree, null, null, filter);
 	}
 
 	@Override
@@ -326,21 +325,26 @@ public class BracketIndexImpl implements BracketIndex {
 			throw new IndexAccessException(e);
 		}
 	}
-	
+
 	@Override
-	public void deleteSubtree(BracketLocator locator, XTCdeweyID key, HintPageInformation hintPageInfo, SubtreeDeleteListener listener) throws DocumentException {
-		
+	public void deleteSubtree(BracketLocator locator, XTCdeweyID key,
+			HintPageInformation hintPageInfo, SubtreeDeleteListener listener)
+			throws DocumentException {
+
 		Tx tx = locator.collection.getTX();
-		
+
 		try {
-			
-			Leaf leaf =	tree.openInternal(tx, locator.rootPageID, NavigationMode.TO_KEY, key, OpenMode.UPDATE, hintPageInfo, null);
+
+			Leaf leaf = tree.openInternal(tx, locator.rootPageID,
+					NavigationMode.TO_KEY, key, OpenMode.UPDATE, hintPageInfo,
+					null);
 			if (leaf == null) {
-				throw new DocumentException("The specified node does not exist and can not be deleted.");
+				throw new DocumentException(
+						"The specified node does not exist and can not be deleted.");
 			}
-			
+
 			tree.deleteSubtree(tx, locator.rootPageID, leaf, listener);
-			
+
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);
 		}

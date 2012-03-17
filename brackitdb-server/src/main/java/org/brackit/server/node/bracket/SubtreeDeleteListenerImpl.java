@@ -30,7 +30,6 @@ package org.brackit.server.node.bracket;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.SubtreeDeleteListener;
-import org.brackit.server.tx.Tx;
 import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
@@ -103,8 +102,13 @@ public class SubtreeDeleteListenerImpl implements SubtreeDeleteListener {
 			// close elements
 			endElements(openElementsLength - level);
 			
-			if (kind == Kind.ELEMENT) {
-				startElement(node);
+			if (kind == Kind.DOCUMENT) {
+				startNode(node);
+				for (SubtreeListener<? super BracketNode> subLis : listener) {
+					subLis.startDocument();
+				}
+			} else if (kind == Kind.ELEMENT) {
+				startNode(node);
 				for (SubtreeListener<? super BracketNode> subLis : listener) {
 					subLis.startElement(node);
 				}
@@ -155,7 +159,7 @@ public class SubtreeDeleteListenerImpl implements SubtreeDeleteListener {
 		pendingElementsLevel = 0;
 	}
 	
-	private void startElement(BracketNode node) {
+	private void startNode(BracketNode node) {
 		
 		if (openElementsLength == openElements.length) {
 			// increase buffer
@@ -172,8 +176,15 @@ public class SubtreeDeleteListenerImpl implements SubtreeDeleteListener {
 		
 		for (int i = 0; i < number; i++) {
 			openElementsLength--;
-			for (SubtreeListener<? super BracketNode> subLis : listener) {
-				subLis.endElement(openElements[openElementsLength]);
+			BracketNode node = openElements[openElementsLength];
+			if (node.getKind() == Kind.DOCUMENT) {
+				for (SubtreeListener<? super BracketNode> subLis : listener) {
+					subLis.endDocument();
+				}
+			} else {
+				for (SubtreeListener<? super BracketNode> subLis : listener) {
+					subLis.endElement(node);
+				}
 			}
 			openElements[openElementsLength] = null;
 		}
