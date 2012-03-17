@@ -153,7 +153,7 @@ public final class BracketTree extends PageContextFactory {
 
 					if (highKey != null && navMode.isAfterHighKey(key, highKey)) {
 						// current leaf page can be skipped
-						navStatus = NavigationStatus.AFTER_LAST;
+						navStatus = NavigationStatus.NOT_FOUND;
 					} else {
 						// check current page
 						navStatus = leaf.navigateContextFree(key, navMode);
@@ -218,7 +218,7 @@ public final class BracketTree extends PageContextFactory {
 
 					if (highKey != null && navMode.isAfterHighKey(key, highKey)) {
 						// current leaf page can be skipped
-						navStatus = NavigationStatus.AFTER_LAST;
+						navStatus = NavigationStatus.NOT_FOUND;
 					} else {
 						// check current page
 						navStatus = leaf.navigateContextFree(key, navMode);
@@ -331,7 +331,7 @@ public final class BracketTree extends PageContextFactory {
 
 					if (highKey != null && navMode.isAfterHighKey(key, highKey)) {
 						// current leaf page can be skipped
-						navStatus = NavigationStatus.AFTER_LAST;
+						navStatus = NavigationStatus.NOT_FOUND;
 
 						// release last page
 						if (lastPage != null) {
@@ -500,7 +500,7 @@ public final class BracketTree extends PageContextFactory {
 
 					if (highKey != null && navMode.isAfterHighKey(key, highKey)) {
 						// current leaf page can be skipped
-						navStatus = NavigationStatus.AFTER_LAST;
+						navStatus = NavigationStatus.NOT_FOUND;
 						leaf.assignDeweyIDBuffer(deweyIDBuffer);
 					} else {
 
@@ -680,7 +680,7 @@ public final class BracketTree extends PageContextFactory {
 
 					if (highKey != null && navMode.isAfterHighKey(key, highKey)) {
 						// current leaf page can be skipped
-						navStatus = NavigationStatus.AFTER_LAST;
+						navStatus = NavigationStatus.NOT_FOUND;
 
 						// release last page
 						if (lastPage != null) {

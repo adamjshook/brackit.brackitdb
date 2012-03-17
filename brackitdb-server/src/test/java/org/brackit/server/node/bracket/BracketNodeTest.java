@@ -159,17 +159,9 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 	}
 
 	public static void main(String[] args) throws Exception {
-		// BracketNodeTest test = new BracketNodeTest();
-		// test.setUp();
-		// test.storeCollection();
-
-		BracketMockup mockup = new BracketMockup();
-		TXCollection<BracketNode> coll = mockup.createCollection(
-				"testCollection", new DocumentParser(smallDocument));
-
-		// for (int i = 0; i < 10; i++) {
-		// coll.add(new DocumentParser(smallDocument));
-		// }
+		 BracketNodeTest test = new BracketNodeTest();
+		 test.setUp();
+		 test.testOverflowNavigate();
 	}
 
 	@Ignore
@@ -497,7 +489,6 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		stream.close();
 	}
 
-	@Ignore
 	@Test
 	public void ultimateNavigationTest() throws Exception {
 		verifyAgainstDOM(bigDocument, CheckType.values());
@@ -522,11 +513,28 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 
 		System.out.println("Replacing finished.");
 
-		verifyAgainstDOM(bigDocument, root, CheckType.PREORDER,
-				CheckType.POSTORDER);
+		verifyAgainstDOM(bigDocument, root, CheckType.values());
+	}
+	
+	@Test
+	public void emptyLastPageTest() throws Exception {
+
+		BracketCollection coll = createCollection(new DocumentParser(
+				bigDocument));
+		BracketNode root = coll.getDocument().getFirstChild();
+		BracketNode lastChild = root.getLastChild();
+				
+		D2NodeFactory fac = new D2NodeFactory();
+		D2Node backup = fac.build(new StreamSubtreeParser(lastChild.getSubtree()));
+		
+		lastChild.insertBefore(backup);
+		lastChild.delete();
+
+		System.out.println("Empty last page produced.");
+
+		verifyAgainstDOM(bigDocument, root, CheckType.values());
 	}
 
-	@Ignore
 	@Test
 	public void testOverflowNavigate() throws Exception {
 
@@ -618,10 +626,6 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 
 				toMove.add(toStore);
 				prefixList.add(prefixIndex);
-
-				// if (maxSubtrees >= 0 && toMove.size() >= maxSubtrees) {
-				// break;
-				// }
 			}
 		}
 		s.close();

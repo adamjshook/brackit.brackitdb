@@ -137,7 +137,7 @@ import org.brackit.server.util.Calc;
  */
 public final class BracketPage extends BasePage {
 
-	private static final boolean CHECK_PAGE_INTEGRITY = false;
+	private static final boolean DEBUG = false;
 
 	private static final int RESERVED_FOR_CONTEXT = LeafBPContext.RESERVED_SIZE;
 	private static final int CONTEXT_DATA_FIELD_NO = BASE_PAGE_START_OFFSET
@@ -641,7 +641,7 @@ public final class BracketPage extends BasePage {
 
 		// initialize result object
 		navRes.reset();
-		navRes.status = NavigationStatus.AFTER_LAST;
+		navRes.status = NavigationStatus.NOT_FOUND;
 		navRes.breakConditionFulfilled = false;
 
 		// currently processed bracket key
@@ -650,6 +650,11 @@ public final class BracketPage extends BasePage {
 
 		// check if lowKey qualifies
 		if (keyPos == BEFORE_LOW_KEY_OFFSET) {
+			
+			if (getRecordCount() == 0) {
+				return navRes;
+			}
+			
 			keyPos = LOW_KEY_OFFSET;
 
 			// backup reference DeweyID
@@ -1091,7 +1096,7 @@ public final class BracketPage extends BasePage {
 
 		handle.setModified(true);
 
-		if (CHECK_PAGE_INTEGRITY) {
+		if (DEBUG) {
 			checkPageIntegrity();
 		}
 
@@ -1189,29 +1194,29 @@ public final class BracketPage extends BasePage {
 	public KeyValueTuple[] getAllNodes() {
 
 		int recordCount = getRecordCount();
-
 		KeyValueTuple[] result = new KeyValueTuple[recordCount];
 
-		if (recordCount == 0) {
-			return result;
-		}
-
-		// load lowID record
-		XTCdeweyID lowID = getLowKey();
-		result[0] = new KeyValueTuple(lowID,
-				getValueUnresolved(LOW_KEY_OFFSET).value);
-
 		// prepare DeweyID buffers
-		DeweyIDBuffer currentDeweyID = new DeweyIDBuffer(lowID);
+		DeweyIDBuffer currentDeweyID = new DeweyIDBuffer();
 
 		// navigate over all records
-		navRes.keyOffset = LOW_KEY_OFFSET;
-		for (int i = 1; i < recordCount; i++) {
-			navigateGeneric(currentDeweyID, navRes.keyOffset,
-					NavigationProfiles.NEXT_NODE, false);
-
+		navRes.reset();
+		navRes.keyOffset = BEFORE_LOW_KEY_OFFSET;
+		navRes.keyType = null;
+		
+		int i = 0;
+		
+		while (true) {
+			
+			navigateNext(navRes.keyOffset, currentDeweyID, navRes.keyType, false);
+			if (navRes.status != NavigationStatus.FOUND) {
+				break;
+			}
+			
 			result[i] = new KeyValueTuple(currentDeweyID.getDeweyID(),
 					getValueUnresolved(navRes.keyOffset).value);
+			
+			i++;
 		}
 
 		return result;
@@ -1231,6 +1236,7 @@ public final class BracketPage extends BasePage {
 
 		if (getRecordCount() == 0) {
 			navRes.reset();
+			navRes.status = NavigationStatus.NOT_FOUND;
 			return navRes;
 		}
 
@@ -1246,7 +1252,7 @@ public final class BracketPage extends BasePage {
 			navRes.keyType = getLowKeyType();
 		} else if (currentDeweyID.compare() > 0) {
 			navRes.reset();
-			navRes.status = NavigationStatus.BEFORE_FIRST;
+			navRes.status = NavigationStatus.NOT_FOUND;
 		} else {
 			// navigate to key
 			navigateGeneric(currentDeweyID, LOW_KEY_OFFSET,
@@ -1274,7 +1280,7 @@ public final class BracketPage extends BasePage {
 			boolean documentScope) {
 
 		navRes.reset();
-		navRes.status = NavigationStatus.AFTER_LAST;
+		navRes.status = NavigationStatus.NOT_FOUND;
 
 		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
 
@@ -1357,7 +1363,7 @@ public final class BracketPage extends BasePage {
 			DeweyIDBuffer currentDeweyID, BracketKey.Type currentKeyType) {
 
 		navRes.reset();
-		navRes.status = NavigationStatus.AFTER_LAST;
+		navRes.status = NavigationStatus.NOT_FOUND;
 
 		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
 
@@ -1429,7 +1435,7 @@ public final class BracketPage extends BasePage {
 			DeweyIDBuffer currentDeweyID, BracketKey.Type currentKeyType) {
 
 		navRes.reset();
-		navRes.status = NavigationStatus.AFTER_LAST;
+		navRes.status = NavigationStatus.NOT_FOUND;
 
 		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
 
@@ -1543,15 +1549,13 @@ public final class BracketPage extends BasePage {
 			DeweyIDBuffer currentDeweyID) {
 
 		if (currentOffset == BEFORE_LOW_KEY_OFFSET) {
-			// current node is root or current offset is an invalid position
-			navRes.reset();
-			return navRes;
+			throw new IllegalArgumentException("Invalid offset!");
 		}
 
 		if (currentOffset == LOW_KEY_OFFSET) {
 			// previous key is located before the low key
 			navRes.reset();
-			navRes.status = NavigationStatus.BEFORE_FIRST;
+			navRes.status = NavigationStatus.NOT_FOUND;
 			return navRes;
 		}
 
@@ -1585,7 +1589,7 @@ public final class BracketPage extends BasePage {
 
 		// initialize result object
 		navRes.reset();
-		navRes.status = NavigationStatus.AFTER_LAST;
+		navRes.status = NavigationStatus.NOT_FOUND;
 
 		int levelDiff = 0;
 		int overflowDiff = 0;
@@ -1725,8 +1729,15 @@ public final class BracketPage extends BasePage {
 			// invoke navigation method
 			navigateNextSibling(refNode.keyOffset, currentDeweyID,
 					refNode.keyType, false);
-		} else if (refNode.status == NavigationStatus.BEFORE_FIRST) {
+		} else if (refNode.status == NavigationStatus.NOT_FOUND) {
 			// continue navigation
+			
+			if (DEBUG) {
+				// refNode needs to be in one of the previous pages
+				if (getRecordCount() > 0 && referenceDeweyID.compareReduced(getLowKey()) >= 0) {
+					throw new RuntimeException("Index brought us to wrong page!");
+				}
+			}
 
 			// determine level difference to low key
 			currentDeweyID.setTo(referenceDeweyID);
@@ -1734,8 +1745,7 @@ public final class BracketPage extends BasePage {
 					NavigationProfiles.NEXT_SIBLING, false);
 
 		} else {
-			// reference key does not exist or is located after the high key
-			throw new RuntimeException("Wrong usage of this method!");
+			throw new RuntimeException("Reference key does not exist!");
 		}
 
 		return navRes;
@@ -1766,7 +1776,7 @@ public final class BracketPage extends BasePage {
 
 		} else {
 			// no parent or previous sibling found -> before lowkey
-			parentOrSibling.status = NavigationStatus.BEFORE_FIRST;
+			parentOrSibling.status = NavigationStatus.NOT_FOUND;
 		}
 
 		return parentOrSibling;
@@ -1800,7 +1810,7 @@ public final class BracketPage extends BasePage {
 
 		} else {
 			// no parent or previous sibling found -> before lowkey
-			parentOrSibling.status = NavigationStatus.BEFORE_FIRST;
+			parentOrSibling.status = NavigationStatus.NOT_FOUND;
 		}
 
 		currentDeweyID.disableCompareMode();
@@ -1830,7 +1840,7 @@ public final class BracketPage extends BasePage {
 		// initialize result object
 
 		navRes.reset();
-		navRes.status = NavigationStatus.AFTER_LAST;
+		navRes.status = NavigationStatus.NOT_FOUND;
 
 		// determine the key offset for the next bracket key
 		if (currentOffset == LOW_KEY_OFFSET) {
@@ -1952,8 +1962,15 @@ public final class BracketPage extends BasePage {
 			// invoke navigation method
 			navigateFirstChild(refNode.keyOffset, currentDeweyID,
 					refNode.keyType, false);
-		} else if (refNode.status == NavigationStatus.BEFORE_FIRST) {
+		} else if (refNode.status == NavigationStatus.NOT_FOUND) {
 			// continue navigation
+			
+			if (DEBUG) {
+				// refNode needs to be in one of the previous pages
+				if (getRecordCount() > 0 && referenceDeweyID.compareReduced(getLowKey()) >= 0) {
+					throw new RuntimeException("Index brought us to wrong page!");
+				}
+			}
 
 			// look for the first child
 			currentDeweyID.setTo(referenceDeweyID);
@@ -1961,8 +1978,7 @@ public final class BracketPage extends BasePage {
 					NavigationProfiles.FIRST_CHILD, false);
 
 		} else {
-			// reference key does not exist or is located after the high key
-			throw new RuntimeException("Wrong usage of this method!");
+			throw new RuntimeException("Reference key does not exist!");
 		}
 
 		return navRes;
@@ -2011,9 +2027,16 @@ public final class BracketPage extends BasePage {
 		if (refNode.status == NavigationStatus.FOUND) {
 			// invoke navigation method
 			navigateLastChild(refNode.keyOffset, currentDeweyID);
-		} else if (refNode.status == NavigationStatus.BEFORE_FIRST) {
+		} else if (refNode.status == NavigationStatus.NOT_FOUND) {
 			// continue navigation
 
+			if (DEBUG) {
+				// refNode needs to be in one of the previous pages
+				if (getRecordCount() > 0 && referenceDeweyID.compareReduced(getLowKey()) >= 0) {
+					throw new RuntimeException("Index brought us to wrong page!");
+				}
+			}
+			
 			// determine level difference to low key
 			currentDeweyID.setTo(referenceDeweyID);
 			navigateGeneric(currentDeweyID, BEFORE_LOW_KEY_OFFSET,
@@ -2025,12 +2048,11 @@ public final class BracketPage extends BasePage {
 			}
 
 			if (navRes.status == NavigationStatus.NOT_EXISTENT) {
-				navRes.status = NavigationStatus.BEFORE_FIRST;
+				navRes.status = NavigationStatus.NOT_FOUND;
 			}
 
 		} else {
-			// reference key does not exist or is located after the high key
-			throw new RuntimeException("Wrong usage of this method!");
+			throw new RuntimeException("Reference key does not exist!");
 		}
 
 		return navRes;
@@ -2053,13 +2075,19 @@ public final class BracketPage extends BasePage {
 			navRes.reset();
 			return navRes;
 		}
+		
+		if (getRecordCount() == 0) {
+			navRes.reset();
+			navRes.status = NavigationStatus.NOT_FOUND;
+			return navRes;
+		}
 
 		// compare parent ID with lowID
 		currentDeweyID.enableCompareMode(getLowKey());
 		int compareValue = currentDeweyID.compare();
 		if (compareValue < 0) {
 			navRes.reset();
-			navRes.status = NavigationStatus.BEFORE_FIRST;
+			navRes.status = NavigationStatus.NOT_FOUND;
 		} else if (compareValue == 0) {
 			// lowKey is parent
 			navRes.reset();
@@ -2111,7 +2139,6 @@ public final class BracketPage extends BasePage {
 
 		if (getRecordCount() == 0) {
 			navRes.reset();
-			navRes.status = NavigationStatus.BEFORE_FIRST;
 		} else if (getRecordCount() == 1) {
 			navRes.reset();
 			navRes.status = NavigationStatus.FOUND;
@@ -2124,7 +2151,6 @@ public final class BracketPage extends BasePage {
 			currentDeweyID.setTo(getLowKey());
 			navigateGeneric(currentDeweyID, LOW_KEY_OFFSET,
 					NavigationProfiles.LAST_NODE, false);
-
 		}
 
 		return navRes;
@@ -2345,8 +2371,6 @@ public final class BracketPage extends BasePage {
 	 */
 	public NavigationResult navigateNextAttribute(int currentOffset,
 			DeweyIDBuffer currentDeweyID, BracketKey.Type currentKeyType) {
-		// return navigateGeneric(currentDeweyID, currentOffset,
-		// NavigationProfiles.NEXT_ATTRIBUTE, false);
 
 		navRes.reset();
 
@@ -2355,6 +2379,7 @@ public final class BracketPage extends BasePage {
 			// attribute
 
 			if (getRecordCount() == 0) {
+				navRes.status = NavigationStatus.NOT_FOUND;
 				return navRes;
 			}
 
@@ -2399,7 +2424,7 @@ public final class BracketPage extends BasePage {
 				}
 			}
 		} else {
-			navRes.status = NavigationStatus.AFTER_LAST;
+			navRes.status = NavigationStatus.NOT_FOUND;
 		}
 		return navRes;
 	}
@@ -2425,10 +2450,20 @@ public final class BracketPage extends BasePage {
 			// invoke navigation method
 			navigateNextAttribute(refNode.keyOffset, currentDeweyID,
 					refNode.keyType);
-		} else if (refNode.status == NavigationStatus.BEFORE_FIRST) {
+		} else if (refNode.status == NavigationStatus.NOT_FOUND) {
 			// continue navigation
-
-			if (getLowKeyType() == BracketKey.Type.ATTRIBUTE) {
+			
+			if (DEBUG) {
+				// refNode needs to be in one of the previous pages
+				if (getRecordCount() > 0 && referenceDeweyID.compareReduced(getLowKey()) >= 0) {
+					throw new RuntimeException("Index brought us to wrong page!");
+				}
+			}
+			
+			if (getRecordCount() == 0) {
+				navRes.reset();
+				navRes.status = NavigationStatus.NOT_FOUND;
+			} else if (getLowKeyType() == BracketKey.Type.ATTRIBUTE) {
 				// lowID is the next attribute
 				navRes.reset();
 				navRes.status = NavigationStatus.FOUND;
@@ -2441,8 +2476,7 @@ public final class BracketPage extends BasePage {
 			}
 
 		} else {
-			// reference key does not exist or is located after the high key
-			throw new RuntimeException("Wrong usage of this method!");
+			throw new RuntimeException("Reference key does not exist!");
 		}
 
 		return navRes;
@@ -3435,7 +3469,7 @@ public final class BracketPage extends BasePage {
 
 		setEntryCount((short) (getRecordCount() - delPrep.numberOfNodes));
 
-		if (CHECK_PAGE_INTEGRITY) {
+		if (DEBUG) {
 			checkPageIntegrity();
 		}
 	}
@@ -3906,7 +3940,7 @@ public final class BracketPage extends BasePage {
 		// adjust key area end offset
 		setKeyAreaEndOffset(pageOffset);
 
-		if (CHECK_PAGE_INTEGRITY) {
+		if (DEBUG) {
 			checkPageIntegrity();
 		}
 
