@@ -161,6 +161,10 @@ public interface BracketIndex {
 	public StreamIterator openChildStream(BracketLocator locator,
 			XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo,
 			BracketFilter filter);
+	
+	public StreamIterator openMultiChildStream(BracketLocator locator,
+			XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo,
+			BracketFilter... filters);
 
 	public StreamIterator openSubtreeStream(BracketLocator locator,
 			XTCdeweyID subtreeRoot, HintPageInformation hintPageInfo,
@@ -197,6 +201,13 @@ public interface BracketIndex {
 	 */
 	public StreamIterator forkChildStream(StreamIterator origin,
 			BracketFilter filter) throws DocumentException;
+	
+	/**
+	 * Opens a new MultiChildStream at the position where the given iterator points
+	 * to.
+	 */
+	public StreamIterator forkMultiChildStream(StreamIterator origin,
+			BracketFilter... filters) throws DocumentException;
 
 	/**
 	 * Opens a new SubtreeStream at the position where the given iterator points

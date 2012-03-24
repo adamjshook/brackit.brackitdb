@@ -46,7 +46,9 @@ import org.brackit.server.node.txnode.TXCollection;
 import org.brackit.server.node.txnode.TXNodeTest;
 import org.brackit.server.node.util.NavigationStatistics;
 import org.brackit.server.node.util.Traverser;
-import org.brackit.server.store.page.bracket.BracketNodeSequence;
+import org.brackit.server.store.index.bracket.BracketTree;
+import org.brackit.server.store.index.bracket.MultiChildStreamMockup;
+import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.tx.IsolationLevel;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.node.d2linked.D2Node;
@@ -159,9 +161,9 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 	}
 
 	public static void main(String[] args) throws Exception {
-		 BracketNodeTest test = new BracketNodeTest();
-		 test.setUp();
-		 test.testOverflowNavigate();
+		BracketNodeTest test = new BracketNodeTest();
+		test.setUp();
+		test.multiChildStreamTest();
 	}
 
 	@Ignore
@@ -490,9 +492,11 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		stream.close();
 	}
 
+	@Ignore
 	@Test
 	public void ultimateNavigationTest() throws Exception {
-		verifyAgainstDOM(bigDocument, CheckType.values());
+		verifyAgainstDOM(bigDocument, createConfusedDocument(bigDocument),
+				CheckType.values());
 	}
 
 	@Ignore
@@ -516,7 +520,8 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 
 		verifyAgainstDOM(bigDocument, root, CheckType.values());
 	}
-	
+
+	@Ignore
 	@Test
 	public void emptyLastPageTest() throws Exception {
 
@@ -524,10 +529,11 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 				bigDocument));
 		BracketNode root = coll.getDocument().getFirstChild();
 		BracketNode lastChild = root.getLastChild();
-				
+
 		D2NodeFactory fac = new D2NodeFactory();
-		D2Node backup = fac.build(new StreamSubtreeParser(lastChild.getSubtree()));
-		
+		D2Node backup = fac.build(new StreamSubtreeParser(lastChild
+				.getSubtree()));
+
 		lastChild.insertBefore(backup);
 		lastChild.delete();
 
@@ -536,10 +542,9 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		verifyAgainstDOM(bigDocument, root, CheckType.values());
 	}
 
-	@Test
-	public void testOverflowNavigate() throws Exception {
+	private BracketNode createConfusedDocument(File docFile)
+			throws DocumentException, FileNotFoundException {
 
-		File docFile = bigDocument;
 		int avgNumberOfSubtrees = 2500;
 		int maxLevel = 5;
 
@@ -676,6 +681,118 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 
 		System.out.println("Moving finished.");
 
-		verifyAgainstDOM(docFile, root, CheckType.values());
+		return root;
+	}
+
+	@Ignore
+	@Test
+	public void multiChildStreamTest() throws DocumentException,
+			FileNotFoundException {
+
+		final int depth = 3;
+
+		BracketNode root = createConfusedDocument(bigDocument);
+
+		System.out.println("\nStart testing MultiChildStream...");
+
+		int count1 = 0;
+		int count2 = 0;
+
+		Stream<? extends BracketNode> stream = root.getDescendantOrSelf();
+		BracketNode node = null;
+		while ((node = stream.next()) != null) {
+
+			count1++;
+
+			Stream<BracketNode> multiChildStream = store.index
+					.openMultiChildStream(node.locator, node.getDeweyID(),
+							node.hintPageInfo, new BracketFilter[depth]);
+
+			// BracketNode current = null;
+			// while ((current = multiChildStream.next()) != null) {
+			// }
+			// multiChildStream.close();
+
+			Stream<BracketNode> multiChildStreamMockup = new MultiChildStreamMockup(
+					node.locator, new BracketTree(store.bufferMgr),
+					node.getDeweyID(), node.hintPageInfo,
+					new BracketFilter[depth]);
+
+			// compare both streams
+
+			BracketNode current = null;
+			BracketNode expected = null;
+			while ((expected = multiChildStreamMockup.next()) != null) {
+
+				count2++;
+				current = multiChildStream.next();
+
+				assertNotNull(current);
+				assertEquals(expected.getDeweyID(), current.getDeweyID());
+				assertEquals(expected.getKind(), current.getKind());
+				if (expected.getKind() == Kind.ELEMENT) {
+					assertEquals(expected.getName(), current.getName());
+				} else {
+					assertTrue(expected.getKind() == Kind.TEXT);
+					assertEquals(expected.getValue().stringValue(), current
+							.getValue().stringValue());
+				}
+			}
+			multiChildStreamMockup.close();
+
+			assertNull(multiChildStream.next());
+			multiChildStream.close();
+
+			// System.out.println(String.format("Test successful for node %s",
+			// node));
+		}
+		stream.close();
+		System.out
+				.println(String
+						.format("Test successful!\nNumber of streams: %s\nNumber of compared nodes: %s",
+								count1, count2));
+	}
+
+	@Ignore
+	@Test
+	public void compareMultiChildStreams() throws DocumentException,
+			FileNotFoundException {
+
+		BracketNode root = createConfusedDocument(bigDocument);
+
+		long time1 = Long.MAX_VALUE;
+		long time2 = Long.MAX_VALUE;
+
+		for (int i = 0; i < 100; i++) {
+
+			Stream<? extends BracketNode> stream1 = store.index
+					.openMultiChildStream(root.locator, root.getDeweyID(),
+							root.hintPageInfo, new BracketFilter[3]);
+
+			Stream<? extends BracketNode> stream2 = new MultiChildStreamMockup(
+					root.locator, new BracketTree(store.bufferMgr),
+					root.getDeweyID(), root.hintPageInfo, new BracketFilter[3]);
+
+			long start = System.currentTimeMillis();
+			while (stream1.next() != null)
+				;
+			stream1.close();
+			long end = System.currentTimeMillis();
+			time1 = Math.min(end - start, time1);
+
+			start = System.currentTimeMillis();
+			while (stream2.next() != null)
+				;
+			stream2.close();
+			end = System.currentTimeMillis();
+			time2 = Math.min(end - start, time2);
+		}
+
+		System.out.println(String.format("\nMinimum MultiChildStream: %s",
+				time1));
+		System.out.println(String.format("Minimum ChildStream Forking: %s",
+				time2));
+		System.out.println(String.format("Saving: %s %%",
+				(1 - ((double) time1 / time2)) * 100));
 	}
 }

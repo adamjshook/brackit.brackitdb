@@ -29,9 +29,9 @@ package org.brackit.server.store.index.bracket;
 
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.BracketLocator;
-import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.SearchMode;
 import org.brackit.server.store.index.IndexAccessException;
+import org.brackit.server.store.index.bracket.ScanResult.Status;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 import org.brackit.xquery.xdm.DocumentException;
@@ -43,6 +43,9 @@ import org.brackit.xquery.xdm.DocumentException;
  *
  */
 public class DocumentStream extends StreamIterator {
+	
+	private ScanResult scanRes;
+	private NavigationStatus navStatus;
 
 	public DocumentStream(BracketLocator locator, BracketTree tree,
 			XTCdeweyID startDeweyID, HintPageInformation hintPageInfo,
@@ -79,7 +82,7 @@ public class DocumentStream extends StreamIterator {
 			IndexAccessException {
 		
 		// try to find node without BracketTree
-		NavigationStatus navStatus = page.navigate(NavigationMode.NEXT_DOCUMENT);
+		navStatus = page.navigate(NavigationMode.NEXT_DOCUMENT);
 		if (navStatus == NavigationStatus.FOUND) {
 			return;
 		} else if ((navStatus == NavigationStatus.NOT_EXISTENT)) {
@@ -89,8 +92,16 @@ public class DocumentStream extends StreamIterator {
 		}
 
 		// use BracketTree to continue the scan
-		page = tree.navigateAfterHintPageFail(tx, locator.rootPageID,
+		scanRes = tree.navigateAfterHintPageFail(tx, locator.rootPageID,
 				NavigationMode.NEXT_DOCUMENT, currentKey, OPEN_MODE, page,
 				deweyIDBuffer, navStatus);
+		
+		page = scanRes.resultLeaf;
+		if (scanRes.status == Status.NOT_EXISTENT) {
+			if (page != null) {
+				page.cleanup();
+				page = null;
+			}
+		}
 	}
 }

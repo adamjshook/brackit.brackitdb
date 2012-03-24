@@ -597,7 +597,7 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		if (navRes.status == NavigationStatus.FOUND
 				|| navRes.status == NavigationStatus.POSSIBLY_FOUND) {
 			// adjust current offset
-			setOffset(navRes.keyOffset, navRes.keyType);
+			setOffset(navRes.keyOffset, navRes.keyType, navRes.levelDiff);
 		} else {
 			moveBeforeFirst();
 		}
@@ -669,9 +669,10 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 		}
 
 		if (navRes.status == NavigationStatus.FOUND
-				|| navRes.status == NavigationStatus.POSSIBLY_FOUND) {
+				|| navRes.status == NavigationStatus.POSSIBLY_FOUND
+				|| navRes.status == NavigationStatus.NOT_EXISTENT) {
 			// adjust current offset
-			setOffset(navRes.keyOffset, navRes.keyType);
+			setOffset(navRes.keyOffset, navRes.keyType, navRes.levelDiff);
 		} else {
 			moveBeforeFirst();
 		}
@@ -1090,8 +1091,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		if (returnVal == BracketPage.INSERTION_DUPLICATE) {
 			throw new IndexOperationException(
-					"Insertion key %s already exists in the index!", nodes
-							.getLowKey());
+					"Insertion key %s already exists in the index!",
+					nodes.getLowKey());
 		} else if (returnVal == BracketPage.INSERTION_NO_SPACE) {
 			return false;
 		} else {
@@ -1134,8 +1135,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		if (returnVal == BracketPage.INSERTION_DUPLICATE) {
 			throw new IndexOperationException(
-					"Insertion key %s already exists in the index!", nodes
-							.getLowKey());
+					"Insertion key %s already exists in the index!",
+					nodes.getLowKey());
 		} else if (returnVal == BracketPage.INSERTION_NO_SPACE) {
 			return false;
 		} else {
@@ -1400,8 +1401,8 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 			BracketNode node = loader.load(currentDeweyID.getDeweyID(), record);
 
 			// set hintpage info
-			node.hintPageInfo = new HintPageInformation(pageID, pageHandle
-					.getLSN(), currentOffset);
+			node.hintPageInfo = new HintPageInformation(pageID,
+					pageHandle.getLSN(), currentOffset);
 
 			return node;
 

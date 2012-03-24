@@ -148,6 +148,22 @@ public class BracketIndexImpl implements BracketIndex {
 	}
 
 	@Override
+	public StreamIterator openMultiChildStream(BracketLocator locator,
+			XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo,
+			BracketFilter... filters) {
+		
+		// ensure to use the MultiChildStream only if necessary
+		if (filters.length == 0) {
+			return new ChildStream(locator, tree, parentDeweyID, hintPageInfo, null);
+		} else if (filters.length == 1) {
+			return new ChildStream(locator, tree, parentDeweyID, hintPageInfo, filters[0]);
+		} else {
+			return new MultiChildStream(locator, tree, parentDeweyID, hintPageInfo,
+					filters);
+		}
+	}
+
+	@Override
 	public StreamIterator openDocumentStream(BracketLocator locator,
 			BracketFilter filter) {
 		return new DocumentStream(locator, tree, null, null, filter);
@@ -157,6 +173,12 @@ public class BracketIndexImpl implements BracketIndex {
 	public StreamIterator forkChildStream(StreamIterator origin,
 			BracketFilter filter) throws DocumentException {
 		return new ChildStream(origin, filter);
+	}
+	
+	@Override
+	public StreamIterator forkMultiChildStream(StreamIterator origin,
+			BracketFilter... filters) throws DocumentException {
+		return new MultiChildStream(origin, filters);
 	}
 
 	@Override

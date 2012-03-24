@@ -38,41 +38,44 @@ import org.brackit.server.store.index.bracket.page.Leaf;
  * 
  */
 public class ScanResult {
-	public final boolean nodeFound;
+	
+	public enum Status {
+		FOUND, NOT_FOUND, NOT_EXISTENT
+	}
+	
+	public final Status status;
 	public final Leaf resultLeaf;
 	public final XTCdeweyID targetDeweyID;
-
+	
 	/**
 	 * The requested node was found and is located in the result leaf.
-	 * 
-	 * @param result
-	 *            the leaf context where the node was found
 	 */
-	public ScanResult(Leaf result) {
-		this.nodeFound = true;
-		this.resultLeaf = result;
-		this.targetDeweyID = null;
+	public static ScanResult found(Leaf result) {
+		return new ScanResult(Status.FOUND, result, null);
 	}
-
+	
 	/**
-	 * The requested node was not found, but at least the DeweyID of the
-	 * requested node is known by now.
-	 * 
-	 * @param targetDeweyID
-	 *            the DeweyID of the target node
+	 * The requested node was not found, but the DeweyID of the
+	 * requested node might be known.
 	 */
-	public ScanResult(XTCdeweyID targetDeweyID) {
-		this.nodeFound = false;
-		this.resultLeaf = null;
+	public static ScanResult notFound(XTCdeweyID targetDeweyID) {
+		return new ScanResult(Status.NOT_FOUND, null, targetDeweyID);
+	}
+	
+	/**
+	 * The requested node does not exist. The given leaf context points to the node where the non-existence was determined. 
+	 */
+	public static ScanResult notExistent(Leaf result) {
+		return new ScanResult(Status.NOT_EXISTENT, result, null);
+	}
+	
+	private ScanResult(Status status, Leaf resultLeaf, XTCdeweyID targetDeweyID) {
+		this.status = status;
+		this.resultLeaf = resultLeaf;
 		this.targetDeweyID = targetDeweyID;
 	}
-
-	/**
-	 * The node was not found (yet).
-	 */
-	public ScanResult() {
-		this.nodeFound = false;
-		this.resultLeaf = null;
-		this.targetDeweyID = null;
+	
+	public boolean scanCompleted() {
+		return status == Status.FOUND || status == Status.NOT_EXISTENT;
 	}
 }
