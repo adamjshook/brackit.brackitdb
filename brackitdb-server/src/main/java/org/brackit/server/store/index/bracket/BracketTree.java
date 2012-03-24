@@ -44,6 +44,7 @@ import org.brackit.server.store.SearchMode;
 import org.brackit.server.store.blob.BlobStore;
 import org.brackit.server.store.blob.impl.SimpleBlobStore;
 import org.brackit.server.store.index.IndexAccessException;
+import org.brackit.server.store.index.bracket.ScanResult.Status;
 import org.brackit.server.store.index.bracket.bulkinsert.BulkInsertContext;
 import org.brackit.server.store.index.bracket.bulkinsert.SeparatorEntry;
 import org.brackit.server.store.index.bracket.page.BPContext;
@@ -73,9 +74,9 @@ import org.brackit.xquery.util.log.Logger;
 public final class BracketTree extends PageContextFactory {
 
 	private static final Logger log = Logger.getLogger(BracketTree.class);
-	private static final KeyNotExistentException KEY_NOT_EXISTENT = new KeyNotExistentException();
 	private static final UnchainException UNCHAIN_EXCEPTION = new UnchainException();
 
+	private static final boolean DEBUG = false;
 	private static final boolean BRANCH_COMPRESSION = false;
 	public static final boolean COLLECT_STATS = false;
 	private static final int NEIGHBOR_LEAFS_TO_SCAN = 2;
@@ -84,10 +85,6 @@ public final class BracketTree extends PageContextFactory {
 	private final BlobStore blobStore;
 	private final EnumMap<NavigationMode, LeafScanner> scannerMap = new EnumMap<NavigationMode, LeafScanner>(
 			NavigationMode.class);
-
-	private static class KeyNotExistentException extends IndexAccessException {
-		private static final long serialVersionUID = 1L;
-	}
 
 	private static class UnchainException extends IndexAccessException {
 		private static final long serialVersionUID = 1L;
@@ -140,7 +137,7 @@ public final class BracketTree extends PageContextFactory {
 								internalStats.neighborHits[i - 1]++;
 							}
 						leaf.cleanup();
-						throw KEY_NOT_EXISTENT;
+						return ScanResult.notExistent(null);
 					}
 
 					Leaf nextPage = (Leaf) getPage(tx, nextPageID, forUpdate,
@@ -162,13 +159,12 @@ public final class BracketTree extends PageContextFactory {
 							if (COLLECT_STATS && i < MAX_NEIGHBORS) {
 								internalStats.neighborHits[i]++;
 							}
-							return new ScanResult(leaf);
+							return ScanResult.found(leaf);
 						} else if (navStatus == NavigationStatus.NOT_EXISTENT) {
 							if (COLLECT_STATS && i < MAX_NEIGHBORS) {
 								internalStats.neighborHits[i]++;
 							}
-							leaf.cleanup();
-							throw KEY_NOT_EXISTENT;
+							return ScanResult.notExistent(leaf);
 						}
 					}
 				}
@@ -185,13 +181,13 @@ public final class BracketTree extends PageContextFactory {
 						}
 					}
 					leaf.cleanup();
-					throw KEY_NOT_EXISTENT;
+					return ScanResult.notExistent(null);
 				} else {
 					if (COLLECT_STATS) {
 						internalStats.neighborFails++;
 					}
 					leaf.cleanup();
-					return new ScanResult();
+					return ScanResult.notFound(null);
 				}
 
 			} catch (IndexOperationException e) {
@@ -224,17 +220,16 @@ public final class BracketTree extends PageContextFactory {
 						navStatus = leaf.navigateContextFree(key, navMode);
 
 						if (navStatus == NavigationStatus.FOUND) {
-							return new ScanResult(leaf);
+							return ScanResult.found(leaf);
 						} else if (navStatus == NavigationStatus.NOT_EXISTENT) {
-							leaf.cleanup();
-							throw KEY_NOT_EXISTENT;
+							return ScanResult.notExistent(leaf);
 						}
 					}
 
 					PageID nextPageID = leaf.getNextPageID();
 					if (nextPageID == null) {
 						leaf.cleanup();
-						throw KEY_NOT_EXISTENT;
+						return ScanResult.notExistent(null);
 					}
 
 					Leaf nextPage = (Leaf) getPage(tx, nextPageID, forUpdate,
@@ -272,14 +267,13 @@ public final class BracketTree extends PageContextFactory {
 					if (COLLECT_STATS) {
 						stats.hintPageHit();
 					}
-					return new ScanResult(leaf);
+					return ScanResult.found(leaf);
 				} else if (navStatus == NavigationStatus.NOT_EXISTENT) {
 					// searched key does not exist
 					if (COLLECT_STATS) {
 						stats.hintPageHit();
 					}
-					leaf.cleanup();
-					throw KEY_NOT_EXISTENT;
+					return ScanResult.notExistent(leaf);
 				} else {
 					// requested node is possibly located in the previous or the
 					// next page(s)
@@ -384,19 +378,19 @@ public final class BracketTree extends PageContextFactory {
 							if (COLLECT_STATS) {
 								internalStats.indexAccessHit++;
 							}
-							return new ScanResult(leaf);
+							return ScanResult.found(leaf);
 						} else if (navStatus == NavigationStatus.NOT_EXISTENT) {
 							if (COLLECT_STATS) {
 								internalStats.indexAccessHit++;
 							}
 							leaf.cleanup();
-							throw KEY_NOT_EXISTENT;
+							return ScanResult.notExistent(null);
 						} else if (navStatus == NavigationStatus.POSSIBLY_FOUND) {
 							if (COLLECT_STATS) {
 								internalStats.indexAccessHit++;
 							}
 							// found node is definitely the last child
-							return new ScanResult(leaf);
+							return ScanResult.found(leaf);
 						} else {
 							// determine last child's DeweyID
 							XTCdeweyID targetDeweyID = lowKey.getAncestor(
@@ -409,13 +403,13 @@ public final class BracketTree extends PageContextFactory {
 								}
 								// no child exists
 								leaf.cleanup();
-								throw KEY_NOT_EXISTENT;
+								return ScanResult.notExistent(null);
 							} else {
 								if (COLLECT_STATS) {
 									internalStats.indexAccessDeweyIDFound++;
 								}
 								leaf.cleanup();
-								return new ScanResult(targetDeweyID);
+								return ScanResult.notFound(targetDeweyID);
 							}
 						}
 					}
@@ -471,10 +465,10 @@ public final class BracketTree extends PageContextFactory {
 					internalStats.hintPageHits++;
 				}
 				if (navStatus == NavigationStatus.POSSIBLY_FOUND) {
-					return new ScanResult(leaf);
+					return ScanResult.found(leaf);
 				} else {
 					leaf.cleanup();
-					throw KEY_NOT_EXISTENT;
+					return ScanResult.notExistent(null);
 				}
 			}
 
@@ -534,10 +528,10 @@ public final class BracketTree extends PageContextFactory {
 								}
 								if (navStatus == NavigationStatus.POSSIBLY_FOUND) {
 									leaf.setContext(hintPageContext);
-									return new ScanResult(leaf);
+									return ScanResult.found(leaf);
 								} else {
 									leaf.cleanup();
-									throw KEY_NOT_EXISTENT;
+									return ScanResult.notExistent(null);
 								}
 							}
 						}
@@ -550,21 +544,21 @@ public final class BracketTree extends PageContextFactory {
 								internalStats.neighborHits[i]++;
 							}
 							cleanupPages(lastPages, -1);
-							return new ScanResult(leaf);
+							return ScanResult.found(leaf);
 						} else if (navStatus == NavigationStatus.NOT_EXISTENT) {
 							if (COLLECT_STATS) {
 								internalStats.neighborHits[i]++;
 							}
 							cleanupPages(lastPages, -1);
 							leaf.cleanup();
-							throw KEY_NOT_EXISTENT;
+							return ScanResult.notExistent(null);
 						} else if (navStatus == NavigationStatus.POSSIBLY_FOUND) {
 							// found node is definitely the last child
 							if (COLLECT_STATS) {
 								internalStats.neighborHits[i]++;
 							}
 							cleanupPages(lastPages, -1);
-							return new ScanResult(leaf);
+							return ScanResult.found(leaf);
 						} else {
 							// next sibling is in the current page, but the last
 							// child is not
@@ -578,13 +572,13 @@ public final class BracketTree extends PageContextFactory {
 								if (hintPageContext == null) {
 									lastPages[0].cleanup();
 									leaf.cleanup();
-									throw KEY_NOT_EXISTENT;
+									return ScanResult.notExistent(null);
 								} else {
 									leaf.cleanup();
 									leaf = lastPages[0];
 									leaf.assignDeweyIDBuffer(deweyIDBuffer);
 									leaf.setContext(hintPageContext);
-									return new ScanResult(leaf);
+									return ScanResult.found(leaf);
 								}
 							}
 
@@ -600,7 +594,7 @@ public final class BracketTree extends PageContextFactory {
 								}
 								cleanupPages(lastPages, -1);
 								leaf.cleanup();
-								throw KEY_NOT_EXISTENT;
+								return ScanResult.notExistent(null);
 							} else {
 								if (COLLECT_STATS) {
 									internalStats.neighborDeweyIDFound[i]++;
@@ -621,7 +615,7 @@ public final class BracketTree extends PageContextFactory {
 										currentLeaf.navigateContextFree(
 												targetDeweyID,
 												NavigationMode.TO_KEY);
-										return new ScanResult(currentLeaf);
+										return ScanResult.found(currentLeaf);
 									}
 								}
 
@@ -630,7 +624,7 @@ public final class BracketTree extends PageContextFactory {
 								cleanupPages(lastPages, 0);
 								currentLeaf.assignDeweyIDBuffer(deweyIDBuffer);
 								currentLeaf.setContext(hintPageContext);
-								return new ScanResult(currentLeaf);
+								return ScanResult.found(currentLeaf);
 							}
 						}
 					}
@@ -642,7 +636,7 @@ public final class BracketTree extends PageContextFactory {
 				if (COLLECT_STATS) {
 					internalStats.neighborFails++;
 				}
-				return new ScanResult();
+				return ScanResult.notFound(null);
 
 			} catch (IndexOperationException e) {
 				cleanupPages(lastPages, -1);
@@ -731,13 +725,13 @@ public final class BracketTree extends PageContextFactory {
 							if (COLLECT_STATS) {
 								internalStats.indexAccessHit++;
 							}
-							return new ScanResult(leaf);
+							return ScanResult.found(leaf);
 						} else if (navStatus == NavigationStatus.NOT_EXISTENT) {
 							if (COLLECT_STATS) {
 								internalStats.indexAccessHit++;
 							}
 							leaf.cleanup();
-							throw KEY_NOT_EXISTENT;
+							return ScanResult.notExistent(null);
 						} else {
 							XTCdeweyID targetDeweyID = lowKey.getAncestor(key
 									.getLevel());
@@ -746,14 +740,14 @@ public final class BracketTree extends PageContextFactory {
 									internalStats.indexAccessHit++;
 								}
 								leaf.cleanup();
-								throw KEY_NOT_EXISTENT;
+								return ScanResult.notExistent(null);
 							}
 
 							if (COLLECT_STATS) {
 								internalStats.indexAccessDeweyIDFound++;
 							}
 							leaf.cleanup();
-							return new ScanResult(targetDeweyID);
+							return ScanResult.notFound(targetDeweyID);
 						}
 					}
 				}
@@ -769,7 +763,7 @@ public final class BracketTree extends PageContextFactory {
 						"Error during leaf page scan over index.");
 			}
 		}
-		
+
 		@Override
 		protected ScanResult hintPageScanFailed(Tx tx, PageID rootPageID,
 				Leaf leaf, NavigationMode navMode, XTCdeweyID key,
@@ -785,21 +779,21 @@ public final class BracketTree extends PageContextFactory {
 						internalStats.hintPageHits++;
 					}
 					leaf.cleanup();
-					throw KEY_NOT_EXISTENT;
+					return ScanResult.notExistent(null);
 				}
 
 				if (COLLECT_STATS) {
 					internalStats.hintPageDeweyIDFound++;
 				}
 				leaf.cleanup();
-				return new ScanResult(targetDeweyID);
+				return ScanResult.notFound(targetDeweyID);
 			} else {
 				// access via index
 				if (COLLECT_STATS) {
 					internalStats.hintPageFails++;
 				}
 				leaf.cleanup();
-				return new ScanResult();
+				return ScanResult.notFound(null);
 			}
 		}
 	}
@@ -835,7 +829,7 @@ public final class BracketTree extends PageContextFactory {
 						leaf.cleanup();
 						leaf = null;
 						prevPage.moveLast();
-						return new ScanResult(prevPage);
+						return ScanResult.found(prevPage);
 					} else {
 						// get previous page and try again
 						PageID previousPageID = leaf.getPrevPageID();
@@ -844,7 +838,7 @@ public final class BracketTree extends PageContextFactory {
 							// current page is the only page of the index
 							// -> return page at the BEFORE_LOWKEY position.
 							leaf.moveBeforeFirst();
-							return new ScanResult(leaf);
+							return ScanResult.found(leaf);
 						} else {
 							leaf.cleanup();
 							prevPage = (Leaf) getPage(tx, previousPageID,
@@ -862,7 +856,7 @@ public final class BracketTree extends PageContextFactory {
 						prevPage = null;
 					}
 					leaf.moveLast();
-					return new ScanResult(leaf);
+					return ScanResult.found(leaf);
 				}
 
 			} catch (IndexOperationException e) {
@@ -981,17 +975,18 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-	public Leaf descendToPosition(Tx tx, PageID rootPageID,
+	public ScanResult descendToPosition(Tx tx, PageID rootPageID,
 			NavigationMode navMode, XTCdeweyID key,
 			DeweyIDBuffer deweyIDBuffer, LeafScanner scanner, boolean forUpdate)
 			throws IndexAccessException {
-		
+
 		if (navMode == NavigationMode.FIRST_CHILD && key.isDocument()) {
-			// special handling for FIRST CHILD of document nodes: retrieve root node
+			// special handling for FIRST CHILD of document nodes: retrieve root
+			// node
 			navMode = NavigationMode.TO_KEY;
 			key = XTCdeweyID.newRootID(key.getDocID());
 		}
-		
+
 		Leaf leaf = descend(tx, rootPageID, navMode.getSearchMode(),
 				Field.COLLECTIONDEWEYID.encode(navMode.getSearchKey(key)),
 				forUpdate);
@@ -999,9 +994,14 @@ public final class BracketTree extends PageContextFactory {
 		ScanResult scanRes = scanner.scan(tx, rootPageID, leaf, navMode, key,
 				forUpdate, true);
 
-		if (scanRes.nodeFound) {
-			return scanRes.resultLeaf;
+		if (scanRes.scanCompleted()) {
+			return scanRes;
 		} else {
+			if (DEBUG) {
+				if (scanRes.targetDeweyID == null) {
+					throw new IllegalStateException();
+				}
+			}
 			return descendToPosition(tx, rootPageID, NavigationMode.TO_KEY,
 					scanRes.targetDeweyID, deweyIDBuffer, scanner, forUpdate);
 		}
@@ -1452,6 +1452,8 @@ public final class BracketTree extends PageContextFactory {
 			}
 		}
 
+		ScanResult scanRes = null;
+
 		if (hintLeaf != null) {
 			if (navMode == NavigationMode.TO_KEY
 					|| navMode == NavigationMode.PARENT) {
@@ -1467,11 +1469,21 @@ public final class BracketTree extends PageContextFactory {
 				return null;
 			}
 			// continue navigation
-			return navigateAfterHintPageFail(tx, rootPageID, navMode, key,
+			scanRes = navigateAfterHintPageFail(tx, rootPageID, navMode, key,
 					openMode, hintLeaf, deweyIDBuffer, navStatus);
 		} else {
-			return navigate(tx, rootPageID, navMode, key, openMode, hintLeaf,
-					deweyIDBuffer);
+
+			scanRes = navigate(tx, rootPageID, navMode, key, openMode,
+					hintLeaf, deweyIDBuffer);
+		}
+
+		if (scanRes.status == Status.FOUND) {
+			return scanRes.resultLeaf;
+		} else {
+			if (scanRes.resultLeaf != null) {
+				scanRes.resultLeaf.cleanup();
+			}
+			return null;
 		}
 	}
 
@@ -1505,81 +1517,66 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-	protected Leaf navigate(Tx tx, PageID rootPageID, NavigationMode navMode,
-			XTCdeweyID key, OpenMode openMode, Leaf hintPage,
-			DeweyIDBuffer deweyIDBuffer) throws IndexAccessException {
+	protected ScanResult navigate(Tx tx, PageID rootPageID,
+			NavigationMode navMode, XTCdeweyID key, OpenMode openMode,
+			Leaf hintPage, DeweyIDBuffer deweyIDBuffer)
+			throws IndexAccessException {
 
 		LeafScanner scanner = scannerMap.get(navMode);
 
-		try {
+		if (hintPage != null) {
+			ScanResult scanRes = scanner.scan(tx, rootPageID, hintPage,
+					navMode, key, openMode.forUpdate(), false);
 
-			if (hintPage != null) {
-				ScanResult scanRes = scanner.scan(tx, rootPageID, hintPage,
-						navMode, key, openMode.forUpdate(), false);
-
-				if (scanRes.nodeFound) {
-					// the specified key is found
-					return scanRes.resultLeaf;
-				} else if (scanRes.targetDeweyID != null) {
-					// look for the target DeweyID
-					navMode = NavigationMode.TO_KEY;
-					key = scanRes.targetDeweyID;
-				}
+			if (scanRes.scanCompleted()) {
+				// the specified key is found (or does not exist)
+				return scanRes;
+			} else if (scanRes.targetDeweyID != null) {
+				// look for the target DeweyID
+				navMode = NavigationMode.TO_KEY;
+				key = scanRes.targetDeweyID;
 			}
-
-			// navigation via hintPage was not successful
-			// -> use the tree index
-			return descendToPosition(tx, rootPageID, navMode, key,
-					deweyIDBuffer, scanner, openMode.forUpdate());
-
-		} catch (KeyNotExistentException e) {
-			return null;
 		}
+
+		// navigation via hintPage was not successful
+		// -> use the tree index
+		return descendToPosition(tx, rootPageID, navMode, key, deweyIDBuffer,
+				scanner, openMode.forUpdate());
 	}
 
-	protected Leaf navigateAfterHintPageFail(Tx tx, PageID rootPageID,
+	protected ScanResult navigateAfterHintPageFail(Tx tx, PageID rootPageID,
 			NavigationMode navMode, XTCdeweyID key, OpenMode openMode,
 			Leaf hintPage, DeweyIDBuffer deweyIDBuffer,
 			NavigationStatus navStatus) throws IndexAccessException {
 
 		LeafScanner scanner = scannerMap.get(navMode);
 
-		try {
+		ScanResult scanRes = scanner.hintPageScanFailed(tx, rootPageID,
+				hintPage, navMode, key, openMode.forUpdate(), navStatus);
 
-			ScanResult scanRes = scanner.hintPageScanFailed(tx, rootPageID,
-					hintPage, navMode, key, openMode.forUpdate(), navStatus);
-
-			if (scanRes.nodeFound) {
-				// the specified key is found
-				return scanRes.resultLeaf;
-			} else if (scanRes.targetDeweyID != null) {
-				// look for the target DeweyID
-				navMode = NavigationMode.TO_KEY;
-				key = scanRes.targetDeweyID;
-			}
-
-			// navigation via hintPage was not successful
-			// -> use the tree index
-			return descendToPosition(tx, rootPageID, navMode, key,
-					deweyIDBuffer, scanner, openMode.forUpdate());
-
-		} catch (KeyNotExistentException e) {
-			return null;
+		if (scanRes.scanCompleted()) {
+			// the specified key is found (or does not exist)
+			return scanRes;
+		} else if (scanRes.targetDeweyID != null) {
+			// look for the target DeweyID
+			navMode = NavigationMode.TO_KEY;
+			key = scanRes.targetDeweyID;
 		}
+
+		// navigation via hintPage was not successful
+		// -> use the tree index
+		return descendToPosition(tx, rootPageID, navMode, key, deweyIDBuffer,
+				scanner, openMode.forUpdate());
 	}
 
-	protected Leaf navigateViaIndexAccess(Tx tx, PageID rootPageID,
+	protected ScanResult navigateViaIndexAccess(Tx tx, PageID rootPageID,
 			NavigationMode navMode, XTCdeweyID key, OpenMode openMode,
 			DeweyIDBuffer deweyIDBuffer) throws IndexAccessException {
 
 		LeafScanner scanner = scannerMap.get(navMode);
 
-		try {
-			return descendToPosition(tx, rootPageID, navMode, key,
-					deweyIDBuffer, scanner, openMode.forUpdate());
-		} catch (KeyNotExistentException e) {
-			return null;
-		}
+		return descendToPosition(tx, rootPageID, navMode, key, deweyIDBuffer,
+				scanner, openMode.forUpdate());
 	}
 
 	/**
@@ -3412,8 +3409,7 @@ public final class BracketTree extends PageContextFactory {
 	}
 
 	public void deleteSubtree(Tx tx, PageID rootPageID, Leaf leaf,
-			SubtreeDeleteListener deleteListener)
-			throws IndexAccessException {
+			SubtreeDeleteListener deleteListener) throws IndexAccessException {
 
 		Leaf next = null;
 
@@ -3439,7 +3435,7 @@ public final class BracketTree extends PageContextFactory {
 					leaf = descendToPosition(tx, rootPageID,
 							NavigationMode.TO_KEY, descendKey,
 							new DeweyIDBuffer(),
-							scannerMap.get(NavigationMode.TO_KEY), true);
+							scannerMap.get(NavigationMode.TO_KEY), true).resultLeaf;
 					if (!firstPage) {
 						if (!leaf.isFirst()) {
 							// may never happen
@@ -3603,7 +3599,7 @@ public final class BracketTree extends PageContextFactory {
 					leaf = descendToPosition(tx, rootPageID,
 							NavigationMode.TO_KEY, descendKey,
 							new DeweyIDBuffer(),
-							scannerMap.get(NavigationMode.TO_KEY), true);
+							scannerMap.get(NavigationMode.TO_KEY), true).resultLeaf;
 				}
 
 				// delete sequence from this page
@@ -3733,7 +3729,7 @@ public final class BracketTree extends PageContextFactory {
 				leaf = descendToPosition(tx, rootPageID,
 						NavigationMode.TO_INSERT_POS, insertKey,
 						new DeweyIDBuffer(),
-						scannerMap.get(NavigationMode.TO_INSERT_POS), true);
+						scannerMap.get(NavigationMode.TO_INSERT_POS), true).resultLeaf;
 			} else {
 				// move to insert position
 				leaf.navigateContextFree(insertKey,

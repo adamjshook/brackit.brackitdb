@@ -61,7 +61,7 @@ public class AttributeStream extends StreamIterator {
 			// hintpage scan did not succeed -> access via index
 			page = tree.navigateViaIndexAccess(tx, locator.rootPageID,
 					NavigationMode.TO_KEY, startDeweyID, OPEN_MODE,
-					deweyIDBuffer);
+					deweyIDBuffer).resultLeaf;
 		}
 		
 		// move to first attribute

@@ -68,7 +68,7 @@ public final class SubtreeStream extends StreamIterator {
 			// hint page could not be loaded
 			page = tree.navigateViaIndexAccess(tx, locator.rootPageID,
 					NavigationMode.TO_KEY, startDeweyID, OPEN_MODE,
-					deweyIDBuffer);
+					deweyIDBuffer).resultLeaf;
 		}
 		subtreeRootLevel = page.getLevel();
 		

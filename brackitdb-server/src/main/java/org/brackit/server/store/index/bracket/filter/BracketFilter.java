@@ -38,6 +38,34 @@ import org.brackit.xquery.xdm.Kind;
  */
 public abstract class BracketFilter {
 	
+	public static final BracketFilter TRUE = new BracketFilter() {
+		
+		@Override
+		public boolean accept(BracketNode node) {
+			return true;
+		}
+		
+		@Override
+		public boolean accept(DeweyIDBuffer deweyID, boolean hasRecord,
+				RecordInterpreter value) {
+			return true;
+		}
+	};
+	
+	public static final BracketFilter FALSE = new BracketFilter() {
+		
+		@Override
+		public boolean accept(BracketNode node) {
+			return false;
+		}
+		
+		@Override
+		public boolean accept(DeweyIDBuffer deweyID, boolean hasRecord,
+				RecordInterpreter value) {
+			return false;
+		}
+	};
+	
 	public abstract boolean accept(DeweyIDBuffer deweyID, boolean hasRecord, RecordInterpreter value);
 	
 	public abstract boolean accept(BracketNode node);

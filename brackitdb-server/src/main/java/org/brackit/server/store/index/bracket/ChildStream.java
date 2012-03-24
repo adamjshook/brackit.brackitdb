@@ -30,6 +30,7 @@ package org.brackit.server.store.index.bracket;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.BracketLocator;
 import org.brackit.server.store.index.IndexAccessException;
+import org.brackit.server.store.index.bracket.ScanResult.Status;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 import org.brackit.xquery.xdm.DocumentException;
@@ -39,6 +40,9 @@ import org.brackit.xquery.xdm.DocumentException;
  * 
  */
 public final class ChildStream extends StreamIterator {
+	
+	private ScanResult scanRes;
+	private NavigationStatus navStatus;
 
 	public ChildStream(BracketLocator locator, BracketTree tree,
 			XTCdeweyID parentDeweyID, HintPageInformation hintPageInfo,
@@ -56,10 +60,10 @@ public final class ChildStream extends StreamIterator {
 	 */
 	@Override
 	protected void first() throws IndexOperationException, IndexAccessException {
-
+		
 		if (page != null) {
 			// hint page was already loaded
-			NavigationStatus navStatus = page.navigateFirstChild(false);
+			navStatus = page.navigateFirstChild(false);
 			if (navStatus == NavigationStatus.FOUND) {
 				return;
 			} else if ((navStatus == NavigationStatus.NOT_EXISTENT)) {
@@ -67,15 +71,18 @@ public final class ChildStream extends StreamIterator {
 				page = null;
 				return;
 			}
-			page = tree.navigateAfterHintPageFail(tx, locator.rootPageID,
+			
+			scanRes = tree.navigateAfterHintPageFail(tx, locator.rootPageID,
 					NavigationMode.FIRST_CHILD, startDeweyID, OPEN_MODE,
 					page, deweyIDBuffer, navStatus);
-			return;
+			
+		} else {
+			scanRes = tree.navigateViaIndexAccess(tx, locator.rootPageID,
+					NavigationMode.FIRST_CHILD, startDeweyID, OPEN_MODE,
+					deweyIDBuffer);
 		}
-
-		page = tree.navigateViaIndexAccess(tx, locator.rootPageID,
-				NavigationMode.FIRST_CHILD, startDeweyID, OPEN_MODE,
-				deweyIDBuffer);
+		
+		processScanResult();
 	}
 
 	/**
@@ -85,7 +92,7 @@ public final class ChildStream extends StreamIterator {
 	protected void nextInternal() throws IndexOperationException,
 			IndexAccessException {
 		// try to find node without BracketTree
-		NavigationStatus navStatus = page.navigateNextSibling(false);
+		navStatus = page.navigateNextSibling(false);
 		if (navStatus == NavigationStatus.FOUND) {
 			return;
 		} else if ((navStatus == NavigationStatus.NOT_EXISTENT)) {
@@ -95,8 +102,19 @@ public final class ChildStream extends StreamIterator {
 		}
 
 		// use BracketTree to continue the scan
-		page = tree.navigateAfterHintPageFail(tx, locator.rootPageID,
+		scanRes = tree.navigateAfterHintPageFail(tx, locator.rootPageID,
 				NavigationMode.NEXT_SIBLING, currentKey, OPEN_MODE, page,
 				deweyIDBuffer, navStatus);
+		processScanResult();
+	}
+	
+	private void processScanResult() {
+		page = scanRes.resultLeaf;
+		if (scanRes.status == Status.NOT_EXISTENT) {
+			if (page != null) {
+				page.cleanup();
+				page = null;
+			}
+		}
 	}
 }

@@ -70,7 +70,7 @@ public class LeafUpdateLogOperation extends BracketIndexLogOperation {
 		this.oldValue = oldValue;
 		this.newValue = newValue;
 	}
-	
+
 	public LeafUpdateLogOperation(PageID pageID, PageID rootPageID,
 			byte[] keyBytes, byte[] oldValue, byte[] newValue) {
 		super(LEAF_UPDATE, pageID, rootPageID);
@@ -113,8 +113,8 @@ public class LeafUpdateLogOperation extends BracketIndexLogOperation {
 			undoUpdate(tx, LSN, undoNextLSN);
 			return;
 		} catch (IndexAccessException e) {
-			throw new LogException(e,
-					"Undo of update index %s failed", rootPageID);
+			throw new LogException(e, "Undo of update index %s failed",
+					rootPageID);
 		}
 	}
 
@@ -131,7 +131,7 @@ public class LeafUpdateLogOperation extends BracketIndexLogOperation {
 
 		try {
 			page = tree.getPage(tx, pageID, true, false);
-			
+
 			if (page.getRootPageID() == null
 					|| !page.getRootPageID().equals(rootPageID)
 					|| !page.isLeaf()) {
@@ -139,19 +139,19 @@ public class LeafUpdateLogOperation extends BracketIndexLogOperation {
 				page.cleanup();
 				page = null;
 			}
-			
+
 			if (page != null) {
 				leaf = (Leaf) page;
 				page = null;
-				
+
 				if (leaf.navigateContextFree(key, NavigationMode.TO_KEY) != NavigationStatus.FOUND) {
 					// wrong page
 					leaf.cleanup();
 					leaf = null;
 				}
 			}
-			
-		}  catch (IndexOperationException e) {
+
+		} catch (IndexOperationException e) {
 			if (log.isTraceEnabled()) {
 				log.trace(String.format("Page %s could not be fixed for undo.",
 						pageID));
@@ -162,9 +162,8 @@ public class LeafUpdateLogOperation extends BracketIndexLogOperation {
 		if (leaf == null) {
 			// descend down the tree
 			leaf = tree.descendToPosition(tx, rootPageID,
-					NavigationMode.TO_KEY, key,
-					new DeweyIDBuffer(),
-					tree.getLeafScanner(NavigationMode.TO_KEY), true);
+					NavigationMode.TO_KEY, key, new DeweyIDBuffer(),
+					tree.getLeafScanner(NavigationMode.TO_KEY), true).resultLeaf;
 		}
 
 		leaf = tree.updateInLeaf(tx, rootPageID, leaf, oldValue, undoNextLSN);
