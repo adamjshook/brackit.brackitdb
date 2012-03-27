@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
@@ -39,7 +38,6 @@ import org.brackit.server.store.blob.BlobStoreAccessException;
 import org.brackit.server.store.blob.impl.SimpleBlobStore;
 import org.brackit.server.store.index.bracket.DeleteExternalizedHook;
 import org.brackit.server.store.index.bracket.IndexOperationException;
-import org.brackit.server.store.index.bracket.log.BracketIndexLogOperation;
 import org.brackit.server.store.index.bracket.log.FormatLogOperation;
 import org.brackit.server.store.index.bracket.log.PointerLogOperation;
 import org.brackit.server.store.index.bracket.log.PointerLogOperation.PointerField;
@@ -50,7 +48,7 @@ import org.brackit.server.store.page.keyvalue.SlottedKeyValuePage;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.log.LogOperation;
-import org.brackit.server.tx.log.SizeConstants;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * @author Sebastian Baechle
@@ -63,9 +61,7 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 	private static final Logger log = Logger.getLogger(AbstractBPContext.class);
 
 	public static final int LEAF_FLAG_FIELD_NO = 0;
-	public static final int UNIT_ID_FIELD_NO = LEAF_FLAG_FIELD_NO + 1;
-	public static final int PREV_PAGE_FIELD_NO = UNIT_ID_FIELD_NO
-			+ SizeConstants.INT_SIZE;
+	public static final int PREV_PAGE_FIELD_NO = LEAF_FLAG_FIELD_NO + 1;
 	public static final int RESERVED_SIZE = PREV_PAGE_FIELD_NO
 			+ PageID.getSize();
 
@@ -84,22 +80,7 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 
 	@Override
 	public int getUnitID() {
-		byte[] buffer = page.getHandle().page;
-		int offset = BasePage.BASE_PAGE_START_OFFSET + UNIT_ID_FIELD_NO;
-		int id = ((buffer[offset] & 255) << 24)
-				| ((buffer[offset + 1] & 255) << 16)
-				| ((buffer[offset + 2] & 255) << 8)
-				| (buffer[offset + 3] & 255);
-		return id;
-	}
-
-	private void setUnitID(int id) {
-		byte[] buffer = page.getHandle().page;
-		int offset = BasePage.BASE_PAGE_START_OFFSET + UNIT_ID_FIELD_NO;
-		buffer[offset] = (byte) ((id >> 24) & 255);
-		buffer[offset + 1] = (byte) ((id >> 16) & 255);
-		buffer[offset + 2] = (byte) ((id >> 8) & 255);
-		buffer[offset + 3] = (byte) (id & 255);
+		return page.getUnitID();
 	}
 
 	private void setLeafFlag(boolean leaf) {
@@ -159,7 +140,8 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 	@Override
 	public byte[] externalize(byte[] value) throws IndexOperationException {
 		try {
-			PageID blobPageID = create(tx, page.getPageID().getContainerNo());
+			PageID blobPageID = create(tx, page.getPageID().getContainerNo(),
+					page.getUnitID());
 			write(tx, blobPageID, value, false);
 			value = blobPageID.getBytes();
 		} catch (BlobStoreAccessException e) {
@@ -203,15 +185,15 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 	}
 
 	@Override
-	public BPContext format(boolean leaf, int unitID, PageID rootPageID,
-			int height, boolean compressed, boolean logged, long undoNextLSN)
+	public BPContext format(boolean leaf, PageID rootPageID, int height,
+			boolean compressed, boolean logged, long undoNextLSN)
 			throws IndexOperationException {
 		LogOperation operation = null;
 
 		if (logged) {
 			operation = new FormatLogOperation(getPageID(), rootPageID,
-					isLeaf(), leaf, getUnitID(), unitID, getHeight(), height,
-					isCompressed(), compressed);
+					isLeaf(), leaf, getHeight(), height, isCompressed(),
+					compressed);
 		}
 
 		/*
@@ -232,7 +214,7 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 		// create new page context
 		AbstractBPContext newContext = this;
 		if (leaf) {
-			
+
 			if (this.isLeaf()) {
 				((LeafBPContext) this).page.clearData(false);
 			} else {
@@ -241,7 +223,7 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 				bracketPage.clearData(false);
 				newContext = new LeafBPContext(bufferMgr, tx, bracketPage);
 			}
-			
+
 		} else if (!leaf && this.isLeaf()) {
 			switch (PageContextFactory.BRANCH_TYPE) {
 			case 1:
@@ -270,7 +252,6 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 		// 1)* PageID.getSize()];
 		// page.insert(0, key, value, compressed);
 
-		newContext.setUnitID(unitID);
 		newContext.setLeafFlag(leaf);
 		newContext.setHeight(height);
 		newContext.page.setBasePageID(rootPageID);

@@ -94,7 +94,7 @@ public class SimpleBlobPage extends BasePage implements BufferedPage {
 			} else {
 				if (nextPageID == null) {
 					if (appendNew) {
-						Handle nextOverflowHandle = buffer.allocatePage(tx);
+						Handle nextOverflowHandle = buffer.allocatePage(tx, getUnitID());
 						nextOverflowHandle.setAssignedTo(tx);
 						SimpleBlobPage next = new SimpleBlobPage(buffer,
 								nextOverflowHandle);

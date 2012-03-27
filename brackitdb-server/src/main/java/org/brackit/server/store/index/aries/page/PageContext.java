@@ -150,7 +150,7 @@ public interface PageContext extends Latch {
 
 	public String dump(String pageTitle) throws IndexOperationException;
 
-	public void format(int unitID, int pageType, PageID rootPageID,
+	public void format(int pageType, PageID rootPageID,
 			Field keyType, Field valueType, boolean unique,
 			boolean compression, boolean logged, long undoNextLSN)
 			throws IndexOperationException;

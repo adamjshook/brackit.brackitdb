@@ -73,7 +73,19 @@ public class BracketIndexImpl implements BracketIndex {
 	@Override
 	public PageID createIndex(Tx tx, int containerNo)
 			throws IndexAccessException {
-		return createIndex(tx, containerNo, -1);
+		
+		Leaf root = null;
+
+		try {
+			root = tree.allocateLeaf(tx, containerNo, -1, null, true);
+			PageID rootPageID = root.getPageID();
+			root.cleanup();
+
+			return rootPageID;
+		} catch (IndexOperationException e) {
+			throw new IndexAccessException(e,
+					"Could not create index root page.");
+		}		
 	}
 
 	@Override
@@ -100,23 +112,6 @@ public class BracketIndexImpl implements BracketIndex {
 	public BracketIter open(Tx tx, PageID rootPageID, NavigationMode navMode,
 			XTCdeweyID key, OpenMode openMode) throws IndexAccessException {
 		return open(tx, rootPageID, navMode, key, openMode, null);
-	}
-
-	@Override
-	public PageID createIndex(Tx tx, int containerNo, int unitID)
-			throws IndexAccessException {
-		Leaf root = null;
-
-		try {
-			root = tree.allocateLeaf(tx, containerNo, unitID, null, true);
-			PageID rootPageID = root.getPageID();
-			root.cleanup();
-
-			return rootPageID;
-		} catch (IndexOperationException e) {
-			throw new IndexAccessException(e,
-					"Could not create index root page.");
-		}
 	}
 
 	@Override

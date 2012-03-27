@@ -90,7 +90,7 @@ public class BracketIndexLogOperationHelper implements LogOperationHelper {
 		case BracketIndexLogOperation.LEAF_SMO_DELETE:
 			return createNodeSequenceLogOperation(type, buffer, pageID,
 					rootPageID);
-			
+
 		case BracketIndexLogOperation.LEAF_UPDATE:
 			return createLeafUpdateLogOperation(buffer, pageID, rootPageID);
 
@@ -101,7 +101,7 @@ public class BracketIndexLogOperationHelper implements LogOperationHelper {
 
 		case BracketIndexLogOperation.HIGHKEY_UPDATE:
 			return createHighkeyLogOperation(buffer, pageID, rootPageID);
-			
+
 		case BracketIndexLogOperation.FORMAT:
 			return createFormatLogOperation(buffer, pageID, rootPageID);
 
@@ -126,17 +126,19 @@ public class BracketIndexLogOperationHelper implements LogOperationHelper {
 		return new BranchUpdateLogOperation(type, pageID, rootPageID, key,
 				oldValue, value);
 	}
-	
-	private LogOperation createLeafUpdateLogOperation(ByteBuffer buffer, PageID pageID, PageID rootPageID) {
-		
+
+	private LogOperation createLeafUpdateLogOperation(ByteBuffer buffer,
+			PageID pageID, PageID rootPageID) {
+
 		byte[] keyBytes = new byte[buffer.getShort() & 0xFFFF];
 		buffer.get(keyBytes);
 		byte[] oldValue = new byte[buffer.getShort() & 0xFFFF];
 		buffer.get(oldValue);
 		byte[] newValue = new byte[buffer.getShort() & 0xFFFF];
 		buffer.get(newValue);
-		
-		return new LeafUpdateLogOperation(pageID, rootPageID, keyBytes, oldValue, newValue);		
+
+		return new LeafUpdateLogOperation(pageID, rootPageID, keyBytes,
+				oldValue, newValue);
 	}
 
 	private LogOperation createPointerLogOperation(byte type,
@@ -152,7 +154,8 @@ public class BracketIndexLogOperationHelper implements LogOperationHelper {
 			ByteBuffer buffer, PageID pageID, PageID rootPageID) {
 
 		int length = buffer.getShort() & 0xFFFF;
-		BracketNodeSequence nodes = BracketNodeSequence.read(rootPageID.value(), length, buffer);
+		BracketNodeSequence nodes = BracketNodeSequence.read(
+				rootPageID.value(), length, buffer);
 
 		return new NodeSequenceLogOperation(type, pageID, rootPageID, nodes);
 	}
@@ -188,12 +191,10 @@ public class BracketIndexLogOperationHelper implements LogOperationHelper {
 		boolean oldCompressed = ((flags >>> 1) & 1) > 0;
 		boolean compressed = (flags & 1) > 0;
 
-		int oldUnitID = buffer.getInt();
-		int unitID = buffer.getInt();
 		int oldHeight = buffer.get() & 0xFF;
 		int height = buffer.get() & 0xFF;
 
 		return new FormatLogOperation(pageID, rootPageID, oldLeaf, leaf,
-				oldUnitID, unitID, oldHeight, height, oldCompressed, compressed);
+				oldHeight, height, oldCompressed, compressed);
 	}
 }

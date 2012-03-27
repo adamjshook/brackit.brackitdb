@@ -69,7 +69,7 @@ public interface BPContext extends Latch {
 
 	public String dump(String pageTitle) throws IndexOperationException;
 
-	public BPContext format(boolean leaf, int unitID, PageID rootPageID,
+	public BPContext format(boolean leaf, PageID rootPageID,
 			int height, boolean compressed, boolean logged, long undoNextLSN)
 			throws IndexOperationException;
 

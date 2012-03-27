@@ -69,22 +69,23 @@ public class PageLogOperationHelper implements LogOperationHelper {
 	public LogOperation fromBytes(byte type, ByteBuffer buffer)
 			throws LogException {
 		PageID pageID = PageID.read(buffer);
+		int unitID = buffer.getInt();
 
 		switch (type) {
 		case PageLogOperation.ALLOCATE:
-			return new AllocatePageLogOperation(pageID);
+			return new AllocatePageLogOperation(pageID, unitID);
 		case PageLogOperation.DEALLOCATE:
-			return new DeallocatePageLogOperation(pageID);
+			return new DeallocatePageLogOperation(pageID, unitID);
 		default:
 			throw new LogException("Unknown operation type: %s.", type);
 		}
 	}
 
-	public AllocatePageLogOperation createAllocateLogOp(PageID pageID) {
-		return new AllocatePageLogOperation(pageID);
+	public AllocatePageLogOperation createAllocateLogOp(PageID pageID, int unitID) {
+		return new AllocatePageLogOperation(pageID, unitID);
 	}
 
-	public DeallocatePageLogOperation createDeallocateLogOp(PageID pageID) {
-		return new DeallocatePageLogOperation(pageID);
+	public DeallocatePageLogOperation createDeallocateLogOp(PageID pageID, int unitID) {
+		return new DeallocatePageLogOperation(pageID, unitID);
 	}
 }

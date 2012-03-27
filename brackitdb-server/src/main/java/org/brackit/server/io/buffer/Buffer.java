@@ -41,10 +41,12 @@ public interface Buffer {
 	public int getBufferSize();
 
 	public int getContainerNo();
+	
+	public int createUnit();
 
-	public Handle allocatePage(Tx tx) throws BufferException;
+	public Handle allocatePage(Tx tx, int unitID) throws BufferException;
 
-	public Handle allocatePage(Tx tx, PageID pageID, boolean logged,
+	public Handle allocatePage(Tx tx, int unitID, PageID pageID, boolean logged,
 			long undoNextLSN) throws BufferException;
 
 	public void deletePage(Tx tx, PageID pageID, boolean logged,

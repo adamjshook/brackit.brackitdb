@@ -55,11 +55,17 @@ public class SimpleBlobStore implements BlobStore {
 	}
 
 	@Override
-	public PageID create(Tx tx, int containerNo)
+	public PageID create(Tx tx, int containerNo, int unitID)
 			throws BlobStoreAccessException {
 		try {
 			Buffer buffer = bufferMgr.getBuffer(containerNo);
-			Handle nextOverflowHandle = buffer.allocatePage(tx);
+			
+			if (unitID == -1) {
+				// create new unit
+				unitID = buffer.createUnit();
+			}
+			
+			Handle nextOverflowHandle = buffer.allocatePage(tx, unitID);
 			nextOverflowHandle.setAssignedTo(tx);
 			SimpleBlobPage page = new SimpleBlobPage(buffer, nextOverflowHandle);
 
