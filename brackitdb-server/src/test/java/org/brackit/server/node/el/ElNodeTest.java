@@ -44,6 +44,7 @@ import org.brackit.server.node.txnode.TXCollection;
 import org.brackit.server.node.txnode.TXNodeTest;
 import org.brackit.server.tx.IsolationLevel;
 import org.brackit.server.tx.TxException;
+import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.node.parser.DocumentParser;
@@ -65,7 +66,7 @@ import org.xml.sax.InputSource;
  */
 public class ElNodeTest extends TXNodeTest<ElNode> {
 	protected ElStore elStore;
-	
+
 	private static final File smallDocument = new File("xmark10.xml");
 	private static final File bigDocument = new File("xmark100.xml");
 
@@ -73,36 +74,40 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 	public void testFromBytes() throws Exception {
 		Collection<ElNode> coll = createDocument(new DocumentParser(DOCUMENT));
 		ElNode root = coll.getDocument();
-		XTCdeweyID deweyID = new XTCdeweyID(root.getDocID(), new int[]{1,3});
+		XTCdeweyID deweyID = new XTCdeweyID(root.getDocID(), new int[] { 1, 3 });
 		ElNode department = root.getNode(deweyID);
-		check(department, deweyID, Kind.ELEMENT, "Department", "KurtMayer1.4.1963Dr.-Ing.HansMettmann12.9.1974Dipl.-Inf");
-		XTCdeweyID deweyID2 = new XTCdeweyID(root.getDocID(), new int[]{1,3,3});
+		check(department, deweyID, Kind.ELEMENT, new QNm("Department"),
+				new Una("KurtMayer1.4.1963Dr.-Ing.HansMettmann12.9.1974Dipl.-Inf"));
+		XTCdeweyID deweyID2 = new XTCdeweyID(root.getDocID(), new int[] { 1, 3,
+				3 });
 		ElNode member = root.getNode(deweyID2);
-		check(member, deweyID2, Kind.ELEMENT, "Member", "KurtMayer1.4.1963Dr.-Ing.");
-		XTCdeweyID deweyID3 = new XTCdeweyID(root.getDocID(), new int[]{1,3,3,3});
+		check(member, deweyID2, Kind.ELEMENT, new QNm("Member"),
+				new Una("KurtMayer1.4.1963Dr.-Ing."));
+		XTCdeweyID deweyID3 = new XTCdeweyID(root.getDocID(), new int[] { 1, 3,
+				3, 3 });
 		ElNode firstname = root.getNode(deweyID3);
-		check(firstname, deweyID3, Kind.ELEMENT, "Firstname", "Kurt");
-		XTCdeweyID deweyID4 = new XTCdeweyID(root.getDocID(), new int[]{1,3,3,3,3});
+		check(firstname, deweyID3, Kind.ELEMENT, new QNm("Firstname"), new Una("Kurt"));
+		XTCdeweyID deweyID4 = new XTCdeweyID(root.getDocID(), new int[] { 1, 3,
+				3, 3, 3 });
 		ElNode firstnameT = root.getNode(deweyID4);
-		check(firstnameT, deweyID4, Kind.TEXT, "", "Kurt");
+		check(firstnameT, deweyID4, Kind.TEXT, null, new Una("Kurt"));
 	}
-	
-	private void check(ElNode node, XTCdeweyID deweyID, Kind kind, 
-			String name, String value) throws DocumentException {
+
+	private void check(ElNode node, XTCdeweyID deweyID, Kind kind, QNm name,
+			Atomic value) throws DocumentException {
 		assertEquals("DeweyID is correct", deweyID, node.getDeweyID());
 		assertEquals("Kind is correct", kind, node.getKind());
 		assertEquals("Name is correct", name, node.getName());
-		assertEquals("Value is correct", value, node.getValue().stringValue());
+		assertEquals("Value is correct", value, node.getValue());
 	}
-	
-	
+
 	@Test
 	public void testEmptyElementUnderRollback1() throws Exception {
 		TXCollection<ElNode> locator = createDocument(new DocumentParser(
 				ROOT_ONLY_DOCUMENT));
 		ElNode root = locator.getDocument().getFirstChild();
 		PageID rootPageID = new PageID(locator.getID());
-		
+
 		tx.commit();
 		tx = sm.taMgr.begin();
 		root = root.copyFor(tx);
@@ -131,7 +136,7 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 	@Test
 	public void traverseBigDocumentInPreOrder() throws Exception,
 			FileNotFoundException {
-		
+
 		long start = System.currentTimeMillis();
 		ElCollection coll = (ElCollection) createDocument(new DocumentParser(
 				bigDocument));
@@ -143,15 +148,14 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 				XTCdeweyID.newRootID(locator.docID));
 		Node domRoot = null;
 
-		domRoot = createDomTree(new InputSource(
-				new FileReader(bigDocument)));
+		domRoot = createDomTree(new InputSource(new FileReader(bigDocument)));
 		System.out.println("DOM-Tree created!");
 
 		start = System.currentTimeMillis();
 		checkSubtreePreOrderReduced(root, domRoot); // check document index
 		end = System.currentTimeMillis();
 		System.out.println("Preorder Traversal: " + (end - start) / 1000f);
-		
+
 	}
 
 	@Ignore
@@ -160,8 +164,7 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		TXCollection<ElNode> locator = createDocument(new DocumentParser(
 				"<xtc><users></users><dir><doc id=\"2\" name=\"_master.xml\" pathSynopsis=\"3\"><indexes></indexes></doc><doc id=\"6\" name=\"/sample.xml\" pathSynopsis=\"7\"><indexes></indexes></doc><doc id=\"8\" name=\"/index.html\" pathSynopsis=\"9\"><indexes></indexes></doc></dir></xtc>"));
 		ElNode doc = locator.getDocument();
-		ElNode root = doc.getNode(
-				XTCdeweyID.newRootID(doc.getDocID()));
+		ElNode root = doc.getNode(XTCdeweyID.newRootID(doc.getDocID()));
 		root.getFirstChild();
 
 		FragmentHelper helper = new FragmentHelper();
@@ -192,15 +195,15 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		node.replaceWith(helper.getRoot());
 		System.out.println("Doc after");
 		SubtreePrinter.print(root, System.out);
-		ElNode checkRoot = locator.getDocument().getFirstChild().getNode(
-				root.getDeweyID());
+		ElNode checkRoot = locator.getDocument().getFirstChild()
+				.getNode(root.getDeweyID());
 		assertNotNull("Root still exists", checkRoot);
 	}
 
 	@Ignore
 	@Test
 	public void traverseBigDocumentInPostOrder() throws Exception {
-		
+
 		long start = System.currentTimeMillis();
 		ElCollection coll = (ElCollection) createDocument(new DocumentParser(
 				bigDocument));
@@ -212,16 +215,15 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 				XTCdeweyID.newRootID(locator.docID));
 		Node domRoot = null;
 
-		domRoot = createDomTree(new InputSource(
-				new FileReader(bigDocument)));
+		domRoot = createDomTree(new InputSource(new FileReader(bigDocument)));
 		System.out.println("DOM-Tree created!");
 
 		start = System.currentTimeMillis();
 		checkSubtreePostOrderReduced(root, domRoot); // check document
-															// index
+														// index
 		end = System.currentTimeMillis();
 		System.out.println("Postorder Traversal: " + (end - start) / 1000f);
-		
+
 	}
 
 	@Test
@@ -229,10 +231,8 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		TXCollection<ElNode> locator = createDocument(new DocumentParser(
 				DOCUMENT));
 		ElNode doc = locator.getDocument();
-		ElNode root = doc.getNode(
-				XTCdeweyID.newRootID(doc.getDocID()));
-		Node domRoot = createDomTree(new InputSource(new StringReader(
-				DOCUMENT)));
+		ElNode root = doc.getNode(XTCdeweyID.newRootID(doc.getDocID()));
+		Node domRoot = createDomTree(new InputSource(new StringReader(DOCUMENT)));
 
 		ElNode department = root.getFirstChild();
 
@@ -245,8 +245,8 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 					.getNode(department.getDeweyID());
 			assertNotNull("Department still exists", checkDepartment);
 			try {
-				ElNode node = locator.getDocument().getFirstChild().getNode(
-						child.getDeweyID());
+				ElNode node = locator.getDocument().getFirstChild()
+						.getNode(child.getDeweyID());
 				Assert.fail("Deleted child does not exist anymore");
 			} catch (DocumentException e) {
 				// expected
@@ -270,16 +270,15 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		TXCollection<ElNode> locator = createDocument(new DocumentParser(
 				"<element test=\"aha\"/>"));
 		ElNode doc = locator.getDocument();
-		ElNode root = doc.getNode(
-				XTCdeweyID.newRootID(doc.getDocID()));
+		ElNode root = doc.getNode(XTCdeweyID.newRootID(doc.getDocID()));
 		root.getFirstChild();
 
 		tx.checkPrevLSN();
 
 		ElNode attribute = root.getAttribute(new QNm("test"));
 		attribute.delete();
-		ElNode checkRoot = locator.getDocument().getFirstChild().getNode(
-				root.getDeweyID());
+		ElNode checkRoot = locator.getDocument().getFirstChild()
+				.getNode(root.getDeweyID());
 		assertNotNull("Root still exists", checkRoot);
 	}
 
@@ -298,7 +297,7 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		collection.create(spec, documentParser);
 		return collection;
 	}
-	
+
 	@Ignore
 	@Test
 	public void storeCollection() throws ServerException, IOException,
@@ -310,7 +309,7 @@ public class ElNodeTest extends TXNodeTest<ElNode> {
 		for (int i = 0; i < 10; i++) {
 			coll.add(new DocumentParser(smallDocument));
 		}
-		
+
 		// iterate over documents
 		Stream<? extends ElNode> docs = coll.getDocuments();
 		ElNode doc = null;
