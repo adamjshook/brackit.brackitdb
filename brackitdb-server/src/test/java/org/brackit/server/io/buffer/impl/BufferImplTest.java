@@ -45,6 +45,7 @@ import org.brackit.server.tx.TxMgr;
 import org.brackit.server.tx.impl.TaMgrMockup;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class BufferImplTest {
@@ -79,6 +80,12 @@ public class BufferImplTest {
 
 	private BufferMgrMockup bufferManager;
 
+	/*
+	 * This test might fail dependening on buffer strategy
+	 * or other replacment influenting parametersl like, e.g.,
+	 * prefetching 
+	 */
+	@Ignore
 	@Test
 	public void testReplacement() throws ServerException {
 		PageID pageNo = null;
