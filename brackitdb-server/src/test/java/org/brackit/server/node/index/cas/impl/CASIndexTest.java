@@ -135,20 +135,21 @@ public class CASIndexTest {
 	}
 
 	@Test
-	public void testSplidClustering() throws IndexAccessException, 
-	DocumentException {
+	public void testSplidClustering() throws IndexAccessException,
+			DocumentException {
 		ElCollection locator = createDocument(t1, new DocumentParser(DOC));
 		IndexDef casIdx = createCASIdxDef(null, false, null, PATHS);
+		locator.getIndexController().createIndexes(casIdx);
 		String[] ids = new String[] { "1.9.5.3.3", "1.13.3.3", "1.11.5.3",
 				"1.5.5.3", "1.7.5.3" };
-//		IndexPrinter.print(t1, casIdx.getID(), System.out);
+		// IndexPrinter.print(t1, casIdx.getID(), System.out);
 		validateIndexContent(t1, locator, casIdx.getID(), ids, Field.STRING,
 				true);
 	}
 
 	@Test
-	public void testSplidClusteringCollection() throws IndexAccessException, 
-	DocumentException {
+	public void testSplidClusteringCollection() throws IndexAccessException,
+			DocumentException {
 		List<DBCollection<?>> locators = new ArrayList<DBCollection<?>>();
 		ElCollection collection = createCollection(t1);
 		for (int i = 0; i < 10; i++) {
@@ -156,82 +157,81 @@ public class CASIndexTest {
 					.getCollection());
 		}
 		IndexDef casIdx = createCASIdxDef(null, false, null, PATHS);
+		collection.getIndexController().createIndexes(casIdx);
 		String[] ids = new String[] { "1.9.5.3.3", "1.13.3.3", "1.11.5.3",
 				"1.5.5.3", "1.7.5.3" };
-//		IndexPrinter.print(t1, casIdx.getID(), System.out);
+		// IndexPrinter.print(t1, casIdx.getID(), System.out);
 		validateIndexContent(t1, collection, casIdx.getID(), ids, Field.STRING,
 				true);
 	}
 
 	@Test
-	public void testPCRClustering() throws IndexAccessException, 
-	DocumentException {
+	public void testPCRClustering() throws IndexAccessException,
+			DocumentException {
 		ElCollection locator = createDocument(t1, new DocumentParser(DOC));
 		IndexDef casIdx = createCASIdxDef(Cluster.PCR, false, null, PATHS);
+		locator.getIndexController().createIndexes(casIdx);
 		String[] ids = new String[] { "1.13.3.3", "1.9.5.3.3", "1.11.5.3",
 				"1.5.5.3", "1.7.5.3" };
-//		IndexPrinter.print(t1, casIdx.getID(), System.out);
+		// IndexPrinter.print(t1, casIdx.getID(), System.out);
 		validateIndexContent(t1, locator, casIdx.getID(), ids, Field.STRING,
 				false);
 	}
 
 	@Test
-	public void testSplidClusteringUpdate() throws IndexAccessException, 
-	DocumentException {
+	public void testSplidClusteringUpdate() throws IndexAccessException,
+			DocumentException {
 		ElCollection locator = createDocument(t1, new DocumentParser(DOC));
 		IndexDef casIdx = createCASIdxDef(null, false, null, PATHS);
+		locator.getIndexController().createIndexes(casIdx);
 		String[] idsBefore = new String[] { "1.9.5.3.3", "1.13.3.3",
 				"1.11.5.3", "1.5.5.3", "1.7.5.3" };
-		validateIndexContent(t1, locator, casIdx.getID(), idsBefore, 
+		validateIndexContent(t1, locator, casIdx.getID(), idsBefore,
 				Field.STRING, true);
 
 		ElNode root = locator.getDocument().getFirstChild();
-		ElNode node = 
-			root.getLastChild().append(Kind.ELEMENT, new QNm("c"), null);
-		node.append(Kind.TEXT, new QNm("ba"), null);
-		node = 
-			root.getLastChild().insertAfter(Kind.ELEMENT, new QNm("a"), null);
-		node.append(Kind.ELEMENT, new QNm("a"), null);
-		node.append(Kind.ELEMENT, new QNm("c"), null);
-		node.append(Kind.TEXT, null, new Una("a"));
+		root.getLastChild().append(Kind.ELEMENT, new QNm("c"), null)
+				.append(Kind.TEXT, null, new Una("ba"));
+		root.getLastChild().insertAfter(Kind.ELEMENT, new QNm("a"), null)
+				.append(Kind.ELEMENT, new QNm("a"), null)
+				.append(Kind.ELEMENT, new QNm("c"), null)
+				.append(Kind.TEXT, null, new Una("a"));
 
-//		IndexPrinter.print(t1, casIdx.getID(), System.out);
 		String[] idsAfter = new String[] { "1.9.5.3.3", "1.13.3.3",
 				"1.15.3.3.3", "1.11.5.3", "1.13.5.3", "1.5.5.3", "1.7.5.3" };
-		validateIndexContent(t1, locator, casIdx.getID(), idsAfter, 
+		validateIndexContent(t1, locator, casIdx.getID(), idsAfter,
 				Field.STRING, true);
 	}
 
 	@Test
-	public void testPCRClusteringUpdate() throws IndexAccessException, 
-	DocumentException {
+	public void testPCRClusteringUpdate() throws IndexAccessException,
+			DocumentException {
 		ElCollection locator = createDocument(t1, new DocumentParser(DOC));
-		IndexDef casIdx = createCASIdxDef(null, false, null, PATHS);
+		IndexDef casIdx = createCASIdxDef(Cluster.PCR, false, null, PATHS);
+		locator.getIndexController().createIndexes(casIdx);
 		
 		String[] idsBefore = new String[] { "1.13.3.3", "1.9.5.3.3",
 				"1.11.5.3", "1.5.5.3", "1.7.5.3" };
-		validateIndexContent(t1, locator, casIdx.getID(), idsBefore, 
+		validateIndexContent(t1, locator, casIdx.getID(), idsBefore,
 				Field.STRING, false);
 
 		ElNode root = locator.getDocument().getFirstChild();
-		ElNode node = 
-			root.getLastChild().append(Kind.ELEMENT, new QNm("c"), null);
-		node.append(Kind.TEXT, new QNm("ba"), null);
-		node = 
-			root.getLastChild().insertAfter(Kind.ELEMENT, new QNm("a"), null);
-		node.append(Kind.ELEMENT, new QNm("a"), null);
-		node.append(Kind.ELEMENT, new QNm("c"), null);
-		node.append(Kind.TEXT, null, new Una("a"));
-		
-		node = root.getFirstChild().getNextSibling().append(Kind.ELEMENT, 
-				new QNm("c"), null);
-		node.append(Kind.TEXT, null, new Una("a"));
+		root.getLastChild().append(Kind.ELEMENT, new QNm("c"), null)
+				.append(Kind.TEXT, null, new Una("ba"));
+		root.getLastChild().insertAfter(Kind.ELEMENT, new QNm("a"), null)
+				.append(Kind.ELEMENT, new QNm("a"), null)
+				.append(Kind.ELEMENT, new QNm("c"), null)
+				.append(Kind.TEXT, null, new Una("a"));
 
-//		SubtreePrinter.print(root, System.out);
-//		IndexPrinter.print(t1, casIdx.getID(), System.out);
+		root.getFirstChild().getNextSibling()
+				.append(Kind.ELEMENT, new QNm("c"), null)
+				.append(Kind.TEXT, null, new Una("a"));
+
+		// SubtreePrinter.print(root, System.out);
+		// IndexPrinter.print(t1, casIdx.getID(), System.out);
 		String[] idsAfter = new String[] { "1.5.7.3", "1.13.3.3", "1.9.5.3.3",
 				"1.15.3.3.3", "1.11.5.3", "1.13.5.3", "1.5.5.3", "1.7.5.3" };
-		validateIndexContent(t1, locator, casIdx.getID(), idsAfter, 
+		validateIndexContent(t1, locator, casIdx.getID(), idsAfter,
 				Field.STRING, false);
 	}
 
@@ -251,7 +251,7 @@ public class CASIndexTest {
 		}
 		documents.close();
 		assertTrue("more than one document in collection", nodes.size() > 0);
-	
+
 		Collections.sort(nodes, new Comparator<ElNode>() {
 			@Override
 			public int compare(ElNode o1, ElNode o2) {
@@ -265,24 +265,24 @@ public class CASIndexTest {
 				}
 				if (diff != 0)
 					return diff;
-	
+
 				if (splidClustering) {
 					diff = o1.getDeweyID().compareTo(o2.getDeweyID());
-	
+
 					if (diff != 0)
 						return diff;
-	
+
 					return o1.getPCR() - o2.getPCR();
 				} else {
 					diff = o1.getPCR() - o2.getPCR();
-	
+
 					if (diff != 0)
 						return diff;
-	
+
 					return o1.getDeweyID().compareTo(o2.getDeweyID());
 				}
 			}
-	
+
 		});
 		return nodes;
 	}
@@ -294,13 +294,12 @@ public class CASIndexTest {
 		List<ElNode> expectedNodes = getResultNodes(tx, collection, keyType,
 				ids, splidClustering);
 
-		Stream<? extends ElNode> stream = casIndex.open(tx, collection
-						.getIndexController(), idxNo, Type.STR,
-						SearchMode.FIRST, null, null, true, true, null);
+		Stream<? extends ElNode> stream = casIndex.open(tx,
+				collection.getIndexController(), idxNo, Type.STR,
+				SearchMode.FIRST, null, null, true, true, null);
 		int pos = -1;
 		int expectedSize = expectedNodes.size();
-		
-		
+
 		ElNode next;
 		while ((next = stream.next()) != null) {
 			assertTrue("No more index entries found than expected",
