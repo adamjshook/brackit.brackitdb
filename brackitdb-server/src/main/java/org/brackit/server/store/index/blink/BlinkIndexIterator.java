@@ -130,8 +130,9 @@ public class BlinkIndexIterator implements IndexIterator {
 		if (!openMode.forUpdate()) {
 			log.trace(String.format("Restart with a tree traversal "
 					+ "to insert (%s, %s) because insert "
-					+ "position is ambigious.", page, keyType
-					.toString(insertKey), valueType.toString(insertValue)));
+					+ "position is ambigious.", page,
+					keyType.toString(insertKey),
+					valueType.toString(insertValue)));
 			close();
 			throw new IndexAccessException("Index %s not opened for update.",
 					rootPageID);
@@ -143,8 +144,8 @@ public class BlinkIndexIterator implements IndexIterator {
 			}
 
 			page = tree.insertIntoLeaf(transaction, rootPageID, page,
-					insertKey, insertValue, openMode.compact(), openMode
-							.doLog(), undoNextLSN);
+					insertKey, insertValue, openMode.compact(),
+					openMode.doLog(), undoNextLSN);
 			key = insertKey;
 			value = insertValue;
 		} catch (IndexAccessException e) {
@@ -156,27 +157,62 @@ public class BlinkIndexIterator implements IndexIterator {
 
 	private void checkInsertPosition(byte[] insertKey, byte[] insertValue)
 			throws IndexAccessException {
-		if ((key != null)
-				&& ((keyType.compare(insertKey, key) > 0) || ((keyType.compare(
-						insertKey, key) == 0) && (page.isUnique() || (valueType
-						.compare(insertValue, value) >= 0))))) {
-			close();
-			throw new IndexAccessException(
-					"Insert of (%s, %s) at current position"
-							+ " violates index integrity because it "
-							+ "is greater than the current record (%s, %s)"
-							+ " or a duplicate.", keyType.toString(insertKey),
-					valueType.toString(insertValue), keyType.toString(key),
-					valueType.toString(value));
+		
+		if (key != null) {
+			// check next key
+			int keyCmp = keyType.compare(insertKey, key);
+			if ((keyCmp > 0)
+					|| ((keyCmp == 0) && (page.isUnique() || (valueType
+							.compare(insertValue, value) >= 0)))) {
+				close();
+				throw new IndexAccessException(
+						"Insert of (%s, %s) at current position"
+								+ " violates index integrity because it "
+								+ "is greater than the current record (%s, %s)"
+								+ " or a duplicate.",
+						keyType.toString(insertKey),
+						valueType.toString(insertValue), keyType.toString(key),
+						valueType.toString(value));
+			}
 		}
 
-		if ((page.getPosition() == 0)
-				|| ((key == null) && (!page.isLastInLevel()))) {
+		int pos = page.getPosition();
+		if (pos > 0) {
+			// check prev key
+			try {
+				page.moveTo(pos - 1);
+				byte[] prevKey = page.getKey();
+				byte[] prevVal = page.getValue();
+				int keyCmp = keyType.compare(prevKey, insertKey);
+				if ((keyCmp > 0)
+						|| ((keyCmp == 0) && ((page.isUnique()) || (valueType
+								.compare(prevVal, insertValue) >= 0)))) {
+					close();
+					throw new IndexAccessException(
+							"Insert of (%s, %s) at current position"
+									+ " violates index integrity because it "
+									+ "is greater than the previous record (%s, %s)"
+									+ " or a duplicate.",
+							keyType.toString(insertKey),
+							valueType.toString(insertValue),
+							keyType.toString(prevKey),
+							valueType.toString(prevVal));
+				}
+				page.moveNext();
+			} catch (IndexOperationException e) {
+				page.cleanup();
+				page = null;
+				throw new IndexAccessException(e);
+			}
+		}
+
+		if ((pos == 0) || ((key == null) && (!page.isLastInLevel()))) {
 			if (log.isTraceEnabled()) {
 				log.trace(String.format("Restart with a tree traversal "
 						+ "to insert (%s, %s) because insert "
-						+ "position is ambigious.", page, keyType
-						.toString(insertKey), valueType.toString(insertValue)));
+						+ "position is ambigious.", page,
+						keyType.toString(insertKey),
+						valueType.toString(insertValue)));
 			}
 
 			page.cleanup();
@@ -344,8 +380,8 @@ public class BlinkIndexIterator implements IndexIterator {
 					log.trace(String.format(
 							"Repositioning cursor for index %s at (%s, %s)",
 							rootPageID, (key != null) ? keyType.toString(key)
-									: null, (value != null) ? valueType
-									.toString(value) : null));
+									: null,
+							(value != null) ? valueType.toString(value) : null));
 				}
 
 				// Reposition the iterator with a new traversal
@@ -356,8 +392,8 @@ public class BlinkIndexIterator implements IndexIterator {
 				if (key != null) {
 					// descend down the index tree to the last seen record again
 					newPage = tree.descendToPosition(transaction, rootPageID,
-							SearchMode.GREATER_OR_EQUAL, key, value, openMode
-									.forUpdate(), false);
+							SearchMode.GREATER_OR_EQUAL, key, value,
+							openMode.forUpdate(), false);
 				} else {
 					// descend down the index tree to the end again
 					newPage = tree.descendToPosition(transaction, rootPageID,
@@ -397,9 +433,7 @@ public class BlinkIndexIterator implements IndexIterator {
 		IndexStatistics is = new IndexStatistics();
 		TxStats statistics = transaction.getStatistics();
 		is.setIndexHeight(statistics.get(TxStats.BTREE_ROOT_SPLITS) + 1);
-		is
-				.setIndexLeaveCount(statistics
-						.get(TxStats.BTREE_LEAF_ALLOCATIONS) + 1);
+		is.setIndexLeaveCount(statistics.get(TxStats.BTREE_LEAF_ALLOCATIONS) + 1);
 		is.setIndexPointers(statistics.get(TxStats.BTREE_LEAF_ALLOCATIONS));
 		is.setIndexTuples(statistics.get(TxStats.BTREE_INSERTS));
 		int pageCount = 1 + statistics.get(TxStats.BTREE_LEAF_ALLOCATIONS)
