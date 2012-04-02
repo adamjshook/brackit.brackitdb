@@ -162,13 +162,13 @@ public class SessionMgrTest {
 					}
 				}
 
-				System.err.println("Attempting");
+//				System.err.println("Attempting");
 				try {
 					sm.cleanup(sessionID, false, false);
 				} catch (SessionException e) {
 					e.printStackTrace();
 				}
-				System.err.println("Success");
+//				System.err.println("Success");
 			}
 		};
 		killer.start();
