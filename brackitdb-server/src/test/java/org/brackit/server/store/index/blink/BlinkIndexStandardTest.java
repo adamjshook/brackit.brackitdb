@@ -41,7 +41,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.SysMockup;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.Handle;
@@ -54,6 +53,7 @@ import org.brackit.server.store.index.IndexIterator;
 import org.brackit.server.store.index.aries.display.DisplayVisitor;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.util.Calc;
+import org.brackit.xquery.util.log.Logger;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -79,8 +79,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		for (Entry entry : entries) {
 			if (log.isDebugEnabled())
 				log.debug(String.format("%s. Inserting (%s, %s)", i,
-						Field.UINTEGER.toString(entry.key), Field.UINTEGER
-								.toString(entry.value)));
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(entry.value)));
 			index.insert(t2, uniqueRootPageID, entry.key, entry.value);
 			// printIndex(t2, uniqueRootPageID, "/media/ramdisk/" + number(i +
 			// 1) + ".dot", true);
@@ -89,12 +89,12 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 			assertTrue("value for inserted key found", (readValue != null));
 			if (log.isDebugEnabled())
 				log.debug(String.format(
-						"key=%s written value=%s read value=%s", Field.UINTEGER
-								.toString(entry.key), Field.UINTEGER
-								.toString(readValue), Field.UINTEGER
-								.toString(readValue)));
-			assertTrue("read value is same as written value", (Field.UINTEGER
-					.compare(readValue, entry.value) == 0));
+						"key=%s written value=%s read value=%s",
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(readValue),
+						Field.UINTEGER.toString(readValue)));
+			assertTrue("read value is same as written value",
+					(Field.UINTEGER.compare(readValue, entry.value) == 0));
 			// IndexPageHelper.checkIndexConsistency(t2, sm.buffer,
 			// uniqueRootPageID);
 			i++;
@@ -114,8 +114,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		for (Entry entry : entries) {
 			if (log.isDebugEnabled())
 				log.debug(String.format("%s. Inserting (%s, %s)", i,
-						Field.UINTEGER.toString(entry.key), Field.UINTEGER
-								.toString(entry.value)));
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(entry.value)));
 			index.insert(t2, uniqueRootPageID, entry.key, entry.value);
 			// printIndex(display, "/home/sbaechl/projects/xtc/test/" + number(i
 			// + 1) + ".dot", true);
@@ -124,12 +124,12 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 			assertTrue("value for inserted key found", (readValue != null));
 			if (log.isDebugEnabled())
 				log.debug(String.format(
-						"key=%s written value=%s read value=%s", Field.UINTEGER
-								.toString(entry.key), Field.UINTEGER
-								.toString(readValue), Field.UINTEGER
-								.toString(readValue)));
-			assertTrue("read value is same as written value", (Field.UINTEGER
-					.compare(readValue, entry.value) == 0));
+						"key=%s written value=%s read value=%s",
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(readValue),
+						Field.UINTEGER.toString(readValue)));
+			assertTrue("read value is same as written value",
+					(Field.UINTEGER.compare(readValue, entry.value) == 0));
 			// IndexPageHelper.checkIndexConsistency(t2, sm.buffer,
 			// uniqueRootPageID);
 			i++;
@@ -149,8 +149,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		for (Entry entry : entries) {
 			if (log.isDebugEnabled())
 				log.debug(String.format("%s. Inserting (%s, %s)", i,
-						Field.UINTEGER.toString(entry.key), Field.UINTEGER
-								.toString(entry.value)));
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(entry.value)));
 			index.insert(t2, uniqueRootPageID, entry.key, entry.value);
 			// printIndex(display, "/home/sbaechl/projects/xtc/test/" +
 			// number(i) + ".dot", true);
@@ -159,12 +159,12 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 			assertTrue("value for inserted key found", (readValue != null));
 			if (log.isDebugEnabled())
 				log.debug(String.format(
-						"key=%s written value=%s read value=%s", Field.UINTEGER
-								.toString(entry.key), Field.UINTEGER
-								.toString(entry.value), Field.UINTEGER
-								.toString(readValue)));
-			assertTrue("read value is same as written value", (Field.UINTEGER
-					.compare(readValue, entry.value) == 0));
+						"key=%s written value=%s read value=%s",
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(entry.value),
+						Field.UINTEGER.toString(readValue)));
+			assertTrue("read value is same as written value",
+					(Field.UINTEGER.compare(readValue, entry.value) == 0));
 			// indexPageHelper.checkIndexConsistency(t2, sm.buffer,
 			// uniqueRootPageID);
 			i++;
@@ -184,8 +184,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		for (Entry entry : entries) {
 			if (log.isDebugEnabled())
 				log.debug(String.format("%s. Deleting (%s, %s)", j,
-						Field.UINTEGER.toString(entry.key), Field.UINTEGER
-								.toString(entry.value)));
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(entry.value)));
 			index.delete(t2, uniqueRootPageID, entry.key, entry.value);
 			// printIndex(display, "/home/sbaechl/projects/xtc/test/" +
 			// number(j) + ".dot", false);
@@ -218,8 +218,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		for (Entry entry : entries) {
 			if (log.isDebugEnabled())
 				log.debug(String.format("%s. Deleting (%s, %s)", j,
-						Field.UINTEGER.toString(entry.key), Field.UINTEGER
-								.toString(entry.value)));
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(entry.value)));
 			index.delete(t2, uniqueRootPageID, entry.key, entry.value);
 			// printIndex(display, "/home/sbaechl/projects/xtc/test/" +
 			// number(j) + ".dot", false);
@@ -245,8 +245,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		for (Entry entry : entries) {
 			if (log.isDebugEnabled())
 				log.debug(String.format("%s. Deleting (%s, %s)", i,
-						Field.UINTEGER.toString(entry.key), Field.UINTEGER
-								.toString(entry.value)));
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(entry.value)));
 			index.delete(t2, uniqueRootPageID, entry.key, entry.value);
 			// printIndex(display, "/home/sbaechl/projects/xtc/test/" +
 			// number(i) + ".dot", false);
@@ -284,12 +284,12 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 			assertTrue("value for updated key found", (readValue != null));
 			if (log.isDebugEnabled())
 				log.debug(String.format(
-						"key=%s written value=%s read value=%s", Field.UINTEGER
-								.toString(entry.key), Field.UINTEGER
-								.toString(readValue), Field.UINTEGER
-								.toString(readValue)));
-			assertTrue("read value is same as updated value", (Field.UINTEGER
-					.compare(readValue, updateValue) == 0));
+						"key=%s written value=%s read value=%s",
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(readValue),
+						Field.UINTEGER.toString(readValue)));
+			assertTrue("read value is same as updated value",
+					(Field.UINTEGER.compare(readValue, updateValue) == 0));
 			// IndexPageHelper.checkIndexConsistency(t2, sm.buffer,
 			// uniqueRootPageID, null);
 		}
@@ -321,12 +321,12 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 			assertTrue("value for updated key found", (readValue != null));
 			if (log.isDebugEnabled())
 				log.debug(String.format(
-						"key=%s written value=%s read value=%s", Field.UINTEGER
-								.toString(entry.key), Field.UINTEGER
-								.toString(readValue), Field.UINTEGER
-								.toString(readValue)));
-			assertTrue("read value is same as updated value", (Field.UINTEGER
-					.compare(readValue, updateValue) == 0));
+						"key=%s written value=%s read value=%s",
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(readValue),
+						Field.UINTEGER.toString(readValue)));
+			assertTrue("read value is same as updated value",
+					(Field.UINTEGER.compare(readValue, updateValue) == 0));
 			// IndexPageHelper.checkIndexConsistency(t2, sm.buffer,
 			// uniqueRootPageID, null);
 		}
@@ -358,12 +358,12 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 			assertTrue("value for updated key found", (readValue != null));
 			if (log.isDebugEnabled())
 				log.debug(String.format(
-						"key=%s written value=%s read value=%s", Field.UINTEGER
-								.toString(entry.key), Field.UINTEGER
-								.toString(readValue), Field.UINTEGER
-								.toString(readValue)));
-			assertTrue("read value is same as updated value", (Field.UINTEGER
-					.compare(readValue, updateValue) == 0));
+						"key=%s written value=%s read value=%s",
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(readValue),
+						Field.UINTEGER.toString(readValue)));
+			assertTrue("read value is same as updated value",
+					(Field.UINTEGER.compare(readValue, updateValue) == 0));
 			// IndexPageHelper.checkIndexConsistency(t2, sm.buffer,
 			// uniqueRootPageID, null);
 		}
@@ -389,8 +389,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		for (Entry entry : entries) {
 			if (log.isDebugEnabled())
 				log.debug(String.format("%s. Deleting (%s, %s)", i,
-						Field.UINTEGER.toString(entry.key), Field.UINTEGER
-								.toString(entry.value)));
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(entry.value)));
 			byte[] readValue2 = index.read(t2, nonuniqueRootPageID, entry.key);
 			assertTrue("value for delete key found", (readValue2 != null));
 			index.delete(t2, nonuniqueRootPageID, entry.key, entry.value);
@@ -425,8 +425,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		for (Entry entry : entries) {
 			if (log.isDebugEnabled())
 				log.debug(String.format("%s. Inserting (%s, %s)", i,
-						Field.UINTEGER.toString(entry.key), Field.UINTEGER
-								.toString(entry.value)));
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(entry.value)));
 
 			index.insert(t2, nonuniqueRootPageID, entry.key, entry.value);
 			// printIndex(t2, nonuniqueRootPageID, "/media/ramdisk/" + number(i)
@@ -458,14 +458,14 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 			try {
 				if (log.isDebugEnabled())
 					log.debug(String.format("%s. Trying to insert (%s, %s)", j,
-							Field.UINTEGER.toString(entry.key), Field.UINTEGER
-									.toString(entry.value)));
+							Field.UINTEGER.toString(entry.key),
+							Field.UINTEGER.toString(entry.value)));
 				index.insert(t2, uniqueRootPageID, entry.key, entry.value);
 				fail("Duplicate insertion was not detected.");
 			} catch (IndexAccessException e) {
 				// expected
-				assertEquals("fixed pages after error", 0, sm.buffer
-						.getFixCount());
+				assertEquals("fixed pages after error", 0,
+						sm.buffer.getFixCount());
 			}
 		}
 	}
@@ -493,13 +493,13 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 							Field.UINTEGER.toString(entry.value)));
 				// if (j++ == 1804)
 				// Logger.getLogger(BPlusIndex.class.getName()).setLevel(Level.TRACE);
-				//				
+				//
 				index.insert(t2, nonuniqueRootPageID, entry.key, entry.value);
 				fail("Duplicate insertion was not detected.");
 			} catch (IndexAccessException e) {
 				// expected
-				assertEquals("fixed pages after error", 0, sm.buffer
-						.getFixCount());
+				assertEquals("fixed pages after error", 0,
+						sm.buffer.getFixCount());
 			}
 		}
 	}
@@ -520,8 +520,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		for (Entry entry : entries) {
 			if (log.isDebugEnabled())
 				log.debug(String.format("%s. Trying to insert (%s, %s)", j,
-						Field.UINTEGER.toString(entry.key), Field.UINTEGER
-								.toString(entry.value)));
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(entry.value)));
 			for (int i = 0; i <= NUMBER_OF_DUPLICATES; i++) {
 				byte[] updateValue = Calc.fromUIntVar(Calc.toUIntVar(entry.key)
 						+ i);
@@ -535,16 +535,15 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 						// "/media/ramdisk/error.dot", true);
 
 						fail(String
-								.format(
-										"Duplicate update (%s, %s) -> (%s, %s) was not detected.",
+								.format("Duplicate update (%s, %s) -> (%s, %s) was not detected.",
 										Field.UINTEGER.toString(entry.key),
 										Field.UINTEGER.toString(entry.value),
 										Field.UINTEGER.toString(entry.key),
 										Field.UINTEGER.toString(updateValue)));
 					} catch (IndexAccessException e) {
 						// expected
-						assertEquals("fixed pages after error", 0, sm.buffer
-								.getFixCount());
+						assertEquals("fixed pages after error", 0,
+								sm.buffer.getFixCount());
 					}
 				}
 			}
@@ -629,11 +628,11 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		while (!entries.isEmpty()) {
 			Entry entry = entries.pop();
 			if (log.isDebugEnabled())
-				log.debug(String.format("%s, Read (%s, %s).", i, Field.UINTEGER
-						.toString(it.getKey()), Field.UINTEGER.toString(it
-						.getValue())));
-			assertTrue("Current key is not equal to expected", (Field.UINTEGER
-					.compare(it.getKey(), entry.key) == 0));
+				log.debug(String.format("%s, Read (%s, %s).", i,
+						Field.UINTEGER.toString(it.getKey()),
+						Field.UINTEGER.toString(it.getValue())));
+			assertTrue("Current key is not equal to expected",
+					(Field.UINTEGER.compare(it.getKey(), entry.key) == 0));
 			assertTrue("Current value is not equal to expected",
 					(Field.UINTEGER.compare(it.getValue(), entry.value) == 0));
 			it.delete();
@@ -643,6 +642,7 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		it.close();
 	}
 
+	@Ignore
 	@Test
 	public void testScanUniqueIndexForward() throws IndexAccessException,
 			IndexOperationException, BufferException {
@@ -657,17 +657,18 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		do {
 			Entry entry = entries.pop();
 			if (log.isDebugEnabled())
-				log.debug(String.format("Read (%s, %s).", Field.UINTEGER
-						.toString(it.getKey()), Field.UINTEGER.toString(it
-						.getValue())));
-			assertTrue("Current key is not equal to expected", (Field.UINTEGER
-					.compare(it.getKey(), entry.key) == 0));
+				log.debug(String.format("Read (%s, %s).",
+						Field.UINTEGER.toString(it.getKey()),
+						Field.UINTEGER.toString(it.getValue())));
+			assertTrue("Current key is not equal to expected",
+					(Field.UINTEGER.compare(it.getKey(), entry.key) == 0));
 			assertTrue("Current value is not equal to expected",
 					(Field.UINTEGER.compare(it.getValue(), entry.value) == 0));
 		} while (it.next());
 		it.close();
 	}
 
+	@Ignore
 	@Test
 	public void testScanUniqueIndexBackward() throws IndexAccessException,
 			IndexOperationException, BufferException {
@@ -683,11 +684,11 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		do {
 			Entry entry = entries.pop();
 			if (log.isDebugEnabled())
-				log.debug(String.format("Read (%s, %s).", Field.UINTEGER
-						.toString(it.getKey()), Field.UINTEGER.toString(it
-						.getValue())));
-			assertTrue("Current key is not equal to expected", (Field.UINTEGER
-					.compare(it.getKey(), entry.key) == 0));
+				log.debug(String.format("Read (%s, %s).",
+						Field.UINTEGER.toString(it.getKey()),
+						Field.UINTEGER.toString(it.getValue())));
+			assertTrue("Current key is not equal to expected",
+					(Field.UINTEGER.compare(it.getKey(), entry.key) == 0));
 			assertTrue("Current value is not equal to expected",
 					(Field.UINTEGER.compare(it.getValue(), entry.value) == 0));
 		} while (it.previous());
@@ -710,11 +711,11 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		while (!entries.isEmpty()) {
 			Entry entry = entries.pop();
 			if (log.isDebugEnabled())
-				log.debug(String.format("%s, Read (%s, %s).", i, Field.UINTEGER
-						.toString(it.getKey()), Field.UINTEGER.toString(it
-						.getValue())));
-			assertTrue("Current key is not equal to expected", (Field.UINTEGER
-					.compare(it.getKey(), entry.key) == 0));
+				log.debug(String.format("%s, Read (%s, %s).", i,
+						Field.UINTEGER.toString(it.getKey()),
+						Field.UINTEGER.toString(it.getValue())));
+			assertTrue("Current key is not equal to expected",
+					(Field.UINTEGER.compare(it.getKey(), entry.key) == 0));
 			assertTrue("Current value is not equal to expected",
 					(Field.UINTEGER.compare(it.getValue(), entry.value) == 0));
 			it.delete();
@@ -732,7 +733,10 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE / 10, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		for (Entry entry : entries) {
-			for (Entry insertEntry : entries) {
+			// check insertion with a smaller key, the same key and a larger key
+			Entry[] checkWith = new Entry[] { entries.getFirst(), entry,
+					entries.getLast() };
+			for (Entry insertEntry : checkWith) {
 				IndexIterator it = index.open(t2, uniqueRootPageID,
 						SearchMode.GREATER_OR_EQUAL, entry.key, null,
 						OpenMode.UPDATE);
@@ -741,8 +745,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 					fail("Illegal insert was not detected.");
 				} catch (IndexAccessException e) {
 					// expected
-					assertEquals("fixed pages after error", 0, sm.buffer
-							.getFixCount());
+					assertEquals("fixed pages after error", 0,
+							sm.buffer.getFixCount());
 				}
 			}
 		}
@@ -758,21 +762,21 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 					/ (10 * NUMBER_OF_DUPLICATES), i));
 		}
 		loadIndex(t2, entries, nonuniqueRootPageID);
-		int i = 0;
 		for (Entry entry : entries) {
-			for (Entry insertEntry : entries) {
+			// check insertion with a smaller key, the same key and a larger key
+			Entry[] checkWith = new Entry[] { entries.getFirst(), entry,
+					entries.getLast() };
+			for (Entry insertEntry : checkWith) {
 				IndexIterator it = index.open(t2, nonuniqueRootPageID,
 						SearchMode.GREATER_OR_EQUAL, entry.key, null,
 						OpenMode.UPDATE);
 				try {
-					i++;
 					it.insert(insertEntry.key, insertEntry.value);
-					System.out.println(i);
 					fail("Illegal insert was not detected.");
 				} catch (IndexAccessException e) {
 					// expected
-					assertEquals("fixed pages after error", 0, sm.buffer
-							.getFixCount());
+					assertEquals("fixed pages after error", 0,
+							sm.buffer.getFixCount());
 				}
 			}
 		}
@@ -787,9 +791,9 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		int i = 0;
 		for (Entry entry : entries) {
 			if (log.isDebugEnabled())
-				log.debug(String.format("Inserting (%s, %s).", Field.UINTEGER
-						.toString(entry.key), Field.UINTEGER
-						.toString(entry.value)));
+				log.debug(String.format("Inserting (%s, %s).",
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(entry.value)));
 			it.insert(entry.key, entry.value);
 			if (log.isDebugEnabled())
 				log.debug(String.format(
@@ -800,7 +804,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 								.getValue()) : null));
 			it.next();
 			if (log.isDebugEnabled())
-				log.debug(String.format("Current record after next (%s, %s).",
+				log.debug(String.format(
+						"Current record after next (%s, %s).",
 						(it.getKey() != null) ? Field.UINTEGER.toString(it
 								.getKey()) : null,
 						(it.getKey() != null) ? Field.UINTEGER.toString(it
@@ -820,9 +825,9 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		int i = 0;
 		for (Entry entry : entries) {
 			if (log.isDebugEnabled())
-				log.debug(String.format("Inserting (%s, %s).", Field.UINTEGER
-						.toString(entry.key), Field.UINTEGER
-						.toString(entry.value)));
+				log.debug(String.format("Inserting (%s, %s).",
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(entry.value)));
 			it.insert(entry.key, entry.value);
 			if (log.isDebugEnabled())
 				log.debug(String.format(
@@ -833,7 +838,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 								.getValue()) : null));
 			it.next();
 			if (log.isDebugEnabled())
-				log.debug(String.format("Current record after next (%s, %s).",
+				log.debug(String.format(
+						"Current record after next (%s, %s).",
 						(it.getKey() != null) ? Field.UINTEGER.toString(it
 								.getKey()) : null,
 						(it.getKey() != null) ? Field.UINTEGER.toString(it
@@ -855,9 +861,9 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		int i = 0;
 		for (Entry entry : entries) {
 			if (log.isDebugEnabled())
-				log.debug(String.format("Inserting (%s, %s).", Field.UINTEGER
-						.toString(entry.key), Field.UINTEGER
-						.toString(entry.value)));
+				log.debug(String.format("Inserting (%s, %s).",
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(entry.value)));
 			it.insert(entry.key, entry.value);
 			if (log.isDebugEnabled())
 				log.debug(String.format(
@@ -868,7 +874,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 								.getValue()) : null));
 			it.next();
 			if (log.isDebugEnabled())
-				log.debug(String.format("Current record after next (%s, %s).",
+				log.debug(String.format(
+						"Current record after next (%s, %s).",
 						(it.getKey() != null) ? Field.UINTEGER.toString(it
 								.getKey()) : null,
 						(it.getKey() != null) ? Field.UINTEGER.toString(it
@@ -898,9 +905,9 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		int i = 0;
 		for (Entry entry : insertEntries) {
 			if (log.isDebugEnabled())
-				log.debug(String.format("Inserting (%s, %s).", Field.UINTEGER
-						.toString(entry.key), Field.UINTEGER
-						.toString(entry.value)));
+				log.debug(String.format("Inserting (%s, %s).",
+						Field.UINTEGER.toString(entry.key),
+						Field.UINTEGER.toString(entry.value)));
 			it.insert(entry.key, entry.value);
 			if (log.isDebugEnabled())
 				log.debug(String.format(
@@ -911,7 +918,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 								.getValue()) : null));
 			it.next();
 			if (log.isDebugEnabled())
-				log.debug(String.format("Current record after next (%s, %s).",
+				log.debug(String.format(
+						"Current record after next (%s, %s).",
 						(it.getKey() != null) ? Field.UINTEGER.toString(it
 								.getKey()) : null,
 						(it.getKey() != null) ? Field.UINTEGER.toString(it
@@ -1010,8 +1018,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		for (Entry entry : entries) {
 			byte[] readValue = index.read(t2, uniqueRootPageID, entry.key);
 			assertTrue("value for restored key found", (readValue != null));
-			assertTrue("value for restored key is correct", Field.UINTEGER
-					.compare(readValue, entry.value) == 0);
+			assertTrue("value for restored key is correct",
+					Field.UINTEGER.compare(readValue, entry.value) == 0);
 		}
 	}
 
@@ -1033,8 +1041,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		for (Entry entry : entries) {
 			byte[] readValue = index.read(t2, uniqueRootPageID, entry.key);
 			assertTrue("value for restored key found", (readValue != null));
-			assertTrue("value for restored key is correct", Field.UINTEGER
-					.compare(readValue, entry.value) == 0);
+			assertTrue("value for restored key is correct",
+					Field.UINTEGER.compare(readValue, entry.value) == 0);
 		}
 	}
 
@@ -1057,8 +1065,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		for (Entry entry : entries) {
 			byte[] readValue = index.read(t2, uniqueRootPageID, entry.key);
 			assertTrue("value for restored key found", (readValue != null));
-			assertTrue("value for restored key is correct", Field.UINTEGER
-					.compare(readValue, entry.value) == 0);
+			assertTrue("value for restored key is correct",
+					Field.UINTEGER.compare(readValue, entry.value) == 0);
 		}
 	}
 
@@ -1112,8 +1120,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		for (Entry entry : entries) {
 			byte[] readValue = index.read(t1, uniqueRootPageID, entry.key);
 			assertTrue("value for inserted key found", (readValue != null));
-			assertTrue("read value is same as written value", (Field.UINTEGER
-					.compare(readValue, entry.value) == 0));
+			assertTrue("read value is same as written value",
+					(Field.UINTEGER.compare(readValue, entry.value) == 0));
 			i++;
 		}
 	}
@@ -1217,8 +1225,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 			}
 
 			assertTrue("value for inserted key found", (readValue != null));
-			assertTrue("read value is same as written value", (Field.UINTEGER
-					.compare(readValue, entry.value) == 0));
+			assertTrue("read value is same as written value",
+					(Field.UINTEGER.compare(readValue, entry.value) == 0));
 			i++;
 		}
 	}
@@ -1243,8 +1251,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 		for (Entry entry : entries) {
 			byte[] readValue = index.read(t1, uniqueRootPageID, entry.key);
 			assertTrue("value for inserted key found", (readValue != null));
-			assertTrue("read value is same as written value", (Field.UINTEGER
-					.compare(readValue, entry.value) == 0));
+			assertTrue("read value is same as written value",
+					(Field.UINTEGER.compare(readValue, entry.value) == 0));
 			i++;
 		}
 	}
@@ -1256,9 +1264,7 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 
 		int i = 0;
 		for (Entry entry : entries) {
-			index
-					.insertPersistent(t1, uniqueRootPageID, entry.key,
-							entry.value);
+			index.insertPersistent(t1, uniqueRootPageID, entry.key, entry.value);
 
 			// printIndex(ctx, uniqueRootPageID, "/media/ramdisk/" + number(i) +
 			// ".dot", false);
@@ -1389,8 +1395,8 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 
 			byte[] readValue = index.read(t2, uniqueRootPageID, key);
 			assertTrue("value for inserted key found", (readValue != null));
-			assertTrue("read value is same as written value", Field.BYTEARRAY
-					.compare(value, readValue) == 0);
+			assertTrue("read value is same as written value",
+					Field.BYTEARRAY.compare(value, readValue) == 0);
 		}
 	}
 
