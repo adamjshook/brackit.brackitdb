@@ -153,7 +153,7 @@ public class BlinkIndexLogOperationHelper implements LogOperationHelper {
 		Field oldValueType = Field.fromId(buffer.get());
 		Field valueType = Field.fromId(buffer.get());
 		int oldHeight = buffer.get();
-		int height = buffer.getInt();
+		int height = buffer.get();
 		boolean oldUnique = (buffer.get() != 0);
 		boolean unique = (buffer.get() != 0);
 		boolean oldCompression = (buffer.get() != 0);
