@@ -100,6 +100,10 @@ public class AbstractBlinkIndexTest {
 		public int hashCode() {
 			return Field.UINTEGER.toString(key).hashCode();
 		}
+		
+		public String toString() {
+			return Field.UINTEGER.toString(key) + ":" + Field.UINTEGER.toString(value);
+		}
 	}
 
 	public AbstractBlinkIndexTest() {
