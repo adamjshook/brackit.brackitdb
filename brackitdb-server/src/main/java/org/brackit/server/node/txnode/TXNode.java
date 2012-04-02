@@ -1201,7 +1201,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 		}
 		nls.lockTreeUpdate(tx, newSiblingDeweyID, lockClass(tx, true), false);
 		nls.lockTreeExclusive(tx, newSiblingDeweyID, lockClass(tx, true), false);
-		E newSibling = getParent().insertRecord(newSiblingDeweyID, kind, name, value);
+		E newSibling = getParent().insertRecord(newSiblingDeweyID, kind, name,
+				value);
 
 		if (tx.getIsolationLevel().shortReadLocks()) {
 			nls.unlockNode(tx, deweyID);
@@ -1365,7 +1366,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 
 		nls.lockTreeUpdate(tx, newSiblingDeweyID, lockClass(tx, true), false);
 		nls.lockTreeExclusive(tx, newSiblingDeweyID, lockClass(tx, true), false);
-		E newSibling = getParent().insertRecord(newSiblingDeweyID, kind, name, value);
+		E newSibling = getParent().insertRecord(newSiblingDeweyID, kind, name,
+				value);
 
 		if (tx.getIsolationLevel().shortReadLocks()) {
 			nls.unlockNode(tx, deweyID);
@@ -1515,9 +1517,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 					"Cannot replace root node with node of type: %s", kind);
 		}
 
-		if ((kind == Kind.ELEMENT) && (kind != Kind.TEXT)
-				&& (kind != Kind.COMMENT)
-				&& (kind != Kind.PROCESSING_INSTRUCTION)) {
+		if ((kind == Kind.ATTRIBUTE) || (kind == Kind.DOCUMENT)
+				|| (kind == Kind.NAMESPACE)) {
 			throw new DocumentException(
 					"Cannot replace node with node of type: %s.", kind);
 		}
@@ -1549,9 +1550,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 					"Cannot replace root node with node of type: %s", type);
 		}
 
-		if ((type != Kind.ELEMENT.ID) && (type != Kind.TEXT.ID)
-				&& (type != Kind.COMMENT.ID)
-				&& (type != Kind.PROCESSING_INSTRUCTION.ID)) {
+		if ((type == Kind.ATTRIBUTE.ID) || (type == Kind.DOCUMENT.ID)
+				|| (type == Kind.NAMESPACE.ID)) {
 			throw new DocumentException(
 					"Cannot replace node with node of type: %s.", type);
 		}
@@ -1588,9 +1588,8 @@ public abstract class TXNode<E extends TXNode<E>> extends AbstractNode<E>
 					"Cannot replace root node with node of type: %s", kind);
 		}
 
-		if ((kind != Kind.ELEMENT) && (kind != Kind.TEXT)
-				&& (kind != Kind.COMMENT)
-				&& (kind != Kind.PROCESSING_INSTRUCTION)) {
+		if ((kind == Kind.ATTRIBUTE) || (kind == Kind.DOCUMENT)
+				|| (kind == Kind.NAMESPACE)) {
 			throw new DocumentException(
 					"Cannot replace node with node of type: %s.", kind);
 		}
