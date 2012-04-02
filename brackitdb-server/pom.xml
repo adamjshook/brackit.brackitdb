@@ -5,11 +5,9 @@
   <parent>
     <artifactId>brackitdb</artifactId>
     <groupId>org.brackit</groupId>
-    <version>0.1.0</version>
+    <version>0.1.2</version>
   </parent>
-  <groupId>org.brackit</groupId>
   <artifactId>brackitdb-server</artifactId>
-  <version>0.1.0</version>
   <name>Brackit Database Server</name>
   <url>http://brackit.org</url>
   <properties>
@@ -137,12 +135,12 @@
     <dependency>
     	<groupId>org.brackit</groupId>
     	<artifactId>brackit</artifactId>
-    	<version>0.1.0</version>
+    	<version>0.1.2</version>
     </dependency>
     <dependency>
     	<groupId>org.brackit</groupId>
     	<artifactId>brackit</artifactId>
-    	<version>0.1.0</version>
+    	<version>0.1.2</version>
     	<type>test-jar</type>
     	<scope>test</scope>
     </dependency>

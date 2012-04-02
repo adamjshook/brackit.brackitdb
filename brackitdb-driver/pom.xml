@@ -5,9 +5,8 @@
   <parent>
     <artifactId>brackitdb</artifactId>
     <groupId>org.brackit</groupId>
-    <version>0.1.0</version>
+    <version>0.1.2</version>
   </parent>
-  <groupId>org.brackit</groupId>
   <artifactId>brackitdb-driver</artifactId>
   <version>0.0.2</version>
   <name>Brackit Database Driver</name>
