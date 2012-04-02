@@ -318,7 +318,7 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 		// getKeyType().valueToString(getKey())));
 		// throw new RuntimeException();
 		// }
-		//		
+		//
 		// if ((currentPos > 0) && (getKeyType().compare(page.getKey(currentPos
 		// - 1), key) > 0))
 		// {
@@ -373,7 +373,7 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 	}
 
 	@Override
-	public void setValue(byte[] value, boolean isStructureModification,
+	public boolean setValue(byte[] value, boolean isStructureModification,
 			boolean logged, long undoNextLSN) throws IndexOperationException {
 		LogOperation operation = null;
 		byte type = (isStructureModification) ? BlinkIndexLogOperation.SMO_UPDATE
@@ -394,7 +394,7 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 		}
 
 		if (!page.setValue(currentPos, value)) {
-			throw new RuntimeException();
+			return false;
 		}
 
 		if (page.checkFlag(currentPos, RecordFlag.EXTERNALIZED)) {
@@ -412,6 +412,7 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 		} else {
 			page.getHandle().setAssignedTo(transaction);
 		}
+		return true;
 	}
 
 	@Override
@@ -649,8 +650,8 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 
 		if (BufferedPage.DEVEL_MODE && log.isTraceEnabled()) {
 			log.trace(String.format("Searching for %s (%s, %s) in page %s.",
-					searchMode, keyType.toString(searchKey), valueType
-							.toString(searchValue), getPageID()));
+					searchMode, keyType.toString(searchKey),
+					valueType.toString(searchValue), getPageID()));
 		}
 
 		if (searchMode.isRandom()) {
@@ -673,8 +674,8 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 				log.trace(String.format("Initial binary search for"
 						+ " %s (%s, %s) in page %s "
 						+ "returned slot %s of %s : (%s, %s).", searchMode,
-						keyType.toString(searchKey), valueType
-								.toString(searchValue), getPageID(), slotNo,
+						keyType.toString(searchKey),
+						valueType.toString(searchValue), getPageID(), slotNo,
 						maxSlotNo, keyType.toString(page.getKey(slotNo)),
 						valueType.toString(getValue(slotNo))));
 			}
@@ -703,8 +704,8 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 					// Perform a second level search to find the smallest entry
 					// with the same key in the page
 					int minSlotNoWithSameKey = findPos(
-							SearchMode.GREATER_OR_EQUAL, keyType, 0, page
-									.getKey(slotNo), minSlotNo, slotNo);
+							SearchMode.GREATER_OR_EQUAL, keyType, 0,
+							page.getKey(slotNo), minSlotNo, slotNo);
 
 					if (searchMode.isInside(valueType,
 							getValue(minSlotNoWithSameKey), searchValue)) {
@@ -748,8 +749,8 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 					// we are at the smallest entry with the key inside and its
 					// value fulfills the search criteria
 					result = 0;
-				} else if (SearchMode.GREATER.isInside(keyType, page
-						.getKey(slotNo), searchKey)) {
+				} else if (SearchMode.GREATER.isInside(keyType,
+						page.getKey(slotNo), searchKey)) {
 					// we are at the smallest entry with the key inside and its
 					// value fulfills the search criteria
 					result = 0;
@@ -759,8 +760,8 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 					// Perform a second level search to find the greatest entry
 					// with this key in the page
 					int maxSlotNoWithSameKey = findPos(
-							SearchMode.LESS_OR_EQUAL, keyType, 0, page
-									.getKey(slotNo), slotNo, maxSlotNo);
+							SearchMode.LESS_OR_EQUAL, keyType, 0,
+							page.getKey(slotNo), slotNo, maxSlotNo);
 
 					if (searchMode.isInside(valueType,
 							getValue(maxSlotNoWithSameKey), searchValue)) {
@@ -788,11 +789,11 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 				if (BufferedPage.DEVEL_MODE && log.isTraceEnabled()) {
 					log.trace(String.format("Search for %s (%s, %s)"
 							+ " in page %s returns %s " + "at %s->(%s, %s).",
-							searchMode, keyType.toString(searchKey), valueType
-									.toString(searchValue), getPageID(),
-							result, slotNo, keyType.toString(page
-									.getKey(slotNo)), valueType
-									.toString(getValue(slotNo))));
+							searchMode, keyType.toString(searchKey),
+							valueType.toString(searchValue), getPageID(),
+							result, slotNo,
+							keyType.toString(page.getKey(slotNo)),
+							valueType.toString(getValue(slotNo))));
 				}
 
 				currentPos = slotNo;
@@ -820,8 +821,8 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 			if (BufferedPage.DEVEL_MODE && log.isTraceEnabled()) {
 				log.trace(String.format("Determining before page "
 						+ "id of emptied page search "
-						+ "for %s %s in page %s.", searchMode, keyType
-						.toString(searchKey), getPageID()));
+						+ "for %s %s in page %s.", searchMode,
+						keyType.toString(searchKey), getPageID()));
 			}
 			return getLowPageID();
 		}
@@ -930,9 +931,9 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 			isInside = searchMode.isInside(type, compareValue, searchValue);
 
 			if (BufferedPage.DEVEL_MODE && log.isTraceEnabled()) {
-				log.trace(String.format("%s is indside %s %s : %s", type
-						.toString(compareValue), searchMode, type
-						.toString(searchValue), isInside));
+				log.trace(String.format("%s is indside %s %s : %s",
+						type.toString(compareValue), searchMode,
+						type.toString(searchValue), isInside));
 			}
 
 			if (findGreatestInside) {
@@ -958,30 +959,26 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 		StringBuffer out = new StringBuffer();
 		Field keyType = getKeyType();
 		Field valueType = getValueType();
-		out
-				.append("\n########################################################\n");
+		out.append("\n########################################################\n");
 		out.append(String.format("Dumping content of \"%s\":\n", pageTitle));
 		PageID pageNumber = page.getPageID();
 		int pageType = getPageType();
 		long LSN = getLSN();
 		int freeSpace = getFreeSpace();
 		int recordCount = page.getRecordCount();
-		out.append(String.format("Number=%s (page=%s)\n", pageNumber, page
-				.getHandle()));
-		out
-				.append(String
-						.format(
-								"Type=%s RootPageNo=%s Height=%s LastInLevel=%s KeyType=%s ValueType=%s\n",
-								pageType, getRootPageID(), getHeight(),
-								isLastInLevel(), getKeyType(), getValueType()));
+		out.append(String.format("Number=%s (page=%s)\n", pageNumber,
+				page.getHandle()));
+		out.append(String
+				.format("Type=%s RootPageNo=%s Height=%s LastInLevel=%s KeyType=%s ValueType=%s\n",
+						pageType, getRootPageID(), getHeight(),
+						isLastInLevel(), getKeyType(), getValueType()));
 		out.append(String.format("LSN=%s\n", LSN));
 		out.append(String.format("FreeSpace=%s\n", freeSpace));
 		out.append(String.format("Entry Count=%s\n", recordCount));
 
 		try {
 			out.append(String.format("Low Page=>%s\n", getLowPageID()));
-			out
-					.append("--------------------------------------------------------\n");
+			out.append("--------------------------------------------------------\n");
 
 			for (int i = 0; i < recordCount; i++) {
 				if ((i == recordCount - 1) && (!isLastInLevel())) {
@@ -1021,8 +1018,7 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 			throw e;
 		}
 
-		out
-				.append("--------------------------------------------------------\n");
+		out.append("--------------------------------------------------------\n");
 		out.append("########################################################");
 		return out.toString();
 	}

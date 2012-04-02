@@ -93,7 +93,7 @@ public class BlinkTree extends PageContextFactory {
 					return leaf;
 				} else {
 					// move to high key
-					leaf.moveNext(); 
+					leaf.moveNext();
 					// reached end of current page -> continue in next page
 					PageContext next = getPage(tx, leaf.getValueAsPageID(),
 							forUpdate, false);
@@ -156,8 +156,8 @@ public class BlinkTree extends PageContextFactory {
 					if (log.isTraceEnabled()) {
 						log.trace(String.format(
 								"Reached leaf page %s searching for %s %s.",
-								page, searchMode, page.getKeyType().toString(
-										key)));
+								page, searchMode,
+								page.getKeyType().toString(key)));
 						log.trace(page.dump("leaf page"));
 					}
 
@@ -232,8 +232,8 @@ public class BlinkTree extends PageContextFactory {
 						updateLockEntry(tx, rootPageID, page, page.getKey(),
 								page.getValue());
 					} else {
-						readLockEntry(tx, rootPageID, page, page.getKey(), page
-								.getValue());
+						readLockEntry(tx, rootPageID, page, page.getKey(),
+								page.getValue());
 					}
 				}
 				return page;
@@ -250,8 +250,8 @@ public class BlinkTree extends PageContextFactory {
 						updateLockEntry(tx, rootPageID, page, page.getKey(),
 								page.getValue());
 					} else {
-						readLockEntry(tx, rootPageID, page, page.getKey(), page
-								.getValue());
+						readLockEntry(tx, rootPageID, page, page.getKey(),
+								page.getValue());
 					}
 				}
 
@@ -260,12 +260,12 @@ public class BlinkTree extends PageContextFactory {
 
 			if (log.isTraceEnabled()) {
 				log.trace(String.format("Reached end of current page %s. "
-						+ "Attempting to proceed to next page %s.", page, page
-						.getValueAsPageID()));
+						+ "Attempting to proceed to next page %s.", page,
+						page.getValueAsPageID()));
 			}
 
-			PageContext next = getPage(tx, page.getValueAsPageID(), openMode
-					.forUpdate(), false);
+			PageContext next = getPage(tx, page.getValueAsPageID(),
+					openMode.forUpdate(), false);
 
 			if (log.isTraceEnabled()) {
 				log.trace(String.format("Switching to next page %s.", next));
@@ -281,11 +281,11 @@ public class BlinkTree extends PageContextFactory {
 			// lock key or EOF
 			if (openMode != OpenMode.LOAD) {
 				if (openMode.forUpdate()) {
-					updateLockEntry(tx, rootPageID, page, page.getKey(), page
-							.getValue());
+					updateLockEntry(tx, rootPageID, page, page.getKey(),
+							page.getValue());
 				} else {
-					readLockEntry(tx, rootPageID, page, page.getKey(), page
-							.getValue());
+					readLockEntry(tx, rootPageID, page, page.getKey(),
+							page.getValue());
 				}
 			}
 
@@ -397,8 +397,8 @@ public class BlinkTree extends PageContextFactory {
 
 		if (hintPageID != null) {
 			try {
-				PageContext hintPage = getPage(tx, hintPageID, openMode
-						.forUpdate(), openMode.forUpdate());
+				PageContext hintPage = getPage(tx, hintPageID,
+						openMode.forUpdate(), openMode.forUpdate());
 
 				if ((hintPage.getLSN() != LSN)
 						|| (!hintPage.getRootPageID().equals(rootPageID))) {
@@ -418,13 +418,11 @@ public class BlinkTree extends PageContextFactory {
 							|| (hintPage.getPosition() == hintPage
 									.getEntryCount())) {
 						if (log.isTraceEnabled()) {
-							log
-									.trace(String
-											.format(
-													"Page %s can not be used"
-															+ " for direct access because"
-															+ " the search key is not bound to this page.",
-													hintPageID));
+							log.trace(String
+									.format("Page %s can not be used"
+											+ " for direct access because"
+											+ " the search key is not bound to this page.",
+											hintPageID));
 						}
 
 						ThreadCB.get().countPageHintMiss();
@@ -470,9 +468,9 @@ public class BlinkTree extends PageContextFactory {
 				Field keyType = page.getKeyType();
 				Field valueType = page.getValueType();
 				log.trace(page.dump(String.format(
-						"Page %s for insert of (%s, %s) at %s", page, keyType
-								.toString(insertKey), valueType
-								.toString(insertValue), page.getPosition())));
+						"Page %s for insert of (%s, %s) at %s", page,
+						keyType.toString(insertKey),
+						valueType.toString(insertValue), page.getPosition())));
 			}
 
 			/*
@@ -485,13 +483,10 @@ public class BlinkTree extends PageContextFactory {
 				if (log.isTraceEnabled()) {
 					Field keyType = page.getKeyType();
 					Field valueType = page.getValueType();
-					log
-							.trace(String
-									.format(
-											"Splitting page %s for insert of (%s, %s) at %s",
-											page, keyType.toString(insertKey),
-											valueType.toString(insertValue),
-											page.getPosition()));
+					log.trace(String.format(
+							"Splitting page %s for insert of (%s, %s) at %s",
+							page, keyType.toString(insertKey),
+							valueType.toString(insertValue), page.getPosition()));
 				}
 
 				// Split and propagate if necessary.
@@ -506,16 +501,10 @@ public class BlinkTree extends PageContextFactory {
 				if (log.isTraceEnabled()) {
 					Field keyType = page.getKeyType();
 					Field valueType = page.getValueType();
-					log
-							.trace(page
-									.dump(String
-											.format(
-													"Splitted page %s before insert of (%s, %s) at %s",
-													page,
-													keyType.toString(insertKey),
-													valueType
-															.toString(insertValue),
-													page.getPosition())));
+					log.trace(page.dump(String.format(
+							"Splitted page %s before insert of (%s, %s) at %s",
+							page, keyType.toString(insertKey),
+							valueType.toString(insertValue), page.getPosition())));
 				}
 			}
 
@@ -537,8 +526,82 @@ public class BlinkTree extends PageContextFactory {
 	public PageContext updateInLeaf(Tx tx, PageID rootPageID, PageContext leaf,
 			byte[] key, byte[] newValue, byte[] oldValue, long undoNextLSN)
 			throws IndexAccessException {
-		leaf.cleanup();
-		throw new IndexAccessException("Not implemented yet");
+		leaf = assureLeafUpdate(tx, rootPageID, leaf, key, newValue, oldValue,
+				true);
+		return updateInPage(tx, rootPageID, leaf, key, newValue, oldValue,
+				undoNextLSN);
+	}
+
+	public PageContext updateInPage(Tx tx, PageID rootPageID, PageContext page,
+			byte[] key, byte[] newValue, byte[] oldValue, long undoNextLSN)
+			throws IndexAccessException {
+		try {
+			if (log.isTraceEnabled()) {
+				Field keyType = page.getKeyType();
+				Field valueType = page.getValueType();
+				log.trace(page.dump(String.format(
+						"Page %s for update of (%s, %s) with %s at %s", page,
+						keyType.toString(key), valueType.toString(oldValue),
+						valueType.toString(newValue), page.getPosition())));
+			}
+
+			/*
+			 * Optimistically try to update record in page saving the
+			 * computation of required space. If this fails we will have to
+			 * perform a split
+			 */
+			while (!page.setValue(newValue, false, true, undoNextLSN)) {
+				if (log.isTraceEnabled()) {
+					Field keyType = page.getKeyType();
+					Field valueType = page.getValueType();
+					log.trace(String
+							.format("Splitting page %s for update of (%s, %s) with %s at %s",
+									page, keyType.toString(key),
+									valueType.toString(oldValue),
+									valueType.toString(newValue),
+									page.getPosition()));
+				}
+
+				// Split and propagate if necessary.
+				if (page.getPageID().equals(rootPageID)) {
+					page = splitRoot(tx, rootPageID, page, key, oldValue,
+							false, true);
+				} else {
+					page = splitNonRoot(tx, rootPageID, page, key, oldValue,
+							false, true);
+				}
+
+				if (log.isTraceEnabled()) {
+					Field keyType = page.getKeyType();
+					Field valueType = page.getValueType();
+					log.trace(page.dump(String
+							.format("Splitted page %s before update of (%s, %s) with %s at %s",
+									page, keyType.toString(key),
+									valueType.toString(oldValue),
+									valueType.toString(newValue),
+									page.getPosition())));
+				}
+			}
+
+			if (log.isTraceEnabled()) {
+				log.trace(page.dump("Page after update"));
+			}
+
+			int insertType = (page.getPageType() == PageType.LEAF) ? TxStats.BTREE_INSERTS
+					: TxStats.BTREE_BRANCH_INSERTS;
+			tx.getStatistics().increment(insertType);
+
+			return page;
+		} catch (IndexOperationException e) {
+			page.cleanup();
+			throw new IndexAccessException(e, "Could not log record insertion.");
+		}
+	}
+
+	protected PageContext assureLeafUpdate(Tx tx, PageID rootPageID,
+			PageContext leaf, byte[] key, byte[] newValue, byte[] oldValue,
+			boolean logged) throws IndexAccessException {
+		return leaf;
 	}
 
 	protected PageContext splitNonRoot(Tx tx, PageID rootPageID,
@@ -581,8 +644,8 @@ public class BlinkTree extends PageContextFactory {
 			Field keyType = left.getKeyType();
 			Field valueType = left.getValueType();
 			right = allocate(tx, -1, left.getUnitID(), leftPageType,
-					rootPageID, keyType, valueType, left.getHeight(), left
-							.isUnique(), left.isCompressed(), logged);
+					rootPageID, keyType, valueType, left.getHeight(),
+					left.isUnique(), left.isCompressed(), logged);
 			rightPageID = right.getPageID();
 
 			if (!leafSplit) {
@@ -698,28 +761,30 @@ public class BlinkTree extends PageContextFactory {
 		byte[] value = rightPageID.getBytes();
 		try {
 			// After page deletions it may happen that the separator pointing
-			// to the (unsplitted) left page is greater or equal the new 
+			// to the (unsplitted) left page is greater or equal the new
 			// separator. In this case, the old separator must be updated to
-			// point to the new right page and the new separator must be pointing
+			// point to the new right page and the new separator must be
+			// pointing
 			// to the left page.
-			if ((!parent.isAfterLast()) && (parent.getValueAsPageID().equals(leftPageID))) {
+			if ((!parent.isAfterLast())
+					&& (parent.getValueAsPageID().equals(leftPageID))) {
 				parent.setPageIDAsValue(rightPageID, logged, -1);
 				value = leftPageID.getBytes();
 			}
 		} catch (IndexOperationException e) {
 			parent.cleanup();
 			throw new IndexAccessException(e);
-		}		
-		
+		}
+
 		if (log.isTraceEnabled()) {
 			Field keyType = parent.getKeyType();
 			log.trace(String.format(
-					"Insert separator (%s, %s) in parent page %s.", keyType
-							.toString(separatorKey), rightPageID, parent));
+					"Insert separator (%s, %s) in parent page %s.",
+					keyType.toString(separatorKey), rightPageID, parent));
 		}
 
-		parent = insertIntoPage(tx, rootPageID, parent, separatorKey,
-				value, true, compact, logged, -1);
+		parent = insertIntoPage(tx, rootPageID, parent, separatorKey, value,
+				true, compact, logged, -1);
 		parent.cleanup();
 	}
 
@@ -733,13 +798,13 @@ public class BlinkTree extends PageContextFactory {
 
 		if (entryCount < 3) {
 			log.error(String.format("Cannot split page %s because it "
-					+ "contains less than three records.", splitPage
-					.getPageID()));
+					+ "contains less than three records.",
+					splitPage.getPageID()));
 			log.error(splitPage.dump("Page to split"));
 			throw new IndexOperationException(
 					"Cannot split page %s because it "
-							+ "contains less than three records.", splitPage
-							.getPageID());
+							+ "contains less than three records.",
+					splitPage.getPageID());
 		}
 
 		if (compact) {
@@ -774,11 +839,11 @@ public class BlinkTree extends PageContextFactory {
 			Field keyType = root.getKeyType();
 			Field valueType = root.getValueType();
 			left = allocate(tx, -1, root.getUnitID(), rootPageType, rootPageID,
-					keyType, valueType, root.getHeight(), root.isUnique(), root
-							.isCompressed(), logged);
+					keyType, valueType, root.getHeight(), root.isUnique(),
+					root.isCompressed(), logged);
 			right = allocate(tx, -1, root.getUnitID(), rootPageType,
-					rootPageID, keyType, valueType, root.getHeight(), root
-							.isUnique(), root.isCompressed(), logged);
+					rootPageID, keyType, valueType, root.getHeight(),
+					root.isUnique(), root.isCompressed(), logged);
 
 			// find out where to split
 			int insertPosition = root.getPosition();
@@ -827,8 +892,8 @@ public class BlinkTree extends PageContextFactory {
 
 			// reformat root page
 			root.format(root.getUnitID(), PageType.BRANCH, rootPageID, keyType,
-					Field.PAGEID, root.getHeight() + 1, root.isUnique(), root
-							.isCompressed(), logged, -1);
+					Field.PAGEID, root.getHeight() + 1, root.isUnique(),
+					root.isCompressed(), logged, -1);
 			root.setLastInLevel(true);
 			// reposition context in converted root page
 			root.moveFirst();
@@ -1013,12 +1078,12 @@ public class BlinkTree extends PageContextFactory {
 
 			while (true) {
 				// try to locate separator in this page
-				int search = page
-						.search(SearchMode.GREATER_OR_EQUAL, separatorKey, null);
+				int search = page.search(SearchMode.GREATER_OR_EQUAL,
+						separatorKey, null);
 				if (search <= 0) {
-					// The context is positioned at an entry that is 
+					// The context is positioned at an entry that is
 					// greater or equal than the separator. The parent page
-					// may be left of this entry (e.g. 
+					// may be left of this entry (e.g.
 
 					// inspect previous pointer
 					PageID p;
@@ -1032,7 +1097,8 @@ public class BlinkTree extends PageContextFactory {
 
 					if (p.equals(targetPageID)) {
 						parentPage = page;
-					} else if ((search == 0) && (page.getValueAsPageID().equals(targetPageID))) {
+					} else if ((search == 0)
+							&& (page.getValueAsPageID().equals(targetPageID))) {
 						parentPage = page;
 					}
 				} else if (!page.isAfterLast()) {
@@ -1086,8 +1152,8 @@ public class BlinkTree extends PageContextFactory {
 				Field keyType = page.getKeyType();
 				Field valueType = page.getValueType();
 				log.trace(String.format("Deleting (%s, %s) from page %s.",
-						keyType.toString(deleteKey), valueType.toString(page
-								.getValue()), page.getPageID()));
+						keyType.toString(deleteKey),
+						valueType.toString(page.getValue()), page.getPageID()));
 			}
 
 			page.delete(isStructureModification, logged, undoNextLSN);
@@ -1137,8 +1203,8 @@ public class BlinkTree extends PageContextFactory {
 				// remove separator from parent (may propagate up the tree)
 				// note, we may keep the page X-latched because no split from
 				// lower levels can block
-				parent = deleteSeparator(tx, rootPageID, page.getPageID(), page
-						.getHeight(), highKey, logged);
+				parent = deleteSeparator(tx, rootPageID, page.getPageID(),
+						page.getHeight(), highKey, logged);
 			} catch (IndexAccessException e) {
 				page.cleanup();
 				throw e;
@@ -1158,7 +1224,8 @@ public class BlinkTree extends PageContextFactory {
 				// collapse root if right page is not splitted concurrently
 				// separator is missing
 				if (next.isLastInLevel()) {
-					PageContext root = collapseRoot(tx, parent, page, next, logged);
+					PageContext root = collapseRoot(tx, parent, page, next,
+							logged);
 					// write CLR to skip tree reorganization during undo
 					logDummyCLR(tx, rememberedLSN);
 					return root;
@@ -1179,9 +1246,9 @@ public class BlinkTree extends PageContextFactory {
 			// the log
 			page.setPrevPageID(null, logged, -1);
 			page.setLowPageID(null, logged, -1);
-			page.format(page.getUnitID(), page.getPageType(), rootPageID, page
-					.getKeyType(), page.getValueType(), page.getHeight(), page
-					.isUnique(), page.isCompressed(), logged, -1);
+			page.format(page.getUnitID(), page.getPageType(), rootPageID,
+					page.getKeyType(), page.getValueType(), page.getHeight(),
+					page.isUnique(), page.isCompressed(), logged, -1);
 			page.deletePage();
 			page = null;
 
@@ -1321,9 +1388,9 @@ public class BlinkTree extends PageContextFactory {
 				// switch root page type and update pointers
 				root.setLowPageID(null, logged, -1);
 				root.format(left.getUnitID(), PageType.BRANCH,
-						root.getPageID(), left.getKeyType(), left
-								.getValueType(), left.getHeight(), left
-								.isUnique(), left.isCompressed(), logged, -1);
+						root.getPageID(), left.getKeyType(),
+						left.getValueType(), left.getHeight(), left.isUnique(),
+						left.isCompressed(), logged, -1);
 				root.setLastInLevel(true);
 				root.moveFirst();
 
@@ -1345,21 +1412,21 @@ public class BlinkTree extends PageContextFactory {
 				left.setPrevPageID(null, logged, -1);
 				right.setLowPageID(null, logged, -1);
 				left.setLowPageID(null, logged, -1);
-				left.format(left.getUnitID(), PageType.BRANCH, left
-						.getRootPageID(), left.getKeyType(), left
-						.getValueType(), left.getHeight(), left.isUnique(),
+				left.format(left.getUnitID(), PageType.BRANCH,
+						left.getRootPageID(), left.getKeyType(),
+						left.getValueType(), left.getHeight(), left.isUnique(),
 						left.isCompressed(), logged, -1);
-				right.format(right.getUnitID(), PageType.BRANCH, left
-						.getRootPageID(), right.getKeyType(), right
-						.getValueType(), right.getHeight(), right.isUnique(),
-						left.isCompressed(), logged, -1);
+				right.format(right.getUnitID(), PageType.BRANCH,
+						left.getRootPageID(), right.getKeyType(),
+						right.getValueType(), right.getHeight(),
+						right.isUnique(), left.isCompressed(), logged, -1);
 			} else {
 				// switch root page type and update pointers
 				root.setLowPageID(null, logged, -1);
 				root.format(left.getUnitID(), PageType.LEAF, root.getPageID(),
-						left.getKeyType(), left.getValueType(), left
-								.getHeight(), left.isUnique(), left
-								.isCompressed(), logged, -1);
+						left.getKeyType(), left.getValueType(),
+						left.getHeight(), left.isUnique(), left.isCompressed(),
+						logged, -1);
 				root.setLastInLevel(true);
 				root.moveFirst();
 
@@ -1377,14 +1444,14 @@ public class BlinkTree extends PageContextFactory {
 				// in the log
 				right.setPrevPageID(null, logged, -1);
 				left.setPrevPageID(null, logged, -1);
-				left.format(left.getUnitID(), PageType.LEAF, left
-						.getRootPageID(), left.getKeyType(), left
-						.getValueType(), left.getHeight(), left.isUnique(),
+				left.format(left.getUnitID(), PageType.LEAF,
+						left.getRootPageID(), left.getKeyType(),
+						left.getValueType(), left.getHeight(), left.isUnique(),
 						left.isCompressed(), logged, -1);
-				right.format(right.getUnitID(), PageType.LEAF, left
-						.getRootPageID(), right.getKeyType(), right
-						.getValueType(), right.getHeight(), right.isUnique(),
-						right.isCompressed(), logged, -1);
+				right.format(right.getUnitID(), PageType.LEAF,
+						left.getRootPageID(), right.getKeyType(),
+						right.getValueType(), right.getHeight(),
+						right.isUnique(), right.isCompressed(), logged, -1);
 			}
 
 			if (log.isTraceEnabled()) {

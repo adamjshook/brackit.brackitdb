@@ -92,7 +92,7 @@ public interface PageContext extends Latch {
 
 	public PageID getValueAsPageID() throws IndexOperationException;
 
-	public void setValue(byte[] value, boolean isStructureModification,
+	public boolean setValue(byte[] value, boolean isStructureModification,
 			boolean logged, long undoNextLSN) throws IndexOperationException;
 
 	public void setPageIDAsValue(PageID pageID, boolean logged, long undoNextLSN)
