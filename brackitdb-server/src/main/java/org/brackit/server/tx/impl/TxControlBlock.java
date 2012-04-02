@@ -139,5 +139,6 @@ class TxControlBlock {
 		if (!assignedThreads.remove(me)) {
 			throw new TxException("Did not join %s.", toString());
 		}
+		notifyAll();
 	}
 }
