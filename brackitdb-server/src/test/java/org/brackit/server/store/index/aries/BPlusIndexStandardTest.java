@@ -43,7 +43,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.SysMockup;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.Handle;
@@ -58,6 +57,7 @@ import org.brackit.server.store.index.aries.page.PageContext;
 import org.brackit.server.store.index.aries.page.PageContextFactory;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.util.Calc;
+import org.brackit.xquery.util.log.Logger;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -727,7 +727,10 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE / 10, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		for (Entry entry : entries) {
-			for (Entry insertEntry : entries) {
+			// check insertion with a smaller key, the same key and a larger key
+			Entry[] checkWith = new Entry[] { entries.getFirst(), entry,
+					entries.getLast() };
+			for (Entry insertEntry : checkWith) {
 				IndexIterator it = index.open(t2, uniqueRootPageID,
 						SearchMode.GREATER_OR_EQUAL, entry.key, null,
 						OpenMode.UPDATE);
@@ -755,7 +758,10 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 		loadIndex(t2, entries, nonuniqueRootPageID);
 		int i = 0;
 		for (Entry entry : entries) {
-			for (Entry insertEntry : entries) {
+			// check insertion with a smaller key, the same key and a larger key
+			Entry[] checkWith = new Entry[] { entries.getFirst(), entry,
+					entries.getLast() };
+			for (Entry insertEntry : checkWith) {
 				IndexIterator it = index.open(t2, nonuniqueRootPageID,
 						SearchMode.GREATER_OR_EQUAL, entry.key, null,
 						OpenMode.UPDATE);
