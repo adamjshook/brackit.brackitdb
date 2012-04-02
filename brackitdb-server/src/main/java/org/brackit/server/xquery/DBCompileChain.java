@@ -27,19 +27,23 @@
  */
 package org.brackit.server.xquery;
 
-import static org.brackit.server.xquery.function.bdb.CreatePathIndex.*;
-import static org.brackit.server.xquery.function.bdb.CreateNameIndex.*;
-import static org.brackit.server.xquery.function.bdb.CreateCASIndex.*;
+import static org.brackit.server.xquery.function.bdb.CreateCASIndex.CREATE_CAS_INDEX;
+import static org.brackit.server.xquery.function.bdb.CreateNameIndex.CREATE_NAME_INDEX;
+import static org.brackit.server.xquery.function.bdb.CreatePathIndex.CREATE_PATH_INDEX;
+
+import java.util.Map;
 
 import org.brackit.server.metadata.manager.MetaDataMgr;
 import org.brackit.server.tx.Tx;
-import org.brackit.server.xquery.compiler.DBCompiler;
+import org.brackit.server.xquery.compiler.optimizer.DBOptimizer;
+import org.brackit.server.xquery.compiler.translator.DBTranslator;
 import org.brackit.server.xquery.function.bdb.CreateCASIndex;
 import org.brackit.server.xquery.function.bdb.CreateNameIndex;
 import org.brackit.server.xquery.function.bdb.CreatePathIndex;
 import org.brackit.server.xquery.function.bdb.SetIsolation;
 import org.brackit.server.xquery.function.bdb.SetLockdepth;
-import org.brackit.server.xquery.optimizer.DBOptimizer;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.compiler.CompileChain;
 import org.brackit.xquery.compiler.optimizer.Optimizer;
 import org.brackit.xquery.compiler.translator.Translator;
@@ -64,36 +68,36 @@ public class DBCompileChain extends CompileChain {
 		Namespaces.predefine(BDB_PREFIX, BDB_NSURI);
 		Functions.predefine(new SetIsolation());
 		Functions.predefine(new SetLockdepth());
-		
-		Functions.predefine(new CreatePathIndex(CREATE_PATH_INDEX, 
-				new Signature(SequenceType.NODE, 
-					new SequenceType(AtomicType.STR, Cardinality.One),
-					new SequenceType(AtomicType.STR, Cardinality.ZeroOrMany))));
-		Functions.predefine(new CreatePathIndex(CREATE_PATH_INDEX, 
-				new Signature(SequenceType.NODE, 
-					new SequenceType(AtomicType.STR, Cardinality.One))));
-		
-		Functions.predefine(new CreateNameIndex(CREATE_NAME_INDEX, 
-				new Signature(SequenceType.NODE, 
-					new SequenceType(AtomicType.STR, Cardinality.One),
-					new SequenceType(AtomicType.QNM, Cardinality.ZeroOrMany))));
-		Functions.predefine(new CreateNameIndex(CREATE_NAME_INDEX, 
-				new Signature(SequenceType.NODE, 
-					new SequenceType(AtomicType.STR, Cardinality.One))));
-		
-		Functions.predefine(new CreateCASIndex(CREATE_CAS_INDEX, 
-				new Signature(SequenceType.NODE, 
-					new SequenceType(AtomicType.STR, Cardinality.One),
-					new SequenceType(AtomicType.STR, Cardinality.ZeroOrOne),
-					new SequenceType(AtomicType.STR, Cardinality.ZeroOrMany))));
-		Functions.predefine(new CreateCASIndex(CREATE_CAS_INDEX, 
-				new Signature(SequenceType.NODE, 
-					new SequenceType(AtomicType.STR, Cardinality.One),
-					new SequenceType(AtomicType.STR, Cardinality.ZeroOrOne))));
-		Functions.predefine(new CreateCASIndex(CREATE_CAS_INDEX, 
-				new Signature(SequenceType.NODE, 
-					new SequenceType(AtomicType.STR, Cardinality.One))));
-		
+
+		Functions.predefine(new CreatePathIndex(CREATE_PATH_INDEX,
+				new Signature(SequenceType.NODE, new SequenceType(
+						AtomicType.STR, Cardinality.One), new SequenceType(
+						AtomicType.STR, Cardinality.ZeroOrMany))));
+		Functions.predefine(new CreatePathIndex(CREATE_PATH_INDEX,
+				new Signature(SequenceType.NODE, new SequenceType(
+						AtomicType.STR, Cardinality.One))));
+
+		Functions.predefine(new CreateNameIndex(CREATE_NAME_INDEX,
+				new Signature(SequenceType.NODE, new SequenceType(
+						AtomicType.STR, Cardinality.One), new SequenceType(
+						AtomicType.QNM, Cardinality.ZeroOrMany))));
+		Functions.predefine(new CreateNameIndex(CREATE_NAME_INDEX,
+				new Signature(SequenceType.NODE, new SequenceType(
+						AtomicType.STR, Cardinality.One))));
+
+		Functions.predefine(new CreateCASIndex(CREATE_CAS_INDEX, new Signature(
+				SequenceType.NODE, new SequenceType(AtomicType.STR,
+						Cardinality.One), new SequenceType(AtomicType.STR,
+						Cardinality.ZeroOrOne), new SequenceType(
+						AtomicType.STR, Cardinality.ZeroOrMany))));
+		Functions.predefine(new CreateCASIndex(CREATE_CAS_INDEX, new Signature(
+				SequenceType.NODE, new SequenceType(AtomicType.STR,
+						Cardinality.One), new SequenceType(AtomicType.STR,
+						Cardinality.ZeroOrOne))));
+		Functions.predefine(new CreateCASIndex(CREATE_CAS_INDEX, new Signature(
+				SequenceType.NODE, new SequenceType(AtomicType.STR,
+						Cardinality.One))));
+
 	}
 
 	private final MetaDataMgr mdm;
@@ -106,12 +110,12 @@ public class DBCompileChain extends CompileChain {
 	}
 
 	@Override
-	protected Translator getTranslator() {
-		return new DBCompiler();
+	protected Translator getTranslator(Map<QNm, Str> options) {
+		return new DBTranslator(options);
 	}
 
 	@Override
-	protected Optimizer getOptimizer() {
-		return new DBOptimizer(mdm, tx);
+	protected Optimizer getOptimizer(Map<QNm, Str> options) {
+		return new DBOptimizer(options, mdm, tx);
 	}
 }

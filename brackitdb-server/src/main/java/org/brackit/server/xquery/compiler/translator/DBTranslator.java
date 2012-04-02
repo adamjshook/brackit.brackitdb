@@ -25,41 +25,34 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery.optimizer;
+package org.brackit.server.xquery.compiler.translator;
 
-import org.brackit.server.metadata.manager.MetaDataMgr;
-import org.brackit.server.tx.Tx;
+import java.util.Map;
+
 import org.brackit.xquery.QueryException;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.compiler.AST;
-import org.brackit.xquery.compiler.optimizer.DefaultOptimizer;
-import org.brackit.xquery.compiler.optimizer.Stage;
-import org.brackit.xquery.module.StaticContext;
+import org.brackit.xquery.compiler.translator.TopDownTranslator;
+import org.brackit.xquery.xdm.Expr;
 
 /**
  * @author Sebastian Baechle
  *
  */
-public class DBOptimizer extends DefaultOptimizer {
+public class DBTranslator extends TopDownTranslator {
 
-	public DBOptimizer(MetaDataMgr mdm, Tx tx) {
-		super();
-		// perform index matching as last step
-		getStages().add(new IndexMatching(mdm, tx));
+	
+	public DBTranslator(Map<QNm, Str> options) {
+		super(options);
 	}
 
-	private static class IndexMatching implements Stage {
-		private final MetaDataMgr mdm;
-		private final Tx tx;
-
-		public IndexMatching(MetaDataMgr mdm, Tx tx) {
-			this.mdm = mdm;
-			this.tx = tx;
-		}
-
-		@Override
-		public AST rewrite(StaticContext sctx, AST ast) throws QueryException {
-			// TODO add rules for index resolution here
-			return ast;
-		}		
-	}
+	protected Expr anyExpr(AST node) throws QueryException {
+		// TODO check if node is db-specific
+		// Example:
+		// if (node.getType() == IndexExpr) {
+		//	return new indexExpr(node);
+		//}
+		return super.anyExpr(node);
+	}	
 }
