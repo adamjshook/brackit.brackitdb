@@ -162,13 +162,13 @@ public class SessionMgrTest {
 					}
 				}
 
-				System.out.println("Attempting");
+				System.err.println("Attempting");
 				try {
 					sm.cleanup(sessionID, false, false);
 				} catch (SessionException e) {
 					e.printStackTrace();
 				}
-				System.out.println("Success");
+				System.err.println("Success");
 			}
 		};
 		killer.start();
@@ -180,7 +180,7 @@ public class SessionMgrTest {
 		} catch (InterruptedException e) {
 		}
 		try {
-			sm.cleanup(sessionID, successful, false);
+			sm.cleanup(sessionID, successful, true);
 			if (successful) {
 				fail("Transaction must not successfully cleanup");
 			}
