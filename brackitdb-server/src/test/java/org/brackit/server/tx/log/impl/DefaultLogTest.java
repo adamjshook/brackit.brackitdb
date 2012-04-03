@@ -128,6 +128,7 @@ public class DefaultLogTest {
 	@Before
 	public void setUp() throws ServerException {
 		log = new DefaultLog(".", DefaultLog.class.getName(), 500);
+		log.open();
 		taMgr = new TaMgrMockup(log);
 		t1 = taMgr.begin();
 		t2 = taMgr.begin();
