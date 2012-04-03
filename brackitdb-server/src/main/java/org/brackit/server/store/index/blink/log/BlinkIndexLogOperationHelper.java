@@ -102,11 +102,12 @@ public class BlinkIndexLogOperationHelper implements LogOperationHelper {
 			int oldUnitID, int unitID, PageID rootPageID, int oldPageType,
 			int pageType, Field oldKeyType, Field keyType, Field oldValueType,
 			Field valueType, int oldHeight, int height, boolean oldUnique,
-			boolean unique, boolean oldCompression, boolean compression) {
+			boolean unique, boolean oldCompression, boolean compression,
+			boolean oldLastInLevel, boolean lastInLevel) {
 		return new FormatLogOperation(pageID, oldUnitID, unitID, rootPageID,
 				oldPageType, pageType, oldKeyType, keyType, oldValueType,
 				valueType, oldHeight, height, oldUnique, unique,
-				oldCompression, compression);
+				oldCompression, compression, oldLastInLevel, lastInLevel);
 	}
 
 	public static PointerLogOperation createrPointerLogOperation(byte type,
@@ -158,10 +159,12 @@ public class BlinkIndexLogOperationHelper implements LogOperationHelper {
 		boolean unique = (buffer.get() != 0);
 		boolean oldCompression = (buffer.get() != 0);
 		boolean compression = (buffer.get() != 0);
+		boolean oldLastInLevel = (buffer.get() != 0);
+		boolean lastInLevel = (buffer.get() != 0);
 
 		return createFormatLogOperation(pageID, oldUnitID, unitID, rootPageID,
 				oldPageType, pageType, oldKeyType, keyType, oldValueType,
 				valueType, oldHeight, height, oldUnique, unique,
-				oldCompression, compression);
+				oldCompression, compression, oldLastInLevel, lastInLevel);
 	}
 }

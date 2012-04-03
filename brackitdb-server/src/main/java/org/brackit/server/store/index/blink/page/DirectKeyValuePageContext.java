@@ -178,8 +178,7 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 		return checkFlag(LAST_IN_LEVEL_FLAG);
 	}
 
-	@Override
-	public void setLastInLevel(boolean last) {
+	private void setLastInLevel(boolean last) {
 		setFlag(LAST_IN_LEVEL_FLAG, last);
 	}
 
@@ -457,7 +456,7 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 	@Override
 	public void format(int unitID, int pageType, PageID rootPageID,
 			Field keyType, Field valueType, int height, boolean unique,
-			boolean compressed, boolean logged, long undoNextLSN)
+			boolean compressed, boolean lastInLevel, boolean clear, boolean logged, long undoNextLSN)
 			throws IndexOperationException {
 		LogOperation operation = null;
 
@@ -466,23 +465,20 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 					getPageID(), getUnitID(), unitID, rootPageID,
 					getPageType(), pageType, getKeyType(), keyType,
 					getValueType(), valueType, getHeight(), height, isUnique(),
-					unique, isCompressed(), compressed);
+					unique, isCompressed(), compressed, isLastInLevel(), lastInLevel);
 		}
 
-		/*
-		 * Change page type, init free space info management, and reset entry
-		 * counter.
-		 */
-		page.clear();
+		if (clear) {
+			/*
+			 * Change page type, init free space info management, and reset entry
+			 * counter.
+			 */
+			page.clear();
+		}
 
 		/*
 		 * Set index specific fields.
 		 */
-		// byte[] key = new byte[0];
-		// byte[] value = new byte[4 + ((pageType == PageType.INDEX_LEAF) ? 2 :
-		// 1)* PageID.getSize()];
-		// page.insert(0, key, value, compressed);
-
 		setUnitID(unitID);
 		setPageType(pageType);
 		setHeight(height);
@@ -491,6 +487,7 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 		setValueType(valueType);
 		setUnique(unique);
 		setCompressed(compressed);
+		setLastInLevel(lastInLevel);
 
 		if (logged) {
 			log(transaction, operation, undoNextLSN);

@@ -27,7 +27,6 @@
  */
 package org.brackit.server.store.index.blink;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.store.Field;
@@ -40,6 +39,7 @@ import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.TxStats;
 import org.brackit.server.tx.thread.ThreadCB;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * 
@@ -386,7 +386,26 @@ public class BlinkTree extends PageContextFactory {
 	protected PageContext assureLeafDelete(Tx tx, PageID rootPageID,
 			PageContext leaf, byte[] key, byte[] value, boolean logged)
 			throws IndexAccessException {
-		// TODO
+		Field keyType = leaf.getKeyType();
+		Field valueType = leaf.getValueType();
+		try {
+			if ((leaf.getKey() == null)
+					|| (keyType.compare(key, leaf.getKey()) != 0)
+					|| ((value != null) && (valueType.compare(value,
+							leaf.getValue()) != 0))) {
+				System.err.println(leaf.dump("leaf? " + keyType.toString(key) + ":" +
+						valueType.toString(value)));
+				leaf.cleanup();
+				throw new IndexAccessException(
+						"Index %s does not contain an entry (%s, %s).",
+						rootPageID, keyType.toString(key),
+						valueType.toString(value));
+			}
+		} catch (IndexOperationException e) {
+			leaf.cleanup();
+			throw new IndexAccessException(e, "Error assuring leaf delete");
+		}
+
 		return leaf;
 	}
 
@@ -645,7 +664,8 @@ public class BlinkTree extends PageContextFactory {
 			Field valueType = left.getValueType();
 			right = allocate(tx, -1, left.getUnitID(), leftPageType,
 					rootPageID, keyType, valueType, left.getHeight(),
-					left.isUnique(), left.isCompressed(), logged);
+					left.isUnique(), left.isCompressed(), left.isLastInLevel(),
+					logged);
 			rightPageID = right.getPageID();
 
 			if (!leafSplit) {
@@ -686,9 +706,13 @@ public class BlinkTree extends PageContextFactory {
 				}
 			}
 
-			// promote last in level flag
-			right.setLastInLevel(left.isLastInLevel());
-			left.setLastInLevel(false);
+			if (left.isLastInLevel()) {
+				// reset last in level flag
+				left.format(left.getUnitID(), left.getPageType(),
+						left.getRootPageID(), left.getKeyType(),
+						left.getValueType(), left.getHeight(), left.isUnique(),
+						left.isCompressed(), false, false, logged, -1);
+			}
 
 			// split at this level is complete
 			if (log.isTraceEnabled()) {
@@ -840,10 +864,10 @@ public class BlinkTree extends PageContextFactory {
 			Field valueType = root.getValueType();
 			left = allocate(tx, -1, root.getUnitID(), rootPageType, rootPageID,
 					keyType, valueType, root.getHeight(), root.isUnique(),
-					root.isCompressed(), logged);
+					root.isCompressed(), false, logged);
 			right = allocate(tx, -1, root.getUnitID(), rootPageType,
 					rootPageID, keyType, valueType, root.getHeight(),
-					root.isUnique(), root.isCompressed(), logged);
+					root.isUnique(), root.isCompressed(), true, logged);
 
 			// find out where to split
 			int insertPosition = root.getPosition();
@@ -893,17 +917,13 @@ public class BlinkTree extends PageContextFactory {
 			// reformat root page
 			root.format(root.getUnitID(), PageType.BRANCH, rootPageID, keyType,
 					Field.PAGEID, root.getHeight() + 1, root.isUnique(),
-					root.isCompressed(), logged, -1);
-			root.setLastInLevel(true);
+					root.isCompressed(), true, true, logged, -1);
 			// reposition context in converted root page
 			root.moveFirst();
 
 			// add right link from left page to right page
 			left.insert(separatorKey, right.getPageID().getBytes(), true,
 					logged, -1);
-
-			// mark right page as last in this level
-			right.setLastInLevel(true);
 
 			// insert separator in converted root page
 			root.insert(separatorKey, right.getPageID().getBytes(), true,
@@ -1248,7 +1268,8 @@ public class BlinkTree extends PageContextFactory {
 			page.setLowPageID(null, logged, -1);
 			page.format(page.getUnitID(), page.getPageType(), rootPageID,
 					page.getKeyType(), page.getValueType(), page.getHeight(),
-					page.isUnique(), page.isCompressed(), logged, -1);
+					page.isUnique(), page.isCompressed(), page.isLastInLevel(),
+					true, logged, -1);
 			page.deletePage();
 			page = null;
 
@@ -1390,8 +1411,7 @@ public class BlinkTree extends PageContextFactory {
 				root.format(left.getUnitID(), PageType.BRANCH,
 						root.getPageID(), left.getKeyType(),
 						left.getValueType(), left.getHeight(), left.isUnique(),
-						left.isCompressed(), logged, -1);
-				root.setLastInLevel(true);
+						left.isCompressed(), true, true, logged, -1);
 				root.moveFirst();
 
 				// copy before page of right page to root
@@ -1415,19 +1435,20 @@ public class BlinkTree extends PageContextFactory {
 				left.format(left.getUnitID(), PageType.BRANCH,
 						left.getRootPageID(), left.getKeyType(),
 						left.getValueType(), left.getHeight(), left.isUnique(),
-						left.isCompressed(), logged, -1);
+						left.isCompressed(), left.isLastInLevel(), true,
+						logged, -1);
 				right.format(right.getUnitID(), PageType.BRANCH,
-						left.getRootPageID(), right.getKeyType(),
+						right.getRootPageID(), right.getKeyType(),
 						right.getValueType(), right.getHeight(),
-						right.isUnique(), left.isCompressed(), logged, -1);
+						right.isUnique(), right.isCompressed(),
+						right.isLastInLevel(), true, logged, -1);
 			} else {
 				// switch root page type and update pointers
 				root.setLowPageID(null, logged, -1);
 				root.format(left.getUnitID(), PageType.LEAF, root.getPageID(),
 						left.getKeyType(), left.getValueType(),
 						left.getHeight(), left.isUnique(), left.isCompressed(),
-						logged, -1);
-				root.setLastInLevel(true);
+						true, true, logged, -1);
 				root.moveFirst();
 
 				// move content of right page to root
@@ -1447,11 +1468,13 @@ public class BlinkTree extends PageContextFactory {
 				left.format(left.getUnitID(), PageType.LEAF,
 						left.getRootPageID(), left.getKeyType(),
 						left.getValueType(), left.getHeight(), left.isUnique(),
-						left.isCompressed(), logged, -1);
+						left.isCompressed(), left.isLastInLevel(), true,
+						logged, -1);
 				right.format(right.getUnitID(), PageType.LEAF,
-						left.getRootPageID(), right.getKeyType(),
+						right.getRootPageID(), right.getKeyType(),
 						right.getValueType(), right.getHeight(),
-						right.isUnique(), right.isCompressed(), logged, -1);
+						right.isUnique(), right.isCompressed(),
+						right.isLastInLevel(), true, logged, -1);
 			}
 
 			if (log.isTraceEnabled()) {

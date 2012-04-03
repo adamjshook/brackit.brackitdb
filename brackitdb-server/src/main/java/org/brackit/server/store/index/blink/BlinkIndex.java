@@ -80,8 +80,7 @@ public class BlinkIndex implements Index {
 		try {
 			root = tree.allocate(transaction, containerNo, unitID,
 					PageType.LEAF, null, keyType, valueType, 0, unique,
-					compression, true);
-			root.setLastInLevel(true);
+					compression, true, true);
 			PageID rootPageID = root.getPageID();
 			root.cleanup();
 
@@ -130,11 +129,9 @@ public class BlinkIndex implements Index {
 				null, null, OpenMode.READ);
 		Field keyType = it.getKeyType();
 		Field valueType = it.getValueType();
-		out
-				.append(String
-						.format(
-								"Dumping content of index %s with key type %s and value type %s:.\n",
-								rootPageID, keyType, valueType));
+		out.append(String
+				.format("Dumping content of index %s with key type %s and value type %s:.\n",
+						rootPageID, keyType, valueType));
 
 		out.append("----------------------------------------------\n");
 		if (it.getKey() != null) {
@@ -144,10 +141,11 @@ public class BlinkIndex implements Index {
 				if ((currentPageID == null)
 						|| (!it.getCurrentPageID().equals(currentPageID))) {
 					currentPageID = it.getCurrentPageID();
-					out.append(String.format("-------------- %s --------------\n",
-							currentPageID));
+					out.append(String
+							.format("-------------- %s --------------\n",
+									currentPageID));
 				}
-				
+
 				byte[] key = it.getKey();
 				byte[] value = it.getValue();
 				out.append(String.format("%7s. %s -> %s\n", ++i,

@@ -50,7 +50,7 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 			.getLogger(FormatLogOperation.class);
 
 	private static final int SIZE = BASE_SIZE
-			+ (2 * SizeConstants.INT_SIZE + 12 * SizeConstants.BYTE_SIZE);
+			+ (2 * SizeConstants.INT_SIZE + 14 * SizeConstants.BYTE_SIZE);
 
 	private int unitID;
 
@@ -80,11 +80,16 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 
 	private boolean compression;
 
+	private boolean oldLastInLevel;
+
+	private boolean lastInLevel;
+
 	public FormatLogOperation(PageID pageID, int oldUnitID, int unitID,
 			PageID rootPageID, int oldPageType, int pageType, Field oldKeyType,
 			Field keyType, Field oldValueType, Field valueType, int oldHeight,
 			int height, boolean oldUnique, boolean unique,
-			boolean oldCompression, boolean compression) {
+			boolean oldCompression, boolean compression,
+			boolean oldLastInLevel, boolean lastInLevel) {
 		super(FORMAT, pageID, rootPageID);
 		this.oldUnitID = oldUnitID;
 		this.unitID = unitID;
@@ -99,6 +104,8 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 		this.unique = unique;
 		this.oldCompression = oldCompression;
 		this.compression = compression;
+		this.oldLastInLevel = oldLastInLevel;
+		this.lastInLevel = lastInLevel;
 		this.valueType = valueType;
 	}
 
@@ -124,13 +131,15 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 		bb.put((byte) ((unique) ? 1 : 0));
 		bb.put((byte) ((oldCompression) ? 1 : 0));
 		bb.put((byte) ((compression) ? 1 : 0));
+		bb.put((byte) ((oldLastInLevel) ? 1 : 0));
+		bb.put((byte) ((lastInLevel) ? 1 : 0));
 	}
 
 	@Override
 	public void redo(Tx tx, long LSN) throws LogException {
 		try {
 			redoFormatPage(tx, pageID, unitID, rootPageID, pageType, keyType,
-					valueType, unique, compression, LSN);
+					valueType, unique, compression, lastInLevel, LSN);
 		} catch (IndexAccessException e) {
 			throw new LogException(e, "Redo of format page %s failed.", pageID);
 		}
@@ -140,8 +149,8 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 	public void undo(Tx tx, long LSN, long undoNextLSN) throws LogException {
 		try {
 			undoFormatPage(tx, pageID, oldUnitID, rootPageID, oldPageType,
-					oldKeyType, oldValueType, oldUnique, oldCompression, LSN,
-					undoNextLSN);
+					oldKeyType, oldValueType, oldUnique, oldCompression,
+					oldLastInLevel, LSN, undoNextLSN);
 		} catch (IndexAccessException e) {
 			throw new LogException(e, "Undo of format page %s failed.", pageID);
 		}
@@ -149,8 +158,8 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 
 	public void undoFormatPage(Tx tx, PageID pageID, int unitID,
 			PageID rootPageID, int pageType, Field keyType, Field valueType,
-			boolean unique, boolean compression, long LSN, long undoNextLSN)
-			throws IndexAccessException {
+			boolean unique, boolean compression, boolean lastInLevel, long LSN,
+			long undoNextLSN) throws IndexAccessException {
 		PageContext page = null;
 
 		if (log.isTraceEnabled()) {
@@ -171,7 +180,8 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 			}
 
 			page.format(unitID, pageType, rootPageID, keyType, valueType,
-					height, unique, compression, true, undoNextLSN);
+					height, unique, compression, lastInLevel, true, true,
+					undoNextLSN);
 			page.cleanup();
 		} catch (IndexOperationException e) {
 			throw new IndexAccessException(e,
@@ -187,7 +197,7 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 
 	public void redoFormatPage(Tx tx, PageID pageID, int unitID,
 			PageID rootPageID, int pageType, Field keyType, Field valueType,
-			boolean unique, boolean compression, long LSN)
+			boolean unique, boolean compression, boolean lastInLevel, long LSN)
 			throws IndexAccessException {
 		PageContext page = null;
 
@@ -220,7 +230,8 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 				}
 
 				page.format(unitID, pageType, rootPageID, keyType, valueType,
-						height, unique, compression, false, -1);
+						height, unique, compression, lastInLevel, true, false,
+						-1);
 			} else {
 				if (log.isTraceEnabled()) {
 					log.trace(String.format(
