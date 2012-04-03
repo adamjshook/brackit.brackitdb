@@ -265,9 +265,9 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 	}
 
 	@Override
-	public void format(int unitID, PageID rootPageID, boolean logged,
+	public void format(PageID rootPageID, boolean logged,
 			long undoNextLSN) throws IndexOperationException {
-		this.format(true, unitID, rootPageID, 0, true, logged, undoNextLSN);
+		this.format(true, rootPageID, 0, true, logged, undoNextLSN);
 	}
 
 	@Override
@@ -279,29 +279,6 @@ public final class LeafBPContext extends AbstractBPContext implements Leaf {
 
 		return currentDeweyID.getDeweyID();
 	}
-
-	// public byte[] getValue() throws IndexOperationException {
-	//
-	// if (CHECK_OFFSET_INTEGRITY) {
-	// declareContextSensitive();
-	// }
-	//
-	// if (bufferedRecord != null) {
-	// return bufferedRecord;
-	// }
-	//
-	// byte[] value = null;
-	// try {
-	//
-	// value = page.getValue(currentOffset, extValueLoader);
-	//
-	// } catch (ExternalValueException e) {
-	// throw new IndexOperationException(e);
-	// }
-	//
-	// bufferedRecord = value;
-	// return value;
-	// }
 
 	@Override
 	public boolean moveFirst() {

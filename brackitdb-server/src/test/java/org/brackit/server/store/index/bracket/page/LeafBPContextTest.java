@@ -75,15 +75,17 @@ public class LeafBPContextTest {
 		bufferManager.createBuffer(BUFFER_SIZE, BLOCK_SIZE, CONTAINER_NO, CONTAINER_NAME, INITIAL_SIZE, EXTEND_SIZE);
 		Buffer buffer = bufferManager.getBuffer(CONTAINER_NO);
 		
+		int unitID = buffer.createUnit();
+		
 		tx = txMgr.begin(IsolationLevel.SERIALIZABLE, null, false);
 		
 		docID = new DocID(99, 0);
 		
 		// create two sample leafs
-		leaf1 = new LeafBPContext(bufferManager, tx, new BracketPage(buffer, buffer.allocatePage(tx, new PageID(1), true, -1)));
-		leaf1.format(42, new PageID(99), true, -1);
-		leaf2 = new LeafBPContext(bufferManager, tx, new BracketPage(buffer, buffer.allocatePage(tx, new PageID(2), true, -1)));
-		leaf2.format(42, new PageID(99), true, -1);
+		leaf1 = new LeafBPContext(bufferManager, tx, new BracketPage(buffer, buffer.allocatePage(tx, unitID, new PageID(1), true, -1)));
+		leaf1.format(new PageID(99), true, -1);
+		leaf2 = new LeafBPContext(bufferManager, tx, new BracketPage(buffer, buffer.allocatePage(tx, unitID, new PageID(2), true, -1)));
+		leaf2.format(new PageID(99), true, -1);
 		
 		fill();
 		

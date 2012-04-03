@@ -27,14 +27,12 @@
  */
 package org.brackit.server.store.index.bracket.page;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.store.Field;
 import org.brackit.server.store.SearchMode;
 import org.brackit.server.store.blob.BlobStoreAccessException;
 import org.brackit.server.store.index.bracket.IndexOperationException;
-import org.brackit.server.store.index.bracket.log.BracketIndexLogOperation;
 import org.brackit.server.store.index.bracket.log.BranchUpdateLogOperation;
 import org.brackit.server.store.index.bracket.log.BranchUpdateLogOperation.ActionType;
 import org.brackit.server.store.index.bracket.log.PointerLogOperation;
@@ -45,6 +43,7 @@ import org.brackit.server.store.page.RecordFlag;
 import org.brackit.server.store.page.keyvalue.KeyValuePage;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.log.LogOperation;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * @author Martin Hiller
@@ -80,10 +79,10 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 	}
 
 	@Override
-	public void format(int unitID, PageID rootPageID, int height,
+	public void format(PageID rootPageID, int height,
 			boolean compressed, boolean logged, long undoNextLSN)
 			throws IndexOperationException {
-		this.format(false, unitID, rootPageID, height, compressed, logged,
+		this.format(false, rootPageID, height, compressed, logged,
 				undoNextLSN);
 	}
 

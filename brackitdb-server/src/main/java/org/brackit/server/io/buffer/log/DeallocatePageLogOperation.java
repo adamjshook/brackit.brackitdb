@@ -47,8 +47,8 @@ public final class DeallocatePageLogOperation extends PageLogOperation {
 	private final static Logger log = Logger
 			.getLogger(DeallocatePageLogOperation.class.getName());
 
-	public DeallocatePageLogOperation(PageID pageID) {
-		super(PageLogOperation.DEALLOCATE, pageID);
+	public DeallocatePageLogOperation(PageID pageID, int unitID) {
+		super(PageLogOperation.DEALLOCATE, pageID, unitID);
 	}
 
 	@Override
@@ -96,7 +96,7 @@ public final class DeallocatePageLogOperation extends PageLogOperation {
 			}
 
 			buffer = tx.getBufferManager().getBuffer(pageID);
-			handle = buffer.allocatePage(tx, pageID, true, undoNextLSN);
+			handle = buffer.allocatePage(tx, unitID, pageID, true, undoNextLSN);
 		} catch (BufferException e) {
 			throw new LogException(e, "Could not allocate page %s.", pageID);
 		}

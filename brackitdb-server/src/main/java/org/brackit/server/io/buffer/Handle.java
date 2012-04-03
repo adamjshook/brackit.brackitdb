@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.thread.SyncLatch;
+import org.brackit.server.util.Calc;
 
 /**
  * <p>
@@ -49,8 +50,7 @@ public class Handle extends SyncLatch {
 	/**
 	 * Size of the page header in bytes.
 	 * <ul>
-	 * <li>byte 0 (byte) - containerID</li>
-	 * <li>byte 1-3 (3 bytes) - block number</li>
+	 * <li>byte 0-3 (byte) - unitID</li>
 	 * <li>byte 4 (byte) - page type</li>
 	 * <li>byte 5-12 (long) - page LSN</li>
 	 * <li>byte 13-15 spare for future use</li>
@@ -124,13 +124,19 @@ public class Handle extends SyncLatch {
 	public PageID getPageID() {
 		return pageID;
 	}
+	
+	public int getUnitID() {
+		return Calc.toInt(page, 0);
+	}
 
-	public void init(PageID pageID) {
+	public void init(PageID pageID, int unitID) {
 		this.pageID = pageID;
 		cache.set(null);
 		Arrays.fill(page, 0, page.length, (byte) 0);
 		setRedoLSN(Long.MAX_VALUE);
 		resetFlags();
+		// set unitID
+		Calc.fromInt(unitID, page, 0);
 	}
 
 	public int getPageSize() {

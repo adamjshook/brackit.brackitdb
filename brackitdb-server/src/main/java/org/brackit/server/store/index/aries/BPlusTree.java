@@ -2018,7 +2018,7 @@ public class BPlusTree extends PageContextFactory {
 				right.setPreviousPageID(left.getPageID(), logged, -1);
 
 				// convert root from leaf into tree page
-				root.format(root.getUnitID(), PageType.INDEX_TREE, rootPageID,
+				root.format(PageType.INDEX_TREE, rootPageID,
 						keyType, Field.PAGEID, root.isUnique(), root
 								.isCompressed(), logged, -1);
 				// reposition context in converted root page
@@ -2527,7 +2527,7 @@ public class BPlusTree extends PageContextFactory {
 			// the log
 			leaf.setNextPageID(null, logged, -1);
 			leaf.setPreviousPageID(null, logged, -1);
-			leaf.format(leaf.getUnitID(), PageType.INDEX_LEAF, rootPageID, leaf
+			leaf.format(PageType.INDEX_LEAF, rootPageID, leaf
 					.getKeyType(), leaf.getValueType(), leaf.isUnique(), leaf
 					.isCompressed(), logged, -1);
 			leaf.deletePage();
@@ -2697,7 +2697,7 @@ public class BPlusTree extends PageContextFactory {
 			 * the log
 			 */
 			right.setBeforePageID(null, logged, -1);
-			right.format(right.getUnitID(), PageType.INDEX_TREE, rootPageID,
+			right.format(PageType.INDEX_TREE, rootPageID,
 					right.getKeyType(), right.getValueType(), right.isUnique(),
 					right.isCompressed(), logged, -1);
 			right.deletePage();
@@ -2767,7 +2767,7 @@ public class BPlusTree extends PageContextFactory {
 			// "Reset" page properties to get the required undo information in
 			// the log
 			left.setBeforePageID(null, logged, -1);
-			left.format(left.getUnitID(), PageType.INDEX_TREE, rootPageID, left
+			left.format(PageType.INDEX_TREE, rootPageID, left
 					.getKeyType(), left.getValueType(), left.isUnique(), left
 					.isCompressed(), logged, -1);
 			left.deletePage();
@@ -2840,11 +2840,11 @@ public class BPlusTree extends PageContextFactory {
 				// in the log
 				right.setBeforePageID(null, logged, -1);
 				left.setBeforePageID(null, logged, -1);
-				left.format(left.getUnitID(), PageType.INDEX_TREE, left
+				left.format(PageType.INDEX_TREE, left
 						.getRootPageID(), left.getKeyType(), left
 						.getValueType(), left.isUnique(), left.isCompressed(),
 						logged, -1);
-				right.format(right.getUnitID(), PageType.INDEX_TREE, left
+				right.format(PageType.INDEX_TREE, left
 						.getRootPageID(), right.getKeyType(), right
 						.getValueType(), right.isUnique(), left.isCompressed(),
 						logged, -1);
@@ -2854,7 +2854,7 @@ public class BPlusTree extends PageContextFactory {
 
 				// switch root page type and update pointers
 				root.setBeforePageID(null, logged, -1);
-				root.format(left.getUnitID(), PageType.INDEX_LEAF, root
+				root.format(PageType.INDEX_LEAF, root
 						.getPageID(), left.getKeyType(), left.getValueType(),
 						left.isUnique(), left.isCompressed(), logged, -1);
 				root.moveFirst();
@@ -2885,11 +2885,11 @@ public class BPlusTree extends PageContextFactory {
 				left.setNextPageID(null, logged, -1);
 				right.setPreviousPageID(null, logged, -1);
 				left.setPreviousPageID(null, logged, -1);
-				left.format(left.getUnitID(), PageType.INDEX_LEAF, left
+				left.format(PageType.INDEX_LEAF, left
 						.getRootPageID(), left.getKeyType(), left
 						.getValueType(), left.isUnique(), left.isCompressed(),
 						logged, -1);
-				right.format(right.getUnitID(), PageType.INDEX_LEAF, left
+				right.format(PageType.INDEX_LEAF, left
 						.getRootPageID(), right.getKeyType(), right
 						.getValueType(), right.isUnique(),
 						right.isCompressed(), logged, -1);

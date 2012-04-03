@@ -70,7 +70,13 @@ public class PageContextFactory {
 		try {
 			buffer = (containerNo != -1) ? bufferMgr.getBuffer(containerNo)
 					: bufferMgr.getBuffer(rootPageID);
-			handle = buffer.allocatePage(tx);
+
+			if (unitID == -1) {
+				// create new unit
+				unitID = buffer.createUnit();
+			}
+
+			handle = buffer.allocatePage(tx, unitID);
 
 			page = createBranch(tx, buffer, handle, Latch.MODE_X);
 
@@ -82,7 +88,7 @@ public class PageContextFactory {
 				rootPageID = page.getPageID();
 			}
 
-			page.format(unitID, rootPageID, height, compression, logged, -1);
+			page.format(rootPageID, height, compression, logged, -1);
 		} catch (BufferException e) {
 			throw new IndexOperationException(e,
 					"Could not allocated new page.");
@@ -140,10 +146,15 @@ public class PageContextFactory {
 		Leaf page = null;
 
 		try {
-			buffer = (containerNo != -1) ? bufferMgr
-					.getBuffer(containerNo) : bufferMgr
-					.getBuffer(rootPageID);
-			handle = buffer.allocatePage(tx);
+			buffer = (containerNo != -1) ? bufferMgr.getBuffer(containerNo)
+					: bufferMgr.getBuffer(rootPageID);
+
+			if (unitID == -1) {
+				// create new unit
+				unitID = buffer.createUnit();
+			}
+
+			handle = buffer.allocatePage(tx, unitID);
 
 			page = createLeaf(tx, buffer, handle, Latch.MODE_X);
 
@@ -155,7 +166,7 @@ public class PageContextFactory {
 				rootPageID = page.getPageID();
 			}
 
-			page.format(unitID, rootPageID, logged, -1);
+			page.format(rootPageID, logged, -1);
 		} catch (BufferException e) {
 			throw new IndexOperationException(e,
 					"Could not allocated new page.");
@@ -184,12 +195,11 @@ public class PageContextFactory {
 
 	private Leaf createLeaf(Tx tx, Buffer buffer, Handle handle)
 			throws IndexOperationException {
-		return new LeafBPContext(bufferMgr, tx, new BracketPage(buffer,
-				handle));
+		return new LeafBPContext(bufferMgr, tx, new BracketPage(buffer, handle));
 	}
 
-	private Leaf createLeaf(Tx tx, Buffer buffer, Handle handle,
-			int latchMode) throws IndexOperationException {
+	private Leaf createLeaf(Tx tx, Buffer buffer, Handle handle, int latchMode)
+			throws IndexOperationException {
 		return createLeaf(tx, buffer, handle);
 	}
 

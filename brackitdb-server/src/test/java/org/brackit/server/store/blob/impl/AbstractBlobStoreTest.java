@@ -107,7 +107,7 @@ public abstract class AbstractBlobStoreTest {
 		blobStore = createBlobStore(sm.bufferManager);
 
 		t1 = sm.taMgr.begin();
-		blobID = blobStore.create(t1, SysMockup.CONTAINER_NO);
+		blobID = blobStore.create(t1, SysMockup.CONTAINER_NO, -1);
 
 		// use same random source to get reproducable results in case of an
 		// error

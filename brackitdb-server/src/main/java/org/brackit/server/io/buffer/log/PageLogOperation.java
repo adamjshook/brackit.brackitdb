@@ -31,23 +31,26 @@ import java.nio.ByteBuffer;
 
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.tx.log.LogOperation;
+import org.brackit.server.tx.log.SizeConstants;
 
 /**
  * @author Sebastian Baechle
  * 
  */
 public abstract class PageLogOperation extends LogOperation {
-	protected static final int BASE_SIZE = PageID.getSize();
+	protected static final int BASE_SIZE = PageID.getSize() + SizeConstants.INT_SIZE;
 
 	public static final byte ALLOCATE = 1;
 
 	public static final byte DEALLOCATE = 2;
 
 	protected PageID pageID;
+	protected int unitID;
 
-	protected PageLogOperation(byte type, PageID pageID) {
+	protected PageLogOperation(byte type, PageID pageID, int unitID) {
 		super(type);
 		this.pageID = pageID;
+		this.unitID = unitID;
 	}
 
 	public PageID getPageID() {
@@ -57,5 +60,6 @@ public abstract class PageLogOperation extends LogOperation {
 	@Override
 	public void toBytes(ByteBuffer bb) {
 		bb.put(pageID.getBytes());
+		bb.putInt(unitID);
 	}
 }

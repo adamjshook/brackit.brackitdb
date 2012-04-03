@@ -43,7 +43,7 @@ public class FieldCachingSlottedPageTest extends SlottedPageTest {
 		super.setUp();
 		Handle handle = new Handle(BLOCK_SIZE) {
 		};
-		handle.init(new PageID(3));
+		handle.init(new PageID(3), 42);
 		page = new FieldCachingSlottedPage(null, handle);
 	}
 

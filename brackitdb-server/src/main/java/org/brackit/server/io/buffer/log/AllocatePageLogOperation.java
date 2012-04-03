@@ -47,8 +47,8 @@ public final class AllocatePageLogOperation extends PageLogOperation {
 	private final static Logger log = Logger
 			.getLogger(AllocatePageLogOperation.class.getName());
 
-	public AllocatePageLogOperation(PageID pageID) {
-		super(PageLogOperation.ALLOCATE, pageID);
+	public AllocatePageLogOperation(PageID pageID, int unitID) {
+		super(PageLogOperation.ALLOCATE, pageID, unitID);
 	}
 
 	@Override
@@ -87,7 +87,7 @@ public final class AllocatePageLogOperation extends PageLogOperation {
 					log.debug(String.format("Reallocating page %s.", pageID));
 				}
 
-				handle = buffer.allocatePage(tx, pageID, false, -1);
+				handle = buffer.allocatePage(tx, unitID, pageID, false, -1);
 				handle.setLSN(LSN);
 				handle.unlatch();
 
