@@ -32,6 +32,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.util.Arrays;
 
 import org.junit.After;
@@ -46,13 +47,13 @@ import org.junit.Test;
  */
 public class DefaultBlockSpaceTest {
 
-	static final String STORE_ROOT = null;
-
-	static final int BLOCK_SIZE = 4096;
+	static final int BLOCK_SIZE = 2048;
 	static final int INIT_SIZE = 1024;
 	static final double EXT_SIZE = 0.5;
 
 	DefaultBlockSpace bs;
+
+	private File root;
 
 	/**
 	 * @throws java.lang.Exception
@@ -73,7 +74,15 @@ public class DefaultBlockSpaceTest {
 	 */
 	@Before
 	public void setUp() throws Exception {
-		bs = new DefaultBlockSpace(STORE_ROOT, 0);
+		File dir;
+		int i = 0;
+		do {
+			dir = new File(System.getProperty("java.io.tmpdir") + File.separator
+					+ DefaultBlockSpace.class.getSimpleName() + i++);
+		} while (!dir.mkdir());
+		dir.deleteOnExit();
+		root = dir;
+		bs = new DefaultBlockSpace(root.toString(), 0);
 		try {
 			bs.create(BLOCK_SIZE, INIT_SIZE, EXT_SIZE);
 		} catch (StoreException e) {
@@ -86,18 +95,15 @@ public class DefaultBlockSpaceTest {
 	 */
 	@After
 	public void tearDown() throws Exception {
-		drop();
-	}
-
-	void drop() {
-		// String storeRoot = Cfg.getProperty(StoreProperties.STORE_ROOT);
-		// File root = new File(storeRoot);
-		// if (root.isDirectory()) {
-		// File[] files = root.listFiles();
-		// for (int i = 0; i < files.length; i++) {
-		// files[i].delete();
-		// }
-		// }
+		if (root != null) {
+			if (root.isDirectory()) {
+				File[] files = root.listFiles();
+				for (int i = 0; i < files.length; i++) {
+					files[i].delete();
+				}
+			}
+			root.delete();
+		}
 	}
 
 	/**
@@ -107,7 +113,7 @@ public class DefaultBlockSpaceTest {
 	 */
 	@Test
 	public final void testDefaultBlockSpace() {
-		bs = new DefaultBlockSpace(STORE_ROOT, 0);
+		bs = new DefaultBlockSpace(root.toString(), 0);
 		assertNotNull(bs);
 	}
 
