@@ -50,6 +50,7 @@ import org.brackit.server.tx.locking.util.DefaultLockName;
 import org.brackit.server.tx.log.LogException;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -158,8 +159,8 @@ public class GenericLockServiceTest {
 
 		t1.commit();
 
-		assertEquals("ta lock count after commit", 0, t1.getLockCB().get(
-				lockService).getLocks().size());
+		assertEquals("ta lock count after commit", 0,
+				t1.getLockCB().get(lockService).getLocks().size());
 	}
 
 	@Test
@@ -174,8 +175,8 @@ public class GenericLockServiceTest {
 
 		t1.commit();
 
-		assertEquals("ta lock count after commit", 0, t1.getLockCB().get(
-				lockService).getLocks().size());
+		assertEquals("ta lock count after commit", 0,
+				t1.getLockCB().get(lockService).getLocks().size());
 	}
 
 	@Test
@@ -242,8 +243,6 @@ public class GenericLockServiceTest {
 
 	@Test
 	public void testDeadlock() throws TxException {
-		boolean t1Failed = false;
-		boolean t2Failed = false;
 		lockService.request(t1, buildLockNames(1), LockClass.COMMIT_DURATION,
 				URIX.Mode.R, false);
 		lockService.request(t2, buildLockNames(1), LockClass.COMMIT_DURATION,
@@ -256,40 +255,58 @@ public class GenericLockServiceTest {
 					t2.join();
 					lockService.request(t2, buildLockNames(1),
 							LockClass.COMMIT_DURATION, URIX.Mode.X, false);
+
+					TxState t1State = t1.getState();
+					assertTrue("t1 was killed to resolve the deadlock",
+							(t1State == TxState.ABORTED)
+									|| (t1State == TxState.ROLLEDBACK));
+					try {
+						t2.commit();
+					} catch (TxException e) {
+						fail("Commit of not-killed ta 2 failed");
+					}
 				} catch (TxException e) {
 					try {
 						t2.rollback();
 					} catch (TxException e1) {
+						e1.printStackTrace();
 						fail("Rollback of killed ta 2 failed");
 					}
 				}
+
+				assertEquals("ta 2 lock count after EOT", 0, t2.getLockCB()
+						.get(lockService).getLocks().size());
 			}
 		}.start();
 
 		try {
 			lockService.request(t1, buildLockNames(1),
 					LockClass.COMMIT_DURATION, URIX.Mode.X, false);
-		} catch (TxException e) {
 
+			TxState t2State = t2.getState();
+			assertTrue("t2 was killed to resolve the deadlock",
+					(t2State == TxState.ABORTED)
+							|| (t2State == TxState.ROLLEDBACK));
+			try {
+				t1.commit();
+			} catch (TxException e) {
+				fail("Commit of not-killed ta 2 failed");
+			}
+		} catch (TxException e) {
+			try {
+				t1.rollback();
+			} catch (TxException e1) {
+				e1.printStackTrace();
+				fail("Rollback of killed ta 1 failed");
+			}
 		}
 
-		assertTrue("One transaction was killed to resolve the deadlock", t1
-				.getState() == TxState.ABORTED
-				^ t2.getState() == TxState.ABORTED);
-
-		assertEquals("ta lock count", 1, t1.getLockCB().get(lockService)
-				.getLocks().size());
-
-		t1.commit();
-
-		assertEquals("ta lock count after commit", 0, t1.getLockCB().get(
-				lockService).getLocks().size());
+		assertEquals("ta 1 lock count after EOT", 0,
+				t1.getLockCB().get(lockService).getLocks().size());
 	}
 
 	@Test
 	public void testDeadlock2() throws TxException {
-		boolean t1Failed = false;
-		boolean t2Failed = false;
 		lockService.request(t1, buildLockNames(1).getLockName(0),
 				LockClass.COMMIT_DURATION, URIX.Mode.R, false);
 		lockService.request(t2, buildLockNames(1).getLockName(0),
@@ -302,158 +319,55 @@ public class GenericLockServiceTest {
 					t2.join();
 					lockService.request(t2, buildLockNames(1).getLockName(0),
 							LockClass.COMMIT_DURATION, URIX.Mode.X, false);
+
+					TxState t1State = t1.getState();
+					assertTrue("t1 was killed to resolve the deadlock",
+							(t1State == TxState.ABORTED)
+									|| (t1State == TxState.ROLLEDBACK));
+					try {
+						t2.commit();
+					} catch (TxException e) {
+						fail("Commit of not-killed ta 2 failed");
+					}
 				} catch (TxException e) {
 					try {
 						t2.rollback();
 					} catch (TxException e1) {
+						e1.printStackTrace();
 						fail("Rollback of killed ta 2 failed");
 					}
 				}
+
+				assertEquals("ta 2 lock count after EOT", 0, t2.getLockCB()
+						.get(lockService).getLocks().size());
 			}
 		}.start();
 
 		try {
 			lockService.request(t1, buildLockNames(1).getLockName(0),
 					LockClass.COMMIT_DURATION, URIX.Mode.X, false);
-		} catch (TxException e) {
 
+			TxState t2State = t2.getState();
+			assertTrue("t2 was killed to resolve the deadlock",
+					(t2State == TxState.ABORTED)
+							|| (t2State == TxState.ROLLEDBACK));
+			try {
+				t1.commit();
+			} catch (TxException e) {
+				fail("Commit of not-killed ta 2 failed");
+			}
+		} catch (TxException e) {
+			try {
+				t1.rollback();
+			} catch (TxException e1) {
+				e1.printStackTrace();
+				fail("Rollback of killed ta 1 failed");
+			}
 		}
 
-		assertTrue("One transaction was killed to resolve the deadlock", t1
-				.getState() == TxState.ABORTED
-				^ t2.getState() == TxState.ABORTED);
-
-		assertEquals("ta lock count", 1, t1.getLockCB().get(lockService)
-				.getLocks().size());
-
-		t1.commit();
-
-		assertEquals("ta lock count after commit", 0, t1.getLockCB().get(
-				lockService).getLocks().size());
+		assertEquals("ta 1 lock count after EOT", 0,
+				t1.getLockCB().get(lockService).getLocks().size());
 	}
-
-	// @Test
-	// public void testDowngrade2TA() throws BrackitException
-	// {
-	// lockService.request(buildLockNames(1), LockClass.COMMIT_DURATION,
-	// URIX.Mode.U, false);
-	//
-	// Thread me = Thread.currentThread();
-	// LockRequestJob concurrentRequest = new LockRequestJob(t2, lockService,
-	// buildLockNames(1), URIX.Mode.U);
-	// concurrentRequest.setSupervisor(me);
-	// scheduler.schedule(concurrentRequest, false);
-	//
-	// try
-	// {
-	// Thread.sleep(2000);
-	// }
-	// catch (InterruptedException e)
-	// {
-	// // ignore
-	// }
-	//
-	// lockService.request(buildLockNames(1), LockClass.COMMIT_DURATION,
-	// URIX.Mode.R, false);
-	//
-	// List<XTClock> locks = ctx.getLockCB().get(lockService).getLocks();
-	// assertEquals("ta lock count", 1, locks.size());
-	// ctx.commit();
-	//
-	// scheduler.join(concurrentRequest);
-	//
-	// assertEquals("ta1 lock count after commit", 0,
-	// ctx.getLockCB().get(lockService).getLocks().size());
-	// assertEquals("ta2 lock count after commit of ta1", 1,
-	// t2.getLockCB().get(lockService).getLocks().size());
-	// }
-	//
-	// @Test
-	// public void testUpgrade2TA() throws BrackitException
-	// {
-	// lockService.request(buildLockNames(1), LockClass.COMMIT_DURATION,
-	// URIX.Mode.U, false);
-	//
-	// Thread me = Thread.currentThread();
-	// LockRequestJob concurrentRequest = new LockRequestJob(t2, lockService,
-	// buildLockNames(1), URIX.Mode.U);
-	// concurrentRequest.setSupervisor(me);
-	// scheduler.schedule(concurrentRequest, false);
-	//
-	// try
-	// {
-	// Thread.sleep(1000);
-	// }
-	// catch (InterruptedException e)
-	// {
-	// }
-	//
-	// lockService.request(buildLockNames(1), LockClass.COMMIT_DURATION,
-	// URIX.Mode.X, false);
-	//
-	// assertEquals("ta lock count", 1,
-	// ctx.getLockCB().get(lockService).getLocks().size());
-	// ctx.commit();
-	//
-	// scheduler.join(concurrentRequest);
-	//
-	// assertEquals("ta1 lock count after commit", 0,
-	// ctx.getLockCB().get(lockService).getLocks().size());
-	// assertEquals("ta2 lock count after commit of ta1", 1,
-	// t2.getLockCB().get(lockService).getLocks().size());
-	// }
-	//
-	// @Test
-	// public void testUpgrade3TA() throws BrackitException
-	// {
-	// lockService.request(buildLockNames(1), LockClass.COMMIT_DURATION,
-	// URIX.Mode.R, false);
-	// lockService.request(buildLockNames(1), LockClass.COMMIT_DURATION,
-	// URIX.Mode.U, false);
-	//
-	// Thread me = Thread.currentThread();
-	// LockRequestJob t3concurrentRequest = new LockRequestJob(t3, lockService,
-	// buildLockNames(1), URIX.Mode.U);
-	// LockRequestJob t2concurrentRequest = new LockRequestJob(t2, lockService,
-	// buildLockNames(1), URIX.Mode.X);
-	// t3concurrentRequest.setSupervisor(me);
-	// scheduler.schedule(t3concurrentRequest, false);
-	// try
-	// {
-	// Thread.sleep(1000);
-	// }
-	// catch (InterruptedException e)
-	// {
-	// }
-	// scheduler.schedule(t2concurrentRequest, false);
-	// try
-	// {
-	// Thread.sleep(1000);
-	// }
-	// catch (InterruptedException e)
-	// {
-	// }
-	//
-	// ctx.commit();
-	// assertEquals("ta1 lock count after commit", 0,
-	// ctx.getLockCB().get(lockService).getLocks().size());
-	// assertEquals("ta2 lock count after commit of ta1", 1,
-	// t2.getLockCB().get(lockService).getLocks().size());
-	//
-	// List<XTClock> locks = t2.getLockCB().get(lockService).getLocks();
-	// assertEquals("ta lock count", 1, locks.size());
-	// assertEquals("ta2 has X", locks.get(0).getMode(), URIX.Mode.X);
-	//
-	// scheduler.join(t2concurrentRequest);
-	//
-	// taMgr.commitWork(t2);
-	//
-	// scheduler.join(t3concurrentRequest);
-	//
-	// locks = t3.getLockCB().get(lockService).getLocks();
-	// assertEquals("ta3 lock count", 1, locks.size());
-	// assertEquals("ta3 has X", locks.get(0).getMode(), URIX.Mode.U);
-	// }
 
 	@Test
 	public void requestAndCommit1TA() throws TxException {
@@ -465,8 +379,8 @@ public class GenericLockServiceTest {
 
 		t1.commit();
 
-		assertEquals("ta lock count after commit", 0, t1.getLockCB().get(
-				lockService).getLocks().size());
+		assertEquals("ta lock count after commit", 0,
+				t1.getLockCB().get(lockService).getLocks().size());
 	}
 
 	@Test
@@ -478,8 +392,8 @@ public class GenericLockServiceTest {
 		assertEquals("ta lock count", 5, t1.getLockCB().get(lockService)
 				.getLocks().size());
 		lockService.release(t1, lockNames);
-		assertEquals("ta lock count after release", 0, t1.getLockCB().get(
-				lockService).getLockServiceCB().getCount());
+		assertEquals("ta lock count after release", 0,
+				t1.getLockCB().get(lockService).getLockServiceCB().getCount());
 	}
 
 	@Test
@@ -497,8 +411,8 @@ public class GenericLockServiceTest {
 
 		lockService.release(t1, lockNames);
 
-		assertEquals("ta lock count after release", 5, t1.getLockCB().get(
-				lockService).getLocks().size());
+		assertEquals("ta lock count after release", 5,
+				t1.getLockCB().get(lockService).getLocks().size());
 	}
 
 	@Test
@@ -516,8 +430,8 @@ public class GenericLockServiceTest {
 
 		lockService.release(t1, lockNames);
 
-		assertEquals("ta lock count after release", 3, t1.getLockCB().get(
-				lockService).getLocks().size());
+		assertEquals("ta lock count after release", 3,
+				t1.getLockCB().get(lockService).getLocks().size());
 	}
 
 	@Test
@@ -537,8 +451,8 @@ public class GenericLockServiceTest {
 
 		lockService.release(t1, lockNames);
 
-		assertEquals("ta lock count after release", 5, t1.getLockCB().get(
-				lockService).getLocks().size());
+		assertEquals("ta lock count after release", 5,
+				t1.getLockCB().get(lockService).getLocks().size());
 	}
 
 	@Test
@@ -585,8 +499,6 @@ public class GenericLockServiceTest {
 		} catch (InterruptedException e) {
 		}
 		lockService.release(t1, lockNames);
-
-		System.out.println(lockService.listLocks());
 	}
 
 	@Test
@@ -670,7 +582,6 @@ public class GenericLockServiceTest {
 					} catch (TxException e) {
 					}
 				}
-				System.out.println("t3 end");
 			}
 		};
 		user3.start();
@@ -709,10 +620,10 @@ public class GenericLockServiceTest {
 
 		t1.commit();
 
-		assertEquals("ta 1 lock count after commit", 0, t1.getLockCB().get(
-				lockService).getLocks().size());
-		assertEquals("ta 2 lock count after commit", 5, t2.getLockCB().get(
-				lockService).getLocks().size());
+		assertEquals("ta 1 lock count after commit", 0,
+				t1.getLockCB().get(lockService).getLocks().size());
+		assertEquals("ta 2 lock count after commit", 5,
+				t2.getLockCB().get(lockService).getLocks().size());
 	}
 
 	@Test
@@ -729,10 +640,10 @@ public class GenericLockServiceTest {
 
 		t1.rollback();
 
-		assertEquals("ta 1 lock count after rollback", 0, t1.getLockCB().get(
-				lockService).getLocks().size());
-		assertEquals("ta 2 lock count after rollback", 5, t2.getLockCB().get(
-				lockService).getLocks().size());
+		assertEquals("ta 1 lock count after rollback", 0,
+				t1.getLockCB().get(lockService).getLocks().size());
+		assertEquals("ta 2 lock count after rollback", 5,
+				t2.getLockCB().get(lockService).getLocks().size());
 	}
 
 	@Test
@@ -745,8 +656,8 @@ public class GenericLockServiceTest {
 
 		t1.rollback();
 
-		assertEquals("ta lock count after rollback", 0, t1.getLockCB().get(
-				lockService).getLocks().size());
+		assertEquals("ta lock count after rollback", 0,
+				t1.getLockCB().get(lockService).getLocks().size());
 	}
 
 	@Test
@@ -838,8 +749,8 @@ public class GenericLockServiceTest {
 
 		assertEquals("ta lock count", 1, t1.getLockCB().get(lockService)
 				.getLocks().size());
-		assertEquals("lock mode", URIX.Mode.R, lockService.getLock(t1,
-				lockNames.getLockName(0)).getMode());
+		assertEquals("lock mode", URIX.Mode.R,
+				lockService.getLock(t1, lockNames.getLockName(0)).getMode());
 	}
 
 	@Test
@@ -853,12 +764,12 @@ public class GenericLockServiceTest {
 
 		assertEquals("ta lock count", 3, t1.getLockCB().get(lockService)
 				.getLocks().size());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames.getLockName(0)).getMode());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames.getLockName(1)).getMode());
-		assertEquals("lock mode", URIX.Mode.X, lockService.getLock(t1,
-				lockNames.getLockName(2)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames.getLockName(0)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames.getLockName(1)).getMode());
+		assertEquals("lock mode", URIX.Mode.X,
+				lockService.getLock(t1, lockNames.getLockName(2)).getMode());
 	}
 
 	@Test
@@ -872,8 +783,8 @@ public class GenericLockServiceTest {
 
 		assertEquals("ta lock count", 1, t1.getLockCB().get(lockService)
 				.getLocks().size());
-		assertEquals("lock mode", URIX.Mode.X, lockService.getLock(t1,
-				lockNames.getLockName(0)).getMode());
+		assertEquals("lock mode", URIX.Mode.X,
+				lockService.getLock(t1, lockNames.getLockName(0)).getMode());
 	}
 
 	@Test
@@ -890,16 +801,16 @@ public class GenericLockServiceTest {
 
 		assertTrue("Level lock implies node read at child level", t1
 				.getLockCB().get(lockService).getLocks().size() == 5);
-		assertEquals("lock mode", TaDOM3Plus.Mode.IR, lockService.getLock(t1,
-				lockNames2.getLockName(0)).getMode());
-		assertEquals("lock mode", TaDOM3Plus.Mode.IR, lockService.getLock(t1,
-				lockNames2.getLockName(1)).getMode());
-		assertEquals("lock mode", TaDOM3Plus.Mode.LR, lockService.getLock(t1,
-				lockNames2.getLockName(2)).getMode());
-		assertEquals("lock mode", TaDOM3Plus.Mode.IR, lockService.getLock(t1,
-				lockNames2.getLockName(3)).getMode());
-		assertEquals("lock mode", TaDOM3Plus.Mode.NR, lockService.getLock(t1,
-				lockNames2.getLockName(4)).getMode());
+		assertEquals("lock mode", TaDOM3Plus.Mode.IR,
+				lockService.getLock(t1, lockNames2.getLockName(0)).getMode());
+		assertEquals("lock mode", TaDOM3Plus.Mode.IR,
+				lockService.getLock(t1, lockNames2.getLockName(1)).getMode());
+		assertEquals("lock mode", TaDOM3Plus.Mode.LR,
+				lockService.getLock(t1, lockNames2.getLockName(2)).getMode());
+		assertEquals("lock mode", TaDOM3Plus.Mode.IR,
+				lockService.getLock(t1, lockNames2.getLockName(3)).getMode());
+		assertEquals("lock mode", TaDOM3Plus.Mode.NR,
+				lockService.getLock(t1, lockNames2.getLockName(4)).getMode());
 	}
 
 	@Test
@@ -917,16 +828,16 @@ public class GenericLockServiceTest {
 
 		assertTrue("Level lock implies node read at child level", t1
 				.getLockCB().get(lockService).getLocks().size() == 5);
-		assertEquals("lock mode", TaDOM3Plus.Mode.IX, lockService.getLock(t1,
-				lockNames2.getLockName(0)).getMode());
-		assertEquals("lock mode", TaDOM3Plus.Mode.IX, lockService.getLock(t1,
-				lockNames2.getLockName(1)).getMode());
-		assertEquals("lock mode", TaDOM3Plus.Mode.LRIX, lockService.getLock(t1,
-				lockNames2.getLockName(2)).getMode());
-		assertEquals("lock mode", TaDOM3Plus.Mode.CX, lockService.getLock(t1,
-				lockNames2.getLockName(3)).getMode());
-		assertEquals("lock mode", TaDOM3Plus.Mode.NX, lockService.getLock(t1,
-				lockNames2.getLockName(4)).getMode());
+		assertEquals("lock mode", TaDOM3Plus.Mode.IX,
+				lockService.getLock(t1, lockNames2.getLockName(0)).getMode());
+		assertEquals("lock mode", TaDOM3Plus.Mode.IX,
+				lockService.getLock(t1, lockNames2.getLockName(1)).getMode());
+		assertEquals("lock mode", TaDOM3Plus.Mode.LRIX,
+				lockService.getLock(t1, lockNames2.getLockName(2)).getMode());
+		assertEquals("lock mode", TaDOM3Plus.Mode.CX,
+				lockService.getLock(t1, lockNames2.getLockName(3)).getMode());
+		assertEquals("lock mode", TaDOM3Plus.Mode.NX,
+				lockService.getLock(t1, lockNames2.getLockName(4)).getMode());
 	}
 
 	@Test
@@ -943,12 +854,12 @@ public class GenericLockServiceTest {
 
 		assertTrue("Level lock implies node read at child level", t1
 				.getLockCB().get(lockService).getLocks().size() == 3);
-		assertEquals("lock mode", TaDOM3Plus.Mode.IR, lockService.getLock(t1,
-				lockNames2.getLockName(0)).getMode());
-		assertEquals("lock mode", TaDOM3Plus.Mode.IR, lockService.getLock(t1,
-				lockNames2.getLockName(1)).getMode());
-		assertEquals("lock mode", TaDOM3Plus.Mode.LR, lockService.getLock(t1,
-				lockNames2.getLockName(2)).getMode());
+		assertEquals("lock mode", TaDOM3Plus.Mode.IR,
+				lockService.getLock(t1, lockNames2.getLockName(0)).getMode());
+		assertEquals("lock mode", TaDOM3Plus.Mode.IR,
+				lockService.getLock(t1, lockNames2.getLockName(1)).getMode());
+		assertEquals("lock mode", TaDOM3Plus.Mode.LR,
+				lockService.getLock(t1, lockNames2.getLockName(2)).getMode());
 	}
 
 	@Test
@@ -1028,32 +939,32 @@ public class GenericLockServiceTest {
 
 		assertEquals("ta lock count", 5, t1.getLockCB().get(lockService)
 				.getLocks().size());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(0)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(1)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(2)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(3)).getMode());
-		assertEquals("lock mode", URIX.Mode.U, lockService.getLock(t1,
-				lockNames1.getLockName(4)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(0)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(1)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(2)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(3)).getMode());
+		assertEquals("lock mode", URIX.Mode.U,
+				lockService.getLock(t1, lockNames1.getLockName(4)).getMode());
 
 		lockService.request(t1, lockNames1, LockClass.COMMIT_DURATION,
 				URIX.Mode.R, false);
 
 		assertEquals("ta lock count", 5, t1.getLockCB().get(lockService)
 				.getLocks().size());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(0)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(1)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(2)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(3)).getMode());
-		assertEquals("lock mode", URIX.Mode.R, lockService.getLock(t1,
-				lockNames1.getLockName(4)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(0)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(1)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(2)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(3)).getMode());
+		assertEquals("lock mode", URIX.Mode.R,
+				lockService.getLock(t1, lockNames1.getLockName(4)).getMode());
 	}
 
 	@Test
@@ -1065,32 +976,32 @@ public class GenericLockServiceTest {
 
 		assertEquals("ta lock count", 5, t1.getLockCB().get(lockService)
 				.getLocks().size());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(0)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(1)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(2)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(3)).getMode());
-		assertEquals("lock mode", URIX.Mode.U, lockService.getLock(t1,
-				lockNames1.getLockName(4)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(0)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(1)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(2)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(3)).getMode());
+		assertEquals("lock mode", URIX.Mode.U,
+				lockService.getLock(t1, lockNames1.getLockName(4)).getMode());
 
 		lockService.request(t1, lockNames1, LockClass.COMMIT_DURATION,
 				URIX.Mode.X, false);
 
 		assertEquals("ta lock count", 5, t1.getLockCB().get(lockService)
 				.getLocks().size());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames1.getLockName(0)).getMode());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames1.getLockName(1)).getMode());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames1.getLockName(2)).getMode());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames1.getLockName(3)).getMode());
-		assertEquals("lock mode", URIX.Mode.X, lockService.getLock(t1,
-				lockNames1.getLockName(4)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames1.getLockName(0)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames1.getLockName(1)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames1.getLockName(2)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames1.getLockName(3)).getMode());
+		assertEquals("lock mode", URIX.Mode.X,
+				lockService.getLock(t1, lockNames1.getLockName(4)).getMode());
 	}
 
 	@Test
@@ -1104,16 +1015,16 @@ public class GenericLockServiceTest {
 				URIX.Mode.U, false);
 		assertEquals("ta lock count", 5, t2.getLockCB().get(lockService)
 				.getLocks().size());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t2,
-				lockNames1.getLockName(0)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t2,
-				lockNames1.getLockName(1)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t2,
-				lockNames1.getLockName(2)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t2,
-				lockNames1.getLockName(3)).getMode());
-		assertEquals("lock mode", URIX.Mode.U, lockService.getLock(t2,
-				lockNames1.getLockName(4)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t2, lockNames1.getLockName(0)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t2, lockNames1.getLockName(1)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t2, lockNames1.getLockName(2)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t2, lockNames1.getLockName(3)).getMode());
+		assertEquals("lock mode", URIX.Mode.U,
+				lockService.getLock(t2, lockNames1.getLockName(4)).getMode());
 
 		t2.leave();
 		Thread t = new Thread() {
@@ -1149,16 +1060,16 @@ public class GenericLockServiceTest {
 		t2.join();
 		assertEquals("ta lock count", 5, t2.getLockCB().get(lockService)
 				.getLocks().size());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t2,
-				lockNames1.getLockName(0)).getMode());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t2,
-				lockNames1.getLockName(1)).getMode());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t2,
-				lockNames1.getLockName(2)).getMode());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t2,
-				lockNames1.getLockName(3)).getMode());
-		assertEquals("lock mode", URIX.Mode.X, lockService.getLock(t2,
-				lockNames1.getLockName(4)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t2, lockNames1.getLockName(0)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t2, lockNames1.getLockName(1)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t2, lockNames1.getLockName(2)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t2, lockNames1.getLockName(3)).getMode());
+		assertEquals("lock mode", URIX.Mode.X,
+				lockService.getLock(t2, lockNames1.getLockName(4)).getMode());
 	}
 
 	@Test
@@ -1169,16 +1080,16 @@ public class GenericLockServiceTest {
 				URIX.Mode.U, false);
 		assertEquals("ta lock count", 5, t1.getLockCB().get(lockService)
 				.getLocks().size());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(0)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(1)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(2)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(3)).getMode());
-		assertEquals("lock mode", URIX.Mode.U, lockService.getLock(t1,
-				lockNames1.getLockName(4)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(0)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(1)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(2)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(3)).getMode());
+		assertEquals("lock mode", URIX.Mode.U,
+				lockService.getLock(t1, lockNames1.getLockName(4)).getMode());
 
 		t2.leave();
 		Thread t = new Thread() {
@@ -1190,7 +1101,6 @@ public class GenericLockServiceTest {
 							LockClass.COMMIT_DURATION, URIX.Mode.U, false);
 					fail("ta 2 was granted update lock");
 				} catch (TxException e) {
-					System.out.println(e.getMessage());
 					// expected
 				}
 			}
@@ -1214,18 +1124,18 @@ public class GenericLockServiceTest {
 
 		assertEquals("ta lock count", 6, t1.getLockCB().get(lockService)
 				.getLocks().size());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames1.getLockName(0)).getMode());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames1.getLockName(1)).getMode());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames1.getLockName(2)).getMode());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames1.getLockName(3)).getMode());
-		assertEquals("lock mode", URIX.Mode.R, lockService.getLock(t1,
-				lockNames1.getLockName(4)).getMode());
-		assertEquals("lock mode", URIX.Mode.X, lockService.getLock(t1,
-				lockNames2.getLockName(4)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames1.getLockName(0)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames1.getLockName(1)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames1.getLockName(2)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames1.getLockName(3)).getMode());
+		assertEquals("lock mode", URIX.Mode.R,
+				lockService.getLock(t1, lockNames1.getLockName(4)).getMode());
+		assertEquals("lock mode", URIX.Mode.X,
+				lockService.getLock(t1, lockNames2.getLockName(4)).getMode());
 	}
 
 	@Test
@@ -1239,16 +1149,16 @@ public class GenericLockServiceTest {
 
 		assertEquals("ta lock count", 5, t1.getLockCB().get(lockService)
 				.getLocks().size());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames1.getLockName(0)).getMode());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames1.getLockName(1)).getMode());
-		assertEquals("lock mode", URIX.Mode.X, lockService.getLock(t1,
-				lockNames1.getLockName(2)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames1.getLockName(3)).getMode());
-		assertEquals("lock mode", URIX.Mode.R, lockService.getLock(t1,
-				lockNames1.getLockName(4)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames1.getLockName(0)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames1.getLockName(1)).getMode());
+		assertEquals("lock mode", URIX.Mode.X,
+				lockService.getLock(t1, lockNames1.getLockName(2)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames1.getLockName(3)).getMode());
+		assertEquals("lock mode", URIX.Mode.R,
+				lockService.getLock(t1, lockNames1.getLockName(4)).getMode());
 	}
 
 	@Test
@@ -1261,16 +1171,16 @@ public class GenericLockServiceTest {
 
 		assertEquals("ta lock count", 5, t1.getLockCB().get(lockService)
 				.getLocks().size());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames.getLockName(0)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames.getLockName(1)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames.getLockName(2)).getMode());
-		assertEquals("lock mode", URIX.Mode.IR, lockService.getLock(t1,
-				lockNames.getLockName(3)).getMode());
-		assertEquals("lock mode", URIX.Mode.R, lockService.getLock(t1,
-				lockNames.getLockName(4)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames.getLockName(0)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames.getLockName(1)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames.getLockName(2)).getMode());
+		assertEquals("lock mode", URIX.Mode.IR,
+				lockService.getLock(t1, lockNames.getLockName(3)).getMode());
+		assertEquals("lock mode", URIX.Mode.R,
+				lockService.getLock(t1, lockNames.getLockName(4)).getMode());
 	}
 
 	@Test
@@ -1283,16 +1193,16 @@ public class GenericLockServiceTest {
 
 		assertEquals("ta lock count", 5, t1.getLockCB().get(lockService)
 				.getLocks().size());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames.getLockName(0)).getMode());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames.getLockName(1)).getMode());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames.getLockName(2)).getMode());
-		assertEquals("lock mode", URIX.Mode.IX, lockService.getLock(t1,
-				lockNames.getLockName(3)).getMode());
-		assertEquals("lock mode", URIX.Mode.X, lockService.getLock(t1,
-				lockNames.getLockName(4)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames.getLockName(0)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames.getLockName(1)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames.getLockName(2)).getMode());
+		assertEquals("lock mode", URIX.Mode.IX,
+				lockService.getLock(t1, lockNames.getLockName(3)).getMode());
+		assertEquals("lock mode", URIX.Mode.X,
+				lockService.getLock(t1, lockNames.getLockName(4)).getMode());
 	}
 
 	@Test
@@ -1300,18 +1210,24 @@ public class GenericLockServiceTest {
 		lockService.getClient(t1).setMaxEscalationCount(10);
 		lockService.getClient(t1).setEscalationGain(-1);
 
+		SimpleLockNameFactory dummyLockNames = buildLockNames(90,91,92,93,94);
+		
 		for (int i = 0; i < 13; i++) {
 			SimpleLockNameFactory lockNames1 = buildLockNames(1, 2, 3, 4,
 					i + 10);
 			lockService.request(t1, lockNames1, LockClass.SHORT_DURATION,
 					URIX.Mode.R, false);
-
+			
+			// request alternative path to trick lock path caching
+			lockService.request(t1, dummyLockNames, LockClass.SHORT_DURATION,
+					URIX.Mode.R, false);
+			
 			if (i < 10) {
-				assertEquals("ta lock count", 4 + 1 + i, t1.getLockCB().get(
-						lockService).getLocks().size());
+				assertEquals("ta lock count", 4 + 5 + 1 + i,
+						t1.getLockCB().get(lockService).getLocks().size());
 			} else {
-				assertEquals("ta lock count", 4 + 10, t1.getLockCB().get(
-						lockService).getLocks().size());
+				assertEquals("ta lock count", 4 + 5 + 10,
+						t1.getLockCB().get(lockService).getLocks().size());
 			}
 		}
 	}
@@ -1320,23 +1236,27 @@ public class GenericLockServiceTest {
 	public void escalation2() throws TxException {
 		lockService.getClient(t1).setMaxEscalationCount(10);
 		lockService.getClient(t1).setEscalationGain(-1);
+		
+		SimpleLockNameFactory dummyLockNames = buildLockNames(90,91,92,93,94);
 
 		for (int i = 0; i < 30; i++) {
 			SimpleLockNameFactory lockNames1 = buildLockNames(1, 2, 3, 4,
 					i + 10);
 			lockService.request(t1, lockNames1, LockClass.SHORT_DURATION,
 					URIX.Mode.R, false);
+			
+			// request alternative path to trick lock path caching
+			lockService.request(t1, dummyLockNames, LockClass.SHORT_DURATION,
+					URIX.Mode.R, false);
 
 			if (i < 10) {
-				assertEquals("ta lock count", 4 + 1 + i, t1.getLockCB().get(
-						lockService).getLocks().size());
+				assertEquals("ta lock count", 4 + 5 + 1 + i,
+						t1.getLockCB().get(lockService).getLocks().size());
 			} else {
-				assertEquals("ta lock count", 4 + 10, t1.getLockCB().get(
-						lockService).getLocks().size());
+				assertEquals("ta lock count", 4 + 5 + 10,
+						t1.getLockCB().get(lockService).getLocks().size());
 			}
 		}
-
-		System.out.println(t1.getLockCB().get(lockService).listLocks());
 	}
 
 	@Test
@@ -1346,9 +1266,9 @@ public class GenericLockServiceTest {
 				URIX.Mode.R, false);
 		lockService.request(t1, lockNames, LockClass.INSTANT_DURATION,
 				URIX.Mode.IX, false);
-		System.out.println(t1.getLockCB().get(lockService).listLocks());
 	}
 
+	@Ignore
 	@Test
 	public void testLockTableScalability() throws TxException, IOException {
 		int roundStart = 0;

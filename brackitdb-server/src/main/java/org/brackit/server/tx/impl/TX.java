@@ -179,8 +179,9 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 	@Override
 	public void rollback() throws TxException {
-		if (getState() != TxState.RUNNING) {
-			throw new TxException("Rollback failed: Tx %s is in state %s", txID, getState());
+		if (!getState().isRollbackable()) {
+			throw new TxException("Rollback failed: Tx %s is in state %s",
+					txID, getState());
 		}
 		boolean processRollback = voteRollback();
 
@@ -196,8 +197,9 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	}
 
 	private void doCommit() throws TxException {
-		if (getState() != TxState.RUNNING) {
-			throw new TxException("Commit failed: Tx %s is in state %s", txID, getState());
+		if (!getState().isCommitable()) {
+			throw new TxException("Commit failed: Tx %s is in state %s", txID,
+					getState());
 		}
 		try {
 			if (log.isDebugEnabled()) {
@@ -298,7 +300,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	public IsolationLevel getIsolationLevel() {
 		return this.isolationLevel;
 	}
-	
+
 	public Session getSession() {
 		return this.session;
 	}
@@ -451,8 +453,8 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 		switch (record.getType()) {
 		case Loggable.TYPE_UPDATE:
 			if (log.isDebugEnabled()) {
-				log.debug(String.format("%s undo %s.", toShortString(), record
-						.getLSN()));
+				log.debug(String.format("%s undo %s.", toShortString(),
+						record.getLSN()));
 			}
 
 			logOperation = record.getLogOperation();
