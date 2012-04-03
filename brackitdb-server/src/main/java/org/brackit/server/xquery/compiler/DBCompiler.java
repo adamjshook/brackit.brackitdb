@@ -27,19 +27,23 @@
  */
 package org.brackit.server.xquery.compiler;
 
+import java.util.Map;
+
 import org.brackit.xquery.QueryException;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.compiler.AST;
-import org.brackit.xquery.compiler.translator.PipelineCompiler;
+import org.brackit.xquery.compiler.translator.TopDownTranslator;
 import org.brackit.xquery.xdm.Expr;
 
 /**
  * @author Sebastian Baechle
  *
  */
-public class DBCompiler extends PipelineCompiler {
+public class DBCompiler extends TopDownTranslator {
 
-	public DBCompiler() {
-		super();
+	public DBCompiler(Map<QNm, Str> options) {
+		super(options);
 	}
 
 	protected Expr anyExpr(AST node) throws QueryException {

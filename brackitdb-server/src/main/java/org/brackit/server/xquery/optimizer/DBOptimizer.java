@@ -27,9 +27,13 @@
  */
 package org.brackit.server.xquery.optimizer;
 
+import java.util.Map;
+
 import org.brackit.server.metadata.manager.MetaDataMgr;
 import org.brackit.server.tx.Tx;
 import org.brackit.xquery.QueryException;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.optimizer.DefaultOptimizer;
 import org.brackit.xquery.compiler.optimizer.Stage;
@@ -41,8 +45,8 @@ import org.brackit.xquery.module.StaticContext;
  */
 public class DBOptimizer extends DefaultOptimizer {
 
-	public DBOptimizer(MetaDataMgr mdm, Tx tx) {
-		super();
+	public DBOptimizer(MetaDataMgr mdm, Tx tx, Map<QNm, Str> options) {
+		super(options);
 		// perform index matching as last step
 		getStages().add(new IndexMatching(mdm, tx));
 	}

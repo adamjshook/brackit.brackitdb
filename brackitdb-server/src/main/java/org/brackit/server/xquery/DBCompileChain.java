@@ -31,6 +31,8 @@ import static org.brackit.server.xquery.function.bdb.CreatePathIndex.*;
 import static org.brackit.server.xquery.function.bdb.CreateNameIndex.*;
 import static org.brackit.server.xquery.function.bdb.CreateCASIndex.*;
 
+import java.util.Map;
+
 import org.brackit.server.metadata.manager.MetaDataMgr;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.xquery.compiler.DBCompiler;
@@ -40,6 +42,8 @@ import org.brackit.server.xquery.function.bdb.CreatePathIndex;
 import org.brackit.server.xquery.function.bdb.SetIsolation;
 import org.brackit.server.xquery.function.bdb.SetLockdepth;
 import org.brackit.server.xquery.optimizer.DBOptimizer;
+import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.compiler.CompileChain;
 import org.brackit.xquery.compiler.optimizer.Optimizer;
 import org.brackit.xquery.compiler.translator.Translator;
@@ -106,12 +110,12 @@ public class DBCompileChain extends CompileChain {
 	}
 
 	@Override
-	protected Translator getTranslator() {
-		return new DBCompiler();
+	protected Translator getTranslator(Map<QNm, Str> options) {
+		return new DBCompiler(options);
 	}
 
 	@Override
-	protected Optimizer getOptimizer() {
-		return new DBOptimizer(mdm, tx);
+	protected Optimizer getOptimizer(Map<QNm, Str> options) {
+		return new DBOptimizer(mdm, tx, options);
 	}
 }
