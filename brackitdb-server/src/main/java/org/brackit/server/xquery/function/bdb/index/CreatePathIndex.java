@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery.function.bdb;
+package org.brackit.server.xquery.function.bdb.index;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -34,62 +34,51 @@ import org.brackit.server.metadata.DBCollection;
 import org.brackit.server.metadata.TXQueryContext;
 import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.index.definition.IndexDefBuilder;
+import org.brackit.server.xquery.function.bdb.BDBFun;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.function.AbstractFunction;
-import org.brackit.xquery.module.Namespaces;
 import org.brackit.xquery.module.StaticContext;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.Item;
 import org.brackit.xquery.xdm.Iter;
 import org.brackit.xquery.xdm.Sequence;
 import org.brackit.xquery.xdm.Signature;
-import org.brackit.xquery.xdm.Type;
 
 /**
- * Function for creating CAS indexes on stored documents, optionally restricted
- * to a set of paths and a content type. If successful, this function returns
- * statistics about the newly created index as an XML fragment. Supported
- * signatures are:</br>
+ * Function for creating path indexes on stored documents, optionally restricted
+ * to a set of paths. If successful, this function returns statistics about the
+ * newly created index as an XML fragment. Supported signatures are:</br>
  * <ul>
- * <li><code>bdb:create-cas-index($coll as xs:string, $type as xs:string?, 
- * $paths as xs:string*) as node()</code></li>
- * <li><code>bdb:create-cas-index($coll as xs:string, $type as xs:string?) 
- * as node()</code></li>
- * <li><code>bdb:create-cas-index($coll as xs:string) as node()</code></li>
+ * <li>
+ * <code>bdb:create-path-index($coll as xs:string, $paths as xs:string*) as 
+ * node()</code></li>
+ * <li><code>bdb:create-path-index($coll as xs:string) as node()</code></li>
  * </ul>
  * 
  * @author Max Bechtold
  * 
  */
-public class CreateCASIndex extends AbstractFunction {
+public class CreatePathIndex extends AbstractFunction {
 
-	public final static QNm CREATE_CAS_INDEX = new QNm(
-			BDBFun.BDB_NSURI, BDBFun.BDB_PREFIX,
-			"create-cas-index");
+	public final static QNm CREATE_PATH_INDEX = new QNm(BDBFun.BDB_NSURI,
+			BDBFun.BDB_PREFIX, "create-path-index");
 
-	public CreateCASIndex(QNm name, Signature signature) {
+	public CreatePathIndex(QNm name, Signature signature) {
 		super(name, signature, true);
 	}
 
 	@Override
-	public Sequence execute(StaticContext sctx, QueryContext ctx, 
+	public Sequence execute(StaticContext sctx, QueryContext ctx,
 			Sequence[] args) throws QueryException {
 		TXQueryContext txCtx = (TXQueryContext) ctx;
 		DBCollection<?> col = (DBCollection<?>) txCtx.getStore().lookup(
 				((Str) args[0]).str);
-		
-		Type type = null;
-		if (args.length > 1 && args[1] != null) {
-			QNm name = new QNm(Namespaces.XS_NSURI, ((Str) args[1]).str);
-			type = sctx.getTypes().resolveAtomicType(name);
-		}
-		
 		List<Path<QNm>> paths = new LinkedList<Path<QNm>>();
-		if (args.length == 3 && args[2] != null) {
-			Iter it = args[2].iterate();
+		if (args.length > 1 && args[1] != null) {
+			Iter it = args[1].iterate();
 			Item next = it.next();
 			while (next != null) {
 				paths.add(Path.parse(((Str) next).str));
@@ -97,7 +86,7 @@ public class CreateCASIndex extends AbstractFunction {
 			}
 		}
 
-		IndexDef idxDef = IndexDefBuilder.createCASIdxDef(null, false, type, paths);
+		IndexDef idxDef = IndexDefBuilder.createPathIdxDef(null, paths);
 		col.getIndexController().createIndexes(idxDef);
 		return idxDef.materialize();
 	}

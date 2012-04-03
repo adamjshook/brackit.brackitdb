@@ -27,13 +27,19 @@
  */
 package org.brackit.server.xquery.function.bdb;
 
-import static org.brackit.server.xquery.function.bdb.CreateCASIndex.CREATE_CAS_INDEX;
-import static org.brackit.server.xquery.function.bdb.CreateNameIndex.CREATE_NAME_INDEX;
-import static org.brackit.server.xquery.function.bdb.CreatePathIndex.CREATE_PATH_INDEX;
+import static org.brackit.server.xquery.function.bdb.index.CreateCASIndex.CREATE_CAS_INDEX;
+import static org.brackit.server.xquery.function.bdb.index.CreateNameIndex.CREATE_NAME_INDEX;
+import static org.brackit.server.xquery.function.bdb.index.CreatePathIndex.CREATE_PATH_INDEX;
 
 import org.brackit.server.xquery.function.bdb.buffer.ClearBuffers;
 import org.brackit.server.xquery.function.bdb.buffer.StartBuffer;
 import org.brackit.server.xquery.function.bdb.buffer.StopBuffer;
+import org.brackit.server.xquery.function.bdb.index.CreateCASIndex;
+import org.brackit.server.xquery.function.bdb.index.CreateNameIndex;
+import org.brackit.server.xquery.function.bdb.index.CreatePathIndex;
+import org.brackit.server.xquery.function.bdb.index.ScanCASIndex;
+import org.brackit.server.xquery.function.bdb.index.ScanNameIndex;
+import org.brackit.server.xquery.function.bdb.index.ScanPathIndex;
 import org.brackit.server.xquery.function.bdb.statistics.ListBuffer;
 import org.brackit.server.xquery.function.bdb.statistics.ListBuffers;
 import org.brackit.server.xquery.function.bdb.statistics.ListConnections;
@@ -64,6 +70,10 @@ public class BDBFun {
 
 	public static final QNm ERR_INVALID_ARGUMENT = new QNm(BDB_NSURI,
 			BDB_PREFIX, "BDBF0001");
+
+	public static final QNm ERR_INDEX_NOT_FOUND = null;
+
+	public static final QNm ERR_INVALID_INDEX_TYPE = null;
 
 	public static void register() {
 		// dummy function to cause static block
@@ -116,5 +126,8 @@ public class BDBFun {
 		Functions.predefine(new CreateCASIndex(CREATE_CAS_INDEX, new Signature(
 				SequenceType.NODE, new SequenceType(AtomicType.STR,
 						Cardinality.One))));
+		Functions.predefine(new ScanCASIndex());
+		Functions.predefine(new ScanPathIndex());
+		Functions.predefine(new ScanNameIndex());
 	}
 }
