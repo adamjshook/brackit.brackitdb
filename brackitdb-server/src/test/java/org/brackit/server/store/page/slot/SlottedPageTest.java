@@ -148,35 +148,6 @@ public class SlottedPageTest {
 	}
 
 	@Test
-	public void test() throws Exception {
-		boolean compressed = true;
-		page.format(page.getHandle().getPageID());
-		RecordGenerator generator = new ElementlessRecordGenerator();
-		new DocumentParser(new File(getClass()
-				.getResource("/xmark/auction.xml").getFile())).parse(generator);
-		List<Record> records = generator.getRecords();
-		int slotNo = 0;
-
-		for (Record record : records) {
-			Tuple toWrite = new ArrayTuple(new byte[][] {
-					record.deweyID.toBytes(), record.record });
-			if (!verifiedWrite(slotNo, toWrite, compressed)) {
-				break;
-			}
-
-			System.out.println("Write tuple " + slotNo);
-			slotNo++;
-		}
-
-		// page.dump(new PrintWriter(System.out));
-
-		for (int i = 0; i < slotNo; i++) {
-			System.out.println(i + " Deleting tuple " + 0);
-			verifiedDelete(0);
-		}
-	}
-
-	@Test
 	public void test2() throws Exception {
 		page.format(page.getHandle().getPageID());
 		Tuple first = new ArrayTuple(new byte[][] {
