@@ -116,8 +116,8 @@ public interface PageContext extends Latch {
 
 	public void format(int unitID, int pageType, PageID rootPageID,
 			Field keyType, Field valueType, int height, boolean unique,
-			boolean compression, boolean logged, long undoNextLSN)
-			throws IndexOperationException;
+			boolean compression, boolean lastInLevel, boolean clear,
+			boolean logged, long undoNextLSN) throws IndexOperationException;
 
 	public int getPageType();
 
@@ -146,6 +146,4 @@ public interface PageContext extends Latch {
 	public int getHeight();
 
 	boolean isLastInLevel();
-
-	void setLastInLevel(boolean last);
 }

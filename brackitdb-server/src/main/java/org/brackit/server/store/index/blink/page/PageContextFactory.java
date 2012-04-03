@@ -27,7 +27,6 @@
  */
 package org.brackit.server.store.index.blink.page;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.Handle;
@@ -42,6 +41,7 @@ import org.brackit.server.store.page.keyvalue.SlottedKeyValuePage;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.thread.Latch;
 import org.brackit.xquery.util.Cfg;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * @author Sebastian Baechle
@@ -61,8 +61,8 @@ public class PageContextFactory {
 
 	public PageContext allocate(Tx tx, int containerNo, int unitID,
 			int pageType, PageID rootPageID, Field keyType, Field valueType,
-			int height, boolean unique, boolean compression, boolean logged)
-			throws IndexOperationException {
+			int height, boolean unique, boolean compression,
+			boolean lastInLevel, boolean logged) throws IndexOperationException {
 		Buffer buffer = null;
 		Handle handle = null;
 		PageContext page = null;
@@ -83,7 +83,7 @@ public class PageContextFactory {
 			}
 
 			page.format(unitID, pageType, rootPageID, keyType, valueType,
-					height, unique, compression, logged, -1);
+					height, unique, compression, lastInLevel, true, logged, -1);
 		} catch (BufferException e) {
 			throw new IndexOperationException(e,
 					"Could not allocated new page.");
