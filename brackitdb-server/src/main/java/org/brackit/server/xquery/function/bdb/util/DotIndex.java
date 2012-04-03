@@ -25,19 +25,28 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery.function.bdb;
+package org.brackit.server.xquery.function.bdb.util;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.PrintStream;
+
+import org.brackit.server.io.buffer.PageID;
+import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.TXQueryContext;
-import org.brackit.server.session.Session;
-import org.brackit.server.tx.IsolationLevel;
+import org.brackit.server.store.index.Index;
+import org.brackit.server.store.index.IndexAccessException;
+import org.brackit.server.store.index.aries.BPlusIndex;
+import org.brackit.server.store.index.aries.display.DisplayVisitor;
+import org.brackit.server.xquery.function.FunUtil;
+import org.brackit.server.xquery.function.bdb.BDBFun;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.function.AbstractFunction;
 import org.brackit.xquery.module.StaticContext;
-import org.brackit.xquery.xdm.DocumentException;
+import org.brackit.xquery.util.annotation.FunctionAnnotation;
 import org.brackit.xquery.xdm.Sequence;
 import org.brackit.xquery.xdm.Signature;
 import org.brackit.xquery.xdm.type.AtomicType;
@@ -49,32 +58,46 @@ import org.brackit.xquery.xdm.type.SequenceType;
  * @author Sebastian Baechle
  * 
  */
-public class SetIsolation extends AbstractFunction {
+@FunctionAnnotation(description = "Creates a graphviz (.dot) print of the given index.", parameters = {
+		"$idxNo", "$file" })
+public class DotIndex extends AbstractFunction {
 
-	public static final QNm SET_ISOLATION = new QNm(BDBFun.BDB_NSURI,
-			BDBFun.BDB_PREFIX, "set-isolation");
+	public static final QNm DEFAULT_NAME = new QNm(BDBFun.BDB_NSURI,
+			BDBFun.BDB_PREFIX, "dot-index");
 
-	public SetIsolation() {
-		super(SET_ISOLATION, new Signature(new SequenceType(AtomicType.STR,
+	public DotIndex() {
+		super(DEFAULT_NAME, new Signature(new SequenceType(AtomicType.STR,
+				Cardinality.One), new SequenceType(AtomicType.INR,
 				Cardinality.One), new SequenceType(AtomicType.STR,
-				Cardinality.One)), true);
+				Cardinality.ZeroOrOne)), true);
 	}
 
 	@Override
-	public Sequence execute(StaticContext sctx, QueryContext ctx, 
+	public Sequence execute(StaticContext sctx, QueryContext ctx,
 			Sequence[] args) throws QueryException {
-		try {
-			Atomic atomic = (Atomic) args[0];
-			String s = atomic.stringValue();
-			IsolationLevel level = IsolationLevel.valueOf(s.toUpperCase());
-			Session session = ((TXQueryContext) ctx).getTX().getSession();
-			if (session != null) {
-				session.setIsolationLevel(level);
-			}
-			return new Str(level.toString());
+		PageID rootPageID = new PageID(FunUtil.getInt(args, 0, "$idxNo",
+				-1, null, true));
+		String filename = FunUtil.getString(args, 1, "$file", null, null,
+				false);
+		File file = (filename != null) ? new File(filename) : null;
 
-		} catch (Exception e) {
-			throw new DocumentException(e);
+		TXQueryContext txctx = (TXQueryContext) ctx;
+		BufferMgr bufferMgr = txctx.getTX().getBufferManager();
+
+		try {
+			Index index = new BPlusIndex(bufferMgr);
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			PrintStream stream = new PrintStream(out);
+			index.traverse(txctx.getTX(), rootPageID, new DisplayVisitor(
+					stream, true));
+			index.dump(txctx.getTX(), rootPageID, stream);
+			stream.close();
+			String result = (file != null) ? String.format(
+					"Dumped index %s to file %s", rootPageID, file) : out
+					.toString();
+			return new Str(result);
+		} catch (IndexAccessException e) {
+			return new Str(e.getMessage());
 		}
 	}
 }

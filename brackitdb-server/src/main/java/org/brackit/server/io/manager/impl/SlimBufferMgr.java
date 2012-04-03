@@ -32,7 +32,6 @@ import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.PageID;
@@ -41,11 +40,11 @@ import org.brackit.server.io.file.BlockSpace;
 import org.brackit.server.io.file.DefaultBlockSpace;
 import org.brackit.server.io.file.StoreException;
 import org.brackit.server.io.manager.BufferMgr;
-import org.brackit.server.procedure.InfoContributor;
-import org.brackit.server.procedure.ProcedureUtil;
-import org.brackit.server.procedure.statistics.ListBuffers;
 import org.brackit.server.tx.log.Log;
+import org.brackit.server.xquery.function.bdb.statistics.InfoContributor;
+import org.brackit.server.xquery.function.bdb.statistics.ListBuffers;
 import org.brackit.xquery.util.Cfg;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * @author Sebastian Baechle
@@ -74,7 +73,7 @@ public class SlimBufferMgr implements BufferMgr, InfoContributor {
 	public SlimBufferMgr(Log transactionLog) {
 		this.bufferMapping = new Buffer[256];
 		this.transactionLog = transactionLog;
-		ProcedureUtil.register(ListBuffers.class, this);
+		ListBuffers.add(this);
 	}
 
 	@Override
@@ -170,7 +169,7 @@ public class SlimBufferMgr implements BufferMgr, InfoContributor {
 
 	@Override
 	public synchronized void shutdown() throws BufferException {
-		ProcedureUtil.deregister(ListBuffers.class, this);
+		ListBuffers.remove(this);
 		for (int containerID = 0; containerID < bufferMapping.length; containerID++) {
 			Buffer buffer = bufferMapping[containerID];
 			if (buffer != null) {

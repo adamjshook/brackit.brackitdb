@@ -31,12 +31,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-import org.brackit.xquery.util.log.Logger;
-import org.brackit.server.procedure.InfoContributor;
-import org.brackit.server.procedure.ProcedureUtil;
-import org.brackit.server.procedure.statistics.ListContainers;
 import org.brackit.server.util.BitArrayWrapper;
 import org.brackit.server.util.FileUtil;
+import org.brackit.server.xquery.function.bdb.statistics.InfoContributor;
+import org.brackit.server.xquery.function.bdb.statistics.ListContainers;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * Default BlockSpace implementation using one BlockFile, simple 1:1 mapping
@@ -86,7 +85,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 		storeRoot = root;
 		dataFileName = storeRoot + File.separator + id + ".cnt";
 		metaFileName = dataFileName + ".meta";
-		ProcedureUtil.register(ListContainers.class, this);
+		ListContainers.add(this);
 	}
 
 	@Override
@@ -203,7 +202,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 	@Override
 	public synchronized void close() throws StoreException {
 		log.info("closing block space: " + id);
-		ProcedureUtil.deregister(ListContainers.class, this);
+		ListContainers.remove(this);
 
 		if (closed) {
 			throw new StoreException("invalid state, space already closed");
@@ -381,7 +380,8 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 						"Repairing freespace information for %s after crash.",
 						dataFileName));
 
-				// the first block reserved, for compatibility with the code which
+				// the first block reserved, for compatibility with the code
+				// which
 				// depends on the old IOMgr
 				freeSpaceInfo.set(0);
 				for (int i = 1; i < blockCnt; i++) {
@@ -446,7 +446,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			throw new StoreException("invalid lba");
 		}
 		try {
-			//block[0] = 1;
+			// block[0] = 1;
 			dataFile.write(lba, block, numBlocks);
 		} catch (FileException e) {
 			throw new StoreException(e);

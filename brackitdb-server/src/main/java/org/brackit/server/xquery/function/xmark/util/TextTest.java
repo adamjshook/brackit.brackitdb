@@ -25,50 +25,58 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery;
+package org.brackit.server.xquery.function.xmark.util;
 
-import java.util.Map;
-
-import org.brackit.server.metadata.manager.MetaDataMgr;
-import org.brackit.server.tx.Tx;
-import org.brackit.server.xquery.compiler.optimizer.DBOptimizer;
-import org.brackit.server.xquery.compiler.translator.DBTranslator;
-import org.brackit.server.xquery.function.bdb.BDBFun;
-import org.brackit.server.xquery.function.xmark.XMarkFun;
+import org.brackit.xquery.ErrorCode;
+import org.brackit.xquery.QueryContext;
+import org.brackit.xquery.QueryException;
+import org.brackit.xquery.Tuple;
+import org.brackit.xquery.atomic.Bool;
 import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.atomic.Str;
-import org.brackit.xquery.compiler.CompileChain;
-import org.brackit.xquery.compiler.optimizer.Optimizer;
-import org.brackit.xquery.compiler.translator.Translator;
+import org.brackit.xquery.expr.BoundVariable;
+import org.brackit.xquery.xdm.Expr;
+import org.brackit.xquery.xdm.Item;
+import org.brackit.xquery.xdm.Kind;
+import org.brackit.xquery.xdm.Node;
+import org.brackit.xquery.xdm.Sequence;
 
 /**
+ * 
  * @author Sebastian Baechle
  * 
  */
-public class DBCompileChain extends CompileChain {
-
-	static {
-		// define function namespaces and functions in these namespaces		
-		BDBFun.register();
-		XMarkFun.register();		
-	}
-
-	private final MetaDataMgr mdm;
-
-	private final Tx tx;
-
-	public DBCompileChain(MetaDataMgr mdm, Tx tx) {
-		this.mdm = mdm;
-		this.tx = tx;
+public class TextTest implements Expr {
+	@Override
+	public Sequence evaluate(QueryContext ctx, Tuple tuple)
+			throws QueryException {
+		return evaluateToItem(ctx, tuple);
 	}
 
 	@Override
-	protected Translator getTranslator(Map<QNm, Str> options) {
-		return new DBTranslator(options);
+	public Item evaluateToItem(QueryContext ctx, Tuple tuple)
+			throws QueryException {
+		try {
+			Node<?> node = (Node<?>) new BoundVariable(new QNm("l"), 0)
+					.evaluateToItem(ctx, tuple);
+
+			if (node == null) {
+				return null;
+			}
+
+			boolean res = (node.getKind() == Kind.TEXT);
+			return res ? Bool.TRUE : Bool.FALSE;
+		} catch (ClassCastException e) {
+			throw new QueryException(e, ErrorCode.ERR_TYPE_INAPPROPRIATE_TYPE);
+		}
 	}
 
 	@Override
-	protected Optimizer getOptimizer(Map<QNm, Str> options) {
-		return new DBOptimizer(options, mdm, tx);
+	public boolean isUpdating() {
+		return false;
+	}
+
+	@Override
+	public boolean isVacuous() {
+		return false;
 	}
 }

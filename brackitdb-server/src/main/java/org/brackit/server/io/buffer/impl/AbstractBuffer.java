@@ -40,7 +40,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.Handle;
@@ -49,15 +48,15 @@ import org.brackit.server.io.buffer.log.PageLogOperationHelper;
 import org.brackit.server.io.file.BlockSpace;
 import org.brackit.server.io.file.StoreException;
 import org.brackit.server.io.manager.BufferMgr;
-import org.brackit.server.procedure.InfoContributor;
-import org.brackit.server.procedure.ProcedureUtil;
-import org.brackit.server.procedure.statistics.ListBuffer;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.TxID;
 import org.brackit.server.tx.log.Log;
 import org.brackit.server.tx.log.LogException;
 import org.brackit.server.tx.thread.ThreadCB;
+import org.brackit.server.xquery.function.bdb.statistics.InfoContributor;
+import org.brackit.server.xquery.function.bdb.statistics.ListBuffer;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * @author Sebastian Baechle
@@ -187,7 +186,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		this.prefetchBuffer = new byte[prefetchSize * pageSize];
 		this.writeSize = 40;
 		this.writeBuffer = new byte[writeSize * pageSize];
-		ProcedureUtil.register(ListBuffer.class, this);
+		ListBuffer.add(this);
 	}
 
 	protected abstract Frame shrink();
@@ -310,8 +309,9 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 						LSN = transaction.logUpdate(loggableHelper
 								.createAllocateLogOp(pageID));
 					} else {
-						LSN = transaction.logCLR(loggableHelper
-								.createAllocateLogOp(pageID), undoNextLSN);
+						LSN = transaction.logCLR(
+								loggableHelper.createAllocateLogOp(pageID),
+								undoNextLSN);
 					}
 				} catch (TxException e) {
 					throw new BufferException(
@@ -356,8 +356,9 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 					transaction.logUpdate(loggableHelper
 							.createDeallocateLogOp(pageID));
 				} else {
-					transaction.logCLR(loggableHelper
-							.createDeallocateLogOp(pageID), undoNextLSN);
+					transaction.logCLR(
+							loggableHelper.createDeallocateLogOp(pageID),
+							undoNextLSN);
 				}
 			} catch (TxException e) {
 				throw new BufferException(
@@ -436,8 +437,8 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 	private void deallocateBlock(PageID pageID) throws BufferException {
 		if (log.isDebugEnabled()) {
-			log.debug(String.format("Releasing block %s of page %s", pageID
-					.getBlockNo(), pageID));
+			log.debug(String.format("Releasing block %s of page %s",
+					pageID.getBlockNo(), pageID));
 		}
 		try {
 			blockSpace.release(pageID.getBlockNo());
@@ -857,32 +858,29 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			int fixed = frame.fixCount();
 			TxID tx = (frame.getAssignedTo() != null) ? frame.getAssignedTo()
 					.getID() : null;
-			out
-					.format(
-							"%s FRM=%s MAPPED=%s FIX=%s LATCH=%s LSN=%s DIRTY=%s TX=%s",
-							pID, fID, mapped, fixed, latched, LSN, dirty, tx);
+			out.format(
+					"%s FRM=%s MAPPED=%s FIX=%s LATCH=%s LSN=%s DIRTY=%s TX=%s",
+					pID, fID, mapped, fixed, latched, LSN, dirty, tx);
 			out.println();
 		}
 	}
 
 	@Override
 	public void shutdown(boolean force) throws BufferException {
+		ListBuffer.remove(this);
 		flush();
 
 		synchronized (this) {
 			if (fixCnt - unfixCnt > 0) {
 				if (force) {
-					log
-							.warn(String
-									.format(
-											"Closing container '%s' because some pages are still fixed in the buffer.",
-											blockSpace.getId()));
+					log.warn(String
+							.format("Closing container '%s' because some pages are still fixed in the buffer.",
+									blockSpace.getId()));
 				} else {
 					throw new BufferException(
-							String
-									.format(
-											"Cannot close container '%s' because some pages are still fixed in the buffer.",
-											blockSpace.getId()));
+							String.format(
+									"Cannot close container '%s' because some pages are still fixed in the buffer.",
+									blockSpace.getId()));
 				}
 			}
 

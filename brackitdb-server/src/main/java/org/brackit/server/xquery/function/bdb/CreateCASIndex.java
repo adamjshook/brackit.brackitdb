@@ -34,7 +34,6 @@ import org.brackit.server.metadata.DBCollection;
 import org.brackit.server.metadata.TXQueryContext;
 import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.index.definition.IndexDefBuilder;
-import org.brackit.server.xquery.DBCompileChain;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.atomic.QNm;
@@ -68,7 +67,7 @@ import org.brackit.xquery.xdm.Type;
 public class CreateCASIndex extends AbstractFunction {
 
 	public final static QNm CREATE_CAS_INDEX = new QNm(
-			DBCompileChain.BDB_NSURI, DBCompileChain.BDB_PREFIX,
+			BDBFun.BDB_NSURI, BDBFun.BDB_PREFIX,
 			"create-cas-index");
 
 	public CreateCASIndex(QNm name, Signature signature) {

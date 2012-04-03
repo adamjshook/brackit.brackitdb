@@ -25,56 +25,82 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery.function.bdb;
+package org.brackit.server.xquery.function.bdb.workload;
 
-import org.brackit.server.metadata.TXQueryContext;
-import org.brackit.server.session.Session;
-import org.brackit.server.tx.IsolationLevel;
+import org.brackit.server.node.sax.SaxParser;
+import org.brackit.server.xquery.function.FunUtil;
+import org.brackit.server.xquery.function.bdb.BDBFun;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.function.AbstractFunction;
 import org.brackit.xquery.module.StaticContext;
-import org.brackit.xquery.xdm.DocumentException;
+import org.brackit.xquery.util.annotation.FunctionAnnotation;
+import org.brackit.xquery.xdm.Collection;
 import org.brackit.xquery.xdm.Sequence;
 import org.brackit.xquery.xdm.Signature;
 import org.brackit.xquery.xdm.type.AtomicType;
 import org.brackit.xquery.xdm.type.Cardinality;
 import org.brackit.xquery.xdm.type.SequenceType;
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
 
 /**
- * 
  * @author Sebastian Baechle
  * 
  */
-public class SetIsolation extends AbstractFunction {
+@FunctionAnnotation(description = "Performs a SAX scan of the document with the default (null) handler.", parameters = { "$document" })
+public class SaxScan extends AbstractFunction {
 
-	public static final QNm SET_ISOLATION = new QNm(BDBFun.BDB_NSURI,
-			BDBFun.BDB_PREFIX, "set-isolation");
+	public static final QNm DEFAULT_NAME = new QNm(BDBFun.BDB_NSURI,
+			BDBFun.BDB_PREFIX, "sax-scan");
 
-	public SetIsolation() {
-		super(SET_ISOLATION, new Signature(new SequenceType(AtomicType.STR,
+	public SaxScan() {
+		super(DEFAULT_NAME, new Signature(new SequenceType(AtomicType.STR,
 				Cardinality.One), new SequenceType(AtomicType.STR,
 				Cardinality.One)), true);
 	}
 
 	@Override
-	public Sequence execute(StaticContext sctx, QueryContext ctx, 
+	public Sequence execute(StaticContext sctx, QueryContext ctx,
 			Sequence[] args) throws QueryException {
-		try {
-			Atomic atomic = (Atomic) args[0];
-			String s = atomic.stringValue();
-			IsolationLevel level = IsolationLevel.valueOf(s.toUpperCase());
-			Session session = ((TXQueryContext) ctx).getTX().getSession();
-			if (session != null) {
-				session.setIsolationLevel(level);
-			}
-			return new Str(level.toString());
+		String storedNamePath = FunUtil.getString(args, 0, "$document",
+				null, null, true);
+		Collection<?> coll = ctx.getStore().lookup(storedNamePath);
 
-		} catch (Exception e) {
-			throw new DocumentException(e);
+		long start = System.nanoTime();
+
+		SaxParser parser = new SaxParser(coll.getDocument().getSubtree());
+		parser.setDisplayNodeIDs(false);
+		NullHandler handler = new NullHandler();
+		parser.parse(ctx, handler);
+
+		long end = System.nanoTime();
+
+		return new Str(String.format(
+				"Required %s ms for (%s elements, %s attributes, %s text)",
+				((end - start) / 1000000), handler.elCnt,
+				handler.attCnt, handler.textCnt));
+	}
+
+	static class NullHandler extends DefaultHandler {
+		int elCnt = 0;
+		int attCnt = 0;
+		int textCnt = 0;
+
+		@Override
+		public void characters(char[] ch, int start, int length)
+				throws SAXException {
+			textCnt++;
+		}
+
+		@Override
+		public void startElement(String uri, String localName, String name,
+				Attributes attributes) throws SAXException {
+			elCnt++;
+			attCnt += attributes.getLength();
 		}
 	}
 }

@@ -27,13 +27,12 @@
  */
 package org.brackit.server.tx.locking.services;
 
-import org.brackit.server.procedure.InfoContributor;
-import org.brackit.server.procedure.ProcedureUtil;
-import org.brackit.server.procedure.statistics.ListLocks;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.locking.protocol.LockMode;
 import org.brackit.server.tx.locking.table.LockTable;
 import org.brackit.server.tx.locking.table.LockTableClient;
+import org.brackit.server.xquery.function.bdb.statistics.InfoContributor;
+import org.brackit.server.xquery.function.bdb.statistics.ListLocks;
 
 /**
  * 
@@ -49,7 +48,7 @@ public abstract class BaseLockServiceImpl<T extends LockMode<T>> implements
 	protected BaseLockServiceImpl(LockTable<T> table, String name) {
 		this.name = name;
 		this.table = table;
-		ProcedureUtil.register(ListLocks.class, this);
+		ListLocks.add(this);
 	}
 
 	public final String listLocks() {

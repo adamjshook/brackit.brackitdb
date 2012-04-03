@@ -25,50 +25,64 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery;
+package org.brackit.server.xquery.function.bdb.workload;
 
-import java.util.Map;
-
-import org.brackit.server.metadata.manager.MetaDataMgr;
-import org.brackit.server.tx.Tx;
-import org.brackit.server.xquery.compiler.optimizer.DBOptimizer;
-import org.brackit.server.xquery.compiler.translator.DBTranslator;
+import org.brackit.server.xquery.function.FunUtil;
 import org.brackit.server.xquery.function.bdb.BDBFun;
-import org.brackit.server.xquery.function.xmark.XMarkFun;
+import org.brackit.xquery.QueryContext;
+import org.brackit.xquery.QueryException;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
-import org.brackit.xquery.compiler.CompileChain;
-import org.brackit.xquery.compiler.optimizer.Optimizer;
-import org.brackit.xquery.compiler.translator.Translator;
+import org.brackit.xquery.function.AbstractFunction;
+import org.brackit.xquery.module.StaticContext;
+import org.brackit.xquery.util.annotation.FunctionAnnotation;
+import org.brackit.xquery.xdm.Collection;
+import org.brackit.xquery.xdm.Node;
+import org.brackit.xquery.xdm.Sequence;
+import org.brackit.xquery.xdm.Signature;
+import org.brackit.xquery.xdm.Stream;
+import org.brackit.xquery.xdm.type.AtomicType;
+import org.brackit.xquery.xdm.type.Cardinality;
+import org.brackit.xquery.xdm.type.SequenceType;
 
 /**
  * @author Sebastian Baechle
  * 
  */
-public class DBCompileChain extends CompileChain {
+@FunctionAnnotation(description = "Performs a raw scan of the document.", parameters = { "$document" })
+public class DocumentScan extends AbstractFunction {
 
-	static {
-		// define function namespaces and functions in these namespaces		
-		BDBFun.register();
-		XMarkFun.register();		
-	}
+	public static final QNm DEFAULT_NAME = new QNm(BDBFun.BDB_NSURI,
+			BDBFun.BDB_PREFIX, "document-scan");
 
-	private final MetaDataMgr mdm;
-
-	private final Tx tx;
-
-	public DBCompileChain(MetaDataMgr mdm, Tx tx) {
-		this.mdm = mdm;
-		this.tx = tx;
+	public DocumentScan() {
+		super(DEFAULT_NAME, new Signature(new SequenceType(AtomicType.STR,
+				Cardinality.One), new SequenceType(AtomicType.STR,
+				Cardinality.One)), true);
 	}
 
 	@Override
-	protected Translator getTranslator(Map<QNm, Str> options) {
-		return new DBTranslator(options);
-	}
+	public Sequence execute(StaticContext sctx, QueryContext ctx,
+			Sequence[] args) throws QueryException {
+		String storedNamePath = FunUtil.getString(args, 0, "$document",
+				null, null, true);
+		Collection<?> coll = ctx.getStore().lookup(storedNamePath);
 
-	@Override
-	protected Optimizer getOptimizer(Map<QNm, Str> options) {
-		return new DBOptimizer(options, mdm, tx);
+		long start = System.nanoTime();
+		int count = 0;
+
+		Stream<? extends Node<?>> stream = coll.getDocument().getSubtree();
+		try {
+			while (stream.next() != null) {
+				count++;
+			}
+		} finally {
+			stream.close();
+		}
+
+		long end = System.nanoTime();
+
+		return new Str(String.format("Required %s ms for %s nodes",
+				((end - start) / 1000000), count));
 	}
 }

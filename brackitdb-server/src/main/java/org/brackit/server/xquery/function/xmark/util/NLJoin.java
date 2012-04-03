@@ -25,56 +25,94 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery.function.bdb;
+package org.brackit.server.xquery.function.xmark.util;
 
-import org.brackit.server.metadata.TXQueryContext;
-import org.brackit.server.session.Session;
-import org.brackit.server.tx.IsolationLevel;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.atomic.Atomic;
-import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.atomic.Str;
-import org.brackit.xquery.function.AbstractFunction;
-import org.brackit.xquery.module.StaticContext;
-import org.brackit.xquery.xdm.DocumentException;
+import org.brackit.xquery.Tuple;
+import org.brackit.xquery.operator.Cursor;
+import org.brackit.xquery.xdm.Expr;
 import org.brackit.xquery.xdm.Sequence;
-import org.brackit.xquery.xdm.Signature;
-import org.brackit.xquery.xdm.type.AtomicType;
-import org.brackit.xquery.xdm.type.Cardinality;
-import org.brackit.xquery.xdm.type.SequenceType;
 
 /**
  * 
  * @author Sebastian Baechle
  * 
  */
-public class SetIsolation extends AbstractFunction {
+public class NLJoin implements Cursor {
+	private final Cursor inner;
 
-	public static final QNm SET_ISOLATION = new QNm(BDBFun.BDB_NSURI,
-			BDBFun.BDB_PREFIX, "set-isolation");
+	private final Cursor outer;
 
-	public SetIsolation() {
-		super(SET_ISOLATION, new Signature(new SequenceType(AtomicType.STR,
-				Cardinality.One), new SequenceType(AtomicType.STR,
-				Cardinality.One)), true);
+	private final Expr predicate;
+
+	private final int[] projections;
+
+	private final boolean leftOuterJoin;
+
+	private boolean delivered;
+
+	private Tuple left;
+
+	private Tuple right;
+
+	public NLJoin(Cursor outer, Cursor inner, Expr predicate,
+			boolean leftOuterJoin) {
+		this(outer, inner, predicate, leftOuterJoin, null);
+	}
+
+	public NLJoin(Cursor outer, Cursor inner, Expr predicate,
+			boolean leftOuterJoin, int... projections) {
+		this.inner = inner;
+		this.outer = outer;
+		this.predicate = predicate;
+		this.projections = projections;
+		this.leftOuterJoin = leftOuterJoin;
 	}
 
 	@Override
-	public Sequence execute(StaticContext sctx, QueryContext ctx, 
-			Sequence[] args) throws QueryException {
-		try {
-			Atomic atomic = (Atomic) args[0];
-			String s = atomic.stringValue();
-			IsolationLevel level = IsolationLevel.valueOf(s.toUpperCase());
-			Session session = ((TXQueryContext) ctx).getTX().getSession();
-			if (session != null) {
-				session.setIsolationLevel(level);
-			}
-			return new Str(level.toString());
+	public void open(QueryContext ctx) throws QueryException {
+		inner.open(ctx);
+		outer.open(ctx);
+	}
 
-		} catch (Exception e) {
-			throw new DocumentException(e);
+	@Override
+	public Tuple next(QueryContext ctx) throws QueryException {
+		while ((left != null) || ((left = outer.next(ctx)) != null)) {
+			if ((right = inner.next(ctx)) == null) {
+				Tuple lojTuple = null;
+
+				if ((!delivered) && (leftOuterJoin)) {
+					Tuple tmp = left.concat((Sequence) null);
+					return (projections != null) ? tmp.project(projections) : tmp;
+				}
+
+				inner.close(ctx);
+				inner.open(ctx);
+				left = null;
+				delivered = false;
+
+				if (lojTuple != null) {
+					return lojTuple;
+				}
+
+				continue;
+			}
+
+			Tuple joined = left.concat(right.array());
+
+			if (predicate.evaluate(ctx, joined).booleanValue()) {
+				delivered = true;
+				return (projections != null) ? joined.project(projections) : joined;
+			}
 		}
+
+		return null;
+	}
+
+	@Override
+	public void close(QueryContext ctx) {
+		inner.close(ctx);
+		outer.close(ctx);
 	}
 }

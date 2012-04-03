@@ -35,7 +35,6 @@ import org.brackit.server.metadata.TXQueryContext;
 import org.brackit.server.node.index.definition.Cluster;
 import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.index.definition.IndexDefBuilder;
-import org.brackit.server.xquery.DBCompileChain;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.atomic.QNm;
@@ -63,7 +62,7 @@ import org.brackit.xquery.xdm.Signature;
 public class CreateNameIndex extends AbstractFunction {
 
 	public final static QNm CREATE_NAME_INDEX = new QNm(
-			DBCompileChain.BDB_NSURI, DBCompileChain.BDB_PREFIX,
+			BDBFun.BDB_NSURI, BDBFun.BDB_PREFIX,
 			"create-name-index");
 
 	public CreateNameIndex(QNm name, Signature signature) {
