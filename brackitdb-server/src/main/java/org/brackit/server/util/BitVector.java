@@ -25,68 +25,36 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.io.file;
+package org.brackit.server.util;
 
 /**
- * Supports block-oriented access, using LBA's (logical block address, derived
- * from page number), to the storage system. A BlockSpace is identified by its
- * id and characterized by its blkSize.
  * 
- * @author Ou Yi
- * 
+ * @author Martin Hiller
+ *
  */
-public interface BlockSpace {
+public interface BitVector {
 
-	void create(int blkSize, int iniSize, double extent) throws StoreException;
-	
-	int createUnit() throws StoreException;
+	public byte[] toBytes();
 
-	void open() throws StoreException;
+	public BitArrayWrapper extendTo(int newLogicalSize);
 
-	void close() throws StoreException;
+	public int logicalSize();
 
-	/**
-	 * allocates a block: marking a free block as used
-	 * 
-	 * @param lba
-	 *            The requested logical block number. If lba < 0, the BlockSpace
-	 *            implementation may choose the to-be-allocated block freely
-	 *            (Normally the next free block from the beginning of the
-	 *            BlockSpace).
-	 * @param unitID
-	 *            The unitID this block will be assigned to. If the unit does
-	 *            not exist, an exception will be thrown.
-	 * @return the logical block address (lba) of the newly allocated block
-	 */
-	int allocate(int lba, int unitID) throws StoreException;
+	public boolean get(int bitIndex);
+
+	public void set(int bitIndex);
+
+	public void clear(int bitIndex);
 
 	/**
-	 * the opposite of allocate: marking the block identified by the lba as
-	 * free.
+	 * Returns the index of the first bit that is set to false that occurs on or
+	 * after the specified starting index. If there is no such bit, -1 will be
+	 * returned.
 	 * 
-	 * @param lba
-	 */
-	void release(int lba) throws StoreException;
-
-	int read(int lba, byte[] buffer, int numBlocks) throws StoreException;
-
-	void write(int lba, byte[] buffer, int numBlocks) throws StoreException;
-
-	/**
-	 * Returns the length of the block header in bytes
-	 * 
+	 * @param fromIndex
+	 *            the index to start checking from (inclusive).
 	 * @return
 	 */
-	int sizeOfHeader();
-
-	int sizeOfBlock() throws StoreException;
-
-	int getId();
-
-	boolean isUsed(int lba);
-
-	boolean isClosed();
-
-	void sync() throws StoreException;
+	public int nextClearBit(int fromIndex);
 
 }

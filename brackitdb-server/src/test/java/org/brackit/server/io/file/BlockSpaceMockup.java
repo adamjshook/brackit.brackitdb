@@ -57,7 +57,7 @@ public class BlockSpaceMockup implements BlockSpace {
 	}
 
 	@Override
-	public int allocate(int blockNo) throws StoreException {
+	public int allocate(int blockNo, int unitID) throws StoreException {
 		if (blockNo < 0) {
 			blockNo = maxBlockNo++;
 		} else {
@@ -170,5 +170,11 @@ public class BlockSpaceMockup implements BlockSpace {
 
 	@Override
 	public void sync() throws StoreException {
+	}
+
+	@Override
+	public int createUnit() throws StoreException {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 }

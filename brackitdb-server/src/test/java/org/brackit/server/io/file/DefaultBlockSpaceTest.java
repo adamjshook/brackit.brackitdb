@@ -53,6 +53,7 @@ public class DefaultBlockSpaceTest {
 	static final double EXT_SIZE = 0.5;
 
 	DefaultBlockSpace bs;
+	int unitID;
 
 	/**
 	 * @throws java.lang.Exception
@@ -76,6 +77,7 @@ public class DefaultBlockSpaceTest {
 		bs = new DefaultBlockSpace(STORE_ROOT, 0);
 		try {
 			bs.create(BLOCK_SIZE, INIT_SIZE, EXT_SIZE);
+			unitID = bs.createUnit();
 		} catch (StoreException e) {
 			e.printStackTrace();
 		}
@@ -121,7 +123,7 @@ public class DefaultBlockSpaceTest {
 		try {
 			bs.open();
 
-			lba1 = bs.allocate(-1);
+			lba1 = bs.allocate(-1, unitID);
 
 			bs.close();
 		} catch (StoreException e) {
@@ -131,7 +133,7 @@ public class DefaultBlockSpaceTest {
 		try {
 			bs.open();
 
-			lba2 = bs.allocate(-1);
+			lba2 = bs.allocate(-1, unitID);
 
 			bs.close();
 		} catch (StoreException e) {
@@ -145,7 +147,7 @@ public class DefaultBlockSpaceTest {
 			bs.open();
 
 			for (int i = 0; i < INIT_SIZE * 2; i++) {
-				bs.allocate(-1);
+				bs.allocate(-1, unitID);
 			}
 
 			bs.close();
@@ -157,7 +159,7 @@ public class DefaultBlockSpaceTest {
 			bs.open();
 
 			for (int i = 0; i < INIT_SIZE * 2; i++) {
-				lba2 = bs.allocate(-1);
+				lba2 = bs.allocate(-1, unitID);
 			}
 			assertTrue(lba2 == 4098);
 
@@ -186,7 +188,7 @@ public class DefaultBlockSpaceTest {
 			bs.open();
 
 			byte[] blk = new byte[BLOCK_SIZE];
-			int lba = bs.allocate(-1);
+			int lba = bs.allocate(-1, unitID);
 
 			// assertTrue(blk[0] == DefaultBlockSpace.BLOCK_IN_USE);
 
@@ -203,7 +205,7 @@ public class DefaultBlockSpaceTest {
 			bs.open();
 
 			byte[] blk = new byte[BLOCK_SIZE];
-			int lba = bs.allocate(-1);
+			int lba = bs.allocate(-1, unitID);
 
 			// assertTrue(blk[0] == DefaultBlockSpace.BLOCK_IN_USE);
 
@@ -278,7 +280,7 @@ public class DefaultBlockSpaceTest {
 			bs.open();
 
 			for (int i = 0; i < INIT_SIZE; i++) {
-				bs.allocate(-1);
+				bs.allocate(-1, unitID);
 			}
 
 			bs.close();
@@ -326,7 +328,7 @@ public class DefaultBlockSpaceTest {
 				blk[i] = (byte) 1;
 			}
 			for (int i = 0; i < INIT_SIZE; i++) {
-				int lba = bs.allocate(-1);
+				int lba = bs.allocate(-1, unitID);
 				bs.write(lba, blk, 1);
 			}
 

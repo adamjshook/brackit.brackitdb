@@ -282,9 +282,12 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 	}
 	
 	@Override
-	public synchronized int createUnit() {
-		// TODO
-		return 42;
+	public synchronized int createUnit() throws BufferException {	
+		try {
+			return blockSpace.createUnit();
+		} catch (StoreException e) {
+			throw new BufferException("Error creating unit.", e);
+		}	
 	}
 
 	public synchronized Handle allocatePage(Tx tx, int unitID)
@@ -315,7 +318,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 		try {
 			evict(victim);
-			pageID = allocateBlock(pageID);
+			pageID = allocateBlock(pageID, unitID);
 
 			if (logged) {
 				try {
@@ -426,14 +429,14 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		}
 	}
 
-	private PageID allocateBlock(PageID pageID) throws BufferException {
+	private PageID allocateBlock(PageID pageID, int unitID) throws BufferException {
 		int blockNo = (pageID != null) ? pageID.getBlockNo() : -1;
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Allocating block %s of page %s", blockNo,
 					pageID));
 		}
 		try {
-			int allocatedBlockNo = blockSpace.allocate(blockNo);
+			int allocatedBlockNo = blockSpace.allocate(blockNo, unitID);
 			PageID allocatedPageID = new PageID(getContainerNo(),
 					allocatedBlockNo);
 			if ((pageID == null) && log.isTraceEnabled()) {
@@ -484,8 +487,8 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		int offset = 0;
 		for (Frame frame : frames) {
 			System.arraycopy(frame.page, 0, buffer, offset, pageSize);
-			// mark block as used
-			buffer[offset] = 1;
+//			// mark block as used
+//			buffer[offset] = 1;
 			offset += pageSize;
 		}
 	}

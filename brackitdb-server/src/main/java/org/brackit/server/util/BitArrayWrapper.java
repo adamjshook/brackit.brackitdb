@@ -37,7 +37,7 @@ import java.util.Arrays;
  * @author Ou Yi
  * 
  */
-public class BitArrayWrapper {
+public class BitArrayWrapper implements BitVector {
 	private BitArray ba;
 	private int logicalSize;
 
@@ -55,6 +55,7 @@ public class BitArrayWrapper {
 		return baw;
 	}
 
+	@Override
 	public byte[] toBytes() {
 		ByteBuffer bb = ByteBuffer.allocate(Integer.SIZE / Byte.SIZE
 				+ ba.words.length);
@@ -63,12 +64,14 @@ public class BitArrayWrapper {
 		return bb.array();
 	}
 
+	@Override
 	public BitArrayWrapper extendTo(int newLogicalSize) {
 		BitArrayWrapper baw = new BitArrayWrapper(newLogicalSize);
 		baw.ba.words = Arrays.copyOf(ba.words, toPhysicalSize(newLogicalSize));
 		return baw;
 	}
 
+	@Override
 	public int logicalSize() {
 		return logicalSize;
 	}
@@ -79,18 +82,21 @@ public class BitArrayWrapper {
 						* BitArray.BITS_PER_WORD);
 	}
 
+	@Override
 	public boolean get(int bitIndex) {
 		if (bitIndex < 0 || bitIndex >= logicalSize)
 			throw new IndexOutOfBoundsException("bitIndex: " + bitIndex);
 		return ba.get(bitIndex);
 	}
 
+	@Override
 	public void set(int bitIndex) {
 		if (bitIndex < 0 || bitIndex >= logicalSize)
 			throw new IndexOutOfBoundsException("bitIndex: " + bitIndex);
 		ba.set(bitIndex);
 	}
 
+	@Override
 	public void clear(int bitIndex) {
 		if (bitIndex < 0 || bitIndex >= logicalSize)
 			throw new IndexOutOfBoundsException("bitIndex: " + bitIndex);
@@ -106,6 +112,7 @@ public class BitArrayWrapper {
 	 *            the index to start checking from (inclusive).
 	 * @return
 	 */
+	@Override
 	public int nextClearBit(int fromIndex) {
 		if (fromIndex < 0 || fromIndex >= logicalSize)
 			throw new IndexOutOfBoundsException("fromIndex: " + fromIndex);

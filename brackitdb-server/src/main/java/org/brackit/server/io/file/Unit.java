@@ -27,66 +27,27 @@
  */
 package org.brackit.server.io.file;
 
+import java.io.RandomAccessFile;
+
+import org.brackit.server.util.BitArrayWrapper;
+import org.brackit.server.util.BitVector;
+
 /**
- * Supports block-oriented access, using LBA's (logical block address, derived
- * from page number), to the storage system. A BlockSpace is identified by its
- * id and characterized by its blkSize.
  * 
- * @author Ou Yi
+ * Represents a logical unit within a container. Each block is assigned to
+ * exactly one unit.
+ * 
+ * @author Martin Hiller
  * 
  */
-public interface BlockSpace {
+public class Unit {
 
-	void create(int blkSize, int iniSize, double extent) throws StoreException;
+	public final RandomAccessFile file;
+	public final BitVector blockTable;
 	
-	int createUnit() throws StoreException;
-
-	void open() throws StoreException;
-
-	void close() throws StoreException;
-
-	/**
-	 * allocates a block: marking a free block as used
-	 * 
-	 * @param lba
-	 *            The requested logical block number. If lba < 0, the BlockSpace
-	 *            implementation may choose the to-be-allocated block freely
-	 *            (Normally the next free block from the beginning of the
-	 *            BlockSpace).
-	 * @param unitID
-	 *            The unitID this block will be assigned to. If the unit does
-	 *            not exist, an exception will be thrown.
-	 * @return the logical block address (lba) of the newly allocated block
-	 */
-	int allocate(int lba, int unitID) throws StoreException;
-
-	/**
-	 * the opposite of allocate: marking the block identified by the lba as
-	 * free.
-	 * 
-	 * @param lba
-	 */
-	void release(int lba) throws StoreException;
-
-	int read(int lba, byte[] buffer, int numBlocks) throws StoreException;
-
-	void write(int lba, byte[] buffer, int numBlocks) throws StoreException;
-
-	/**
-	 * Returns the length of the block header in bytes
-	 * 
-	 * @return
-	 */
-	int sizeOfHeader();
-
-	int sizeOfBlock() throws StoreException;
-
-	int getId();
-
-	boolean isUsed(int lba);
-
-	boolean isClosed();
-
-	void sync() throws StoreException;
-
+	public Unit(RandomAccessFile file, int blockCount) {
+		super();
+		this.file = file;
+		this.blockTable = new BitArrayWrapper(blockCount);
+	}
 }

@@ -42,7 +42,7 @@ public interface Buffer {
 
 	public int getContainerNo();
 	
-	public int createUnit();
+	public int createUnit() throws BufferException;
 
 	public Handle allocatePage(Tx tx, int unitID) throws BufferException;
 
