@@ -1311,12 +1311,14 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 			e.printStackTrace();
 		}
 
+		/*
 		System.out.println(entries.size());
 		System.out.println(uniqueReadKeys.size());
 		System.out
 				.println("Collission ratio: "
 						+ ((double) 1 - ((double) uniqueReadKeys.size() / (double) entries
 								.size())));
+		 */
 	}
 
 	@Test
@@ -1353,12 +1355,14 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 			e.printStackTrace();
 		}
 
+		/*
 		System.out.println(entries.size());
 		System.out.println(uniqueReadKeys.size());
 		System.out
 				.println("Collission ratio: "
 						+ ((double) 1 - ((double) uniqueReadKeys.size() / (double) entries
 								.size())));
+		 */
 	}
 
 	@Test
