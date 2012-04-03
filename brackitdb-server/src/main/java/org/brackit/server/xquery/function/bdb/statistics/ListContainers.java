@@ -25,50 +25,59 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery;
+package org.brackit.server.xquery.function.bdb.statistics;
 
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.brackit.server.metadata.manager.MetaDataMgr;
-import org.brackit.server.tx.Tx;
-import org.brackit.server.xquery.compiler.optimizer.DBOptimizer;
-import org.brackit.server.xquery.compiler.translator.DBTranslator;
 import org.brackit.server.xquery.function.bdb.BDBFun;
-import org.brackit.server.xquery.function.xmark.XMarkFun;
+import org.brackit.xquery.QueryContext;
+import org.brackit.xquery.QueryException;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
-import org.brackit.xquery.compiler.CompileChain;
-import org.brackit.xquery.compiler.optimizer.Optimizer;
-import org.brackit.xquery.compiler.translator.Translator;
+import org.brackit.xquery.function.AbstractFunction;
+import org.brackit.xquery.module.StaticContext;
+import org.brackit.xquery.util.annotation.FunctionAnnotation;
+import org.brackit.xquery.xdm.Sequence;
+import org.brackit.xquery.xdm.Signature;
+import org.brackit.xquery.xdm.type.AtomicType;
+import org.brackit.xquery.xdm.type.Cardinality;
+import org.brackit.xquery.xdm.type.SequenceType;
 
 /**
+ * Lists statistics about the containers.
+ * 
  * @author Sebastian Baechle
+ * @author Karsten Schmidt
  * 
  */
-public class DBCompileChain extends CompileChain {
+@FunctionAnnotation(description = "Dumps information about the containers.", parameters = {})
+public class ListContainers extends AbstractFunction {
 
-	static {
-		// define function namespaces and functions in these namespaces		
-		BDBFun.register();
-		XMarkFun.register();		
+	public static final QNm DEFAULT_NAME = new QNm(BDBFun.BDB_NSURI,
+			BDBFun.BDB_PREFIX, "list-containers");
+
+	public ListContainers() {
+		super(DEFAULT_NAME, new Signature(new SequenceType(AtomicType.STR,
+				Cardinality.One)), true);
 	}
 
-	private final MetaDataMgr mdm;
+	protected static final List<InfoContributor> ic = new ArrayList<InfoContributor>();
 
-	private final Tx tx;
+	public static void add(InfoContributor info) {
+		ic.add(info);
+	}
 
-	public DBCompileChain(MetaDataMgr mdm, Tx tx) {
-		this.mdm = mdm;
-		this.tx = tx;
+	public static void remove(InfoContributor info) {
+		ic.remove(info);
 	}
 
 	@Override
-	protected Translator getTranslator(Map<QNm, Str> options) {
-		return new DBTranslator(options);
-	}
-
-	@Override
-	protected Optimizer getOptimizer(Map<QNm, Str> options) {
-		return new DBOptimizer(options, mdm, tx);
+	public Sequence execute(StaticContext sctx, QueryContext ctx,
+			Sequence[] args) throws QueryException {
+		StringBuilder out = new StringBuilder();
+		for (InfoContributor i : ic)
+			out.append(i.getInfo());
+		return new Str(out.toString());
 	}
 }

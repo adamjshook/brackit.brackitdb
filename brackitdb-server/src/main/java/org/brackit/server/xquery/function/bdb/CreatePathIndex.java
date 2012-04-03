@@ -34,7 +34,6 @@ import org.brackit.server.metadata.DBCollection;
 import org.brackit.server.metadata.TXQueryContext;
 import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.index.definition.IndexDefBuilder;
-import org.brackit.server.xquery.DBCompileChain;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.atomic.QNm;
@@ -63,16 +62,15 @@ import org.brackit.xquery.xdm.Signature;
  */
 public class CreatePathIndex extends AbstractFunction {
 
-	public final static QNm CREATE_PATH_INDEX = new QNm(
-			DBCompileChain.BDB_NSURI, DBCompileChain.BDB_PREFIX,
-			"create-path-index");
+	public final static QNm CREATE_PATH_INDEX = new QNm(BDBFun.BDB_NSURI,
+			BDBFun.BDB_PREFIX, "create-path-index");
 
 	public CreatePathIndex(QNm name, Signature signature) {
 		super(name, signature, true);
 	}
 
 	@Override
-	public Sequence execute(StaticContext sctx, QueryContext ctx, 
+	public Sequence execute(StaticContext sctx, QueryContext ctx,
 			Sequence[] args) throws QueryException {
 		TXQueryContext txCtx = (TXQueryContext) ctx;
 		DBCollection<?> col = (DBCollection<?>) txCtx.getStore().lookup(

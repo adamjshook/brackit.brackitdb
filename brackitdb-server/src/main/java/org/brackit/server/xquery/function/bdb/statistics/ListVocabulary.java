@@ -25,56 +25,66 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery.function.bdb;
+package org.brackit.server.xquery.function.bdb.statistics;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.brackit.server.metadata.DBCollection;
 import org.brackit.server.metadata.TXQueryContext;
-import org.brackit.server.session.Session;
-import org.brackit.server.tx.IsolationLevel;
+import org.brackit.server.xquery.function.FunUtil;
+import org.brackit.server.xquery.function.bdb.BDBFun;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.function.AbstractFunction;
 import org.brackit.xquery.module.StaticContext;
-import org.brackit.xquery.xdm.DocumentException;
+import org.brackit.xquery.util.annotation.FunctionAnnotation;
 import org.brackit.xquery.xdm.Sequence;
 import org.brackit.xquery.xdm.Signature;
+import org.brackit.xquery.xdm.Store;
 import org.brackit.xquery.xdm.type.AtomicType;
 import org.brackit.xquery.xdm.type.Cardinality;
 import org.brackit.xquery.xdm.type.SequenceType;
 
 /**
+ * Dumps the content of the vocabulary
  * 
  * @author Sebastian Baechle
  * 
  */
-public class SetIsolation extends AbstractFunction {
+@FunctionAnnotation(description = "Dumps the vocabulary of a document.", parameters = { "$document" })
+public class ListVocabulary extends AbstractFunction {
 
-	public static final QNm SET_ISOLATION = new QNm(BDBFun.BDB_NSURI,
-			BDBFun.BDB_PREFIX, "set-isolation");
+	public static final QNm DEFAULT_NAME = new QNm(BDBFun.BDB_NSURI,
+			BDBFun.BDB_PREFIX, "list-vocabulary");
 
-	public SetIsolation() {
-		super(SET_ISOLATION, new Signature(new SequenceType(AtomicType.STR,
+	public ListVocabulary() {
+		super(DEFAULT_NAME, new Signature(new SequenceType(AtomicType.STR,
 				Cardinality.One), new SequenceType(AtomicType.STR,
 				Cardinality.One)), true);
 	}
 
-	@Override
-	public Sequence execute(StaticContext sctx, QueryContext ctx, 
-			Sequence[] args) throws QueryException {
-		try {
-			Atomic atomic = (Atomic) args[0];
-			String s = atomic.stringValue();
-			IsolationLevel level = IsolationLevel.valueOf(s.toUpperCase());
-			Session session = ((TXQueryContext) ctx).getTX().getSession();
-			if (session != null) {
-				session.setIsolationLevel(level);
-			}
-			return new Str(level.toString());
+	protected static final List<InfoContributor> ic = new ArrayList<InfoContributor>();
 
-		} catch (Exception e) {
-			throw new DocumentException(e);
-		}
+	public static void add(InfoContributor info) {
+		ic.add(info);
+	}
+
+	public static void remove(InfoContributor info) {
+		ic.remove(info);
+	}
+
+	@Override
+	public Sequence execute(StaticContext sctx, QueryContext ctx,
+			Sequence[] args) throws QueryException {
+		String doc = FunUtil.getString(args, 0, "$document", null, null,
+				true);
+		TXQueryContext txctx = (TXQueryContext) ctx;
+		Store store = txctx.getStore();
+		DBCollection<?> document = (DBCollection<?>) store.lookup(doc);
+		String vocabulary = document.getDictionary().list(txctx.getTX());
+		return new Str(vocabulary);
 	}
 }

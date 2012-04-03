@@ -25,50 +25,42 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery;
+package org.brackit.server.xquery.function.xmark.util;
 
-import java.util.Map;
-
-import org.brackit.server.metadata.manager.MetaDataMgr;
-import org.brackit.server.tx.Tx;
-import org.brackit.server.xquery.compiler.optimizer.DBOptimizer;
-import org.brackit.server.xquery.compiler.translator.DBTranslator;
-import org.brackit.server.xquery.function.bdb.BDBFun;
-import org.brackit.server.xquery.function.xmark.XMarkFun;
-import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.atomic.Str;
-import org.brackit.xquery.compiler.CompileChain;
-import org.brackit.xquery.compiler.optimizer.Optimizer;
-import org.brackit.xquery.compiler.translator.Translator;
+import org.brackit.xquery.QueryContext;
+import org.brackit.xquery.QueryException;
+import org.brackit.xquery.Tuple;
+import org.brackit.xquery.operator.Cursor;
+import org.brackit.xquery.xdm.Node;
+import org.brackit.xquery.xdm.Stream;
 
 /**
+ * 
  * @author Sebastian Baechle
  * 
  */
-public class DBCompileChain extends CompileChain {
+public class DocumentScan implements Cursor {
+	private final Node<?> root;
 
-	static {
-		// define function namespaces and functions in these namespaces		
-		BDBFun.register();
-		XMarkFun.register();		
-	}
+	private Stream<? extends Node<?>> stream;
 
-	private final MetaDataMgr mdm;
-
-	private final Tx tx;
-
-	public DBCompileChain(MetaDataMgr mdm, Tx tx) {
-		this.mdm = mdm;
-		this.tx = tx;
+	public DocumentScan(Node<?> root) {
+		super();
+		this.root = root;
 	}
 
 	@Override
-	protected Translator getTranslator(Map<QNm, Str> options) {
-		return new DBTranslator(options);
+	public void open(QueryContext ctx) throws QueryException {
+		stream = root.getSubtree();
 	}
 
 	@Override
-	protected Optimizer getOptimizer(Map<QNm, Str> options) {
-		return new DBOptimizer(options, mdm, tx);
+	public Tuple next(QueryContext ctx) throws QueryException {
+		return stream.next();
+	}
+
+	@Override
+	public void close(QueryContext ctx) {
+		stream.close();
 	}
 }

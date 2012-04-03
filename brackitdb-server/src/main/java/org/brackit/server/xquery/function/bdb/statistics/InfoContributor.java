@@ -25,50 +25,25 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery;
-
-import java.util.Map;
-
-import org.brackit.server.metadata.manager.MetaDataMgr;
-import org.brackit.server.tx.Tx;
-import org.brackit.server.xquery.compiler.optimizer.DBOptimizer;
-import org.brackit.server.xquery.compiler.translator.DBTranslator;
-import org.brackit.server.xquery.function.bdb.BDBFun;
-import org.brackit.server.xquery.function.xmark.XMarkFun;
-import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.atomic.Str;
-import org.brackit.xquery.compiler.CompileChain;
-import org.brackit.xquery.compiler.optimizer.Optimizer;
-import org.brackit.xquery.compiler.translator.Translator;
+package org.brackit.server.xquery.function.bdb.statistics;
 
 /**
- * @author Sebastian Baechle
+ * @author Karsten Schmidt
  * 
  */
-public class DBCompileChain extends CompileChain {
+public interface InfoContributor {
+	public static final int NO_ID = 0;
 
-	static {
-		// define function namespaces and functions in these namespaces		
-		BDBFun.register();
-		XMarkFun.register();		
-	}
+	/**
+	 * 
+	 * @return string serialized information used for list procedures
+	 */
+	public String getInfo();
 
-	private final MetaDataMgr mdm;
-
-	private final Tx tx;
-
-	public DBCompileChain(MetaDataMgr mdm, Tx tx) {
-		this.mdm = mdm;
-		this.tx = tx;
-	}
-
-	@Override
-	protected Translator getTranslator(Map<QNm, Str> options) {
-		return new DBTranslator(options);
-	}
-
-	@Override
-	protected Optimizer getOptimizer(Map<QNm, Str> options) {
-		return new DBOptimizer(options, mdm, tx);
-	}
+	/**
+	 * Used to distinguish several instances (e.g., buffers)
+	 * 
+	 * @return
+	 */
+	public int getInfoID();
 }

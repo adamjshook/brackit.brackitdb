@@ -25,50 +25,62 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery;
+package org.brackit.server.xquery.function.bdb.buffer;
 
-import java.util.Map;
-
-import org.brackit.server.metadata.manager.MetaDataMgr;
-import org.brackit.server.tx.Tx;
-import org.brackit.server.xquery.compiler.optimizer.DBOptimizer;
-import org.brackit.server.xquery.compiler.translator.DBTranslator;
+import org.brackit.server.io.buffer.Buffer;
+import org.brackit.server.io.buffer.BufferException;
+import org.brackit.server.io.manager.BufferMgr;
+import org.brackit.server.metadata.TXQueryContext;
 import org.brackit.server.xquery.function.bdb.BDBFun;
-import org.brackit.server.xquery.function.xmark.XMarkFun;
+import org.brackit.xquery.QueryContext;
+import org.brackit.xquery.QueryException;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
-import org.brackit.xquery.compiler.CompileChain;
-import org.brackit.xquery.compiler.optimizer.Optimizer;
-import org.brackit.xquery.compiler.translator.Translator;
+import org.brackit.xquery.function.AbstractFunction;
+import org.brackit.xquery.module.StaticContext;
+import org.brackit.xquery.util.annotation.FunctionAnnotation;
+import org.brackit.xquery.xdm.Sequence;
+import org.brackit.xquery.xdm.Signature;
+import org.brackit.xquery.xdm.type.AtomicType;
+import org.brackit.xquery.xdm.type.Cardinality;
+import org.brackit.xquery.xdm.type.SequenceType;
 
 /**
  * @author Sebastian Baechle
  * 
  */
-public class DBCompileChain extends CompileChain {
+@FunctionAnnotation(description = "Clears all buffers.", parameters = {})
+public class ClearBuffers extends AbstractFunction {
 
-	static {
-		// define function namespaces and functions in these namespaces		
-		BDBFun.register();
-		XMarkFun.register();		
-	}
+	public static final QNm DEFAULT_NAME = new QNm(BDBFun.BDB_NSURI,
+			BDBFun.BDB_PREFIX, "clear-buffers");
 
-	private final MetaDataMgr mdm;
-
-	private final Tx tx;
-
-	public DBCompileChain(MetaDataMgr mdm, Tx tx) {
-		this.mdm = mdm;
-		this.tx = tx;
+	public ClearBuffers() {
+		super(DEFAULT_NAME, new Signature(new SequenceType(AtomicType.STR,
+				Cardinality.One)), true);
 	}
 
 	@Override
-	protected Translator getTranslator(Map<QNm, Str> options) {
-		return new DBTranslator(options);
+	public Sequence execute(StaticContext sctx, QueryContext ctx,
+			Sequence[] args) throws QueryException {
+
+		TXQueryContext txctx = (TXQueryContext) ctx;
+		BufferMgr bufferMgr = txctx.getTX().getBufferManager();
+		return new Str(flushBuffers(bufferMgr));
 	}
 
-	@Override
-	protected Optimizer getOptimizer(Map<QNm, Str> options) {
-		return new DBOptimizer(options, mdm, tx);
+	private String flushBuffers(BufferMgr bufferMgr) {
+		StringBuilder out = new StringBuilder();
+		for (Buffer buffer : bufferMgr.getBuffers()) {
+			try {
+				buffer.clear();
+				out.append(String.format("Cleared buffer %s\n", buffer));
+			} catch (BufferException e) {
+				out.append(String.format("Clearing buffer %s failed: %s\n",
+						buffer, e.getMessage()));
+			}
+
+		}
+		return out.toString();
 	}
 }

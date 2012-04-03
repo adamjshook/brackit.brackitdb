@@ -25,50 +25,33 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery;
+package org.brackit.server.xquery.function.xmark;
 
-import java.util.Map;
-
-import org.brackit.server.metadata.manager.MetaDataMgr;
-import org.brackit.server.tx.Tx;
-import org.brackit.server.xquery.compiler.optimizer.DBOptimizer;
-import org.brackit.server.xquery.compiler.translator.DBTranslator;
-import org.brackit.server.xquery.function.bdb.BDBFun;
-import org.brackit.server.xquery.function.xmark.XMarkFun;
 import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.atomic.Str;
-import org.brackit.xquery.compiler.CompileChain;
-import org.brackit.xquery.compiler.optimizer.Optimizer;
-import org.brackit.xquery.compiler.translator.Translator;
+import org.brackit.xquery.module.Functions;
+import org.brackit.xquery.module.Namespaces;
+
 
 /**
  * @author Sebastian Baechle
  * 
  */
-public class DBCompileChain extends CompileChain {
+public class XMarkFun {
+	public static final String XMARK_NSURI = "http://brackit.org/ns/xmark";
 
+	public static final String XMARK_PREFIX = "xmark";
+	
+	public static final QNm ERR_UNKNOWN_OPERATION = new QNm(XMARK_NSURI, XMARK_PREFIX, "BDXM0001");
+
+	public static void register() {
+		// dummy function to cause static block
+		// to be executed exactly once
+	}
+	
 	static {
-		// define function namespaces and functions in these namespaces		
-		BDBFun.register();
-		XMarkFun.register();		
-	}
-
-	private final MetaDataMgr mdm;
-
-	private final Tx tx;
-
-	public DBCompileChain(MetaDataMgr mdm, Tx tx) {
-		this.mdm = mdm;
-		this.tx = tx;
-	}
-
-	@Override
-	protected Translator getTranslator(Map<QNm, Str> options) {
-		return new DBTranslator(options);
-	}
-
-	@Override
-	protected Optimizer getOptimizer(Map<QNm, Str> options) {
-		return new DBOptimizer(options, mdm, tx);
+		Namespaces.predefine(XMarkFun.XMARK_PREFIX, XMarkFun.XMARK_NSURI);
+		Functions.predefine(new XMarkQuery1());
+		Functions.predefine(new XMark());
+		Functions.predefine(new InsertSubtrees());
 	}
 }
