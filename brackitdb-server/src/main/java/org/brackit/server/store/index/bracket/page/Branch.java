@@ -79,7 +79,7 @@ public interface Branch extends BPContext {
 
 	public int getUsedSpace(int position);
 
-	public void format(int unitID, PageID rootPageID, int height,
+	public void format(PageID rootPageID, int height,
 			boolean compressed, boolean logged, long undoNextLSN)
 			throws IndexOperationException;
 	

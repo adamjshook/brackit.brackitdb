@@ -280,14 +280,27 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 				REDO_COMPARATOR);
 		return frame.getRedoLSN();
 	}
-
-	public synchronized Handle allocatePage(Tx transaction)
-			throws BufferException {
-		return allocatePage(transaction, null, true, -1);
+	
+	@Override
+	public synchronized int createUnit() {
+		// TODO
+		return 42;
 	}
 
-	public synchronized Handle allocatePage(Tx transaction, PageID pageID,
+	public synchronized Handle allocatePage(Tx tx, int unitID)
+			throws BufferException {
+		return allocatePage(tx, unitID, null, true, -1);
+	}
+
+	public synchronized Handle allocatePage(Tx tx, int unitID, PageID pageID,
 			boolean logged, long undoNextLSN) throws BufferException {
+		
+		if (DEBUG) {
+			if (unitID <= 0) {
+				throw new IllegalArgumentException("UnitID must be greater than Zero!");
+			}
+		}
+		
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Allocating page %s.", pageID));
 		}
@@ -307,11 +320,11 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			if (logged) {
 				try {
 					if (undoNextLSN == -1) {
-						LSN = transaction.logUpdate(loggableHelper
-								.createAllocateLogOp(pageID));
+						LSN = tx.logUpdate(loggableHelper
+								.createAllocateLogOp(pageID, unitID));
 					} else {
-						LSN = transaction.logCLR(loggableHelper
-								.createAllocateLogOp(pageID), undoNextLSN);
+						LSN = tx.logCLR(loggableHelper
+								.createAllocateLogOp(pageID, unitID), undoNextLSN);
 					}
 				} catch (TxException e) {
 					throw new BufferException(
@@ -328,7 +341,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			throw new RuntimeException();
 
 		victim.fix();
-		victim.init(pageID);
+		victim.init(pageID, unitID);
 		victim.setLSN(LSN);
 		// update page mapping
 		if (pageNoToFrame.put(pageID, victim) != null)
@@ -460,7 +473,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 				throw new RuntimeException();
 
 			PageID pID = new PageID(containerNo, currentBlockNo);
-			frame.init(pID);
+			frame.init(pID, 0); // unitID not relevant, since it is overwritten in the next line anyway
 			System.arraycopy(buffer, offset, frame.page, 0, pageSize);
 			currentBlockNo++;
 			offset += pageSize;

@@ -1609,8 +1609,8 @@ public final class BracketTree extends PageContextFactory {
 				left.setContext(rootContext);
 
 				// reformat root page
-				root = (Branch) rootLeaf.format(false, rootLeaf.getUnitID(),
-						rootPageID, 1, BRANCH_COMPRESSION, logged, -1);
+				root = (Branch) rootLeaf.format(false, rootPageID, 1,
+						BRANCH_COMPRESSION, logged, -1);
 				root.setLastInLevel(true);
 				// reposition context in converted root page
 				root.moveFirst();
@@ -1768,8 +1768,8 @@ public final class BracketTree extends PageContextFactory {
 				left.setContext(rootContext);
 
 				// reformat root page
-				root = (Branch) rootLeaf.format(false, rootLeaf.getUnitID(),
-						rootPageID, 1, BRANCH_COMPRESSION, logged, -1);
+				root = (Branch) rootLeaf.format(false, rootPageID, 1,
+						BRANCH_COMPRESSION, logged, -1);
 				root.setLastInLevel(true);
 				// reposition context in converted root page
 				root.moveFirst();
@@ -2611,8 +2611,8 @@ public final class BracketTree extends PageContextFactory {
 			right.setPrevPageID(left.getPageID(), logged, -1);
 
 			// reformat root page
-			root.format(root.getUnitID(), rootPageID, root.getHeight() + 1,
-					root.isCompressed(), logged, -1);
+			root.format(rootPageID, root.getHeight() + 1, root.isCompressed(),
+					logged, -1);
 			root.setLastInLevel(true);
 			// reposition context in converted root page
 			root.moveFirst();
@@ -2692,9 +2692,8 @@ public final class BracketTree extends PageContextFactory {
 
 				// switch root page type and update pointers
 				root.setLowPageID(null, logged, -1);
-				root.format(leftBranch.getUnitID(), root.getPageID(),
-						leftBranch.getHeight(), leftBranch.isCompressed(),
-						logged, -1);
+				root.format(root.getPageID(), leftBranch.getHeight(),
+						leftBranch.isCompressed(), logged, -1);
 				root.setLastInLevel(true);
 				root.moveFirst();
 
@@ -2716,10 +2715,10 @@ public final class BracketTree extends PageContextFactory {
 				leftBranch.setPrevPageID(null, logged, -1);
 				rightBranch.setLowPageID(null, logged, -1);
 				leftBranch.setLowPageID(null, logged, -1);
-				leftBranch.format(leftBranch.getUnitID(),
-						leftBranch.getRootPageID(), leftBranch.getHeight(),
-						leftBranch.isCompressed(), logged, -1);
-				rightBranch.format(right.getUnitID(), left.getRootPageID(),
+				leftBranch.format(leftBranch.getRootPageID(),
+						leftBranch.getHeight(), leftBranch.isCompressed(),
+						logged, -1);
+				rightBranch.format(leftBranch.getRootPageID(),
 						right.getHeight(), leftBranch.isCompressed(), logged,
 						-1);
 			} else {
@@ -2951,7 +2950,7 @@ public final class BracketTree extends PageContextFactory {
 			leaf.setNextPageID(null, logged, -1);
 			leaf.setPrevPageID(null, logged, -1);
 			leaf.setHighKey(null, logged, -1);
-			leaf.format(leaf.getUnitID(), rootPageID, logged, -1);
+			leaf.format(rootPageID, logged, -1);
 			leaf.deletePage();
 			leaf = null;
 
@@ -3037,8 +3036,8 @@ public final class BracketTree extends PageContextFactory {
 			// the log
 			page.setPrevPageID(null, logged, -1);
 			page.setLowPageID(null, logged, -1);
-			page.format(page.getUnitID(), rootPageID, page.getHeight(),
-					page.isCompressed(), logged, -1);
+			page.format(rootPageID, page.getHeight(), page.isCompressed(),
+					logged, -1);
 			page.deletePage();
 			page = null;
 

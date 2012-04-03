@@ -28,7 +28,6 @@
 package org.brackit.server.store.index.bracket;
 
 import org.brackit.server.io.buffer.Buffer;
-import org.brackit.server.io.buffer.Handle;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.node.DocID;
@@ -83,6 +82,8 @@ public class BracketTreeTest {
 		bufferManager.createBuffer(BUFFER_SIZE, BLOCK_SIZE, CONTAINER_NO,
 				CONTAINER_NAME, INITIAL_SIZE, EXTEND_SIZE);
 		Buffer buffer = bufferManager.getBuffer(CONTAINER_NO);
+		
+		int unitID = buffer.createUnit();
 
 		tx = txMgr.begin(IsolationLevel.SERIALIZABLE, null, false);
 
@@ -90,21 +91,21 @@ public class BracketTreeTest {
 
 		// create root
 		root = new BranchBPContext(bufferManager, tx, new SlottedKeyValuePage(
-				buffer, buffer.allocatePage(tx, new PageID(99), true, -1),
+				buffer, buffer.allocatePage(tx, unitID, new PageID(99), true, -1),
 				BranchBPContext.RESERVED_SIZE));
-		root.format(42, new PageID(99), 1, false, true, -1);
+		root.format(new PageID(99), 1, false, true, -1);
 		root.setLastInLevel(true);
 
 		// create three sample leafs
 		leaf1 = new LeafBPContext(bufferManager, tx, new BracketPage(buffer,
-				buffer.allocatePage(tx, new PageID(1), true, -1)));
-		leaf1.format(42, new PageID(99), true, -1);
+				buffer.allocatePage(tx, unitID, new PageID(1), true, -1)));
+		leaf1.format(new PageID(99), true, -1);
 		leaf2 = new LeafBPContext(bufferManager, tx, new BracketPage(buffer,
-				buffer.allocatePage(tx, new PageID(2), true, -1)));
-		leaf2.format(42, new PageID(99), true, -1);
+				buffer.allocatePage(tx, unitID, new PageID(2), true, -1)));
+		leaf2.format(new PageID(99), true, -1);
 		leaf3 = new LeafBPContext(bufferManager, tx, new BracketPage(buffer,
-				buffer.allocatePage(tx, new PageID(3), true, -1)));
-		leaf3.format(42, new PageID(99), true, -1);
+				buffer.allocatePage(tx, unitID, new PageID(3), true, -1)));
+		leaf3.format(new PageID(99), true, -1);
 		
 		// chain leafs
 		leaf1.setNextPageID(new PageID(2), true, -1);

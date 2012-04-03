@@ -50,7 +50,7 @@ import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
  */
 public interface Leaf extends BPContext {
 
-	public void format(int unitID, PageID rootPageID, boolean logged,
+	public void format(PageID rootPageID, boolean logged,
 			long undoNextLSN) throws IndexOperationException;
 
 	/**

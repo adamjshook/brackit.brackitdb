@@ -70,7 +70,13 @@ public class PageContextFactory {
 		try {
 			buffer = (containerNo != -1) ? bufferMgr.getBuffer(containerNo)
 					: bufferMgr.getBuffer(rootPageID);
-			handle = buffer.allocatePage(tx);
+			
+			if (unitID == -1) {
+				// create new unit
+				unitID = buffer.createUnit();
+			}
+			
+			handle = buffer.allocatePage(tx, unitID);
 
 			page = create(tx, buffer, handle, Latch.MODE_X);
 
@@ -82,7 +88,7 @@ public class PageContextFactory {
 				rootPageID = page.getPageID();
 			}
 
-			page.format(unitID, pageType, rootPageID, keyType, valueType,
+			page.format(pageType, rootPageID, keyType, valueType,
 					height, unique, compression, logged, -1);
 		} catch (BufferException e) {
 			throw new IndexOperationException(e,

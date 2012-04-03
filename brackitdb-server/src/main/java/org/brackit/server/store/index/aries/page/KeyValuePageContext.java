@@ -403,7 +403,7 @@ public class KeyValuePageContext extends SimpleBlobStore implements PageContext 
 	private byte[] externalize(byte[] value) throws IndexOperationException {
 		try {
 			PageID blobPageID = create(transaction, page.getPageID()
-					.getContainerNo());
+					.getContainerNo(), page.getHandle().getUnitID());
 			write(transaction, blobPageID, value, false);
 			value = blobPageID.getBytes();
 		} catch (BlobStoreAccessException e) {
@@ -495,14 +495,14 @@ public class KeyValuePageContext extends SimpleBlobStore implements PageContext 
 	}
 
 	@Override
-	public void format(int unitID, int pageType, PageID rootPageID,
+	public void format(int pageType, PageID rootPageID,
 			Field keyType, Field valueType, boolean unique, boolean compressed,
 			boolean logged, long undoNextLSN) throws IndexOperationException {
 		LogOperation operation = null;
 
 		if (logged) {
 			operation = BPlusIndexLogOperationHelper.createFormatLogOperation(
-					getPageID(), getUnitID(), unitID, rootPageID,
+					getPageID(), rootPageID,
 					getPageType(), pageType, getKeyType(), keyType,
 					getValueType(), valueType, isUnique(), unique,
 					isCompressed(), compressed);

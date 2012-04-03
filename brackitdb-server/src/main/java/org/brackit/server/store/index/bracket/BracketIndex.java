@@ -124,23 +124,6 @@ public interface BracketIndex {
 			throws IndexAccessException;
 
 	/**
-	 * Creates a new index in container <code>containerNo</code> for the given
-	 * <code>keyType</code> and <code>valueType</code>.
-	 * 
-	 * @param tx
-	 *            tx that wants to create the index
-	 * @param containerNo
-	 *            number of the container where the index should be created
-	 * @param unitID
-	 *            id of the unit the index belongs to
-	 * @return the number of the index root page
-	 * @throws IndexAccessException
-	 *             iff an error occurred during index creation
-	 */
-	public PageID createIndex(Tx tx, int containerNo, int unitID)
-			throws IndexAccessException;
-
-	/**
 	 * Dumps the content of the index.
 	 * 
 	 * @param tx

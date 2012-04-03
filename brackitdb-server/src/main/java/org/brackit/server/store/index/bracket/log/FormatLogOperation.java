@@ -31,7 +31,6 @@ import java.nio.ByteBuffer;
 
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.store.Field;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.BracketTree;
 import org.brackit.server.store.index.bracket.IndexOperationException;
@@ -49,13 +48,10 @@ public class FormatLogOperation extends BracketIndexLogOperation {
 	private static final Logger log = Logger
 			.getLogger(FormatLogOperation.class);
 
-	private static final int SIZE = BASE_SIZE + 3 + 2 * SizeConstants.INT_SIZE;
+	private static final int SIZE = BASE_SIZE + 3;
 
 	private boolean oldLeaf;
 	private boolean leaf;
-
-	private int oldUnitID;
-	private int unitID;
 
 	private int oldHeight;
 	private int height;
@@ -64,13 +60,11 @@ public class FormatLogOperation extends BracketIndexLogOperation {
 	private boolean compressed;
 
 	public FormatLogOperation(PageID pageID, PageID rootPageID,
-			boolean oldLeaf, boolean leaf, int oldUnitID, int unitID,
-			int oldHeight, int height, boolean oldCompressed, boolean compressed) {
+			boolean oldLeaf, boolean leaf, int oldHeight, int height,
+			boolean oldCompressed, boolean compressed) {
 		super(FORMAT, pageID, rootPageID);
 		this.oldLeaf = oldLeaf;
 		this.leaf = leaf;
-		this.oldUnitID = oldUnitID;
-		this.unitID = unitID;
 		this.oldHeight = oldHeight;
 		this.height = height;
 		this.oldCompressed = oldCompressed;
@@ -90,8 +84,6 @@ public class FormatLogOperation extends BracketIndexLogOperation {
 				| ((oldCompressed ? 1 : 0) << 1) | (compressed ? 1 : 0));
 
 		bb.put(flags);
-		bb.putInt(oldUnitID);
-		bb.putInt(unitID);
 		bb.put((byte) oldHeight);
 		bb.put((byte) height);
 	}
@@ -134,8 +126,8 @@ public class FormatLogOperation extends BracketIndexLogOperation {
 						rootPageID);
 			}
 
-			page.format(oldLeaf, oldUnitID, rootPageID, oldHeight,
-					oldCompressed, true, undoNextLSN);
+			page.format(oldLeaf, rootPageID, oldHeight, oldCompressed, true,
+					undoNextLSN);
 			page.cleanup();
 		} catch (IndexOperationException e) {
 			throw new IndexAccessException(e,
@@ -171,17 +163,16 @@ public class FormatLogOperation extends BracketIndexLogOperation {
 
 		try {
 			if (page.getLSN() < LSN) {
-//				if ((page.getRootPageID() != null)
-//						&& (!page.getRootPageID().equals(rootPageID))) {
-//					page.cleanup();
-//					throw new IndexAccessException(
-//							"Redo format page %s failed because"
-//									+ " it does not belong to index %s.",
-//							pageID, rootPageID);
-//				}
+				// if ((page.getRootPageID() != null)
+				// && (!page.getRootPageID().equals(rootPageID))) {
+				// page.cleanup();
+				// throw new IndexAccessException(
+				// "Redo format page %s failed because"
+				// + " it does not belong to index %s.",
+				// pageID, rootPageID);
+				// }
 
-				page.format(leaf, unitID, rootPageID, height, compressed,
-						false, -1);
+				page.format(leaf, rootPageID, height, compressed, false, -1);
 
 			} else {
 				if (log.isTraceEnabled()) {

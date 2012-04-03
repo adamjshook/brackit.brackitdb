@@ -68,11 +68,11 @@ public class IndexBlobStore implements BlobStore {
 	}
 
 	@Override
-	public PageID create(Tx transaction, int containerNo)
+	public PageID create(Tx transaction, int containerNo, int unitID)
 			throws BlobStoreAccessException {
 		try {
 			return index.createIndex(transaction, containerNo, Field.INTEGER,
-					Field.BYTEARRAY, true);
+					Field.BYTEARRAY, true, true, unitID);
 		} catch (IndexAccessException e) {
 			throw new BlobStoreAccessException(e,
 					"Error creating backing index in container %s.",

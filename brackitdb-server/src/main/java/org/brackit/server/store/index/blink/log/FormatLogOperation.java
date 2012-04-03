@@ -49,12 +49,7 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 	private static final Logger log = Logger
 			.getLogger(FormatLogOperation.class);
 
-	private static final int SIZE = BASE_SIZE
-			+ (2 * SizeConstants.INT_SIZE + 12 * SizeConstants.BYTE_SIZE);
-
-	private int unitID;
-
-	private int oldUnitID;
+	private static final int SIZE = BASE_SIZE + (12 * SizeConstants.BYTE_SIZE);
 
 	private byte oldPageType;
 
@@ -80,14 +75,12 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 
 	private boolean compression;
 
-	public FormatLogOperation(PageID pageID, int oldUnitID, int unitID,
-			PageID rootPageID, int oldPageType, int pageType, Field oldKeyType,
-			Field keyType, Field oldValueType, Field valueType, int oldHeight,
-			int height, boolean oldUnique, boolean unique,
-			boolean oldCompression, boolean compression) {
+	public FormatLogOperation(PageID pageID, PageID rootPageID,
+			int oldPageType, int pageType, Field oldKeyType, Field keyType,
+			Field oldValueType, Field valueType, int oldHeight, int height,
+			boolean oldUnique, boolean unique, boolean oldCompression,
+			boolean compression) {
 		super(FORMAT, pageID, rootPageID);
-		this.oldUnitID = oldUnitID;
-		this.unitID = unitID;
 		this.pageType = (byte) pageType;
 		this.oldPageType = (byte) oldPageType;
 		this.keyType = keyType;
@@ -110,8 +103,6 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 	@Override
 	public void toBytes(ByteBuffer bb) {
 		super.toBytes(bb);
-		bb.putInt(oldUnitID);
-		bb.putInt(unitID);
 		bb.put(oldPageType);
 		bb.put(pageType);
 		bb.put((byte) oldKeyType.ID);
@@ -129,7 +120,7 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 	@Override
 	public void redo(Tx tx, long LSN) throws LogException {
 		try {
-			redoFormatPage(tx, pageID, unitID, rootPageID, pageType, keyType,
+			redoFormatPage(tx, pageID, rootPageID, pageType, keyType,
 					valueType, unique, compression, LSN);
 		} catch (IndexAccessException e) {
 			throw new LogException(e, "Redo of format page %s failed.", pageID);
@@ -139,7 +130,7 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 	@Override
 	public void undo(Tx tx, long LSN, long undoNextLSN) throws LogException {
 		try {
-			undoFormatPage(tx, pageID, oldUnitID, rootPageID, oldPageType,
+			undoFormatPage(tx, pageID, rootPageID, oldPageType,
 					oldKeyType, oldValueType, oldUnique, oldCompression, LSN,
 					undoNextLSN);
 		} catch (IndexAccessException e) {
@@ -147,7 +138,7 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 		}
 	}
 
-	public void undoFormatPage(Tx tx, PageID pageID, int unitID,
+	public void undoFormatPage(Tx tx, PageID pageID,
 			PageID rootPageID, int pageType, Field keyType, Field valueType,
 			boolean unique, boolean compression, long LSN, long undoNextLSN)
 			throws IndexAccessException {
@@ -170,7 +161,7 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 						rootPageID);
 			}
 
-			page.format(unitID, pageType, rootPageID, keyType, valueType,
+			page.format(pageType, rootPageID, keyType, valueType,
 					height, unique, compression, true, undoNextLSN);
 			page.cleanup();
 		} catch (IndexOperationException e) {
@@ -185,7 +176,7 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 		}
 	}
 
-	public void redoFormatPage(Tx tx, PageID pageID, int unitID,
+	public void redoFormatPage(Tx tx, PageID pageID,
 			PageID rootPageID, int pageType, Field keyType, Field valueType,
 			boolean unique, boolean compression, long LSN)
 			throws IndexAccessException {
@@ -219,7 +210,7 @@ public class FormatLogOperation extends BlinkIndexLogOperation {
 							pageID, rootPageID);
 				}
 
-				page.format(unitID, pageType, rootPageID, keyType, valueType,
+				page.format(pageType, rootPageID, keyType, valueType,
 						height, unique, compression, false, -1);
 			} else {
 				if (log.isTraceEnabled()) {
