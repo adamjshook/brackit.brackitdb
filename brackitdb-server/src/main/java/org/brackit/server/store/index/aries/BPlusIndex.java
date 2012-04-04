@@ -110,7 +110,7 @@ public class BPlusIndex implements Index {
 			walker.traverse();
 			Buffer buffer = bufferMgr.getBuffer(rootPageID.getContainerNo());
 			for (PageID pageID : visitor.getPages()) {
-				buffer.deletePage(transaction, pageID, true, -1);
+				buffer.deletePage(transaction, pageID, -1, true, -1);
 			}
 			transaction.logDummyCLR(undeNextLSN);
 		} catch (BufferException e) {

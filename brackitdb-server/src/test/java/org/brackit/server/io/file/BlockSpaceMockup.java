@@ -130,7 +130,7 @@ public class BlockSpaceMockup implements BlockSpace {
 	}
 
 	@Override
-	public void release(int blockNo) throws StoreException {
+	public void release(int blockNo, int hintUnitID) throws StoreException {
 		byte[] myBlock = blocks.get(blockNo);
 
 		if (myBlock == null) {
@@ -176,5 +176,11 @@ public class BlockSpaceMockup implements BlockSpace {
 	public int createUnit() throws StoreException {
 		// TODO Auto-generated method stub
 		return 0;
+	}
+
+	@Override
+	public void dropUnit(int unitID) throws StoreException {
+		// TODO Auto-generated method stub
+		
 	}
 }

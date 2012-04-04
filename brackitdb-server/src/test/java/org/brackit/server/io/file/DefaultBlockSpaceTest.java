@@ -192,7 +192,7 @@ public class DefaultBlockSpaceTest {
 
 			// assertTrue(blk[0] == DefaultBlockSpace.BLOCK_IN_USE);
 
-			bs.release(lba);
+			bs.release(lba, unitID);
 
 			// assertTrue(blk[0] == ~DefaultBlockSpace.BLOCK_IN_USE);
 
@@ -213,7 +213,7 @@ public class DefaultBlockSpaceTest {
 
 			bs.open();
 
-			bs.release(lba);
+			bs.release(lba, unitID);
 		} catch (StoreException e) {
 			e.printStackTrace();
 		}

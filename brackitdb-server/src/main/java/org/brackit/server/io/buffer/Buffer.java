@@ -49,7 +49,10 @@ public interface Buffer {
 	public Handle allocatePage(Tx tx, int unitID, PageID pageID, boolean logged,
 			long undoNextLSN) throws BufferException;
 
-	public void deletePage(Tx tx, PageID pageID, boolean logged,
+	/**
+	 * @param hintUnitID used to indicate the unitID of the page that is to be deleted. Use -1, if unknown.
+	 */
+	public void deletePage(Tx tx, PageID pageID, int hintUnitID, boolean logged,
 			long undoNextLSN) throws BufferException;
 
 	public Handle fixPage(Tx tx, PageID pageID) throws BufferException;

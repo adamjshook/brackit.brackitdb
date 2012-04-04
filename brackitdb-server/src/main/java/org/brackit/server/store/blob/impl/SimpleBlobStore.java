@@ -89,7 +89,7 @@ public class SimpleBlobStore implements BlobStore {
 			SimpleBlobPage page = new SimpleBlobPage(buffer, nextOverflowHandle);
 
 			page.deleteTail(tx);
-			buffer.deletePage(tx, nextOverflowHandle.getPageID(), true, tx
+			buffer.deletePage(tx, nextOverflowHandle.getPageID(), nextOverflowHandle.getUnitID(), true, tx
 					.checkPrevLSN());
 			page.cleanup();
 		} catch (BufferException e) {
