@@ -27,11 +27,11 @@
  */
 package org.brackit.server.node.el.index;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.node.el.index.page.ElKeyValuePageContext;
 import org.brackit.server.node.el.index.page.ElPageContext;
+import org.brackit.server.store.Field;
 import org.brackit.server.store.OpenMode;
 import org.brackit.server.store.SearchMode;
 import org.brackit.server.store.index.IndexAccessException;
@@ -42,6 +42,7 @@ import org.brackit.server.store.index.aries.page.PageContext;
 import org.brackit.server.store.page.keyvalue.KeyValuePage;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxStats;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * 
@@ -209,10 +210,8 @@ public class ElBPlusTree extends BPlusTree {
 				if (leaf.getKeyType().compareAsPrefix(leaf.getKey(), key) == 0) {
 					try {
 						if (log.isTraceEnabled()) {
-							log
-									.trace("Deleting placeholder "
-											+ leaf.getKeyType().toString(
-													leaf.getKey()));
+							log.trace("Deleting placeholder "
+									+ leaf.getKeyType().toString(leaf.getKey()));
 						}
 
 						leaf.delete(false, true, transaction.checkPrevLSN());
@@ -263,8 +262,8 @@ public class ElBPlusTree extends BPlusTree {
 								+ leaf.getKeyType().toString(leaf.getKey()));
 					}
 
-					leaf = deleteFromPage(transaction, rootPageID, leaf, leaf
-							.getKey(), leaf.getValue(), false, logged,
+					leaf = deleteFromPage(transaction, rootPageID, leaf,
+							leaf.getKey(), leaf.getValue(), false, logged,
 							transaction.checkPrevLSN());
 
 					if (leaf.getKey() == null) {
@@ -291,20 +290,24 @@ public class ElBPlusTree extends BPlusTree {
 			int level, boolean logged, long undoNextLSN)
 			throws IndexAccessException {
 		boolean treeLatched = false;
-		byte[] placeHolderKey = placeHolderHelper.createPlaceHolderKey(key,
-				level);
-		byte[] placeHolderValue = placeHolderHelper
-				.createPlaceHolderValue(value);
+		byte[] phKey = placeHolderHelper.createPlaceHolderKey(key, level);
+		byte[] phValue = placeHolderHelper.createPlaceHolderValue(value);
 
 		try {
 			leaf = assureLeafDelete(transaction, rootPageID, leaf, key, value,
 					logged);
 
 			boolean deleteLastInLeaf = false;
-			boolean deleteIsBound = (leaf.getPreviousKey() != null)
-					&& (leaf.getNextKey() != null);
+			byte[] prevKey = leaf.getPreviousKey();
+			byte[] nextKey = leaf.getNextKey();
+			boolean deleteIsBound = (prevKey != null) && (nextKey != null);
+			Field keyType = leaf.getKeyType();
+			boolean nextKeyCovers = (nextKey != null)
+					&& (keyType.compareAsPrefix(phKey, nextKey) == 0);
+			boolean prevKeyCovers = (prevKey != null)
+					&& (keyType.compareAsPrefix(phKey, prevKey) == 0);
 
-			if (!deleteIsBound) {
+			if ((!deleteIsBound) || ((!prevKeyCovers) && (!nextKeyCovers))) {
 				/*
 				 * The delete record is not "bound" to this page. The
 				 * page-oriented undo of this delete is therefore ambiguous and
@@ -323,14 +326,20 @@ public class ElBPlusTree extends BPlusTree {
 				if (targetLeaf != leaf) // re-check conditions
 				{
 					leaf = targetLeaf;
-					deleteIsBound = (leaf.getPreviousKey() != null)
-							&& (leaf.getNextKey() != null);
+					prevKey = leaf.getPreviousKey();
+					nextKey = leaf.getNextKey();
+					deleteIsBound = (prevKey != null) && (nextKey != null);
+					nextKeyCovers = (nextKey != null)
+							&& (keyType.compareAsPrefix(phKey, nextKey) == 0);
+					prevKeyCovers = (prevKey != null)
+							&& (keyType.compareAsPrefix(phKey, prevKey) == 0);
 				}
 
 				deleteLastInLeaf = (leaf.getEntryCount() == 1);
 
 				// tree latched in update mode
-				if (deleteLastInLeaf) {
+				if ((deleteLastInLeaf)
+						|| ((!prevKeyCovers) && (!nextKeyCovers))) {
 					treeLatch.upX(rootPageID);
 				} else if (deleteIsBound) {
 					treeLatch.downS(rootPageID);
@@ -347,8 +356,10 @@ public class ElBPlusTree extends BPlusTree {
 			leaf = deleteSpecialFromPage(transaction, rootPageID, leaf, key,
 					value, level, false, logged, undoNextLSN);
 
-			leaf = insertPlaceHolder(transaction, rootPageID, leaf,
-					placeHolderKey, placeHolderValue);
+			if ((!prevKeyCovers) && (!nextKeyCovers)) {
+				leaf = insertPlaceHolder(transaction, rootPageID, leaf, phKey,
+						phValue);
+			}
 
 			if (leaf.getKey() == null) {
 				leaf = moveNext(transaction, rootPageID, leaf, OpenMode.UPDATE);
@@ -440,6 +451,10 @@ public class ElBPlusTree extends BPlusTree {
 					}
 				}
 
+				/*
+				 * Check parent for separator whether we have to insert in
+				 * current leaf or previous page
+				 */
 				leaf = verifyInsertPage(transaction, rootPageID, leaf,
 						placeHolderKey);
 			}
@@ -478,13 +493,34 @@ public class ElBPlusTree extends BPlusTree {
 				leaf.setSafe(false);
 				leaf.unlatch();
 				parent = descendToParent(transaction, rootPageID, rootPageID,
-						placeHolderKey, leafPageID, true); // we expect to find
-				// the current leaf
+						placeHolderKey, leafPageID, true);
+				// we expect to find the current leaf
 				insertPageID = parent.determineNextChildPageID(
 						SearchMode.GREATER_OR_EQUAL, placeHolderKey);
 
-				leaf.latchX();
-				leaf.setSafe(true);
+				if (!leafPageID.equals(insertPageID)) {
+					// target must MUST be previous page
+					// or anything serious is wrong!!!!
+					PageContext insertLeaf = getPage(transaction, insertPageID,
+							true, false);
+					/*
+					 * System.err.println(String.format(
+					 * "Switching from %s to %s to insert %s", leaf
+					 * .getPageID(), insertLeaf.getPageID(), leaf
+					 * .getKeyType().toString(placeHolderKey)));
+					 * System.err.println(parent.dump("parent"));
+					 * System.err.println(leaf.dump("leaf"));
+					 * System.err.println(insertLeaf.dump("insert leaf"));
+					 */
+					leaf.setSafe(true);
+					leaf.latchS();
+					leaf.cleanup();
+					leaf = insertLeaf;
+					leaf.moveAfterLast();
+				} else {
+					leaf.latchX();
+					leaf.setSafe(true);
+				}
 			} catch (IndexAccessException e) {
 				leaf.latchS();
 				leaf.setSafe(true);
@@ -494,21 +530,6 @@ public class ElBPlusTree extends BPlusTree {
 				if (parent != null) {
 					parent.cleanup();
 				}
-			}
-
-			if (!leafPageID.equals(insertPageID)) {
-				PageContext insertLeaf = getPage(transaction, insertPageID,
-						true, false);
-				System.err.println(String.format(
-						"Switching from %s to %s to insert %s", leaf
-								.getPageID(), insertLeaf.getPageID(), leaf
-								.getKeyType().toString(placeHolderKey)));
-				// System.err.println(parentDump);
-				// System.err.println(leaf.dump("leaf"));
-				// System.err.println(insertLeaf.dump("insert leaf"));
-				leaf.cleanup();
-				leaf = insertLeaf;
-				leaf.moveAfterLast();
 			}
 
 			return leaf;
