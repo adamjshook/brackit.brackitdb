@@ -241,7 +241,7 @@ public class BPlusIndexLockingTest extends AbstractBPlusIndexTest {
 		Cfg.set(TxMgr.LOCK_WAIT_TIMEOUT, 5000);
 		super.setUp();
 		lockService = new IntegerByteArrayKVLLockService("Test",
-				INDEX_LOAD_SIZE * 2, 10);
+				LOAD_SIZE * 2, 10);
 		index = new BPlusIndex(sm.bufferManager, lockService);
 	}
 }

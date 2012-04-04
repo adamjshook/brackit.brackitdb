@@ -33,9 +33,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -52,7 +49,6 @@ import org.brackit.server.store.OpenMode;
 import org.brackit.server.store.SearchMode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.IndexIterator;
-import org.brackit.server.store.index.aries.display.DisplayVisitor;
 import org.brackit.server.store.index.aries.page.PageContext;
 import org.brackit.server.store.index.aries.page.PageContextFactory;
 import org.brackit.server.tx.TxException;
@@ -77,7 +73,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testInsertUniqueIndexAscendingKeys()
 			throws IndexAccessException, IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 
 		int i = 0;
 		for (Entry entry : entries) {
@@ -110,7 +106,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testInsertUniqueIndexDescendingKeys()
 			throws IndexAccessException, IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		Collections.reverse(entries);
 		// Logger.getLogger(BPlusIndex.class.getName()).setLevel(Level.TRACE);
 		int i = 0;
@@ -144,7 +140,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testInsertUniqueIndexRandomKeys() throws IndexAccessException,
 			IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		Collections.shuffle(entries, rand);
 
 		int i = 1;
@@ -178,7 +174,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testDeleteUniqueIndexDescendingKeys()
 			throws IndexAccessException, IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		Collections.reverse(entries);
 
@@ -205,7 +201,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testDeleteUniqueIndexAscendingKey()
 			throws IndexAccessException, IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 
 		int j = 1;
@@ -231,7 +227,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testDeleteUniqueIndexRandomKeys() throws IndexAccessException,
 			IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		Collections.shuffle(entries, rand);
 
@@ -258,7 +254,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testUpdateUniqueIndexAscendingKeys()
 			throws IndexAccessException, IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 
 		int j = 1;
@@ -294,7 +290,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testUpdateUniqueIndexDescendingKeys()
 			throws IndexAccessException, IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 
 		int j = 1;
@@ -331,7 +327,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testUpdateUniqueIndexRandomKeys() throws IndexAccessException,
 			IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 
 		int j = 1;
@@ -368,10 +364,10 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testDeleteNonUniqueIndexRandomKeys()
 			throws IndexAccessException, IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE
 				/ NUMBER_OF_DUPLICATES, 0);
 		for (int i = 1; i <= NUMBER_OF_DUPLICATES; i++) {
-			entries.addAll(generateEntries(INDEX_LOAD_SIZE
+			entries.addAll(generateEntries(LOAD_SIZE
 					/ NUMBER_OF_DUPLICATES, i));
 		}
 		loadIndex(t2, entries, nonuniqueRootPageID);
@@ -406,10 +402,10 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testInsertNonUniqueIndexRandomKeys()
 			throws IndexAccessException, IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE
 				/ NUMBER_OF_DUPLICATES, 0);
 		for (int i = 1; i <= NUMBER_OF_DUPLICATES; i++) {
-			entries.addAll(generateEntries(INDEX_LOAD_SIZE
+			entries.addAll(generateEntries(LOAD_SIZE
 					/ NUMBER_OF_DUPLICATES, i));
 		}
 
@@ -442,7 +438,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testInsertUniqueIndexKeyViolation()
 			throws IndexAccessException, IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 
 		// Logger.getLogger(BPlusIndex.class.getName()).setLevel(Level.TRACE);
@@ -467,10 +463,10 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testInsertNonUniqueIndexDuplicateViolation()
 			throws IndexAccessException, IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE
 				/ NUMBER_OF_DUPLICATES, 0);
 		for (int i = 1; i <= NUMBER_OF_DUPLICATES; i++) {
-			entries.addAll(generateEntries(INDEX_LOAD_SIZE
+			entries.addAll(generateEntries(LOAD_SIZE
 					/ NUMBER_OF_DUPLICATES, i));
 		}
 		loadIndex(t2, entries, nonuniqueRootPageID);
@@ -502,10 +498,10 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testUpdateNonUniqueIndexDuplicateViolation()
 			throws IndexAccessException, IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE
 				/ NUMBER_OF_DUPLICATES, 0);
 		for (int i = 1; i <= NUMBER_OF_DUPLICATES; i++) {
-			entries.addAll(generateEntries(INDEX_LOAD_SIZE
+			entries.addAll(generateEntries(LOAD_SIZE
 					/ NUMBER_OF_DUPLICATES, i));
 		}
 		loadIndex(t2, entries, nonuniqueRootPageID);
@@ -550,10 +546,10 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testUpdateNonUniqueIndexAscending()
 			throws IndexAccessException, IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE
 				/ NUMBER_OF_DUPLICATES, 0);
 		for (int i = 1; i <= NUMBER_OF_DUPLICATES; i++) {
-			entries.addAll(generateEntries(INDEX_LOAD_SIZE
+			entries.addAll(generateEntries(LOAD_SIZE
 					/ NUMBER_OF_DUPLICATES, i));
 		}
 		loadIndex(t2, entries, nonuniqueRootPageID);
@@ -571,10 +567,10 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testUpdateNonUniqueIndexDescending()
 			throws IndexAccessException, IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE
 				/ NUMBER_OF_DUPLICATES, 0);
 		for (int i = 1; i <= NUMBER_OF_DUPLICATES; i++) {
-			entries.addAll(generateEntries(INDEX_LOAD_SIZE
+			entries.addAll(generateEntries(LOAD_SIZE
 					/ NUMBER_OF_DUPLICATES, i));
 		}
 		loadIndex(t2, entries, nonuniqueRootPageID);
@@ -593,10 +589,10 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testUpdateNonUniqueIndexRandom() throws IndexAccessException,
 			IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE
 				/ NUMBER_OF_DUPLICATES, 0);
 		for (int i = 1; i <= NUMBER_OF_DUPLICATES; i++) {
-			entries.addAll(generateEntries(INDEX_LOAD_SIZE
+			entries.addAll(generateEntries(LOAD_SIZE
 					/ NUMBER_OF_DUPLICATES, 2 * i));
 		}
 		loadIndex(t2, entries, nonuniqueRootPageID);
@@ -613,7 +609,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testScanDeleteUniqueIndexForward() throws IndexAccessException,
 			IndexOperationException, BufferException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 
 		sm.buffer.clear();
@@ -641,7 +637,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testScanUniqueIndexForward() throws IndexAccessException,
 			IndexOperationException, BufferException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 
 		sm.buffer.clear();
@@ -666,7 +662,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testScanUniqueIndexBackward() throws IndexAccessException,
 			IndexOperationException, BufferException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		Collections.reverse(entries);
 
@@ -693,7 +689,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	public void testScanDeleteUniqueIndexBackward()
 			throws IndexAccessException, IndexOperationException,
 			BufferException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 
 		sm.buffer.clear();
@@ -724,7 +720,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testInsertIntoOpenedUniqueIndexInsertViolation()
 			throws IndexAccessException, IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE / 10, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE / 10, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		for (Entry entry : entries) {
 			// check insertion with a smaller key, the same key and a larger key
@@ -749,10 +745,10 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testInsertIntoOpenedNonUniqueIndexInsertViolation()
 			throws IndexAccessException, IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE
 				/ (10 * NUMBER_OF_DUPLICATES), 0);
 		for (int i = 1; i <= NUMBER_OF_DUPLICATES; i++) {
-			entries.addAll(generateEntries(INDEX_LOAD_SIZE
+			entries.addAll(generateEntries(LOAD_SIZE
 					/ (10 * NUMBER_OF_DUPLICATES), i));
 		}
 		loadIndex(t2, entries, nonuniqueRootPageID);
@@ -849,7 +845,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	public void testLoadEmptyOpenedNonUniqueIndex()
 			throws IndexAccessException, IndexOperationException {
 		LinkedList<Entry> entries = generateEntries(1, 0);
-		entries.addAll(generateDuplicates(entries.get(0), INDEX_LOAD_SIZE));
+		entries.addAll(generateDuplicates(entries.get(0), LOAD_SIZE));
 
 		IndexIterator it = index.open(t2, nonuniqueRootPageID,
 				SearchMode.FIRST, null, null, OpenMode.BULK);
@@ -884,15 +880,15 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testInsertInOpenedUniqueIndex() throws IndexAccessException,
 			IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		LinkedList<Entry> loadEntries = new LinkedList<Entry>();
-		loadEntries.addAll(entries.subList(0, INDEX_LOAD_SIZE / 3));
-		loadEntries.addAll(entries.subList(2 * INDEX_LOAD_SIZE / 3,
-				INDEX_LOAD_SIZE));
+		loadEntries.addAll(entries.subList(0, LOAD_SIZE / 3));
+		loadEntries.addAll(entries.subList(2 * LOAD_SIZE / 3,
+				LOAD_SIZE));
 		loadIndex(t2, loadEntries, uniqueRootPageID);
 
-		List<Entry> insertEntries = entries.subList(INDEX_LOAD_SIZE / 3,
-				2 * INDEX_LOAD_SIZE / 3);
+		List<Entry> insertEntries = entries.subList(LOAD_SIZE / 3,
+				2 * LOAD_SIZE / 3);
 		Entry first = insertEntries.get(0);
 		IndexIterator it = index.open(t2, uniqueRootPageID,
 				SearchMode.GREATER_OR_EQUAL, first.key, null, OpenMode.UPDATE);
@@ -938,7 +934,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testRollbackInsertUniqueIndexAscendingKeys()
 			throws IndexAccessException, IndexOperationException, TxException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(REDUCED_LOAD_SIZE, 0);
 
 		int i = 0;
 		for (Entry entry : entries) {
@@ -957,7 +953,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testRollbackInsertUniqueIndexDescendingKeys()
 			throws IndexAccessException, IndexOperationException, TxException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(REDUCED_LOAD_SIZE, 0);
 		Collections.reverse(entries);
 
 		int i = 0;
@@ -977,7 +973,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testRollbackInsertUniqueIndexRandomKeys()
 			throws IndexAccessException, IndexOperationException, TxException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(REDUCED_LOAD_SIZE, 0);
 		Collections.shuffle(entries, rand);
 
 		int i = 0;
@@ -997,7 +993,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testRollbackDeleteUniqueIndexAscendingKeys()
 			throws IndexAccessException, IndexOperationException, TxException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(REDUCED_LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 
 		int i = 0;
@@ -1019,7 +1015,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testRollbackDeleteUniqueIndexDescendingKeys()
 			throws IndexAccessException, IndexOperationException, TxException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(REDUCED_LOAD_SIZE, 0);
 
 		loadIndex(t2, entries, uniqueRootPageID);
 		Collections.reverse(entries);
@@ -1042,7 +1038,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testRollbackDeleteUniqueIndexRandomKeys()
 			throws IndexAccessException, IndexOperationException, TxException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(REDUCED_LOAD_SIZE, 0);
 
 		loadIndex(t2, entries, uniqueRootPageID);
 		Collections.shuffle(entries, rand);
@@ -1102,7 +1098,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testRecoveryInsertCommitted() throws BufferException,
 			IndexAccessException, IndexOperationException, TxException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(REDUCED_LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		t2.commit();
 
@@ -1122,7 +1118,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testRecoveryInsertFailed() throws BufferException,
 			IndexAccessException, IndexOperationException, TxException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(REDUCED_LOAD_SIZE, 0);
 		t2.commit();
 		t2 = sm.taMgr.begin();
 		loadIndex(t2, entries, uniqueRootPageID);
@@ -1141,7 +1137,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testRecoveryInsertRollback() throws BufferException,
 			IndexAccessException, IndexOperationException, TxException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(REDUCED_LOAD_SIZE, 0);
 		t2.commit();
 		t2 = sm.taMgr.begin();
 		loadIndex(t2, entries, uniqueRootPageID);
@@ -1161,7 +1157,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testRecoveryDeleteCommitted() throws BufferException,
 			IndexAccessException, IndexOperationException, TxException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(REDUCED_LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		t2.commit();
 
@@ -1185,7 +1181,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testRecoveryDeleteFailed() throws BufferException,
 			IndexAccessException, IndexOperationException, TxException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(REDUCED_LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		t2.commit();
 
@@ -1227,7 +1223,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testRecoveryDeleteRollback() throws BufferException,
 			IndexAccessException, IndexOperationException, TxException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(REDUCED_LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		t2.commit();
 
@@ -1253,7 +1249,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testRollbackInsertPersistentUniqueIndexRandomKeys()
 			throws IndexAccessException, IndexOperationException, TxException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 
 		int i = 0;
 		for (Entry entry : entries) {
@@ -1277,13 +1273,12 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 		}
 	}
 
+	@Ignore
 	@Test
 	public void testOpenUniqueIndexRandomThread() throws IndexAccessException,
 			IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(REDUCED_LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
-		// Logger.getLogger(BPlusIndex.class.getName()).setLevel(Level.TRACE);
-		// Logger.getLogger(BufferImpl.class.getName()).setLevel(Level.TRACE);
 
 		HashSet<Entry> uniqueReadKeys = new HashSet<Entry>();
 		ArrayList<Entry> hits = new ArrayList<Entry>();
@@ -1298,6 +1293,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 			iterator.close();
 		}
 
+		/*
 		try {
 			PrintStream printer = new PrintStream(new File(
 					"/media/ramdisk/randomIndex.dot"));
@@ -1311,7 +1307,6 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 			e.printStackTrace();
 		}
 
-		/*
 		System.out.println(entries.size());
 		System.out.println(uniqueReadKeys.size());
 		System.out
@@ -1321,13 +1316,12 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 		 */
 	}
 
+	@Ignore
 	@Test
 	public void testOpenUniqueIndexRandomSystem() throws IndexAccessException,
 			IndexOperationException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
-		// Logger.getLogger(BPlusIndex.class.getName()).setLevel(Level.TRACE);
-		// Logger.getLogger(BufferImpl.class.getName()).setLevel(Level.TRACE);
 
 		HashSet<Entry> uniqueReadKeys = new HashSet<Entry>();
 		ArrayList<Entry> hits = new ArrayList<Entry>();
@@ -1342,6 +1336,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 			iterator.close();
 		}
 
+		/*
 		try {
 			PrintStream printer = new PrintStream(new File(
 					"/media/ramdisk/randomIndex.dot"));
@@ -1355,7 +1350,6 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 			e.printStackTrace();
 		}
 
-		/*
 		System.out.println(entries.size());
 		System.out.println(uniqueReadKeys.size());
 		System.out
