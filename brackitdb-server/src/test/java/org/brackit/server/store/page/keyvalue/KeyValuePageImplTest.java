@@ -69,8 +69,8 @@ public class KeyValuePageImplTest extends KeyValuePageTest {
 					.fromUIntVar(count--));
 			int writeToPos = (random) ? (rand.nextInt(no + 1)) : ((prepend) ? 0
 					: no);
-			System.out.println(String.format("%3s: Writing %s to pos %s", no,
-					toWrite, writeToPos));
+//			System.out.println(String.format("%3s: Writing %s to pos %s", no,
+//					toWrite, writeToPos));
 			success = verifiedWrite(writeToPos, toWrite, compressed);
 
 			if (success) {

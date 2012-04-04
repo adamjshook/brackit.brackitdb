@@ -139,8 +139,8 @@ public abstract class KeyValuePageTest {
 			Entry toWrite = generateRandomEntry(1, 6);
 			int writeToPos = (random) ? (rand.nextInt(no + 1)) : ((prepend) ? 0
 					: no);
-			System.out.println(String.format("%3s: Writing %s to pos %s", no,
-					toWrite, writeToPos));
+//			System.out.println(String.format("%3s: Writing %s to pos %s", no,
+//					toWrite, writeToPos));
 			success = verifiedWrite(writeToPos, toWrite, compressed);
 
 			if (success) {
@@ -195,6 +195,7 @@ public abstract class KeyValuePageTest {
 		}
 	}
 
+	@Ignore
 	@Test
 	public void test() throws Exception {
 		boolean compressed = true;
@@ -225,7 +226,7 @@ public abstract class KeyValuePageTest {
 	}
 
 	@Test
-	public void test2() throws Exception {
+	public void testLongRecord() throws Exception {
 		page.format(page.getHandle().getPageID());
 		Entry first = new Entry((new org.brackit.server.node.XTCdeweyID(
 				"4711:1.3.3.61.17.3.9.5.3")).toBytes(), ElRecordAccess
@@ -237,7 +238,10 @@ public abstract class KeyValuePageTest {
 						.createRecord(
 								23,
 								(byte) 2,
-								"miserable field tear hunted blam feather swears she berowne buttons mingle hurl vainglory freezes zounds salisbury woe pause rapier manifest soldier breeding abide ever brine bias vengeance meet crouching without sun all blunt letter wives quench dirge"));
+								"miserable field tear hunted blam feather swears she berowne " +
+								"buttons mingle hurl vainglory freezes zounds salisbury woe pause " +
+								"rapier manifest soldier breeding abide ever brine bias vengeance meet " +
+								"crouching without sun all blunt letter wives quench dirge"));
 
 		verifiedWrite(0, first, true);
 		verifiedWrite(1, second, true);
@@ -314,7 +318,7 @@ public abstract class KeyValuePageTest {
 			int entryCount = page.getRecordCount();
 			int deleteSlot = rand.nextInt(entryCount);
 			Entry toDelete = tuples.remove(deleteSlot);
-			System.out.println(i + " Deleting pos " + deleteSlot);
+//			System.out.println(i + " Deleting pos " + deleteSlot);
 			boolean success = verifiedDelete(deleteSlot);
 
 			for (int j = 0; j < tuples.size(); j++) {
@@ -354,7 +358,7 @@ public abstract class KeyValuePageTest {
 		for (int i = 0; i < slotNo - 1; i++) {
 			int deleteSlot = (ascending) ? 0 : page.getRecordCount() - 1;
 			Entry toDelete = tuples.remove(deleteSlot);
-			System.out.println(i + " Deleting pos " + deleteSlot);
+//			System.out.println(i + " Deleting pos " + deleteSlot);
 			boolean success = verifiedDelete(deleteSlot);
 
 			for (int j = 0; j < tuples.size(); j++) {
@@ -398,9 +402,9 @@ public abstract class KeyValuePageTest {
 						false, (byte) 0);
 
 				Entry updateEntry = new Entry(entry.getKey(), update);
-				System.out.println(String.format(
-						"Updating value of pos %s with value of length %s",
-						updatePos, lengthOfUpdate));
+//				System.out.println(String.format(
+//						"Updating value of pos %s with value of length %s",
+//						updatePos, lengthOfUpdate));
 
 				if (!verifiedUpdate(updatePos, entry, updateEntry, compressed)) {
 					Assert.fail("Update did not succeed");
@@ -639,7 +643,8 @@ public abstract class KeyValuePageTest {
 		return entry;
 	}
 
-	// @Test
+	@Ignore
+	@Test
 	public void testCompression() throws Exception {
 		byte[] previousValue = null;
 
