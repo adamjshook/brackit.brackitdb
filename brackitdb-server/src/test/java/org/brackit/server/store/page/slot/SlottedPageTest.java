@@ -86,8 +86,8 @@ public class SlottedPageTest {
 		do {
 			boolean success = false;
 			Tuple toWrite = generateRandomTuple(6, 6, -1, 6);
-			System.out.println(String.format("Writing %s to slot %s", toWrite,
-					slotNo));
+			// System.out.println(String.format("Writing %s to slot %s",
+			// toWrite, slotNo));
 			success = verifiedWrite(slotNo, toWrite, compressed);
 
 			if (success) {
@@ -230,6 +230,11 @@ public class SlottedPageTest {
 
 	@Test
 	public void testUpdateFieldCompressed() {
+		// this takes long!!! use a smaller page size
+		Handle handle = new Handle(1024) {
+		};
+		handle.init(new PageID(3));
+		page = new SlottedPage(null, handle);
 		testUpdateField(true);
 	}
 
