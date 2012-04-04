@@ -88,6 +88,7 @@ public abstract class AxisTest extends XQueryBaseTest {
 			try {
 				boolean check = !axis.check(element, node);
 
+				/*
 				if (check) {
 					System.err.println("Filter out " + element + " -> !" + axis
 							+ " of " + node);
@@ -95,7 +96,7 @@ public abstract class AxisTest extends XQueryBaseTest {
 					System.out.println("Accept " + element + " -> " + axis
 							+ " of " + node);
 				}
-				//				
+				*/				
 				return check;
 			} catch (QueryException e) {
 				throw new DocumentException(e);
@@ -119,11 +120,13 @@ public abstract class AxisTest extends XQueryBaseTest {
 					else
 						Assert.assertTrue("a > b", a.cmp(b) > 0);
 				} catch (AssertionError e) {
+					/*
 					SubtreePrinter.print(collection.getDocument(), System.out);
 					System.err.println(nodes);
 					System.err.println(a);
 					System.err.println(b);
 					System.err.println(a.cmp(b));
+					*/
 					throw e;
 				}
 			}
@@ -173,7 +176,6 @@ public abstract class AxisTest extends XQueryBaseTest {
 
 	@Test
 	public void testNonRootPreceding() throws Exception {
-		SubtreePrinter.print(collection.getDocument(), System.out);
 		Node<?> node = collection.getDocument().getFirstChild().getFirstChild()
 				.getFirstChild().getNextSibling();
 		Set<Node<?>> expected = buildExpectedSet(collection.getDocument()
@@ -194,11 +196,9 @@ public abstract class AxisTest extends XQueryBaseTest {
 	public void testNonRootPrecedingSibling() throws Exception {
 		Node<?> node = collection.getDocument().getFirstChild().getFirstChild()
 				.getFirstChild().getNextSibling();
-		System.out.println(node);
 		Set<Node<?>> expected = buildExpectedSet(collection.getDocument()
 				.getSubtree(),
 				new AxisFilter(ctx, node, Axis.PRECEDING_SIBLING));
-		System.out.println("---------------");
 		checkOutput(Accessor.PRECEDING_SIBLING.performStep(node), expected);
 	}
 
@@ -245,13 +245,14 @@ public abstract class AxisTest extends XQueryBaseTest {
 		Node<?> node;
 		while ((node = nodes.next()) != null) {
 			Assert.assertTrue("Node not delivered yet.", delivered.add(node));
-			System.out.println(node);
+			//System.out.println(node);
 		}
 		nodes.close();
 		try {
 			Assert.assertEquals("Expected number of nodes delivered", expected
 					.size(), delivered.size());
 
+			/*
 			for (Node<?> n : delivered) {
 				System.err.println("CHECKING " + n);
 				if (!expected.contains(n)) {
@@ -261,12 +262,13 @@ public abstract class AxisTest extends XQueryBaseTest {
 					return;
 				}
 			}
+			*/
 
 			Assert.assertTrue("Expected nodes delivered", expected
 					.containsAll(delivered));
 		} catch (Error e) {
-			System.out.println("Expected:\t" + expected);
-			System.out.println("Delivered:\t" + delivered);
+			//System.out.println("Expected:\t" + expected);
+			//System.out.println("Delivered:\t" + delivered);
 			throw e;
 		}
 	}
