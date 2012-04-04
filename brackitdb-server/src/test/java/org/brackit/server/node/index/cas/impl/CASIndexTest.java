@@ -306,7 +306,7 @@ public class CASIndexTest {
 					++pos < expectedSize);
 			ElNode expected = expectedNodes.get(pos);
 			assertEquals("Expected index entry found", expected, next);
-			System.out.println("Matched " + expected);
+//			System.out.println("Matched " + expected);
 		}
 		assertTrue("Number of index entries is correct",
 				pos == expectedSize - 1);

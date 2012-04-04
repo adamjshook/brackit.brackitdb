@@ -44,4 +44,9 @@ public class TaMgrMockup extends TaMgrImpl {
 	public TaMgrMockup(Log transactionLog) {
 		super(transactionLog, new BufferMgrMockup(transactionLog));
 	}
+
+	@Override
+	protected void finalize() throws Throwable {
+		patrol.terminate();
+	}
 }

@@ -54,8 +54,8 @@ public class BracketNodeSequenceTest {
 		
 		BracketNodeSequence other = seq.split(new XTCdeweyID(docID, "1.5.5.2.3"), null);
 		
-		System.out.println(seq);
-		System.out.println(other);
+//		System.out.println(seq);
+//		System.out.println(other);
 	}
 
 }
