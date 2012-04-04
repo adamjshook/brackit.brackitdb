@@ -27,7 +27,6 @@
  */
 package org.brackit.server.store.index.aries;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.node.index.external.IndexStatistics;
 import org.brackit.server.store.Field;
@@ -38,6 +37,7 @@ import org.brackit.server.store.index.IndexIterator;
 import org.brackit.server.store.index.aries.page.PageContext;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxStats;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * 
@@ -45,6 +45,8 @@ import org.brackit.server.tx.TxStats;
  * 
  */
 public class BPlusIndexIterator implements IndexIterator {
+	private static final boolean TOGGLE_LATCH = false;
+
 	private static Logger log = Logger.getLogger(BPlusIndexIterator.class
 			.getName());
 
@@ -105,11 +107,9 @@ public class BPlusIndexIterator implements IndexIterator {
 
 	public void close() {
 		if (page != null) {
-			// if ((!on) && (openMode != OpenMode.LOAD))
-			// {
-			// page.latchShared();
-			// }
-
+			if ((TOGGLE_LATCH) && (!on) && (openMode != OpenMode.LOAD)) {
+				page.latchS();
+			}
 			page.cleanup();
 			page = null;
 		}
@@ -328,11 +328,11 @@ public class BPlusIndexIterator implements IndexIterator {
 	}
 
 	public PageID getCurrentPageID() throws IndexAccessException {
-		return rememberedPageID;
+		return (TOGGLE_LATCH) ? rememberedPageID : page.getPageID();
 	}
 
 	public long getCurrentLSN() throws IndexAccessException {
-		return rememberedLSN;
+		return (TOGGLE_LATCH) ? rememberedLSN : page.getLSN();
 	}
 
 	@Override
@@ -355,8 +355,9 @@ public class BPlusIndexIterator implements IndexIterator {
 	}
 
 	protected void on() throws IndexAccessException {
-		if (true)
+		if (!TOGGLE_LATCH) {
 			return;
+		}
 		if (openMode == OpenMode.LOAD) {
 			on = true;
 			return;
@@ -420,8 +421,9 @@ public class BPlusIndexIterator implements IndexIterator {
 	}
 
 	protected void off() throws IndexAccessException {
-		if (true)
+		if (!TOGGLE_LATCH) {
 			return;
+		}
 		if (openMode == OpenMode.LOAD) {
 			on = false;
 			return;
@@ -438,9 +440,7 @@ public class BPlusIndexIterator implements IndexIterator {
 		IndexStatistics is = new IndexStatistics();
 		TxStats statistics = transaction.getStatistics();
 		is.setIndexHeight(statistics.get(TxStats.BTREE_ROOT_SPLITS) + 1);
-		is
-				.setIndexLeaveCount(statistics
-						.get(TxStats.BTREE_LEAF_ALLOCATIONS) + 1);
+		is.setIndexLeaveCount(statistics.get(TxStats.BTREE_LEAF_ALLOCATIONS) + 1);
 		is.setIndexPointers(statistics.get(TxStats.BTREE_LEAF_ALLOCATIONS));
 		is.setIndexTuples(statistics.get(TxStats.BTREE_INSERTS));
 		int pageCount = 1 + statistics.get(TxStats.BTREE_LEAF_ALLOCATIONS)
