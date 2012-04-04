@@ -196,32 +196,43 @@ public class TreeLockTableClient<T extends TreeLockMode<T>> extends
 			if (((request = lastPath[level]) != null)
 					&& ((header = request.getHeader()).getName()
 							.equals(lockName))) {
+
+				// The following code is similar to the standard case below,
+				// except that we try to perform instant lock granting
+				// and lock escalation without latching the lock header.
+				// For heavily contended resources (e.g. the document root)
+				// this may drastically increase thread-level parallelism
 				lscb.useRequest();
-				T currentMode = request.getMode();
 
-				if ((currentMode.implies(targetMode, distanceToTargetLevel))
-						&& (currentMode.convert(mode) == currentMode)) {
-					if (lockClass != LockClass.INSTANT_DURATION) {
-						if (parentRequest != null) {
-							// Increase parent counter to indicate locality in
-							// its subtree.
-							// We do not hold the parent's header latch, but
-							// simply updating
-							// the counter is not harmful as we hold the
-							// transactions lscb latch
-							parentRequest.incCount();
+				T escalationMode = suggestEscalation(request, level, mode,
+						targetMode, distanceToTargetLevel);
+
+				if (escalationMode == mode) {
+					T currentMode = request.getMode();
+					if ((currentMode.implies(targetMode, distanceToTargetLevel))
+							&& (currentMode.convert(mode) == currentMode)) {
+						if (lockClass != LockClass.INSTANT_DURATION) {
+							if (parentRequest != null) {
+								// Increase parent counter to indicate locality
+								// in its subtree. We do not hold the parent's
+								// header latch, but simply updating the counter
+								// is not harmful as we hold the transactions
+								// lscb latch
+								parentRequest.incCount();
+							}
+
+							request.incCount();
+							lscb.useRequest();
 						}
-
-						request.incCount();
-						lscb.useRequest();
+						return currentMode.implicitMode(distanceToTargetLevel);
+					} else if ((currentMode == mode)
+							|| (currentMode.convert(mode) == currentMode)) {
+						level++;
+						parentRequest = request;
+						continue;
 					}
-					return currentMode.implicitMode(distanceToTargetLevel);
-				} else if ((currentMode == mode)
-						|| (currentMode.convert(mode) == currentMode)) {
-					level++;
-					parentRequest = request;
-					continue;
 				}
+				// OK, we need to follow the standard case
 				header.latchX();
 			} else {
 				header = table.allocate(lockName);
@@ -368,6 +379,24 @@ public class TreeLockTableClient<T extends TreeLockMode<T>> extends
 						"%s current mode is %s -> convert request of %s to %s",
 						tx.toShortString(), request.getMode(), mode, request
 								.getMode().convert(mode)));
+			mode = request.getMode().convert(mode);
+		}
+
+		return mode;
+	}
+
+	protected T suggestEscalation(Request<T> request, int level, T mode,
+			T targetMode, int distanceToTargetLevel) {
+		int requestCount = request.getCount();
+		int threshold = getEscalationTreshold(level);
+		T escalationMode = targetMode.escalate(distanceToTargetLevel);
+
+		if ((threshold != -1) && (requestCount >= threshold)
+				&& (escalationMode != mode)
+				&& (request.getMode() != escalationMode)) {
+			// escalate the request
+			mode = escalationMode;
+			// calc the conversion mode we have to request
 			mode = request.getMode().convert(mode);
 		}
 
