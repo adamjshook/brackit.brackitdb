@@ -38,7 +38,7 @@ package org.brackit.server.io.file;
 public interface BlockSpace {
 
 	void create(int blkSize, int iniSize, double extent) throws StoreException;
-	
+
 	int createUnit() throws StoreException;
 
 	void open() throws StoreException;
@@ -62,11 +62,12 @@ public interface BlockSpace {
 
 	/**
 	 * the opposite of allocate: marking the block identified by the lba as
-	 * free.
+	 * free. The hintUnitID can be used to speed up the method by indicating the
+	 * unitID this block is assigned to. Otherwise, set it to -1.
 	 * 
 	 * @param lba
 	 */
-	void release(int lba) throws StoreException;
+	void release(int lba, int hintUnitID) throws StoreException;
 
 	int read(int lba, byte[] buffer, int numBlocks) throws StoreException;
 
@@ -89,4 +90,5 @@ public interface BlockSpace {
 
 	void sync() throws StoreException;
 
+	void dropUnit(int unitID) throws StoreException;
 }

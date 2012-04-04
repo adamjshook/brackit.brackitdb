@@ -360,7 +360,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		return victim;
 	}
 
-	public synchronized void deletePage(Tx transaction, PageID pageID,
+	public synchronized void deletePage(Tx transaction, PageID pageID, int hintUnitID,
 			boolean logged, long undoNextLSN) throws BufferException {
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Deleting page %s.", pageID));
@@ -391,7 +391,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			frame.drop();
 			pool.remove(frame);
 		}
-		deallocateBlock(pageID);
+		deallocateBlock(pageID, hintUnitID);
 	}
 
 	private int readBlocks(PageID pageID, byte[] buffer, int numOfBlocks)
@@ -450,13 +450,13 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		}
 	}
 
-	private void deallocateBlock(PageID pageID) throws BufferException {
+	private void deallocateBlock(PageID pageID, int hintUnitID) throws BufferException {
 		if (log.isDebugEnabled()) {
 			log.debug(String.format("Releasing block %s of page %s", pageID
 					.getBlockNo(), pageID));
 		}
 		try {
-			blockSpace.release(pageID.getBlockNo());
+			blockSpace.release(pageID.getBlockNo(), hintUnitID);
 		} catch (StoreException e) {
 			throw new BufferException(e,
 					"Releasing block %s of page %s failed",

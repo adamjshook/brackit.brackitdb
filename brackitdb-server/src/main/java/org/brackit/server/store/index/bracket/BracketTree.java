@@ -884,10 +884,6 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-	/**
-	 * This PostCommitHook finishes the subtree deletion by removing the inner
-	 * leaf pages.
-	 */
 	private class DeletePageHook implements PostCommitHook {
 
 		private final PageID rootPageID;
@@ -906,7 +902,7 @@ public final class BracketTree extends PageContextFactory {
 			for (PageID pageID : pageIDs) {
 				try {
 					// TODO: log page deletion?
-					buffer.deletePage(tx, pageID, false, -1);
+					buffer.deletePage(tx, pageID, -1, false, -1);
 				} catch (BufferException e) {
 					if (exceptionPageIDs == null) {
 						exceptionPageIDs = new ArrayList<PageID>();

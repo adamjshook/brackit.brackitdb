@@ -29,9 +29,12 @@ package org.brackit.server.io.file;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.brackit.xquery.util.log.Logger;
@@ -70,6 +73,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 	String dataFileName;
 	String metaFileName;
 	String unitFileNamePrefix;
+	String unitFileNameFormat;
 	BlockFile dataFile;
 	RandomAccessFile metaFile;
 	int iniSize;
@@ -97,6 +101,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 		dataFileName = storeRoot + File.separator + id + ".cnt";
 		metaFileName = dataFileName + ".meta";
 		unitFileNamePrefix = dataFileName + ".unit";
+		unitFileNameFormat = unitFileNamePrefix + "%03d";
 		ProcedureUtil.register(ListContainers.class, this);
 	}
 
@@ -115,13 +120,15 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 		return allocateImpl(lba, unitID);
 	}
 
-	private synchronized int allocateImpl(int lba, int unitID) throws StoreException {
+	private synchronized int allocateImpl(int lba, int unitID)
+			throws StoreException {
 
 		Unit unit = unitMap.get(unitID);
 		if (unit == null) {
-			throw new StoreException(String.format("UnitID %s does not exist!", unitID));
+			throw new StoreException(String.format("UnitID %s does not exist!",
+					unitID));
 		}
-		
+
 		// lba >= 0, the caller decides which block to allocate
 		if (lba >= 0) {
 			while (lba >= freeSpaceInfo.logicalSize()) {
@@ -203,13 +210,35 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 	}
 
 	@Override
-	public void release(int lba) throws StoreException {
-		releaseImpl(lba);
+	public void release(int lba, int hintUnitID) throws StoreException {
+		releaseImpl(lba, hintUnitID);
 		usedBlockCount--;
 		freeBlockCount++;
 	}
 
-	private synchronized void releaseImpl(int lba) throws StoreException {
+	private synchronized void releaseImpl(int lba, int hintUnitID)
+			throws StoreException {
+		
+		// mark block as free
+		freeBlock(lba);
+
+		// release block from unit
+		if (hintUnitID > 0) {
+			Unit unit = unitMap.get(hintUnitID);
+			if (unit != null && unit.blockTable.get(lba)) {
+				// hintUnitID was right
+				unit.blockTable.clear(lba);
+				return;
+			}
+		}
+
+		for (Unit unit : unitMap.values()) {
+			unit.blockTable.clear(lba);
+		}
+	}
+	
+	private void freeBlock(int lba) throws StoreException {
+		
 		if (!freeSpaceInfo.get(lba)) {
 			throw new StoreException("invalid lba, block not in use");
 		}
@@ -217,8 +246,6 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 		if (nextFreeBlockHint > lba) {
 			nextFreeBlockHint = lba;
 		}
-		
-		// TODO: release block from unit
 	}
 
 	@Override
@@ -233,11 +260,11 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			dataFile.close();
 
 			syncMeta(false, true);
-			
+
 			for (Unit unit : unitMap.values()) {
 				unit.file.close();
 			}
-			
+
 			metaFile.close();
 
 			closed = true;
@@ -342,7 +369,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 				meta.delete();
 			}
 			deleteUnitFiles();
-			
+
 			dataFile = new RAFBlockFile(dataFileName, blkSize);
 
 			// no autoSync to speed up the initialization
@@ -412,9 +439,10 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 
 				freeBlockCount = metaFile.readInt();
 				usedBlockCount = metaFile.readInt();
-				
-				// TODO: read unit files from disk
-				
+
+				// read unit files from disk
+				loadUnits();
+
 			} else {
 				int blockCnt = dataFile.getBlockCnt();
 				freeSpaceInfo = new BitArrayWrapper(blockCnt);
@@ -444,10 +472,8 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 						Unit unit = unitMap.get(unitID);
 						if (unit == null) {
 							// unit not yet loaded into the map
-							RandomAccessFile unitFile = new RandomAccessFile(
-									unitFileNamePrefix + unitID,
-									Constants.FILE_MODE_UNSY);
-							unit = new Unit(unitFile, blockCnt);
+							RandomAccessFile unitFile = openUnitFile(unitID);
+							unit = new Unit(unitFile, freeSpaceInfo);
 							unitMap.put(unitID, unit);
 							nextUnit = Math.max(nextUnit, unitID + 1);
 						}
@@ -563,28 +589,118 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 	public int getInfoID() {
 		return InfoContributor.NO_ID;
 	}
-	
+
 	private void deleteUnitFiles() {
-		// TODO
+		List<UnitFile> unitFiles = getUnitFiles();
+		for (UnitFile unitFile : unitFiles) {
+			unitFile.file.delete();
+		}
 	}
 
 	@Override
 	public synchronized int createUnit() throws StoreException {
-		
+
 		try {
-		
+
 			int unitID = nextUnit++;
-			RandomAccessFile unitFile = new RandomAccessFile(
-					unitFileNamePrefix + unitID,
-					Constants.FILE_MODE_UNSY);
-			
-			Unit unit = new Unit(unitFile, freeSpaceInfo.logicalSize());
+			RandomAccessFile unitFile = openUnitFile(unitID);
+
+			Unit unit = new Unit(unitFile, freeSpaceInfo);
 			unitMap.put(unitID, unit);
-			
+
 			return unitID;
-		
+
 		} catch (FileNotFoundException e) {
 			throw new StoreException(e);
+		}
+	}
+	
+	@Override
+	public synchronized void dropUnit(int unitID) throws StoreException {
+
+		try {
+		
+			// remove unit from main memory map
+			Unit unit = unitMap.remove(unitID);
+			if (unit == null) {
+				throw new StoreException(String.format("Unit with ID %s does not exist!", unitID));
+			}
+			
+			// free blocks that belong to this unit
+			// TODO: find more efficient implementation
+			int length = unit.blockTable.logicalSize();
+			for (int i = 0; i < length; i++) {
+				if (unit.blockTable.get(i)) {
+					freeBlock(i);
+				}
+			}
+			
+			// close RandomAccessFile
+			unit.file.close();
+			// delete unit file
+			File unitFile = getUnitFile(unitID);
+			unitFile.delete();
+			
+			// TODO: syncMeta?
+		
+		} catch (IOException e) {
+			throw new StoreException(e);
+		}
+	}
+
+	private RandomAccessFile openUnitFile(int unitID)
+			throws FileNotFoundException {
+		return new RandomAccessFile(String.format(unitFileNameFormat, unitID),
+				Constants.FILE_MODE_UNSY);
+	}
+	
+	private File getUnitFile(int unitID) {
+		return new File(String.format(unitFileNameFormat, unitID));
+	}
+	
+	private List<UnitFile> getUnitFiles() {
+
+		File unitPrefix = new File(unitFileNamePrefix);
+		File dir = unitPrefix.getParentFile();
+		final String prefix = unitPrefix.getName();
+
+		FilenameFilter filter = new FilenameFilter() {
+			@Override
+			public boolean accept(File dir, String name) {
+				return name.startsWith(prefix);
+			}
+		};
+
+		// look for corresponding unit files
+		File[] files = dir.listFiles(filter);
+		ArrayList<UnitFile> unitFiles = new ArrayList<UnitFile>(files.length);
+		for (File file : files) {
+			// parse out unitID
+			String unitIDString = file.getName().substring(prefix.length());
+			try {
+
+				int unitID = Integer.parseInt(unitIDString);
+				unitFiles.add(new UnitFile(unitID, file));
+
+			} catch (NumberFormatException e) {
+				log.warn(String.format("Invalid unit file name found: %s",
+						file.getPath()));
+			}
+		}
+		
+		return unitFiles;	
+	}
+
+	private void loadUnits() throws IOException {
+
+		unitMap = new HashMap<Integer, Unit>();
+		nextUnit = 1;
+		
+		List<UnitFile> unitFiles = getUnitFiles();
+		for (UnitFile unitFile : unitFiles) {
+			unitMap.put(unitFile.unitID, new Unit(new RandomAccessFile(unitFile.file,
+					Constants.FILE_MODE_UNSY), freeSpaceInfo));
+			nextUnit = Math.max(nextUnit, unitFile.unitID + 1);
 		}
 	}
 }

@@ -45,9 +45,9 @@ public class Unit {
 	public final RandomAccessFile file;
 	public final BitVector blockTable;
 	
-	public Unit(RandomAccessFile file, int blockCount) {
+	public Unit(RandomAccessFile file, BitVector freeSpaceInfo) {
 		super();
 		this.file = file;
-		this.blockTable = new BitArrayWrapper(blockCount);
+		this.blockTable = new BitArrayWrapper(freeSpaceInfo.logicalSize());
 	}
 }
