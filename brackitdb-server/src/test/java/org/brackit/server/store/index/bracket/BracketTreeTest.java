@@ -28,7 +28,6 @@
 package org.brackit.server.store.index.bracket;
 
 import org.brackit.server.io.buffer.Buffer;
-import org.brackit.server.io.buffer.Handle;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.node.DocID;
@@ -46,6 +45,7 @@ import org.brackit.server.tx.TxMgr;
 import org.brackit.server.tx.impl.TaMgrMockup;
 import org.brackit.xquery.xdm.DocumentException;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -174,6 +174,7 @@ public class BracketTreeTest {
 
 	}
 
+	@Ignore
 	@Test
 	public void testDeleteSequence() throws Exception {
 
