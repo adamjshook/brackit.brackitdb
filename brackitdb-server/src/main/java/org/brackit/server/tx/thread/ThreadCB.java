@@ -137,7 +137,8 @@ public final class ThreadCB {
 	}
 
 	public void registerUnlatch(Latch latch) {
-		int latchCount = myLatches.get(latch);
+		Integer lc = myLatches.get(latch);
+		int latchCount = (lc == null) ? -1 : lc;
 
 		if (latchCount == -1) {
 			throw new RuntimeException("Did not latch " + latch
@@ -150,7 +151,8 @@ public final class ThreadCB {
 	}
 
 	public void registerUpdateLatch(Latch latch) {
-		int latchCount = myLatches.get(latch);
+		Integer lc = myLatches.get(latch);
+		int latchCount = (lc == null) ? -1 : lc;
 
 		if (latchCount == -1) {
 			myLatches.put(latch, 1);
@@ -160,7 +162,8 @@ public final class ThreadCB {
 	}
 
 	public void registerExclusiveLatch(Latch latch) {
-		int latchCount = myLatches.get(latch);
+		Integer lc = myLatches.get(latch);
+		int latchCount = (lc == null) ? -1 : lc;
 
 		if (latchCount == -1) {
 			myLatches.put(latch, 1);
@@ -170,7 +173,8 @@ public final class ThreadCB {
 	}
 
 	public void registerSharedLatch(Latch latch) {
-		int latchCount = myLatches.get(latch);
+		Integer lc = myLatches.get(latch);
+		int latchCount = (lc == null) ? -1 : lc;
 
 		if (latchCount == -1) {
 			myLatches.put(latch, 1);
@@ -181,6 +185,10 @@ public final class ThreadCB {
 
 	public int getLatchedCount() {
 		return myLatches.size();
+	}
+	
+	public String getLatches() {
+		return myLatches.toString();
 	}
 
 	public void countPageHintMiss() {
