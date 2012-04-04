@@ -27,12 +27,15 @@
  */
 package org.brackit.server.node.bracket;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -62,7 +65,6 @@ import org.brackit.xquery.xdm.Kind;
 import org.brackit.xquery.xdm.Stream;
 import org.junit.Ignore;
 import org.junit.Test;
-import static org.junit.Assert.*;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
