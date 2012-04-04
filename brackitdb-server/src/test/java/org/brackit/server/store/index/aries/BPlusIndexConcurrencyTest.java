@@ -33,7 +33,6 @@ import static org.junit.Assert.fail;
 import java.util.Collections;
 import java.util.LinkedList;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.SysMockup;
 import org.brackit.server.io.buffer.PageID;
@@ -41,6 +40,8 @@ import org.brackit.server.store.Field;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.util.Calc;
+import org.brackit.xquery.util.log.Logger;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -48,6 +49,7 @@ import org.junit.Test;
  * @author Sebastian Baechle
  * 
  */
+@Ignore
 public class BPlusIndexConcurrencyTest extends AbstractBPlusIndexTest {
 	private static final Logger log = Logger
 			.getLogger(BPlusIndexConcurrencyTest.class);
@@ -236,12 +238,12 @@ public class BPlusIndexConcurrencyTest extends AbstractBPlusIndexTest {
 			throws IndexAccessException, IndexOperationException,
 			InterruptedException {
 		Thread[] users = new Thread[CONCURRENT_USER_SIZE];
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		Collections.shuffle(entries, rand);
 
 		for (int i = 1; i <= CONCURRENT_USER_SIZE; i++) {
 			LinkedList<Entry> userEntries = new LinkedList<Entry>();
-			for (int j = 0; j < INDEX_LOAD_SIZE / CONCURRENT_USER_SIZE
+			for (int j = 0; j < LOAD_SIZE / CONCURRENT_USER_SIZE
 					&& !entries.isEmpty(); j++) {
 				Entry entry = entries.removeFirst();
 				userEntries.add(entry);
@@ -259,9 +261,6 @@ public class BPlusIndexConcurrencyTest extends AbstractBPlusIndexTest {
 			users[i - 1].join();
 		}
 
-		// printIndex(new IndexDisplay(t2, sm.buffer, ValueType.UINTEGER,
-		// ValueType.UINTEGER, rootPageID), "/home/sbaechl/index.dot", false);
-
 		if (!stop)
 			indexPageHelper.checkIndexConsistency(t2, sm.buffer,
 					uniqueRootPageID);
@@ -274,11 +273,11 @@ public class BPlusIndexConcurrencyTest extends AbstractBPlusIndexTest {
 			throws ServerException, InterruptedException {
 		int numberOfUsers = 2 * (SysMockup.BUFFER_SIZE / 3) + 0;
 		Thread[] users = new Thread[numberOfUsers];
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		LinkedList<Entry> deleteEntries = new LinkedList<Entry>();
 		Collections.shuffle(entries, rand);
 
-		for (int i = 0; i < INDEX_LOAD_SIZE / 2; i++) {
+		for (int i = 0; i < LOAD_SIZE / 2; i++) {
 			Entry entry = entries.removeFirst();
 			deleteEntries.add(entry);
 			index.insert(t2, uniqueRootPageID, entry.key, entry.value);
@@ -287,7 +286,7 @@ public class BPlusIndexConcurrencyTest extends AbstractBPlusIndexTest {
 
 		for (int i = 0; i < numberOfUsers / 2; i++) {
 			LinkedList<Entry> userEntries = new LinkedList<Entry>();
-			for (int j = 0; j < INDEX_LOAD_SIZE / numberOfUsers
+			for (int j = 0; j < LOAD_SIZE / numberOfUsers
 					&& !entries.isEmpty(); j++) {
 				Entry entry = entries.removeFirst();
 				// System.out.println("InsertUser " + i + " : " +
@@ -303,7 +302,7 @@ public class BPlusIndexConcurrencyTest extends AbstractBPlusIndexTest {
 
 		for (int i = numberOfUsers / 2; i < numberOfUsers; i++) {
 			LinkedList<Entry> userEntries = new LinkedList<Entry>();
-			for (int j = 0; j < INDEX_LOAD_SIZE / numberOfUsers
+			for (int j = 0; j < LOAD_SIZE / numberOfUsers
 					&& !deleteEntries.isEmpty(); j++) {
 				Entry entry = deleteEntries.removeFirst();
 				// System.out.println("DeleteUser " + i + " : " +
@@ -326,8 +325,6 @@ public class BPlusIndexConcurrencyTest extends AbstractBPlusIndexTest {
 		}
 
 		t2 = sm.taMgr.begin();
-		// printIndex(new IndexDisplay(t2, sm.buffer, ValueType.UINTEGER,
-		// ValueType.UINTEGER, rootPageID), "/home/sbaechl/index.dot", false);
 
 		if (!stop)
 			indexPageHelper.checkIndexConsistency(t2, sm.buffer,
@@ -340,18 +337,16 @@ public class BPlusIndexConcurrencyTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testDeleteUniqueIndexRandomKeysConcurrent()
 			throws ServerException, InterruptedException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		t2.commit();
 
 		Thread[] users = new Thread[CONCURRENT_USER_SIZE];
 		Collections.shuffle(entries, rand);
 
-		// Logger.getLogger("org.brackit.server.io.file.index").setLevel(Level.TRACE);
-
 		for (int i = 1; i <= CONCURRENT_USER_SIZE; i++) {
 			LinkedList<Entry> userEntries = new LinkedList<Entry>();
-			for (int j = 0; j < INDEX_LOAD_SIZE / CONCURRENT_USER_SIZE
+			for (int j = 0; j < LOAD_SIZE / CONCURRENT_USER_SIZE
 					&& !entries.isEmpty(); j++) {
 				Entry entry = entries.removeFirst();
 				userEntries.add(entry);
@@ -371,8 +366,6 @@ public class BPlusIndexConcurrencyTest extends AbstractBPlusIndexTest {
 
 		t2 = sm.taMgr.begin();
 
-		// printIndex(display, "/home/sbaechl/projects/xtc/test/index.dot",
-		// true);
 		if (!stop)
 			indexPageHelper.checkIndexConsistency(t2, sm.buffer,
 					uniqueRootPageID);
@@ -386,12 +379,12 @@ public class BPlusIndexConcurrencyTest extends AbstractBPlusIndexTest {
 			throws IndexAccessException, IndexOperationException,
 			InterruptedException {
 		Thread[] users = new Thread[CONCURRENT_USER_SIZE];
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		Collections.shuffle(entries, rand);
 
 		for (int i = 1; i <= CONCURRENT_USER_SIZE; i++) {
 			LinkedList<Entry> userEntries = new LinkedList<Entry>();
-			for (int j = 0; j < INDEX_LOAD_SIZE / CONCURRENT_USER_SIZE
+			for (int j = 0; j < LOAD_SIZE / CONCURRENT_USER_SIZE
 					&& !entries.isEmpty(); j++) {
 				Entry entry = entries.removeFirst();
 				userEntries.add(entry);
@@ -409,9 +402,6 @@ public class BPlusIndexConcurrencyTest extends AbstractBPlusIndexTest {
 			users[i - 1].join();
 		}
 
-		// printIndex(new IndexDisplay(t2, sm.buffer, ValueType.UINTEGER,
-		// ValueType.UINTEGER, rootPageID), "/home/sbaechl/index.dot", false);
-
 		if (!stop) {
 			indexPageHelper.checkIndexConsistency(t2, sm.buffer,
 					uniqueRootPageID);
@@ -423,18 +413,16 @@ public class BPlusIndexConcurrencyTest extends AbstractBPlusIndexTest {
 	@Test
 	public void testRollbackDeleteUniqueIndexRandomKeysConcurrent()
 			throws ServerException, InterruptedException {
-		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
+		LinkedList<Entry> entries = generateEntries(LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		t2.commit();
 
 		Thread[] users = new Thread[CONCURRENT_USER_SIZE];
 		Collections.shuffle(entries, rand);
 
-		// Logger.getLogger("org.brackit.server.io.file.index").setLevel(Level.TRACE);
-
 		for (int i = 1; i <= CONCURRENT_USER_SIZE; i++) {
 			LinkedList<Entry> userEntries = new LinkedList<Entry>();
-			for (int j = 0; j < INDEX_LOAD_SIZE / CONCURRENT_USER_SIZE
+			for (int j = 0; j < LOAD_SIZE / CONCURRENT_USER_SIZE
 					&& !entries.isEmpty(); j++) {
 				Entry entry = entries.removeFirst();
 				userEntries.add(entry);
@@ -454,8 +442,6 @@ public class BPlusIndexConcurrencyTest extends AbstractBPlusIndexTest {
 
 		t2 = sm.taMgr.begin();
 
-		// printIndex(display, "/home/sbaechl/projects/xtc/test/index.dot",
-		// true);
 		if (!stop) {
 			indexPageHelper.checkIndexConsistency(t2, sm.buffer,
 					uniqueRootPageID);

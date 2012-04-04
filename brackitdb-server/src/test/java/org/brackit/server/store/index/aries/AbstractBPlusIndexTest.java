@@ -59,7 +59,9 @@ public class AbstractBPlusIndexTest {
 	private static final Logger log = Logger
 			.getLogger(AbstractBPlusIndexTest.class.getName());
 
-	protected static final int INDEX_LOAD_SIZE = 20000;
+	protected static final int LOAD_SIZE = 20000;
+	
+	protected static final int REDUCED_LOAD_SIZE = LOAD_SIZE / 4;
 
 	protected static final int NUMBER_OF_DUPLICATES = 10;
 
