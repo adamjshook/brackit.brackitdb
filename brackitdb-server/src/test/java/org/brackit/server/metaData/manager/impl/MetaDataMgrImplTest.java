@@ -297,7 +297,6 @@ public class MetaDataMgrImplTest {
 		mdm.shutdown();
 		mdm.start(tx2, false);
 		DBCollection<?> collection = mdm.lookup(tx, "/test.xml");
-		System.out.println(collection.get(Indexes.class).getIndexDefs());
 	}
 
 	@Test

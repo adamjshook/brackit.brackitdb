@@ -100,18 +100,6 @@ public class IntValueMapTest {
 		return tmp;
 	}
 
-	private boolean duplicate(String[] s, int i) {
-		String check = s[i];
-		for (int j = 0; j < i; i++) {
-			if (s[i].equals(check)) {
-				System.out.println("duplicate");
-				return true;
-			}
-		}
-		return false;
-
-	}
-
 	@Before
 	public void setUp() {
 		rand = new Random(123456789);

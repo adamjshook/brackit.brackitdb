@@ -81,7 +81,7 @@ public class MockupSegmentHelper implements SegmentLogFileHelper {
 
 					tail = segment;
 				} else {
-					System.out.println("Dropping file " + file);
+					//System.out.println("Dropping file " + file);
 					files.remove(file);
 				}
 			}

@@ -121,7 +121,7 @@ public class DeadlockDetectorTest {
 		Tx t1 = newTa();
 		Tx t2 = newTa();
 		newWaitFor(t1, t2, "A");
-		System.out.println(detector.listWaitForGraph());
+//		System.out.println(detector.listWaitForGraph());
 	}
 
 	@Test
@@ -136,7 +136,7 @@ public class DeadlockDetectorTest {
 		newWaitFor(t1, t3, "B");
 		newWaitFor(t3, t4, "C");
 		newWaitFor(t5, t1, "A");
-		System.out.println(detector.listWaitForGraph());
+//		System.out.println(detector.listWaitForGraph());
 	}
 
 	@Test
@@ -153,7 +153,7 @@ public class DeadlockDetectorTest {
 		newWaitFor(t3, t4, "C");
 		newWaitFor(t3, t6, "C");
 		newWaitFor(t5, t1, "A");
-		System.out.println(detector.listWaitForGraph());
+//		System.out.println(detector.listWaitForGraph());
 	}
 
 	@Test
@@ -172,7 +172,7 @@ public class DeadlockDetectorTest {
 		newWaitFor(t3, t6, "C");
 		newWaitFor(t5, t1, "A");
 		newWaitFor(t6, t1, "D");
-		System.out.println(detector.listWaitForGraph());
+//		System.out.println(detector.listWaitForGraph());
 	}
 
 	private void newWaitFor(Tx requestor, Tx blocker, Object object) {

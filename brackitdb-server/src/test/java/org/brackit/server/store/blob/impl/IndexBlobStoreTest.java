@@ -47,6 +47,7 @@ import org.brackit.server.store.index.aries.BPlusIndex;
 import org.brackit.server.store.index.aries.display.DisplayVisitor;
 import org.brackit.server.store.index.aries.visitor.SizeCounterVisitor;
 import org.brackit.server.tx.TxException;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class IndexBlobStoreTest extends AbstractBlobStoreTest {
@@ -56,6 +57,7 @@ public class IndexBlobStoreTest extends AbstractBlobStoreTest {
 	public IndexBlobStoreTest() {
 	}
 
+	@Ignore
 	@Test
 	public void testIndexUsage() throws BlobStoreAccessException,
 			BufferException, TxException, IndexAccessException,
