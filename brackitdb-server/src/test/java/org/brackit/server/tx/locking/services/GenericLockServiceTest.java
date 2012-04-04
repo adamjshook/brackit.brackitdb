@@ -1209,8 +1209,6 @@ public class GenericLockServiceTest {
 	public void escalation1() throws TxException {
 		lockService.getClient(t1).setMaxEscalationCount(10);
 		lockService.getClient(t1).setEscalationGain(-1);
-
-		SimpleLockNameFactory dummyLockNames = buildLockNames(90,91,92,93,94);
 		
 		for (int i = 0; i < 13; i++) {
 			SimpleLockNameFactory lockNames1 = buildLockNames(1, 2, 3, 4,
@@ -1218,15 +1216,11 @@ public class GenericLockServiceTest {
 			lockService.request(t1, lockNames1, LockClass.SHORT_DURATION,
 					URIX.Mode.R, false);
 			
-			// request alternative path to trick lock path caching
-			lockService.request(t1, dummyLockNames, LockClass.SHORT_DURATION,
-					URIX.Mode.R, false);
-			
 			if (i < 10) {
-				assertEquals("ta lock count", 4 + 5 + 1 + i,
+				assertEquals("ta lock count", 4 + 1 + i,
 						t1.getLockCB().get(lockService).getLocks().size());
 			} else {
-				assertEquals("ta lock count", 4 + 5 + 10,
+				assertEquals("ta lock count", 4 + 10,
 						t1.getLockCB().get(lockService).getLocks().size());
 			}
 		}
@@ -1236,24 +1230,18 @@ public class GenericLockServiceTest {
 	public void escalation2() throws TxException {
 		lockService.getClient(t1).setMaxEscalationCount(10);
 		lockService.getClient(t1).setEscalationGain(-1);
-		
-		SimpleLockNameFactory dummyLockNames = buildLockNames(90,91,92,93,94);
 
 		for (int i = 0; i < 30; i++) {
 			SimpleLockNameFactory lockNames1 = buildLockNames(1, 2, 3, 4,
 					i + 10);
 			lockService.request(t1, lockNames1, LockClass.SHORT_DURATION,
 					URIX.Mode.R, false);
-			
-			// request alternative path to trick lock path caching
-			lockService.request(t1, dummyLockNames, LockClass.SHORT_DURATION,
-					URIX.Mode.R, false);
 
 			if (i < 10) {
-				assertEquals("ta lock count", 4 + 5 + 1 + i,
+				assertEquals("ta lock count", 4 + 1 + i,
 						t1.getLockCB().get(lockService).getLocks().size());
 			} else {
-				assertEquals("ta lock count", 4 + 5 + 10,
+				assertEquals("ta lock count", 4 + 10,
 						t1.getLockCB().get(lockService).getLocks().size());
 			}
 		}
