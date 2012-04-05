@@ -27,6 +27,9 @@
  */
 package org.brackit.server.io.file;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import org.brackit.server.util.BitArrayWrapper;
@@ -42,12 +45,49 @@ import org.brackit.server.util.BitVector;
  */
 public class Unit {
 
-	public final RandomAccessFile file;
+	private final RandomAccessFile file;
+	
 	public final BitVector blockTable;
 	
-	public Unit(RandomAccessFile file, BitVector freeSpaceInfo) {
-		super();
+	public Unit(File file, int initialSize) throws FileNotFoundException {
+		
+		this.file = new RandomAccessFile(file,
+				Constants.FILE_MODE_UNSY);
+		
+		this.blockTable = new BitArrayWrapper(initialSize);
+	}
+	
+	private Unit(RandomAccessFile file, BitVector blockTable) {
 		this.file = file;
-		this.blockTable = new BitArrayWrapper(freeSpaceInfo.logicalSize());
+		this.blockTable = blockTable;
+	}
+	
+	public static Unit fromFile(File file) throws IOException {
+		
+		RandomAccessFile f = new RandomAccessFile(file,
+				Constants.FILE_MODE_UNSY);
+		
+		int length = f.readInt();
+		
+		byte[] b = new byte[length];		
+		f.readFully(b);
+		
+		BitVector blockTable = BitArrayWrapper.fromBytes(b);
+		
+		return new Unit(f, blockTable);
+	}
+	
+	public void sync() throws IOException {
+		
+		byte[] blockTableBytes = blockTable.toBytes();
+		
+		file.seek(0);
+		file.writeInt(blockTableBytes.length);
+		file.write(blockTableBytes);
+		file.getFD().sync();
+	}
+	
+	public void close() throws IOException {
+		file.close();
 	}
 }

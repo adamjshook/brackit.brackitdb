@@ -36,7 +36,7 @@ public interface BitVector {
 
 	public byte[] toBytes();
 
-	public BitArrayWrapper extendTo(int newLogicalSize);
+	public void extendTo(int newLogicalSize);
 
 	public int logicalSize();
 

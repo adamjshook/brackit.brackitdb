@@ -27,6 +27,7 @@
  */
 package org.brackit.server.io.file;
 
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -46,7 +47,7 @@ import org.junit.Test;
  */
 public class DefaultBlockSpaceTest {
 
-	static final String STORE_ROOT = null;
+	static final String STORE_ROOT = "BlockSpaceTest";
 
 	static final int BLOCK_SIZE = 4096;
 	static final int INIT_SIZE = 1024;
@@ -77,7 +78,11 @@ public class DefaultBlockSpaceTest {
 		bs = new DefaultBlockSpace(STORE_ROOT, 0);
 		try {
 			bs.create(BLOCK_SIZE, INIT_SIZE, EXT_SIZE);
+			
+			bs.open();
 			unitID = bs.createUnit();
+			bs.close();
+			
 		} catch (StoreException e) {
 			e.printStackTrace();
 		}
@@ -364,5 +369,80 @@ public class DefaultBlockSpaceTest {
 			assertNotNull(e);
 		}
 	}
-
+	
+	@Test
+	public void unitTest() throws Exception {
+		
+		bs.open();
+		
+		StoreException e = null;
+		int lba = -1;
+		
+		try {
+			lba = bs.allocate(-1, 2);
+		} catch (StoreException ex) {
+			e = ex;
+		}
+		
+		// unit id does not exist
+		assertNotNull(e);
+		
+		bs.createUnit();
+		e = null;
+		try {
+			lba = bs.allocate(-1, 2);
+		} catch (StoreException ex) {
+			e = ex;
+		}
+		// not it should work
+		assertNull(e);
+		
+		// release block again
+		bs.release(lba, 99);
+		
+		// create a third unit
+		bs.createUnit();
+		
+		// allocate blocks in each unit
+		for (int i = 1; i <= 9999; i++) {
+			lba = bs.allocate(-1, (i % 3) + 1);
+			if (i == 1) {
+				// first allocate should deliver block 1 again
+				assertEquals(lba, 1);
+			}
+		}
+		
+		bs.close();
+		bs.open();
+		
+		// drop unit 1
+		bs.dropUnit(1);
+		// create unit 4
+		bs.createUnit();
+		// fill unit 4
+		for (int i = 1; i <= 3333; i++) {
+			lba = bs.allocate(-1, 4);
+			assertEquals(lba % 3, 0);
+		}
+		
+		// drop unit 2
+		bs.dropUnit(2);
+		// create unit 5
+		bs.createUnit();
+		// fill unit 5
+		for (int i = 1; i <= 3333; i++) {
+			lba = bs.allocate(-1, 5);
+			assertEquals(lba % 3, 1);
+		}
+		
+		// drop unit 3
+		bs.dropUnit(3);
+		// create unit 6
+		bs.createUnit();
+		// fill unit 6
+		for (int i = 1; i <= 3333; i++) {
+			lba = bs.allocate(-1, 6);
+			assertEquals(lba % 3, 2);
+		}		
+	}
 }
