@@ -65,10 +65,14 @@ public class BitArrayWrapper implements BitVector {
 	}
 
 	@Override
-	public BitArrayWrapper extendTo(int newLogicalSize) {
-		BitArrayWrapper baw = new BitArrayWrapper(newLogicalSize);
-		baw.ba.words = Arrays.copyOf(ba.words, toPhysicalSize(newLogicalSize));
-		return baw;
+	public void extendTo(int newLogicalSize) {
+		
+		byte[] old = ba.words;
+		
+		this.logicalSize = newLogicalSize;
+		this.ba = new BitArray(toPhysicalSize(newLogicalSize));
+		
+		System.arraycopy(old, 0, ba.words, 0, old.length);
 	}
 
 	@Override

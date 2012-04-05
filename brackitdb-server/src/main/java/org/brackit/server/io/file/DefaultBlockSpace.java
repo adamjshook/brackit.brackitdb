@@ -193,8 +193,13 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 
 			dataFile.close();
 
-			freeSpaceInfo = freeSpaceInfo.extendTo(newStoreSize);
+			freeSpaceInfo.extendTo(newStoreSize);
 			freeBlockCount += extSize;
+
+			for (Unit unit : unitMap.values()) {
+				unit.blockTable.extendTo(newStoreSize);
+			}
+
 			syncMeta(false, false);
 
 			dataFile.open(true);
@@ -218,7 +223,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 
 	private synchronized void releaseImpl(int lba, int hintUnitID)
 			throws StoreException {
-		
+
 		// mark block as free
 		freeBlock(lba);
 
@@ -236,9 +241,9 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			unit.blockTable.clear(lba);
 		}
 	}
-	
+
 	private void freeBlock(int lba) throws StoreException {
-		
+
 		if (!freeSpaceInfo.get(lba)) {
 			throw new StoreException("invalid lba, block not in use");
 		}
@@ -262,7 +267,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			syncMeta(false, true);
 
 			for (Unit unit : unitMap.values()) {
-				unit.file.close();
+				unit.close();
 			}
 
 			metaFile.close();
@@ -304,13 +309,9 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 
 			metaFile.getFD().sync();
 
-			// write unit mapping
+			// sync unit mappings
 			for (Unit unit : unitMap.values()) {
-				byte[] blockTableBytes = unit.blockTable.toBytes();
-				unit.file.seek(0);
-				unit.file.writeInt(blockTableBytes.length);
-				unit.file.write(blockTableBytes);
-				unit.file.getFD().sync();
+				unit.sync();
 			}
 
 			if (markConsistent) {
@@ -457,8 +458,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 						dataFileName));
 
 				// the first block reserved, for compatibility with the code
-				// which
-				// depends on the old IOMgr
+				// which depends on the old IOMgr
 				freeSpaceInfo.set(0);
 				for (int i = 1; i < blockCnt; i++) {
 					dataFile.read(i, block, 1);
@@ -472,8 +472,8 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 						Unit unit = unitMap.get(unitID);
 						if (unit == null) {
 							// unit not yet loaded into the map
-							RandomAccessFile unitFile = openUnitFile(unitID);
-							unit = new Unit(unitFile, freeSpaceInfo);
+							unit = new Unit(getUnitFile(unitID),
+									freeSpaceInfo.logicalSize());
 							unitMap.put(unitID, unit);
 							nextUnit = Math.max(nextUnit, unitID + 1);
 						}
@@ -603,10 +603,12 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 		try {
 
 			int unitID = nextUnit++;
-			RandomAccessFile unitFile = openUnitFile(unitID);
 
-			Unit unit = new Unit(unitFile, freeSpaceInfo);
+			Unit unit = new Unit(getUnitFile(unitID),
+					freeSpaceInfo.logicalSize());
 			unitMap.put(unitID, unit);
+			
+			syncMeta(false, false);
 
 			return unitID;
 
@@ -614,18 +616,19 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			throw new StoreException(e);
 		}
 	}
-	
+
 	@Override
 	public synchronized void dropUnit(int unitID) throws StoreException {
 
 		try {
-		
+
 			// remove unit from main memory map
 			Unit unit = unitMap.remove(unitID);
 			if (unit == null) {
-				throw new StoreException(String.format("Unit with ID %s does not exist!", unitID));
+				throw new StoreException(String.format(
+						"Unit with ID %s does not exist!", unitID));
 			}
-			
+
 			// free blocks that belong to this unit
 			// TODO: find more efficient implementation
 			int length = unit.blockTable.logicalSize();
@@ -634,30 +637,24 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 					freeBlock(i);
 				}
 			}
-			
-			// close RandomAccessFile
-			unit.file.close();
+
+			// close unit
+			unit.close();
 			// delete unit file
 			File unitFile = getUnitFile(unitID);
 			unitFile.delete();
-			
+
 			// TODO: syncMeta?
-		
+
 		} catch (IOException e) {
 			throw new StoreException(e);
 		}
 	}
 
-	private RandomAccessFile openUnitFile(int unitID)
-			throws FileNotFoundException {
-		return new RandomAccessFile(String.format(unitFileNameFormat, unitID),
-				Constants.FILE_MODE_UNSY);
-	}
-	
 	private File getUnitFile(int unitID) {
 		return new File(String.format(unitFileNameFormat, unitID));
 	}
-	
+
 	private List<UnitFile> getUnitFiles() {
 
 		File unitPrefix = new File(unitFileNamePrefix);
@@ -687,19 +684,19 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 						file.getPath()));
 			}
 		}
-		
-		return unitFiles;	
+
+		return unitFiles;
 	}
 
 	private void loadUnits() throws IOException {
 
 		unitMap = new HashMap<Integer, Unit>();
 		nextUnit = 1;
-		
+
 		List<UnitFile> unitFiles = getUnitFiles();
 		for (UnitFile unitFile : unitFiles) {
-			unitMap.put(unitFile.unitID, new Unit(new RandomAccessFile(unitFile.file,
-					Constants.FILE_MODE_UNSY), freeSpaceInfo));
+
+			unitMap.put(unitFile.unitID, Unit.fromFile(unitFile.file));
 			nextUnit = Math.max(nextUnit, unitFile.unitID + 1);
 		}
 	}

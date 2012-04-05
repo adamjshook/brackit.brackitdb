@@ -367,18 +367,19 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		}
 
 		if (logged) {
-			try {
-				if (undoNextLSN == -1) {
-					transaction.logUpdate(loggableHelper
-							.createDeallocateLogOp(pageID));
-				} else {
-					transaction.logCLR(loggableHelper
-							.createDeallocateLogOp(pageID), undoNextLSN);
-				}
-			} catch (TxException e) {
-				throw new BufferException(
-						"Could not write log for page deallocation.", e);
-			}
+			// TODO
+//			try {
+//				if (undoNextLSN == -1) {
+//					transaction.logUpdate(loggableHelper
+//							.createDeallocateLogOp(pageID));
+//				} else {
+//					transaction.logCLR(loggableHelper
+//							.createDeallocateLogOp(pageID), undoNextLSN);
+//				}
+//			} catch (TxException e) {
+//				throw new BufferException(
+//						"Could not write log for page deallocation.", e);
+//			}
 		}
 
 		Frame frame = pageNoToFrame.remove(pageID);
