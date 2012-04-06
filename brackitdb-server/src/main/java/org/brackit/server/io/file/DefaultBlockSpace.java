@@ -598,11 +598,22 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 	}
 
 	@Override
-	public synchronized int createUnit() throws StoreException {
+	public synchronized int createUnit(int unitID) throws StoreException {
 
 		try {
 
-			int unitID = nextUnit++;
+			if (unitID <= 0) {
+				// automatically assign unitID
+				unitID = nextUnit++;
+			} else {
+				
+				// check validity of requested unitID
+				if (unitMap.get(unitID) != null) {
+					throw new StoreException(String.format("The requested unitID %s already exists!", unitID));
+				}
+				
+				nextUnit = Math.max(nextUnit, unitID + 1);
+			}
 
 			Unit unit = new Unit(getUnitFile(unitID),
 					freeSpaceInfo.logicalSize());

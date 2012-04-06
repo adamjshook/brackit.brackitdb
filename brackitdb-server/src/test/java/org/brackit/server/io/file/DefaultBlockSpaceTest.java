@@ -80,7 +80,7 @@ public class DefaultBlockSpaceTest {
 			bs.create(BLOCK_SIZE, INIT_SIZE, EXT_SIZE);
 			
 			bs.open();
-			unitID = bs.createUnit();
+			unitID = bs.createUnit(-1);
 			bs.close();
 			
 		} catch (StoreException e) {
@@ -387,7 +387,7 @@ public class DefaultBlockSpaceTest {
 		// unit id does not exist
 		assertNotNull(e);
 		
-		bs.createUnit();
+		bs.createUnit(-1);
 		e = null;
 		try {
 			lba = bs.allocate(-1, 2);
@@ -401,7 +401,7 @@ public class DefaultBlockSpaceTest {
 		bs.release(lba, 99);
 		
 		// create a third unit
-		bs.createUnit();
+		bs.createUnit(-1);
 		
 		// allocate blocks in each unit
 		for (int i = 1; i <= 9999; i++) {
@@ -418,7 +418,7 @@ public class DefaultBlockSpaceTest {
 		// drop unit 1
 		bs.dropUnit(1);
 		// create unit 4
-		bs.createUnit();
+		bs.createUnit(-1);
 		// fill unit 4
 		for (int i = 1; i <= 3333; i++) {
 			lba = bs.allocate(-1, 4);
@@ -428,7 +428,7 @@ public class DefaultBlockSpaceTest {
 		// drop unit 2
 		bs.dropUnit(2);
 		// create unit 5
-		bs.createUnit();
+		bs.createUnit(-1);
 		// fill unit 5
 		for (int i = 1; i <= 3333; i++) {
 			lba = bs.allocate(-1, 5);
@@ -438,7 +438,7 @@ public class DefaultBlockSpaceTest {
 		// drop unit 3
 		bs.dropUnit(3);
 		// create unit 6
-		bs.createUnit();
+		bs.createUnit(-1);
 		// fill unit 6
 		for (int i = 1; i <= 3333; i++) {
 			lba = bs.allocate(-1, 6);

@@ -75,7 +75,7 @@ public class LeafBPContextTest {
 		bufferManager.createBuffer(BUFFER_SIZE, BLOCK_SIZE, CONTAINER_NO, CONTAINER_NAME, INITIAL_SIZE, EXTEND_SIZE);
 		Buffer buffer = bufferManager.getBuffer(CONTAINER_NO);
 		
-		int unitID = buffer.createUnit();
+		int unitID = buffer.createUnit(-1);
 		
 		tx = txMgr.begin(IsolationLevel.SERIALIZABLE, null, false);
 		

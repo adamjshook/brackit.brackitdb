@@ -53,7 +53,6 @@ import org.brackit.server.procedure.InfoContributor;
 import org.brackit.server.procedure.ProcedureUtil;
 import org.brackit.server.procedure.statistics.ListBuffer;
 import org.brackit.server.tx.Tx;
-import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.TxID;
 import org.brackit.server.tx.log.Log;
 import org.brackit.server.tx.log.LogException;
@@ -280,14 +279,43 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 				REDO_COMPARATOR);
 		return frame.getRedoLSN();
 	}
-	
+
 	@Override
-	public synchronized int createUnit() throws BufferException {	
+	public synchronized int createUnit(int unitID) throws BufferException {
 		try {
-			return blockSpace.createUnit();
+			// TODO: logging			
+			return blockSpace.createUnit(unitID);
 		} catch (StoreException e) {
 			throw new BufferException("Error creating unit.", e);
-		}	
+		}
+	}
+
+	@Override
+	public synchronized void dropUnit(int unitID) throws BufferException {
+		try {
+			// TODO: logging
+			
+			ArrayList<Frame> toDrop = new ArrayList<Frame>();
+			
+			// determine frames that belong to this unit
+			for (Frame frame : pool) {
+				if (frame.getUnitID() == unitID) {
+					pageNoToFrame.remove(frame.getPageID());
+					frame.drop();
+					toDrop.add(frame);
+				}
+			}
+			
+			// drop frames
+			for (Frame frame : toDrop) {
+				pool.remove(frame);
+			}
+			
+			blockSpace.dropUnit(unitID);
+		} catch (StoreException e) {
+			throw new BufferException(String.format("Error dropping unit %s.",
+					unitID), e);
+		}
 	}
 
 	public synchronized Handle allocatePage(Tx tx, int unitID)
@@ -297,13 +325,14 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 	public synchronized Handle allocatePage(Tx tx, int unitID, PageID pageID,
 			boolean logged, long undoNextLSN) throws BufferException {
-		
+
 		if (DEBUG) {
 			if (unitID <= 0) {
-				throw new IllegalArgumentException("UnitID must be greater than Zero!");
+				throw new IllegalArgumentException(
+						"UnitID must be greater than Zero!");
 			}
 		}
-		
+
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Allocating page %s.", pageID));
 		}
@@ -321,18 +350,19 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			pageID = allocateBlock(pageID, unitID);
 
 			if (logged) {
-				try {
-					if (undoNextLSN == -1) {
-						LSN = tx.logUpdate(loggableHelper
-								.createAllocateLogOp(pageID, unitID));
-					} else {
-						LSN = tx.logCLR(loggableHelper
-								.createAllocateLogOp(pageID, unitID), undoNextLSN);
-					}
-				} catch (TxException e) {
-					throw new BufferException(
-							"Could not write log for page allocation.", e);
-				}
+				// TODO
+				// try {
+				// if (undoNextLSN == -1) {
+				// LSN = tx.logUpdate(loggableHelper
+				// .createAllocateLogOp(pageID, unitID));
+				// } else {
+				// LSN = tx.logCLR(loggableHelper
+				// .createAllocateLogOp(pageID, unitID), undoNextLSN);
+				// }
+				// } catch (TxException e) {
+				// throw new BufferException(
+				// "Could not write log for page allocation.", e);
+				// }
 			}
 		} catch (BufferException e) {
 			// victim is free simply kick the page out
@@ -360,26 +390,27 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		return victim;
 	}
 
-	public synchronized void deletePage(Tx transaction, PageID pageID, int hintUnitID,
-			boolean logged, long undoNextLSN) throws BufferException {
+	public synchronized void deletePage(Tx transaction, PageID pageID,
+			int hintUnitID, boolean logged, long undoNextLSN)
+			throws BufferException {
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Deleting page %s.", pageID));
 		}
 
 		if (logged) {
 			// TODO
-//			try {
-//				if (undoNextLSN == -1) {
-//					transaction.logUpdate(loggableHelper
-//							.createDeallocateLogOp(pageID));
-//				} else {
-//					transaction.logCLR(loggableHelper
-//							.createDeallocateLogOp(pageID), undoNextLSN);
-//				}
-//			} catch (TxException e) {
-//				throw new BufferException(
-//						"Could not write log for page deallocation.", e);
-//			}
+			// try {
+			// if (undoNextLSN == -1) {
+			// transaction.logUpdate(loggableHelper
+			// .createDeallocateLogOp(pageID));
+			// } else {
+			// transaction.logCLR(loggableHelper
+			// .createDeallocateLogOp(pageID), undoNextLSN);
+			// }
+			// } catch (TxException e) {
+			// throw new BufferException(
+			// "Could not write log for page deallocation.", e);
+			// }
 		}
 
 		Frame frame = pageNoToFrame.remove(pageID);
@@ -430,7 +461,8 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		}
 	}
 
-	private PageID allocateBlock(PageID pageID, int unitID) throws BufferException {
+	private PageID allocateBlock(PageID pageID, int unitID)
+			throws BufferException {
 		int blockNo = (pageID != null) ? pageID.getBlockNo() : -1;
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Allocating block %s of page %s", blockNo,
@@ -451,7 +483,8 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		}
 	}
 
-	private void deallocateBlock(PageID pageID, int hintUnitID) throws BufferException {
+	private void deallocateBlock(PageID pageID, int hintUnitID)
+			throws BufferException {
 		if (log.isDebugEnabled()) {
 			log.debug(String.format("Releasing block %s of page %s", pageID
 					.getBlockNo(), pageID));
@@ -477,7 +510,8 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 				throw new RuntimeException();
 
 			PageID pID = new PageID(containerNo, currentBlockNo);
-			frame.init(pID, 0); // unitID not relevant, since it is overwritten in the next line anyway
+			frame.init(pID, 0); // unitID not relevant, since it is overwritten
+								// in the next line anyway
 			System.arraycopy(buffer, offset, frame.page, 0, pageSize);
 			currentBlockNo++;
 			offset += pageSize;
@@ -488,8 +522,8 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		int offset = 0;
 		for (Frame frame : frames) {
 			System.arraycopy(frame.page, 0, buffer, offset, pageSize);
-//			// mark block as used
-//			buffer[offset] = 1;
+			// // mark block as used
+			// buffer[offset] = 1;
 			offset += pageSize;
 		}
 	}

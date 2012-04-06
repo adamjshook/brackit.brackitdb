@@ -1156,6 +1156,8 @@ public final class BracketPage extends BasePage {
 		out.append("PageHandle Information:\n");
 		out.append("\tPageID: ");
 		out.append(handle.getPageID());
+		out.append("\n\tUnitID: ");
+		out.append(handle.getUnitID());
 		out.append("\n\tLSN: ");
 		out.append(handle.getLSN());
 

@@ -223,7 +223,7 @@ public class BufferImplTest {
 		bufferManager.createBuffer(BUFFER_SIZE, BLOCK_SIZE, CONTAINER_NO,
 				CONTAINER_NAME, INITIAL_SIZE, EXTEND_SIZE);
 		buffer = bufferManager.getBuffer(CONTAINER_NO);
-		unitID = buffer.createUnit();
+		unitID = buffer.createUnit(-1);
 
 		taMgr.recover();
 	}
@@ -348,7 +348,7 @@ public class BufferImplTest {
 		bufferManager.createBuffer(BUFFER_SIZE, BLOCK_SIZE, CONTAINER_NO,
 				CONTAINER_NAME, INITIAL_SIZE, EXTEND_SIZE);
 		buffer = bufferManager.getBuffer(CONTAINER_NO);
-		unitID = buffer.createUnit();
+		unitID = buffer.createUnit(-1);
 		t1 = taMgr.begin();
 		t2 = taMgr.begin();
 		t3 = taMgr.begin();
