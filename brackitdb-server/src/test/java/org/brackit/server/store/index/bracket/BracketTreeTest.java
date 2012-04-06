@@ -83,7 +83,7 @@ public class BracketTreeTest {
 				CONTAINER_NAME, INITIAL_SIZE, EXTEND_SIZE);
 		Buffer buffer = bufferManager.getBuffer(CONTAINER_NO);
 		
-		int unitID = buffer.createUnit();
+		int unitID = buffer.createUnit(-1);
 
 		tx = txMgr.begin(IsolationLevel.SERIALIZABLE, null, false);
 

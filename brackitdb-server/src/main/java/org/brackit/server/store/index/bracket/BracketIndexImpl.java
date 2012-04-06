@@ -29,6 +29,8 @@ package org.brackit.server.store.index.bracket;
 
 import java.io.PrintStream;
 
+import org.brackit.server.io.buffer.Buffer;
+import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
@@ -40,6 +42,7 @@ import org.brackit.server.node.el.ElRecordAccess;
 import org.brackit.server.store.OpenMode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
+import org.brackit.server.store.index.bracket.page.BPContext;
 import org.brackit.server.store.index.bracket.page.Leaf;
 import org.brackit.server.store.page.bracket.RecordInterpreter;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
@@ -90,8 +93,29 @@ public class BracketIndexImpl implements BracketIndex {
 
 	@Override
 	public void dropIndex(Tx tx, PageID rootPageID) throws IndexAccessException {
-		// TODO Auto-generated method stub
-
+		
+		BPContext page = null;
+		
+		try {
+			
+			// find out unitID and buffer of this index
+			page = tree.getPage(tx, rootPageID, false, false);
+			int unitID = page.getUnitID();
+			Buffer buffer = page.getPage().getBuffer();
+			page.cleanup();
+			page = null;
+			
+			// drop unit
+			buffer.dropUnit(unitID);
+			
+		} catch (IndexOperationException e) {
+			if (page != null) {
+				page.cleanup();
+			}
+			throw new IndexAccessException(e);
+		} catch (BufferException e) {
+			throw new IndexAccessException(e);
+		}		
 	}
 
 	@Override

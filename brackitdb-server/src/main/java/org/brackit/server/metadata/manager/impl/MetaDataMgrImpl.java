@@ -592,7 +592,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		}
 
 		// object cast is a hack for a sun compiler bug
-		if (cachedCollection.getID() == MASTERDOC_PAGEID.value())
+		if (collection.getID() == MASTERDOC_PAGEID.value())
 			throw new DocumentException(
 					"Deletion of master document forbidden.");
 

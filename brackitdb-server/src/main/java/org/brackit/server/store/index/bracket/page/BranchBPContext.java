@@ -673,8 +673,8 @@ public class BranchBPContext extends AbstractBPContext implements Branch {
 		long LSN = getLSN();
 		int freeSpace = getFreeSpace();
 		int recordCount = page.getRecordCount();
-		out.append(String.format("Number=%s (page=%s)\n", pageNumber,
-				page.getHandle()));
+		out.append(String.format("PageID=%s (UnitID=%s)\n", pageNumber,
+				page.getHandle().getUnitID()));
 		out.append(String
 				.format("Type=BRANCH RootPageNo=%s Height=%s LastInLevel=%s KeyType=%s ValueType=%s\n",
 						getRootPageID(), getHeight(), isLastInLevel(), keyType,

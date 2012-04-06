@@ -42,7 +42,14 @@ public interface Buffer {
 
 	public int getContainerNo();
 	
-	public int createUnit() throws BufferException;
+	/**
+	 * @param unitID
+	 *            requested unitID; if -1, the unitID will be assigned
+	 *            automatically.
+	 */
+	public int createUnit(int unitID) throws BufferException;
+	
+	public void dropUnit(int unitID) throws BufferException;
 
 	public Handle allocatePage(Tx tx, int unitID) throws BufferException;
 

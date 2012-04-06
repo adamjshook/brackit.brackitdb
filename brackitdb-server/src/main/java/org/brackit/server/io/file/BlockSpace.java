@@ -39,7 +39,12 @@ public interface BlockSpace {
 
 	void create(int blkSize, int iniSize, double extent) throws StoreException;
 
-	int createUnit() throws StoreException;
+	/**
+	 * @param unitID
+	 *            requested unitID; if -1, the unitID will be assigned
+	 *            automatically.
+	 */
+	int createUnit(int unitID) throws StoreException;
 
 	void open() throws StoreException;
 

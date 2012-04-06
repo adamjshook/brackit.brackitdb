@@ -62,7 +62,7 @@ public class SimpleBlobStore implements BlobStore {
 			
 			if (unitID == -1) {
 				// create new unit
-				unitID = buffer.createUnit();
+				unitID = buffer.createUnit(-1);
 			}
 			
 			Handle nextOverflowHandle = buffer.allocatePage(tx, unitID);
