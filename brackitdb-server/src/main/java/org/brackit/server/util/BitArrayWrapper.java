@@ -28,7 +28,7 @@
 package org.brackit.server.util;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.Iterator;
 
 /**
  * A wrapper for the BitArray to eliminate the restriction that the size must be
@@ -37,7 +37,7 @@ import java.util.Arrays;
  * @author Ou Yi
  * 
  */
-public class BitArrayWrapper implements BitVector {
+public class BitArrayWrapper implements BitMap {
 	private BitArray ba;
 	private int logicalSize;
 
@@ -125,5 +125,10 @@ public class BitArrayWrapper implements BitVector {
 			return pos;
 		}
 		return -1;
+	}
+
+	@Override
+	public Iterator<Integer> getSetBits() {
+		return ba.getSetBits();
 	}
 }

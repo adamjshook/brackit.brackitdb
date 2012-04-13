@@ -33,7 +33,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import org.brackit.server.util.BitArrayWrapper;
-import org.brackit.server.util.BitVector;
+import org.brackit.server.util.BitMap;
+import org.brackit.server.util.BitMapTree;
 
 /**
  * 
@@ -47,17 +48,17 @@ public class Unit {
 
 	private final RandomAccessFile file;
 	
-	public final BitVector blockTable;
+	public final BitMap blockTable;
 	
 	public Unit(File file, int initialSize) throws FileNotFoundException {
 		
 		this.file = new RandomAccessFile(file,
 				Constants.FILE_MODE_UNSY);
 		
-		this.blockTable = new BitArrayWrapper(initialSize);
+		this.blockTable = new BitMapTree(initialSize);
 	}
 	
-	private Unit(RandomAccessFile file, BitVector blockTable) {
+	private Unit(RandomAccessFile file, BitMap blockTable) {
 		this.file = file;
 		this.blockTable = blockTable;
 	}
@@ -72,7 +73,7 @@ public class Unit {
 		byte[] b = new byte[length];		
 		f.readFully(b);
 		
-		BitVector blockTable = BitArrayWrapper.fromBytes(b);
+		BitMap blockTable = BitArrayWrapper.fromBytes(b);
 		
 		return new Unit(f, blockTable);
 	}
