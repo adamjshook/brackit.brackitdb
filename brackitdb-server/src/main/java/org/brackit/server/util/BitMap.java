@@ -27,12 +27,14 @@
  */
 package org.brackit.server.util;
 
+import java.util.Iterator;
+
 /**
  * 
  * @author Martin Hiller
  *
  */
-public interface BitVector {
+public interface BitMap {
 
 	public byte[] toBytes();
 
@@ -56,5 +58,6 @@ public interface BitVector {
 	 * @return
 	 */
 	public int nextClearBit(int fromIndex);
-
+	
+	public Iterator<Integer> getSetBits();
 }

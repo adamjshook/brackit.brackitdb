@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -42,7 +43,7 @@ import org.brackit.server.procedure.InfoContributor;
 import org.brackit.server.procedure.ProcedureUtil;
 import org.brackit.server.procedure.statistics.ListContainers;
 import org.brackit.server.util.BitArrayWrapper;
-import org.brackit.server.util.BitVector;
+import org.brackit.server.util.BitMap;
 import org.brackit.server.util.Calc;
 import org.brackit.server.util.FileUtil;
 
@@ -78,7 +79,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 	RandomAccessFile metaFile;
 	int iniSize;
 	int extSize;
-	BitVector freeSpaceInfo;
+	BitMap freeSpaceInfo;
 
 	Map<Integer, Unit> unitMap;
 	int nextUnit = 1;
@@ -639,14 +640,11 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 				throw new StoreException(String.format(
 						"Unit with ID %s does not exist!", unitID));
 			}
-
+			
 			// free blocks that belong to this unit
-			// TODO: find more efficient implementation
-			int length = unit.blockTable.logicalSize();
-			for (int i = 0; i < length; i++) {
-				if (unit.blockTable.get(i)) {
-					freeBlock(i);
-				}
+			Iterator<Integer> setBits = unit.blockTable.getSetBits();
+			while (setBits.hasNext()) {
+				freeBlock(setBits.next());
 			}
 
 			// close unit
