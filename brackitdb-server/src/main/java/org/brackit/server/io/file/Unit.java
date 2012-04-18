@@ -73,7 +73,7 @@ public class Unit {
 		byte[] b = new byte[length];		
 		f.readFully(b);
 		
-		BitMap blockTable = BitArrayWrapper.fromBytes(b);
+		BitMap blockTable = BitMapTree.fromBytes(b);
 		
 		return new Unit(f, blockTable);
 	}

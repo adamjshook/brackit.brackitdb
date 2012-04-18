@@ -45,6 +45,7 @@ import java.util.Map.Entry;
  */
 public class BitMapTree implements BitMap {
 
+	private final static boolean DEBUG = false;
 	private final static boolean CHECK_BOUNDS = false;
 
 	private final static int SECTION_SIZE = 32;
@@ -329,6 +330,12 @@ public class BitMapTree implements BitMap {
 		for (Entry<Integer, Section> entry : entries) {
 			bb.putInt(entry.getKey());
 			bb.put(entry.getValue().bits);
+		}
+		
+		if (DEBUG) {
+			if (bb.hasRemaining()) {
+				throw new RuntimeException("Wrong array length calculation!");
+			}
 		}
 
 		return bb.array();
