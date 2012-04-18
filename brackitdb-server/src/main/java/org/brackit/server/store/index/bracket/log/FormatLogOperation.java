@@ -29,7 +29,6 @@ package org.brackit.server.store.index.bracket.log;
 
 import java.nio.ByteBuffer;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.BracketTree;
@@ -37,7 +36,7 @@ import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.page.BPContext;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.log.LogException;
-import org.brackit.server.tx.log.SizeConstants;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * @author Martin Hiller
