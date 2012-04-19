@@ -124,7 +124,7 @@ public class NameIndexListener<E extends TXNode<E>> extends
 
 				nodePageID = index.createIndex(tx, indexNo.getContainerNo(),
 						encoder.getKeyType(), encoder.getValueType(), true,
-						true, encoder.getUnitID());
+						true);
 
 				index.insert(tx, indexNo, nameDirectoryKey,
 						nameDirectoryEncoder.encodeValue(nodePageID));

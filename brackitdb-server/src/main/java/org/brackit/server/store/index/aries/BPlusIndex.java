@@ -74,17 +74,17 @@ public class BPlusIndex implements Index {
 	public PageID createIndex(Tx transaction, int containerNo, Field keyType,
 			Field valueType, boolean unique) throws IndexAccessException {
 		return createIndex(transaction, containerNo, keyType, valueType,
-				unique, true, -1);
+				unique, true);
 	}
 
 	@Override
 	public PageID createIndex(Tx transaction, int containerNo, Field keyType,
-			Field valueType, boolean unique, boolean compression, int unitID)
+			Field valueType, boolean unique, boolean compression)
 			throws IndexAccessException {
 		PageContext root = null;
 
 		try {
-			root = tree.allocate(transaction, containerNo, unitID,
+			root = tree.allocate(transaction, containerNo, -1,
 					PageType.INDEX_LEAF, null, keyType, valueType, unique,
 					compression, true);
 			PageID rootPageID = root.getPageID();

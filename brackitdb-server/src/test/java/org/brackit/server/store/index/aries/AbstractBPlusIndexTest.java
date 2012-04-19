@@ -192,9 +192,9 @@ public class AbstractBPlusIndexTest {
 		t1 = sm.taMgr.begin();
 		t2 = sm.taMgr.begin();
 		uniqueRootPageID = index.createIndex(t2, SysMockup.CONTAINER_NO,
-				Field.UINTEGER, Field.UINTEGER, true, true, 2);
+				Field.UINTEGER, Field.UINTEGER, true, true);
 		nonuniqueRootPageID = index.createIndex(t2, SysMockup.CONTAINER_NO,
-				Field.UINTEGER, Field.UINTEGER, false, true, 3);
+				Field.UINTEGER, Field.UINTEGER, false, true);
 
 		// use same random source to get reproducable results in case of an
 		// error

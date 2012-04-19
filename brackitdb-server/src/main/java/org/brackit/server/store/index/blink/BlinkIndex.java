@@ -68,17 +68,17 @@ public class BlinkIndex implements Index {
 	public PageID createIndex(Tx transaction, int containerNo, Field keyType,
 			Field valueType, boolean unique) throws IndexAccessException {
 		return createIndex(transaction, containerNo, keyType, valueType,
-				unique, true, -1);
+				unique, true);
 	}
 
 	@Override
 	public PageID createIndex(Tx transaction, int containerNo, Field keyType,
-			Field valueType, boolean unique, boolean compression, int unitID)
+			Field valueType, boolean unique, boolean compression)
 			throws IndexAccessException {
 		PageContext root = null;
 
 		try {
-			root = tree.allocate(transaction, containerNo, unitID,
+			root = tree.allocate(transaction, containerNo, -1,
 					PageType.LEAF, null, keyType, valueType, 0, unique,
 					compression, true);
 			root.setLastInLevel(true);
