@@ -27,6 +27,9 @@
  */
 package org.brackit.server.util;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -66,8 +69,13 @@ public class BitMapTree implements BitMap {
 	private int logicalSize;
 
 	public BitMapTree(int logicalSize) {
-		this.sectionMap = new TreeMap<Integer, Section>();
 		this.logicalSize = logicalSize;
+		this.sectionMap = new TreeMap<Integer, Section>();
+	}
+	
+	public BitMapTree() {
+		this.logicalSize = 0;
+		this.sectionMap = new TreeMap<Integer, Section>();
 	}
 
 	@Override
@@ -318,80 +326,88 @@ public class BitMapTree implements BitMap {
 	}
 
 	@Override
-	public byte[] toBytes() {
-
+	public void write(DataOutput out) throws IOException {
+		
 		Set<Entry<Integer, Section>> entries = sectionMap.entrySet();
-
-		int intSize = Integer.SIZE / Byte.SIZE;
-		int length = intSize + entries.size()
-				* (intSize + SECTION_SIZE_IN_BYTES);
-
-		ByteBuffer bb = ByteBuffer.allocate(length);
 		ArrayList<Entry<Integer, Section>> toInsert = new ArrayList<Entry<Integer,Section>>();
 		Iterator<Entry<Integer, Section>> iter = entries.iterator();
 		
-		bb.putInt(logicalSize);
+		out.writeInt(logicalSize);
 		
-		while (iter.hasNext()) {
-			Entry<Integer, Section> entryStart = iter.next();
+		Entry<Integer, Section> entryStart = (iter.hasNext() ? iter.next() : null);
+		
+		while (entryStart != null) {
 			int startSection = entryStart.getKey();
 			int previousSection = startSection;
 			
 			toInsert.clear();
 			toInsert.add(entryStart);
+			entryStart = null;
 			
-			// count number of continuous sections
-			int contSections = 0;
-			while (iter.hasNext() && contSections < 255) {
+			// count number of continuous sections (-> Zero means 'End of Unit')
+			int contSections = 1;
+			while (iter.hasNext()) {
 				
 				Entry<Integer, Section> entryCurrent = iter.next();
 				
 				int sectionNo = entryCurrent.getKey();
-				if (sectionNo == previousSection + 1 && toInsert.size() < 256) {
+				if (sectionNo == previousSection + 1 && contSections < 255) {
 					// continuous section number
 					contSections++;
 					toInsert.add(entryCurrent);
 					previousSection = sectionNo;
+				} else {
+					// start at current entry in the next iteration
+					entryStart = entryCurrent;
+					break;
 				}
 			}
 			
 			// write continous sections
 			
 			// write #sections and start section number
-			bb.put((byte) contSections);
-			bb.put((byte) ((startSection >> 16) & 0xFF));
-			bb.put((byte) ((startSection >> 8) & 0xFF));
-			bb.put((byte) (startSection & 0xFF));
+			out.writeByte(contSections);
+			out.writeByte(startSection >> 16);
+			out.writeByte(startSection >> 8);
+			out.writeByte(startSection);
 			
 			// write section bits
 			for (Entry<Integer, Section> entry : toInsert) {
-				bb.put(entry.getValue().bits);
+				out.write(entry.getValue().bits);
 			}
 		}
 		
-		if (DEBUG) {
-			if (bb.hasRemaining()) {
-				throw new RuntimeException("Wrong array length calculation!");
-			}
-		}
-
-		return bb.array();
+		// mark end of unit
+		out.writeByte(0);
 	}
 
-	public static BitMapTree fromBytes(byte[] bytes) {
-
-		ByteBuffer bb = ByteBuffer.wrap(bytes);
-		int logicalSize = bb.getInt();
-
-		BitMapTree bmt = new BitMapTree(logicalSize);
-		while (bb.hasRemaining()) {
-			int sectionNo = bb.getInt();
-			Section section = bmt.new Section();
-			bb.get(section.bits);
-
-			bmt.sectionMap.put(sectionNo, section);
+	@Override
+	public void read(DataInput in) throws IOException {
+		
+		logicalSize = in.readInt();
+		sectionMap.clear();
+		
+		while (true) {
+			
+			int contSections = in.readByte() & 0xFF;
+			if (contSections == 0) {
+				// end of unit
+				break;
+			}
+			
+			int sectionNo = (in.readByte() & 0xFF) << 16;
+			sectionNo |= (in.readByte() & 0xFF) << 8;
+			sectionNo |= (in.readByte() & 0xFF);
+			
+			for (int i = 0; i < contSections; i++) {
+				
+				Section section = new Section();
+				in.readFully(section.bits);
+				
+				sectionMap.put(sectionNo, section);
+				
+				sectionNo++;
+			}
 		}
-
-		return bmt;
 	}
 }
