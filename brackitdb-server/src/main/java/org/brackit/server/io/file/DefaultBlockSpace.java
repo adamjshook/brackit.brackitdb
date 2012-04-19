@@ -201,7 +201,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 				unit.blockTable.extendTo(newStoreSize);
 			}
 
-			syncMeta(false, false);
+			//syncMeta(false, false);
 
 			dataFile.open(true);
 
@@ -300,10 +300,8 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			metaFile.writeInt(1);
 			metaFile.getFD().sync();
 
-			// so that we know how many bytes to read for the free space
-			// administration
-			metaFile.writeInt(freeSpaceInfo.toBytes().length);
-			metaFile.write(freeSpaceInfo.toBytes());
+			// write freeSpaceInfo
+			freeSpaceInfo.write(metaFile);
 
 			metaFile.writeInt(freeBlockCount);
 			metaFile.writeInt(usedBlockCount);
@@ -434,10 +432,10 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			dataFile.open(true);
 
 			if (consistent) {
-				int freeSpaceInfoBytes = metaFile.readInt();
-				byte[] b = new byte[freeSpaceInfoBytes];
-				metaFile.readFully(b);
-				freeSpaceInfo = BitArrayWrapper.fromBytes(b);
+				
+				// read freeSpaceInfo from meta file
+				freeSpaceInfo = new BitArrayWrapper();
+				freeSpaceInfo.read(metaFile);
 
 				freeBlockCount = metaFile.readInt();
 				usedBlockCount = metaFile.readInt();
@@ -620,7 +618,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 					freeSpaceInfo.logicalSize());
 			unitMap.put(unitID, unit);
 			
-			syncMeta(false, false);
+			//syncMeta(false, false);
 
 			return unitID;
 

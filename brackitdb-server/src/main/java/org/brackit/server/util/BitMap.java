@@ -27,6 +27,9 @@
  */
 package org.brackit.server.util;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Iterator;
 
 /**
@@ -35,8 +38,10 @@ import java.util.Iterator;
  *
  */
 public interface BitMap {
-
-	public byte[] toBytes();
+	
+	public void write(DataOutput out) throws IOException;
+	
+	public void read(DataInput in) throws IOException;
 
 	public void extendTo(int newLogicalSize);
 

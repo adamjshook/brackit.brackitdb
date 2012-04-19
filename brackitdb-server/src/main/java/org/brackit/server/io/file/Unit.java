@@ -68,23 +68,16 @@ public class Unit {
 		RandomAccessFile f = new RandomAccessFile(file,
 				Constants.FILE_MODE_UNSY);
 		
-		int length = f.readInt();
-		
-		byte[] b = new byte[length];		
-		f.readFully(b);
-		
-		BitMap blockTable = BitMapTree.fromBytes(b);
+		BitMap blockTable = new BitMapTree();
+		blockTable.read(f);
 		
 		return new Unit(f, blockTable);
 	}
 	
 	public void sync() throws IOException {
 		
-		byte[] blockTableBytes = blockTable.toBytes();
-		
 		file.seek(0);
-		file.writeInt(blockTableBytes.length);
-		file.write(blockTableBytes);
+		blockTable.write(file);
 		file.getFD().sync();
 	}
 	
