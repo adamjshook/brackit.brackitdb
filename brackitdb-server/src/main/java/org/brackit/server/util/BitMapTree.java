@@ -28,6 +28,7 @@
 package org.brackit.server.util;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeMap;
@@ -326,10 +327,46 @@ public class BitMapTree implements BitMap {
 				* (intSize + SECTION_SIZE_IN_BYTES);
 
 		ByteBuffer bb = ByteBuffer.allocate(length);
+		ArrayList<Entry<Integer, Section>> toInsert = new ArrayList<Entry<Integer,Section>>();
+		Iterator<Entry<Integer, Section>> iter = entries.iterator();
+		
 		bb.putInt(logicalSize);
-		for (Entry<Integer, Section> entry : entries) {
-			bb.putInt(entry.getKey());
-			bb.put(entry.getValue().bits);
+		
+		while (iter.hasNext()) {
+			Entry<Integer, Section> entryStart = iter.next();
+			int startSection = entryStart.getKey();
+			int previousSection = startSection;
+			
+			toInsert.clear();
+			toInsert.add(entryStart);
+			
+			// count number of continuous sections
+			int contSections = 0;
+			while (iter.hasNext() && contSections < 255) {
+				
+				Entry<Integer, Section> entryCurrent = iter.next();
+				
+				int sectionNo = entryCurrent.getKey();
+				if (sectionNo == previousSection + 1 && toInsert.size() < 256) {
+					// continuous section number
+					contSections++;
+					toInsert.add(entryCurrent);
+					previousSection = sectionNo;
+				}
+			}
+			
+			// write continous sections
+			
+			// write #sections and start section number
+			bb.put((byte) contSections);
+			bb.put((byte) ((startSection >> 16) & 0xFF));
+			bb.put((byte) ((startSection >> 8) & 0xFF));
+			bb.put((byte) (startSection & 0xFF));
+			
+			// write section bits
+			for (Entry<Integer, Section> entry : toInsert) {
+				bb.put(entry.getValue().bits);
+			}
 		}
 		
 		if (DEBUG) {
