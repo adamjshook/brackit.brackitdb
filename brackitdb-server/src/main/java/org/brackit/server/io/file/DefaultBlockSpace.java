@@ -541,7 +541,6 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			throw new StoreException("invalid lba");
 		}
 		try {
-			// block[0] = 1;
 			dataFile.write(lba, block, numBlocks);
 		} catch (FileException e) {
 			throw new StoreException(e);
