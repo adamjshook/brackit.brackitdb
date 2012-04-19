@@ -74,9 +74,9 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 
 	private BracketStore store;
 
-	private static final File smallDocument = new File("D:\\XMLDocs\\xmark10.xml");
-	private static final File mediumDocument = new File("D:\\XMLDocs\\xmark50.xml");
-	private static final File bigDocument = new File("D:\\XMLDocs\\xmark100.xml");
+	private static final File smallDocument = new File("xmark10.xml");
+	private static final File mediumDocument = new File("xmark50.xml");
+	private static final File bigDocument = new File("xmark100.xml");
 
 	private static final boolean COLLECTION_CHECK = true;
 
@@ -492,6 +492,7 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 		stream.close();
 	}
 
+	@Ignore
 	@Test
 	public void ultimateNavigationTest() throws Exception {
 		verifyAgainstDOM(bigDocument, createConfusedDocument(bigDocument),
@@ -752,6 +753,7 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 								count1, count2));
 	}
 
+	@Ignore
 	@Test
 	public void compareMultiChildStreams() throws DocumentException,
 			FileNotFoundException {
@@ -763,13 +765,9 @@ public class BracketNodeTest extends TXNodeTest<BracketNode> {
 
 		for (int i = 0; i < 100; i++) {
 
-//			Stream<? extends BracketNode> stream1 = store.index
-//					.openMultiChildStream(root.locator, root.getDeweyID(),
-//							root.hintPageInfo, new BracketFilter[3]);
-			
 			Stream<? extends BracketNode> stream1 = store.index
-			.openMultiChildStream(root.locator, new XTCdeweyID(root.locator.docID),
-					null, new BracketFilter[3]);
+					.openMultiChildStream(root.locator, root.getDeweyID(),
+							root.hintPageInfo, new BracketFilter[3]);
 
 			Stream<? extends BracketNode> stream2 = new MultiChildStreamMockup(
 					root.locator, new BracketTree(store.bufferMgr),
