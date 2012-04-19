@@ -175,8 +175,7 @@ class NameIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 				long start = System.nanoTime();
 				PageID rootPageID = index.createIndex(tx, containerNo,
 						nodeRefIndex.encoder.getKeyType(),
-						nodeRefIndex.encoder.getValueType(), true, true,
-						nodeRefIndex.encoder.getUnitID());
+						nodeRefIndex.encoder.getValueType(), true, true);
 
 				IndexIterator iterator = index.open(tx, rootPageID,
 						SearchMode.FIRST, null, null, OpenMode.LOAD);
@@ -225,7 +224,7 @@ class NameIndexBuilder<E extends TXNode<E>> extends DefaultListener<E>
 
 			Field keyType = nameDirEncoder.getKeyType();
 			PageID nameDirRootPageID = index.createIndex(tx, containerNo,
-					keyType, nameDirEncoder.getValueType(), false, true, -1);
+					keyType, nameDirEncoder.getValueType(), false, true);
 
 			IndexIterator iterator = index.open(tx, nameDirRootPageID,
 					SearchMode.FIRST, null, null, OpenMode.LOAD);
