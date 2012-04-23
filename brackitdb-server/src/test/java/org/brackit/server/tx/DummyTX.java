@@ -27,6 +27,7 @@
  */
 package org.brackit.server.tx;
 
+import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.cache.CachedObjectHook;
 import org.brackit.server.session.Session;
@@ -164,5 +165,9 @@ public class DummyTX implements Tx {
 	@Override
 	public Session getSession() {
 		return null;
+	}
+
+	@Override
+	public void addDeallocateHook(PageID pageID) {
 	}
 }
