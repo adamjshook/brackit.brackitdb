@@ -29,12 +29,10 @@ package org.brackit.server.tx.impl;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.Buffer;
-import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.cache.CachedObjectHook;
 import org.brackit.server.session.Session;
@@ -89,8 +87,6 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	private final Collection<PostCommitHook> postHooks;
 
 	private FlushBufferHook flushHook;
-	
-	private DeallocateHook deallocHook;
 
 	private TxStats statistics = null;
 
@@ -118,27 +114,6 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 			if (!list.contains(containerNo)) {
 				list.append(containerNo);
 			}
-		}
-	}
-	
-	private final class DeallocateHook implements PreCommitHook {
-		
-		private List<PageID> pageIDs = new ArrayList<PageID>();
-
-		@Override
-		public void abort(Tx tx) throws ServerException {
-			// TODO Auto-generated method stub
-		}
-
-		@Override
-		public void prepare(Tx tx) throws ServerException {
-			for (PageID pageID : pageIDs) {
-				// 
-			}
-		}
-
-		public void addPage(PageID pageID) {
-			pageIDs.add(pageID);
 		}
 	}
 
@@ -581,16 +556,5 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	@Override
 	public TxStats getStatistics() {
 		return this.statistics;
-	}
-
-	@Override
-	public void addDeallocateHook(PageID pageID) {
-		
-		if (deallocHook == null) {
-			deallocHook = new DeallocateHook();
-			preHooks.add(deallocHook);
-		}
-
-		deallocHook.addPage(pageID);
 	}
 }

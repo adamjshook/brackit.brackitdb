@@ -40,6 +40,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
+import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.Handle;
@@ -51,6 +52,7 @@ import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.procedure.InfoContributor;
 import org.brackit.server.procedure.ProcedureUtil;
 import org.brackit.server.procedure.statistics.ListBuffer;
+import org.brackit.server.tx.PreCommitHook;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxID;
 import org.brackit.server.tx.log.Log;
@@ -81,6 +83,24 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		abstract boolean isFixed();
 
 		abstract int fixCount();
+	}
+	
+	private final class DeallocateHook implements PreCommitHook {
+
+		private final PageID pageID;
+		
+		public DeallocateHook(PageID pageID) {
+			this.pageID = pageID;
+		}
+		
+		@Override
+		public void abort(Tx tx) throws ServerException {
+			// TODO Auto-generated method stub
+		}
+
+		@Override
+		public void prepare(Tx tx) throws ServerException {
+		}
 	}
 
 	protected static Comparator<Frame> PAGEID_COMPARATOR = new Comparator<Frame>() {

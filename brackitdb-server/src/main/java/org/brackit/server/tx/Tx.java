@@ -27,7 +27,6 @@
  */
 package org.brackit.server.tx;
 
-import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.cache.CachedObjectUser;
 import org.brackit.server.session.Session;
@@ -93,8 +92,6 @@ public interface Tx extends CachedObjectUser {
 	public BufferMgr getBufferManager();
 
 	public void addFlushHook(int containerNo);
-	
-	public void addDeallocateHook(PageID pageID);
 
 	public TxStats getStatistics();
 }
