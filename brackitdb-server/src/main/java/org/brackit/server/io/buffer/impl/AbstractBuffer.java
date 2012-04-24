@@ -542,8 +542,6 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		int offset = 0;
 		for (Frame frame : frames) {
 			System.arraycopy(frame.page, 0, buffer, offset, pageSize);
-			// // mark block as used
-			// buffer[offset] = 1;
 			offset += pageSize;
 		}
 	}

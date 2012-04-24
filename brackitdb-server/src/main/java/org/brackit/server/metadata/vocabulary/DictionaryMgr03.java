@@ -94,7 +94,7 @@ public class DictionaryMgr03 implements DictionaryMgr, PreCommitHook {
 	public synchronized int create(Tx transaction) throws DocumentException {
 		try {
 			vocIdxNo = index.createIndex(transaction, -1, Field.UINTEGER,
-					Field.STRING, true, true, -1).value();
+					Field.STRING, true, true).value();
 			transaction.addPreCommitHook(this);
 			return vocIdxNo;
 		} catch (IndexAccessException e) {

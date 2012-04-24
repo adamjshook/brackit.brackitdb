@@ -27,6 +27,9 @@
  */
 package org.brackit.server.util;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 
@@ -38,6 +41,7 @@ import java.util.Iterator;
  * 
  */
 public class BitArrayWrapper implements BitMap {
+	
 	private BitArray ba;
 	private int logicalSize;
 
@@ -46,22 +50,8 @@ public class BitArrayWrapper implements BitMap {
 		int physicalSize = toPhysicalSize(logicalSize);
 		ba = new BitArray(physicalSize);
 	}
-
-	public static BitArrayWrapper fromBytes(byte[] bytes) {
-		ByteBuffer bb = ByteBuffer.wrap(bytes);
-		int logicalSize = bb.getInt();
-		BitArrayWrapper baw = new BitArrayWrapper(logicalSize);
-		bb.get(baw.ba.words);
-		return baw;
-	}
-
-	@Override
-	public byte[] toBytes() {
-		ByteBuffer bb = ByteBuffer.allocate(Integer.SIZE / Byte.SIZE
-				+ ba.words.length);
-		bb.putInt(logicalSize);
-		bb.put(ba.words);
-		return bb.array();
+	
+	public BitArrayWrapper() {
 	}
 
 	@Override
@@ -130,5 +120,18 @@ public class BitArrayWrapper implements BitMap {
 	@Override
 	public Iterator<Integer> getSetBits() {
 		return ba.getSetBits();
+	}
+
+	@Override
+	public void write(DataOutput out) throws IOException {
+		out.writeInt(logicalSize);
+		out.write(ba.words);
+	}
+
+	@Override
+	public void read(DataInput in) throws IOException {
+		logicalSize = in.readInt();
+		ba = new BitArray(toPhysicalSize(logicalSize));
+		in.readFully(ba.words);		
 	}
 }

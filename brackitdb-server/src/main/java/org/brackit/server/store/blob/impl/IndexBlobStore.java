@@ -33,6 +33,7 @@ import java.io.InputStream;
 import java.util.Arrays;
 
 import org.brackit.xquery.util.log.Logger;
+import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.store.Field;
@@ -71,8 +72,13 @@ public class IndexBlobStore implements BlobStore {
 	public PageID create(Tx transaction, int containerNo, int unitID)
 			throws BlobStoreAccessException {
 		try {
+			
+			if (unitID != -1) {
+				throw new UnsupportedOperationException("A BlobStore of this type can not be assigned to a unit manually!");
+			}
+			
 			return index.createIndex(transaction, containerNo, Field.INTEGER,
-					Field.BYTEARRAY, true, true, unitID);
+					Field.BYTEARRAY, true, true);
 		} catch (IndexAccessException e) {
 			throw new BlobStoreAccessException(e,
 					"Error creating backing index in container %s.",
