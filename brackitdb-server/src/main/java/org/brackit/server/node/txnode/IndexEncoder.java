@@ -37,7 +37,6 @@ import org.brackit.xquery.xdm.Node;
  * 
  */
 public interface IndexEncoder<E extends Node<E>> {
-	public int getUnitID();
 
 	public Field getKeyType();
 

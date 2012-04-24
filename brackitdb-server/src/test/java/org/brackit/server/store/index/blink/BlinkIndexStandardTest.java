@@ -1372,7 +1372,7 @@ public class BlinkIndexStandardTest extends AbstractBlinkIndexTest {
 	public void testInsertOverflowValues() throws BufferException,
 			IndexAccessException {
 		uniqueRootPageID = index.createIndex(t2, SysMockup.CONTAINER_NO,
-				Field.UINTEGER, Field.BYTEARRAY, true, true, 2);
+				Field.UINTEGER, Field.BYTEARRAY, true, true);
 
 		for (int i = 0; i < 10; i++) {
 			byte[] key = Calc.fromUIntVar(i);

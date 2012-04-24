@@ -118,8 +118,7 @@ public class PathIndexBuilder<E extends Node<E>> extends DefaultListener<E>
 			// TODO: what is faster enforcing unique index or not enforcing
 			// since we do not have uniqueness!
 			PageID rootPageID = index.createIndex(tx, containerNo, encoder
-					.getKeyType(), encoder.getValueType(), true, true, encoder
-					.getUnitID());
+					.getKeyType(), encoder.getValueType(), true, true);
 
 			IndexIterator iterator = index.open(tx, rootPageID,
 					SearchMode.FIRST, null, null, OpenMode.LOAD);
