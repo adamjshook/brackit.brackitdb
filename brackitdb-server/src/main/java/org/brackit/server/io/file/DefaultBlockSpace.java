@@ -210,31 +210,28 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 	}
 
 	@Override
-	public void release(int lba, int hintUnitID) throws StoreException {
-		releaseImpl(lba, hintUnitID);
+	public void release(int lba, int unitID) throws StoreException {
+		releaseImpl(lba, unitID);
 		usedBlockCount--;
 		freeBlockCount++;
 	}
 
-	private synchronized void releaseImpl(int lba, int hintUnitID)
+	private synchronized void releaseImpl(int lba, int unitID)
 			throws StoreException {
 
 		// mark block as free
 		freeBlock(lba);
 
 		// release block from unit
-		if (hintUnitID > 0) {
-			BitMap unit = unitMap.get(hintUnitID);
-			if (unit != null && unit.get(lba)) {
-				// hintUnitID was right
-				unit.clear(lba);
-				return;
-			}
+		BitMap unit = unitMap.get(unitID);
+		if (unit == null || !unit.get(lba)) {
+			throw new StoreException(String.format("Block %s does not belong to unit %s.", lba, unitID));
 		}
+		unit.clear(lba);
 
-		for (BitMap unit : unitMap.values()) {
-			unit.clear(lba);
-		}
+//		for (BitMap unit : unitMap.values()) {
+//			unit.clear(lba);
+//		}
 	}
 
 	private void freeBlock(int lba) throws StoreException {

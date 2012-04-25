@@ -884,39 +884,39 @@ public final class BracketTree extends PageContextFactory {
 		}
 	}
 
-	private class DeletePageHook implements PostCommitHook {
-
-		private final PageID rootPageID;
-		private final List<PageID> pageIDs;
-
-		public DeletePageHook(PageID rootPageID, List<PageID> pageIDs) {
-			this.rootPageID = rootPageID;
-			this.pageIDs = pageIDs;
-		}
-
-		@Override
-		public void execute(Tx tx) throws ServerException {
-			Buffer buffer = bufferMgr.getBuffer(rootPageID);
-			List<PageID> exceptionPageIDs = null;
-
-			for (PageID pageID : pageIDs) {
-				try {
-					// TODO: log page deletion?
-					buffer.deletePage(tx, pageID, -1, false, -1);
-				} catch (BufferException e) {
-					if (exceptionPageIDs == null) {
-						exceptionPageIDs = new ArrayList<PageID>();
-					}
-					exceptionPageIDs.add(pageID);
-				}
-			}
-
-			if (exceptionPageIDs != null) {
-				throw new ServerException(String.format(
-						"Error deleting pages %s.", exceptionPageIDs));
-			}
-		}
-	}
+//	private class DeletePageHook implements PostCommitHook {
+//
+//		private final PageID rootPageID;
+//		private final List<PageID> pageIDs;
+//
+//		public DeletePageHook(PageID rootPageID, List<PageID> pageIDs) {
+//			this.rootPageID = rootPageID;
+//			this.pageIDs = pageIDs;
+//		}
+//
+//		@Override
+//		public void execute(Tx tx) throws ServerException {
+//			Buffer buffer = bufferMgr.getBuffer(rootPageID);
+//			List<PageID> exceptionPageIDs = null;
+//
+//			for (PageID pageID : pageIDs) {
+//				try {
+//					// TODO: log page deletion?
+//					buffer.deletePage(tx, pageID, -1, false, -1);
+//				} catch (BufferException e) {
+//					if (exceptionPageIDs == null) {
+//						exceptionPageIDs = new ArrayList<PageID>();
+//					}
+//					exceptionPageIDs.add(pageID);
+//				}
+//			}
+//
+//			if (exceptionPageIDs != null) {
+//				throw new ServerException(String.format(
+//						"Error deleting pages %s.", exceptionPageIDs));
+//			}
+//		}
+//	}
 
 	public BracketTree(BufferMgr bufferMgr) {
 		super(bufferMgr);

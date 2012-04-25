@@ -52,7 +52,7 @@ public class DummyTX implements Tx {
 	}
 
 	@Override
-	public void addPreCommitHook(PreCommitHook hook) {
+	public void addPreCommitHook(PreCommitHook hook, String name) {
 	}
 
 	@Override
@@ -163,6 +163,11 @@ public class DummyTX implements Tx {
 
 	@Override
 	public Session getSession() {
+		return null;
+	}
+
+	@Override
+	public PreCommitHook getPreCommitHook(String name) {
 		return null;
 	}
 }

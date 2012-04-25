@@ -36,19 +36,25 @@ import org.brackit.server.io.buffer.Handle;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.log.LogException;
+import org.brackit.server.tx.log.SizeConstants;
 
 /**
  * @author Sebastian Baechle
  * 
  */
 public final class AllocatePageLogOperation extends PageLogOperation {
-	private static final int SIZE = BASE_SIZE;
+	private static final int SIZE = PageID.getSize() + SizeConstants.INT_SIZE;
 
 	private final static Logger log = Logger
 			.getLogger(AllocatePageLogOperation.class.getName());
+	
+	private final PageID pageID;
+	private final int unitID;
 
 	public AllocatePageLogOperation(PageID pageID, int unitID) {
-		super(PageLogOperation.ALLOCATE, pageID, unitID);
+		super(PageLogOperation.ALLOCATE);
+		this.pageID = pageID;
+		this.unitID = unitID;
 	}
 
 	@Override
@@ -58,7 +64,8 @@ public final class AllocatePageLogOperation extends PageLogOperation {
 
 	@Override
 	public void toBytes(ByteBuffer bb) {
-		super.toBytes(bb);
+		bb.put(pageID.getBytes());
+		bb.putInt(unitID);
 	}
 
 	@Override

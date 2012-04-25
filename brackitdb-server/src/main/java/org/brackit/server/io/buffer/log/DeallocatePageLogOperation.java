@@ -28,61 +28,79 @@
 package org.brackit.server.io.buffer.log;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.Buffer;
-import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.Handle;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.log.LogException;
+import org.brackit.server.tx.log.SizeConstants;
+import org.brackit.xquery.util.log.Logger;
 
 /**
+ * This LogOperation logs the deallocation of single pages and whole units at
+ * once.
+ * 
  * @author Sebastian Baechle
  * 
  */
 public final class DeallocatePageLogOperation extends PageLogOperation {
-	private static final int SIZE = BASE_SIZE;
 
 	private final static Logger log = Logger
 			.getLogger(DeallocatePageLogOperation.class.getName());
 
-	public DeallocatePageLogOperation(PageID pageID, int unitID) {
-		super(PageLogOperation.DEALLOCATE, pageID, unitID);
+	private final PageUnitPair[] pages;
+	private final int[] units;
+
+	public DeallocatePageLogOperation(PageUnitPair[] pages, int[] units) {
+		super(PageLogOperation.DEALLOCATE);
+		this.pages = pages;
+		this.units = units;
 	}
 
 	@Override
 	public int getSize() {
-		return SIZE;
+		return 2 * SizeConstants.INT_SIZE + pages.length
+				* (PageID.getSize() + SizeConstants.INT_SIZE) + units.length
+				* SizeConstants.INT_SIZE;
 	}
 
 	@Override
 	public void toBytes(ByteBuffer bb) {
-		super.toBytes(bb);
+		bb.putInt(pages.length);
+		for (PageUnitPair page : pages) {
+			bb.put(page.pageID.getBytes());
+			bb.putInt(page.unitID);
+		}
+		bb.putInt(units.length);
+		for (int unitID : units) {
+			bb.putInt(unitID);
+		}
 	}
 
 	@Override
 	public void redo(Tx tx, long LSN) throws LogException {
 		Buffer buffer = null;
 
-		try {
-			buffer = tx.getBufferManager().getBuffer(pageID);
-
-			try {
-				if (log.isDebugEnabled()) {
-					log.debug(String.format("Redeallocating page %s.", pageID));
-				}
-				buffer.deletePage(tx, pageID, -1, false, -1);
-			} catch (BufferException e) {
-				throw new LogException(e, "Could not deallocate page %s.",
-						pageID);
-			}
-		} catch (BufferException e) {
-			if (log.isDebugEnabled()) {
-				log.debug(String
-						.format("Page %s is already allocated.", pageID));
-			}
-		}
+//		try {
+//			buffer = tx.getBufferManager().getBuffer(pageID);
+//
+//			try {
+//				if (log.isDebugEnabled()) {
+//					log.debug(String.format("Redeallocating page %s.", pageID));
+//				}
+//				buffer.deletePage(tx, pageID, -1, false, -1);
+//			} catch (BufferException e) {
+//				throw new LogException(e, "Could not deallocate page %s.",
+//						pageID);
+//			}
+//		} catch (BufferException e) {
+//			if (log.isDebugEnabled()) {
+//				log.debug(String
+//						.format("Page %s is already allocated.", pageID));
+//			}
+//		}
 	}
 
 	@Override
@@ -90,29 +108,29 @@ public final class DeallocatePageLogOperation extends PageLogOperation {
 		Buffer buffer = null;
 		Handle handle = null;
 
-		try {
-			if (log.isDebugEnabled()) {
-				log.debug(String.format("Allocating page %s.", pageID));
-			}
-
-			buffer = tx.getBufferManager().getBuffer(pageID);
-			handle = buffer.allocatePage(tx, unitID, pageID, true, undoNextLSN);
-		} catch (BufferException e) {
-			throw new LogException(e, "Could not allocate page %s.", pageID);
-		}
-
-		handle.unlatch();
-
-		try {
-			buffer.unfixPage(handle);
-		} catch (BufferException e) {
-			log.error("Error unfixing page after failed allocation.", e);
-			throw new LogException(e, "Error unfixing page after allocation");
-		}
+//		try {
+//			if (log.isDebugEnabled()) {
+//				log.debug(String.format("Allocating page %s.", pageID));
+//			}
+//
+//			buffer = tx.getBufferManager().getBuffer(pageID);
+//			handle = buffer.allocatePage(tx, unitID, pageID, true, undoNextLSN);
+//		} catch (BufferException e) {
+//			throw new LogException(e, "Could not allocate page %s.", pageID);
+//		}
+//
+//		handle.unlatch();
+//
+//		try {
+//			buffer.unfixPage(handle);
+//		} catch (BufferException e) {
+//			log.error("Error unfixing page after failed allocation.", e);
+//			throw new LogException(e, "Error unfixing page after allocation");
+//		}
 	}
 
 	@Override
 	public String toString() {
-		return String.format("%s(%s)", getClass().getSimpleName(), pageID);
+		return String.format("%s(Pages: %s, Units: %s)", getClass().getSimpleName(), Arrays.toString(pages), Arrays.toString(units));
 	}
 }
