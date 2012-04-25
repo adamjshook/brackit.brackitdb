@@ -42,7 +42,7 @@ public interface Tx extends CachedObjectUser {
 	public TxID getID();
 
 	public IsolationLevel getIsolationLevel();
-	
+
 	public Session getSession();
 
 	public boolean isReadOnly();
@@ -80,10 +80,21 @@ public interface Tx extends CachedObjectUser {
 
 	public long logUpdateSpecial(LogOperation logOperation, long undoNextLSN)
 			throws TxException;
-
-	public void addPreCommitHook(PreCommitHook hook);
+	
+	/**
+	 * Adds a (named) PreCommitHook to this transaction. The name can be used
+	 * to retrieve the PreCommitHook with the method 'getPreCommitHook(...)'.
+	 * It may also be null.
+	 */
+	public void addPreCommitHook(PreCommitHook hook, String name);
 
 	public void addPostCommitHook(PostCommitHook hook);
+
+	/**
+	 * Returns the PreCommitHook with the specified name. It returns null of no
+	 * such PreCommitHook exists.
+	 */
+	public PreCommitHook getPreCommitHook(String name);
 
 	public void leave() throws TxException;
 

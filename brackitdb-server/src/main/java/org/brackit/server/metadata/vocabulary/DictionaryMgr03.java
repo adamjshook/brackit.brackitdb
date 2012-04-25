@@ -81,7 +81,7 @@ public class DictionaryMgr03 implements DictionaryMgr, PreCommitHook {
 
 		if (vocID < 0) {
 			vocID = vocabulary.add(string);
-			transaction.addPreCommitHook(this);
+			transaction.addPreCommitHook(this, null);
 		}
 
 		return vocID;
@@ -95,7 +95,7 @@ public class DictionaryMgr03 implements DictionaryMgr, PreCommitHook {
 		try {
 			vocIdxNo = index.createIndex(transaction, -1, Field.UINTEGER,
 					Field.STRING, true, true).value();
-			transaction.addPreCommitHook(this);
+			transaction.addPreCommitHook(this, null);
 			return vocIdxNo;
 		} catch (IndexAccessException e) {
 			throw new DocumentException(e);

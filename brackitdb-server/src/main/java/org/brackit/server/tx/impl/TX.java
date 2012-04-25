@@ -29,6 +29,8 @@ package org.brackit.server.tx.impl;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
@@ -83,6 +85,8 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	private final Collection<CachedObjectHook> cacheHooks;
 
 	private final Collection<PreCommitHook> preHooks;
+	
+	private final Map<String, PreCommitHook> preHookMap;
 
 	private final Collection<PostCommitHook> postHooks;
 
@@ -128,6 +132,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 		this.lcb = new LockControlBlock(this, timeout);
 		this.preHooks = new ArrayList<PreCommitHook>(4);
 		this.postHooks = new ArrayList<PostCommitHook>(4);
+		this.preHookMap = new HashMap<String, PreCommitHook>(4);
 		this.cacheHooks = new ArrayList<CachedObjectHook>(4);
 		this.statistics = new TxStats();
 	}
@@ -504,8 +509,12 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 		return this.taMgr.getBufferManager();
 	}
 
-	public void addPreCommitHook(PreCommitHook hook) {
+	public void addPreCommitHook(PreCommitHook hook, String name) {
 		preHooks.add(hook);
+		
+		if (name != null) {
+			preHookMap.put(name, hook);
+		}
 	}
 
 	public void addPostCommitHook(PostCommitHook hook) {
@@ -556,5 +565,10 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	@Override
 	public TxStats getStatistics() {
 		return this.statistics;
+	}
+
+	@Override
+	public PreCommitHook getPreCommitHook(String name) {
+		return preHookMap.get(name);
 	}
 }

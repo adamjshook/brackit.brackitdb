@@ -73,7 +73,7 @@ public class PathSynopsisMgr05 extends AbstractPathSynopsisMgr implements
 			// affects the PathSynopsis
 			psByTA = new HashMap<PathSynopsis, Integer>();
 			psNodesByTA.put(tx, psByTA);
-			tx.addPreCommitHook(this);
+			tx.addPreCommitHook(this, null);
 		}
 
 		// gets the List of PathSynopsisNodes that are affected

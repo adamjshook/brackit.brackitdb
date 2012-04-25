@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.io.manager.BufferMgr;
+import org.brackit.server.io.buffer.log.PageLogOperation.PageUnitPair;
 import org.brackit.server.tx.log.LogException;
 import org.brackit.server.tx.log.LogOperation;
 import org.brackit.server.tx.log.LogOperationHelper;
@@ -50,16 +50,6 @@ public class PageLogOperationHelper implements LogOperationHelper {
 		operationTypes.add(PageLogOperation.DEALLOCATE);
 	}
 
-	private final BufferMgr bufferMgr;
-
-	public PageLogOperationHelper() {
-		this(null);
-	}
-
-	public PageLogOperationHelper(BufferMgr bufferMgr) {
-		this.bufferMgr = bufferMgr;
-	}
-
 	@Override
 	public Collection<Byte> getOperationTypes() {
 		return operationTypes;
@@ -68,24 +58,43 @@ public class PageLogOperationHelper implements LogOperationHelper {
 	@Override
 	public LogOperation fromBytes(byte type, ByteBuffer buffer)
 			throws LogException {
-		PageID pageID = PageID.read(buffer);
-		int unitID = buffer.getInt();
 
 		switch (type) {
 		case PageLogOperation.ALLOCATE:
-			return new AllocatePageLogOperation(pageID, unitID);
+			return createAllocatePageLogOperation(buffer);
 		case PageLogOperation.DEALLOCATE:
-			return new DeallocatePageLogOperation(pageID, unitID);
+			return createDeallocatePageLogOperation(buffer);
 		default:
 			throw new LogException("Unknown operation type: %s.", type);
 		}
 	}
-
-	public AllocatePageLogOperation createAllocateLogOp(PageID pageID, int unitID) {
+	
+	private LogOperation createAllocatePageLogOperation(ByteBuffer bb) {
+		PageID pageID = PageID.read(bb);
+		int unitID = bb.getInt();
 		return new AllocatePageLogOperation(pageID, unitID);
 	}
-
-	public DeallocatePageLogOperation createDeallocateLogOp(PageID pageID, int unitID) {
-		return new DeallocatePageLogOperation(pageID, unitID);
+	
+	private LogOperation createDeallocatePageLogOperation(ByteBuffer bb) {
+		
+		// read single pages
+		int length = bb.getInt();
+		PageUnitPair[] pages = new PageUnitPair[length];
+		
+		for (int i = 0; i < length; i++) {
+			PageID pageID = PageID.read(bb);
+			int unitID = bb.getInt();
+			pages[i] = new PageUnitPair(pageID, unitID);
+		}
+		
+		// read units
+		length = bb.getInt();
+		int[] units = new int[length];
+		
+		for (int i = 0; i < length; i++) {
+			units[i] = bb.getInt();
+		}
+		
+		return new DeallocatePageLogOperation(pages, units);
 	}
 }
