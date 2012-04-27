@@ -85,7 +85,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	private final Collection<CachedObjectHook> cacheHooks;
 
 	private final Collection<PreCommitHook> preHooks;
-	
+
 	private final Map<String, PreCommitHook> preHookMap;
 
 	private final Collection<PostCommitHook> postHooks;
@@ -151,41 +151,42 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 	@Override
 	public void commit() throws TxException {
-		try {
-			int TLSN = 0;
-			boolean doCommit = voteCommit();
+		int TLSN = 0;
+		boolean doCommit = voteCommit();
 
-			if (doCommit) {
-				doCommit();
-			} else {
-				waitEOT();
+		if (doCommit) {
+			doCommit();
+		} else {
+			waitEOT();
 
-				if (getState() != TxState.COMMITTED) {
-					throw new TxException("Commit failed.");
-				}
-			}
-		} finally {
-			// TODO perform the after hooks asynchronously
-			for (PostCommitHook postHook : postHooks) {
-				Tx postTX = taMgr.begin(IsolationLevel.SERIALIZABLE, null,
-						false);
-				try {
-					postHook.execute(postTX);
-					postTX.commit();
-				} catch (ServerException e) {
-					log.error(String.format(
-							"Post commit hook %s for tx %s failed: %s",
-							postHook, this, e.getMessage()), e);
-					postTX.rollback();
-				}
+			if (getState() != TxState.COMMITTED) {
+				throw new TxException("Commit failed.");
 			}
 		}
+
+		// perform after hooks (in case of commit success)
+		for (PostCommitHook postHook : postHooks) {
+			Tx postTX = taMgr.begin(IsolationLevel.SERIALIZABLE, null, false);
+			try {
+				postHook.execute(postTX);
+				postTX.commit();
+			} catch (ServerException e) {
+				log.error(String.format(
+						"Post commit hook %s for tx %s failed: %s", postHook,
+						this, e.getMessage()), e);
+				postTX.rollback();
+			}
+		}
+
+		// remove Tx from table
+		taMgr.getTxTable().remove(txID);
 	}
 
 	@Override
 	public void rollback() throws TxException {
 		if (getState() != TxState.RUNNING) {
-			throw new TxException("Rollback failed: Tx %s is in state %s", txID, getState());
+			throw new TxException("Rollback failed: Tx %s is in state %s",
+					txID, getState());
 		}
 		boolean processRollback = voteRollback();
 
@@ -202,7 +203,8 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 	private void doCommit() throws TxException {
 		if (getState() != TxState.RUNNING) {
-			throw new TxException("Commit failed: Tx %s is in state %s", txID, getState());
+			throw new TxException("Commit failed: Tx %s is in state %s", txID,
+					getState());
 		}
 		try {
 			if (log.isDebugEnabled()) {
@@ -225,7 +227,12 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 			signalEOT(true);
 
-			taMgr.getTxTable().remove(txID);
+			// keep Tx in table, until the PostCommitHooks are executed ->
+			// ensures that in case of Checkpoints between Commit and
+			// PostCommitHooks no log records related to this transaction are
+			// removed
+			
+			// taMgr.getTxTable().remove(txID);
 		} catch (ServerException e) {
 			log.error(String.format(
 					"Prepare of resource managers for commit failed. "
@@ -303,7 +310,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	public IsolationLevel getIsolationLevel() {
 		return this.isolationLevel;
 	}
-	
+
 	public Session getSession() {
 		return this.session;
 	}
@@ -456,8 +463,8 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 		switch (record.getType()) {
 		case Loggable.TYPE_UPDATE:
 			if (log.isDebugEnabled()) {
-				log.debug(String.format("%s undo %s.", toShortString(), record
-						.getLSN()));
+				log.debug(String.format("%s undo %s.", toShortString(),
+						record.getLSN()));
 			}
 
 			logOperation = record.getLogOperation();
@@ -511,7 +518,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 	public void addPreCommitHook(PreCommitHook hook, String name) {
 		preHooks.add(hook);
-		
+
 		if (name != null) {
 			preHookMap.put(name, hook);
 		}
