@@ -59,7 +59,7 @@ public interface Buffer {
 	/**
 	 * @param hintUnitID used to indicate the unitID of the page that is to be deleted. Use -1, if unknown.
 	 */
-	public void deletePage(Tx tx, PageID pageID, int hintUnitID, boolean logged,
+	public void deletePageDeferred(Tx tx, PageID pageID, int hintUnitID, boolean logged,
 			long undoNextLSN) throws BufferException;
 
 	public Handle fixPage(Tx tx, PageID pageID) throws BufferException;
@@ -93,4 +93,7 @@ public interface Buffer {
 	public int getPageSize();
 
 	public boolean isFixed(Handle handle);
+
+	public void deletePageImmediately(Tx transaction, PageID pageID,
+			int unitID, boolean logged, long undoNextLSN) throws BufferException;
 }
