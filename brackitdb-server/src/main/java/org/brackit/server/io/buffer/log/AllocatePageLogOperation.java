@@ -27,45 +27,25 @@
  */
 package org.brackit.server.io.buffer.log;
 
-import java.nio.ByteBuffer;
-
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.Handle;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.log.LogException;
-import org.brackit.server.tx.log.SizeConstants;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * @author Sebastian Baechle
  * 
  */
-public final class AllocatePageLogOperation extends PageLogOperation {
-	private static final int SIZE = PageID.getSize() + SizeConstants.INT_SIZE;
+public final class AllocatePageLogOperation extends SinglePageLogOperation {
 
 	private final static Logger log = Logger
 			.getLogger(AllocatePageLogOperation.class.getName());
-	
-	private final PageID pageID;
-	private final int unitID;
 
 	public AllocatePageLogOperation(PageID pageID, int unitID) {
-		super(PageLogOperation.ALLOCATE);
-		this.pageID = pageID;
-		this.unitID = unitID;
-	}
-
-	@Override
-	public int getSize() {
-		return SIZE;
-	}
-
-	@Override
-	public void toBytes(ByteBuffer bb) {
-		bb.put(pageID.getBytes());
-		bb.putInt(unitID);
+		super(PageLogOperation.ALLOCATE, pageID, unitID);
 	}
 
 	@Override
@@ -132,7 +112,7 @@ public final class AllocatePageLogOperation extends PageLogOperation {
 			if (log.isDebugEnabled()) {
 				log.debug(String.format("Deallocating page %s.", pageID));
 			}
-			buffer.deletePage(tx, pageID, -1, true, undoNextLSN);
+			buffer.deletePageImmediately(tx, pageID, -1, true, undoNextLSN);
 		} catch (BufferException e) {
 			throw new LogException(e, "Could not deallocate page %s.", pageID);
 		}

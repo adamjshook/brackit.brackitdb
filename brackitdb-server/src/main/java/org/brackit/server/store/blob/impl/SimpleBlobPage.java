@@ -70,7 +70,7 @@ public class SimpleBlobPage extends BasePage implements BufferedPage {
 		for (SimpleBlobPage p = getNext(tx, true, false); p != null; p = p
 				.getNext(tx, true, false)) {
 			try {
-				buffer.deletePage(tx, p.getPageID(), p.getUnitID(), true, tx.checkPrevLSN());
+				buffer.deletePageDeferred(tx, p.getPageID(), p.getUnitID(), true, tx.checkPrevLSN());
 				p.cleanup();
 			} catch (BufferException e) {
 				throw new BlobStoreAccessException(e,

@@ -48,6 +48,7 @@ public class PageLogOperationHelper implements LogOperationHelper {
 		operationTypes = new ArrayList<Byte>();
 		operationTypes.add(PageLogOperation.ALLOCATE);
 		operationTypes.add(PageLogOperation.DEALLOCATE);
+		operationTypes.add(PageLogOperation.DEALLOCATE_DEFERRED);
 	}
 
 	@Override
@@ -64,6 +65,8 @@ public class PageLogOperationHelper implements LogOperationHelper {
 			return createAllocatePageLogOperation(buffer);
 		case PageLogOperation.DEALLOCATE:
 			return createDeallocatePageLogOperation(buffer);
+		case PageLogOperation.DEALLOCATE_DEFERRED:
+			return createDeallocateDeferredPageLogOperation(buffer);
 		default:
 			throw new LogException("Unknown operation type: %s.", type);
 		}
@@ -76,6 +79,15 @@ public class PageLogOperationHelper implements LogOperationHelper {
 	}
 	
 	private LogOperation createDeallocatePageLogOperation(ByteBuffer bb) {
+		PageID pageID = PageID.read(bb);
+		int unitID = bb.getInt();
+		return new DeallocatePageLogOperation(pageID, unitID);
+	}
+	
+	private LogOperation createDeallocateDeferredPageLogOperation(ByteBuffer bb) {
+		
+		// read containerID
+		int containerID = bb.getInt();
 		
 		// read single pages
 		int length = bb.getInt();
@@ -95,6 +107,6 @@ public class PageLogOperationHelper implements LogOperationHelper {
 			units[i] = bb.getInt();
 		}
 		
-		return new DeallocatePageLogOperation(pages, units);
+		return new DeallocateDeferredPageLogOperation(containerID, pages, units);
 	}
 }

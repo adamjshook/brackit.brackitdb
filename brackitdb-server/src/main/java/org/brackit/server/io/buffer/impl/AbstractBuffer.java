@@ -46,6 +46,7 @@ import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.Handle;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.buffer.log.AllocatePageLogOperation;
+import org.brackit.server.io.buffer.log.DeallocateDeferredPageLogOperation;
 import org.brackit.server.io.buffer.log.DeallocatePageLogOperation;
 import org.brackit.server.io.buffer.log.PageLogOperationHelper;
 import org.brackit.server.io.buffer.log.PageLogOperation.PageUnitPair;
@@ -109,7 +110,6 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			// write the corresponding log records (so that this can be redone
 			// in case of a crash)
 
-			// TODO: logging
 			PageUnitPair[] pages = pageList.toArray(new PageUnitPair[pageList
 					.size()]);
 			int[] units = new int[unitList.size()];
@@ -117,7 +117,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 				units[i] = unitList.get(i);
 			}
 
-			tx.logUpdate(new DeallocatePageLogOperation(pages, units));
+			tx.logUpdate(new DeallocateDeferredPageLogOperation(blockSpace.getId(), pages, units));
 
 			// register a PostCommitHook to physically release the blocks
 			tx.addPostCommitHook(this);
@@ -452,7 +452,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		return victim;
 	}
 
-	public synchronized void deletePage(Tx transaction, PageID pageID,
+	public synchronized void deletePageDeferred(Tx transaction, PageID pageID,
 			int unitID, boolean logged, long undoNextLSN)
 			throws BufferException {
 		if (log.isTraceEnabled()) {
@@ -494,6 +494,41 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			transaction.addPreCommitHook(hook, deallocateHookName);
 		}
 		((DeallocateHook) hook).addPage(pageID, unitID);
+	}
+	
+	public synchronized void deletePageImmediately(Tx transaction, PageID pageID,
+			int unitID, boolean logged, long undoNextLSN) throws BufferException {
+		
+		if (log.isTraceEnabled()) {
+			log.trace(String.format("Deleting page %s.", pageID));
+		}
+
+		if (logged) {
+			try {
+				if (undoNextLSN == -1) {
+					transaction.logUpdate(new DeallocatePageLogOperation(
+							pageID, unitID));
+				} else {
+					transaction.logCLR(new DeallocatePageLogOperation(
+							pageID, unitID), undoNextLSN);
+				}
+			} catch (TxException e) {
+				throw new BufferException(
+						"Could not write log for page deallocation.", e);
+			}
+		}
+
+		Frame frame = pageNoToFrame.remove(pageID);
+		if (frame != null) {
+			// The handle of a deleted page is allowed to be fixed
+			// by concurrent threads. However, the safe flag should be
+			// used in this case to signal them that they
+			// must not use the handle anymore.
+			// To avoid any change for corruption we drop the handle!
+			frame.drop();
+			pool.remove(frame);
+		}
+		deallocateBlock(pageID, unitID);
 	}
 
 	private int readBlocks(PageID pageID, byte[] buffer, int numOfBlocks)
