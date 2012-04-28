@@ -51,11 +51,11 @@ public abstract class PageLogOperation extends LogOperation {
 		}
 	}
 
-	public static final byte ALLOCATE = 1;
+	public static final byte ALLOCATE = 3;
 	
-	public static final byte DEALLOCATE = 2;
+	public static final byte DEALLOCATE = 4;
 
-	public static final byte DEALLOCATE_DEFERRED = 3;
+	public static final byte DEALLOCATE_DEFERRED = 5;
 	
 	public PageLogOperation(byte type) {
 		super(type);

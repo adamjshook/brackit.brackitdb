@@ -44,6 +44,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.brackit.xquery.util.log.Logger;
+import org.brackit.server.ServerException;
 import org.brackit.server.SysMockup;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.Handle;
@@ -1094,8 +1095,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	}
 
 	@Test
-	public void testRecoveryInsertCommitted() throws BufferException,
-			IndexAccessException, IndexOperationException, TxException {
+	public void testRecoveryInsertCommitted() throws ServerException {
 		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		t2.commit();
@@ -1114,8 +1114,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	}
 
 	@Test
-	public void testRecoveryInsertFailed() throws BufferException,
-			IndexAccessException, IndexOperationException, TxException {
+	public void testRecoveryInsertFailed() throws ServerException {
 		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
 		t2.commit();
 		t2 = sm.taMgr.begin();
@@ -1133,8 +1132,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	}
 
 	@Test
-	public void testRecoveryInsertRollback() throws BufferException,
-			IndexAccessException, IndexOperationException, TxException {
+	public void testRecoveryInsertRollback() throws ServerException {
 		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
 		t2.commit();
 		t2 = sm.taMgr.begin();
@@ -1153,8 +1151,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	}
 
 	@Test
-	public void testRecoveryDeleteCommitted() throws BufferException,
-			IndexAccessException, IndexOperationException, TxException {
+	public void testRecoveryDeleteCommitted() throws ServerException {
 		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		t2.commit();
@@ -1177,8 +1174,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	}
 
 	@Test
-	public void testRecoveryDeleteFailed() throws BufferException,
-			IndexAccessException, IndexOperationException, TxException {
+	public void testRecoveryDeleteFailed() throws ServerException {
 		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		t2.commit();
@@ -1219,8 +1215,7 @@ public class BPlusIndexStandardTest extends AbstractBPlusIndexTest {
 	}
 
 	@Test
-	public void testRecoveryDeleteRollback() throws BufferException,
-			IndexAccessException, IndexOperationException, TxException {
+	public void testRecoveryDeleteRollback() throws ServerException {
 		LinkedList<Entry> entries = generateEntries(INDEX_LOAD_SIZE, 0);
 		loadIndex(t2, entries, uniqueRootPageID);
 		t2.commit();

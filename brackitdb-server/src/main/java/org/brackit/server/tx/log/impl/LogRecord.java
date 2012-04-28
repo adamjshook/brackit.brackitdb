@@ -123,6 +123,7 @@ public class LogRecord implements Loggable {
 		bb.putLong(prevLSN);
 
 		switch (type) {
+		case TYPE_EOT:
 		case TYPE_UPDATE:
 			bb.put(logOperation.getType());
 			logOperation.toBytes(bb);

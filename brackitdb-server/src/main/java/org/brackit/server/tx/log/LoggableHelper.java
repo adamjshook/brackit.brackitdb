@@ -38,7 +38,7 @@ import org.brackit.server.tx.TxID;
  * 
  */
 public interface LoggableHelper {
-	public Loggable createEOT(TxID taID, long prevLSN);
+	public Loggable createEOT(TxID taID, long prevLSN, boolean commit);
 
 	public Loggable createUpdate(TxID taID, long prevLSN,
 			LogOperation createOperation);

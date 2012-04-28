@@ -27,6 +27,7 @@
  */
 package org.brackit.server.tx;
 
+import org.brackit.server.ServerException;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.cache.CachedObjectUser;
 import org.brackit.server.session.Session;
@@ -89,6 +90,10 @@ public interface Tx extends CachedObjectUser {
 	public void addPreCommitHook(PreCommitHook hook, String name);
 
 	public void addPostCommitHook(PostCommitHook hook);
+	
+	public void addPostRedoHook(PostRedoHook hook);
+	
+	public void executePostRedoHooks() throws ServerException;
 
 	/**
 	 * Returns the PreCommitHook with the specified name. It returns null of no

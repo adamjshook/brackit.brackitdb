@@ -29,6 +29,7 @@ package org.brackit.server.io.buffer;
 
 import java.io.PrintStream;
 
+import org.brackit.server.io.buffer.log.PageLogOperation.PageUnitPair;
 import org.brackit.server.tx.Tx;
 
 /**
@@ -41,25 +42,22 @@ public interface Buffer {
 	public int getBufferSize();
 
 	public int getContainerNo();
-	
+
 	/**
 	 * @param unitID
 	 *            requested unitID; if -1, the unitID will be assigned
 	 *            automatically.
 	 */
 	public int createUnit(int unitID) throws BufferException;
-	
+
 	public void dropUnit(int unitID) throws BufferException;
 
 	public Handle allocatePage(Tx tx, int unitID) throws BufferException;
 
-	public Handle allocatePage(Tx tx, int unitID, PageID pageID, boolean logged,
-			long undoNextLSN) throws BufferException;
+	public Handle allocatePage(Tx tx, int unitID, PageID pageID,
+			boolean logged, long undoNextLSN) throws BufferException;
 
-	/**
-	 * @param hintUnitID used to indicate the unitID of the page that is to be deleted. Use -1, if unknown.
-	 */
-	public void deletePageDeferred(Tx tx, PageID pageID, int hintUnitID, boolean logged,
+	public void deletePage(Tx tx, PageID pageID, int unitID, boolean logged,
 			long undoNextLSN) throws BufferException;
 
 	public Handle fixPage(Tx tx, PageID pageID) throws BufferException;
@@ -94,6 +92,19 @@ public interface Buffer {
 
 	public boolean isFixed(Handle handle);
 
-	public void deletePageImmediately(Tx transaction, PageID pageID,
-			int unitID, boolean logged, long undoNextLSN) throws BufferException;
+	/**
+	 * Releases/deallocates the page immediately. This method may only be used
+	 * during the recovery phase. During normal DB execution the deletePage(...)
+	 * method needs to be used.
+	 */
+	public void releasePageForRecovery(Tx transaction, PageID pageID,
+			int unitID, boolean logged, long undoNextLSN)
+			throws BufferException;
+
+	/**
+	 * Adds a PostRedoHook to the transaction so that the given pages and
+	 * units are released after the COMMIT log record is found in the log. This
+	 * method has only an effect when invoked during the Redo phase.
+	 */
+	public void releaseAfterRedo(Tx tx, PageUnitPair[] pages, int[] units);
 }

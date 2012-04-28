@@ -618,7 +618,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 							collection.getName()));
 				}
 				try {
-					collection.delete();
+					collection.copyFor(tx).delete();
 				} catch (DocumentException e) {
 					throw new ServerException(e);
 				}
@@ -758,7 +758,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 							.getName()));
 				}
 				try {
-					blobHandle.delete();
+					blobHandle.copyFor(tx).delete();
 				} catch (DocumentException e) {
 					throw new ServerException(e);
 				}

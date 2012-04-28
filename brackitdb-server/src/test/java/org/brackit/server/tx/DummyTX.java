@@ -170,4 +170,12 @@ public class DummyTX implements Tx {
 	public PreCommitHook getPreCommitHook(String name) {
 		return null;
 	}
+
+	@Override
+	public void addPostRedoHook(PostRedoHook hook) {
+	}
+
+	@Override
+	public void executePostRedoHooks() {
+	}
 }

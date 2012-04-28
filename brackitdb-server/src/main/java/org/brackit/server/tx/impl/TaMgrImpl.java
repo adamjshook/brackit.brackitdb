@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.brackit.xquery.util.log.Logger;
+import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.manager.BufferMgr;
@@ -43,6 +44,7 @@ import org.brackit.server.tx.log.Log;
 import org.brackit.server.tx.log.LogException;
 import org.brackit.server.tx.log.LogOperation;
 import org.brackit.server.tx.log.Loggable;
+import org.brackit.server.tx.log.impl.EOTLogOperation;
 import org.brackit.xquery.util.Cfg;
 
 /**
@@ -101,11 +103,11 @@ public class TaMgrImpl implements TxMgr {
 		return txLog;
 	}
 
-	public void recover() throws TxException {
+	public void recover() throws ServerException {
 		restart();
 	}
 
-	private void restart() throws LogException, TxException {
+	private void restart() throws ServerException {
 		txTable.clear();
 
 		if (log.isInfoEnabled()) {
@@ -146,6 +148,11 @@ public class TaMgrImpl implements TxMgr {
 			case Loggable.TYPE_EOT:
 				if (log.isDebugEnabled()) {
 					log.debug(String.format("Finishing %s.", tx));
+				}
+				
+				// if successful EOT -> execute redo hooks
+				if (logOp.getType() == EOTLogOperation.COMMIT) {
+					tx.executePostRedoHooks();
 				}
 
 				txTable.remove(loggable.getTxID());
@@ -207,7 +214,7 @@ public class TaMgrImpl implements TxMgr {
 						transaction));
 			}
 
-			transaction.logEOT();
+			transaction.logEOT(false);
 			txTable.remove(transaction.getID());
 		}
 
@@ -236,7 +243,7 @@ public class TaMgrImpl implements TxMgr {
 							tx));
 				}
 
-				tx.logEOT();
+				tx.logEOT(false);
 				txTable.remove(loggable.getTxID());
 			} else {
 				tx.setPrevLSN(nextUndoLSN);

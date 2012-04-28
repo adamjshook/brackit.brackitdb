@@ -29,6 +29,7 @@ package org.brackit.server.tx;
 
 import java.util.Collection;
 
+import org.brackit.server.ServerException;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.session.Session;
 import org.brackit.server.tx.impl.TX;
@@ -53,7 +54,7 @@ public interface TxMgr {
 
 	public void shutdown() throws TxException;
 
-	public void recover() throws TxException;
+	public void recover() throws ServerException;
 
 	public Tx begin() throws TxException;
 
