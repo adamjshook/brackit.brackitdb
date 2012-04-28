@@ -41,6 +41,7 @@ import org.brackit.server.session.Session;
 import org.brackit.server.tx.IsolationLevel;
 import org.brackit.server.tx.PostCommitHook;
 import org.brackit.server.tx.PreCommitHook;
+import org.brackit.server.tx.PostRedoHook;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.TxID;
@@ -89,6 +90,8 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	private final Map<String, PreCommitHook> preHookMap;
 
 	private final Collection<PostCommitHook> postHooks;
+	
+	private Collection<PostRedoHook> redoHooks;
 
 	private FlushBufferHook flushHook;
 
@@ -216,7 +219,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 			}
 
 			if (!readOnly) {
-				long commitLsn = logEOT();
+				long commitLsn = logEOT(true);
 				taMgr.getLog().flush(commitLsn);
 			}
 
@@ -274,7 +277,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 			}
 
 			try {
-				long commitLsn = logEOT();
+				long commitLsn = logEOT(false);
 			} catch (TxException e) {
 				if (log.isDebugEnabled()) {
 					log.debug(
@@ -327,10 +330,10 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 		return 0;
 	}
 
-	public long logEOT() throws TxException {
+	public long logEOT(boolean commit) throws TxException {
 		if (prevLSN != -1) {
 			Loggable loggable = taMgr.getLog().getLoggableHelper()
-					.createEOT(txID, prevLSN);
+					.createEOT(txID, prevLSN, commit);
 			long LSN = log(loggable, true);
 
 			if (log.isDebugEnabled()) {
@@ -577,5 +580,24 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	@Override
 	public PreCommitHook getPreCommitHook(String name) {
 		return preHookMap.get(name);
+	}
+
+	@Override
+	public void addPostRedoHook(PostRedoHook hook) {
+		
+		if (redoHooks == null) {
+			redoHooks = new ArrayList<PostRedoHook>();
+		}
+		redoHooks.add(hook);
+	}
+
+	@Override
+	public void executePostRedoHooks() throws ServerException {
+		
+		if (redoHooks != null) {
+			for (PostRedoHook hook : redoHooks) {
+				hook.execute();
+			}
+		}
 	}
 }

@@ -1040,7 +1040,7 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 			PageID pageID = page.getPageID();
 			int unitID = page.getHandle().getUnitID();
 			page.cleanup();
-			page.getBuffer().deletePageDeferred(transaction, pageID, unitID, true, -1);
+			page.getBuffer().deletePage(transaction, pageID, unitID, true, -1);
 		} catch (BufferException e) {
 			throw new IndexOperationException(e, "Error deleting page");
 		}
