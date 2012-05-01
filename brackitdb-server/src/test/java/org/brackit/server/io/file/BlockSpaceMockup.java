@@ -57,7 +57,7 @@ public class BlockSpaceMockup implements BlockSpace {
 	}
 
 	@Override
-	public int allocate(int blockNo, int unitID) throws StoreException {
+	public int allocate(int blockNo, int unitID, boolean force) throws StoreException {
 		if (blockNo < 0) {
 			blockNo = maxBlockNo++;
 		} else {
@@ -130,7 +130,7 @@ public class BlockSpaceMockup implements BlockSpace {
 	}
 
 	@Override
-	public void release(int blockNo, int hintUnitID) throws StoreException {
+	public void release(int blockNo, int hintUnitID, boolean force) throws StoreException {
 		byte[] myBlock = blocks.get(blockNo);
 
 		if (myBlock == null) {

@@ -136,7 +136,7 @@ public class BufferImplTest {
 
 		// handle = buffer.fixPage(ctx, pageNo);
 		// handle.latchExclusive();
-		buffer.deletePage(t1, pageNo, -1, true, -1);
+		buffer.deletePage(t1, pageNo, -1);
 		// handle.unlatch();
 		// buffer.unfixPage(handle);
 		t1.rollback();
@@ -160,7 +160,7 @@ public class BufferImplTest {
 
 		// handle = buffer.fixPage(ctx, pageNo);
 		// handle.latchExclusive();
-		buffer.deletePage(t1, pageNo, -1, true, -1);
+		buffer.deletePage(t1, pageNo, -1);
 		// handle.unlatch();
 		// buffer.unfixPage(handle);
 		t1.rollback();
@@ -234,7 +234,7 @@ public class BufferImplTest {
 		PageID pageNo = handle.getPageID();
 		handle.unlatch();
 		buffer.unfixPage(handle);
-		buffer.deletePage(t2, pageNo, -1, true, -1);
+		buffer.deletePage(t2, pageNo, -1);
 		try {
 			Handle fetchDeleted = buffer.fixPage(t2, pageNo);
 			fail("Could fix deleted page");
@@ -248,7 +248,7 @@ public class BufferImplTest {
 		Handle handle = buffer.allocatePage(t2, unitID);
 		PageID pageNo = handle.getPageID();
 		handle.unlatch();
-		buffer.deletePage(t2, pageNo, -1, true, -1);
+		buffer.deletePage(t2, pageNo, -1);
 		try {
 			Handle fetchDeleted = buffer.fixPage(t2, pageNo);
 			fail("Could fix deleted page");

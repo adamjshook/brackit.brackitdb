@@ -82,9 +82,9 @@ public class LeafBPContextTest {
 		docID = new DocID(99, 0);
 		
 		// create two sample leafs
-		leaf1 = new LeafBPContext(bufferManager, tx, new BracketPage(buffer, buffer.allocatePage(tx, unitID, new PageID(1), true, -1)));
+		leaf1 = new LeafBPContext(bufferManager, tx, new BracketPage(buffer, buffer.allocatePage(tx, unitID, new PageID(1), true, -1, false)));
 		leaf1.format(new PageID(99), true, -1);
-		leaf2 = new LeafBPContext(bufferManager, tx, new BracketPage(buffer, buffer.allocatePage(tx, unitID, new PageID(2), true, -1)));
+		leaf2 = new LeafBPContext(bufferManager, tx, new BracketPage(buffer, buffer.allocatePage(tx, unitID, new PageID(2), true, -1, false)));
 		leaf2.format(new PageID(99), true, -1);
 		
 		fill();

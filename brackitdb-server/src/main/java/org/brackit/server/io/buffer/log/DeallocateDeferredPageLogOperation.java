@@ -67,7 +67,7 @@ public final class DeallocateDeferredPageLogOperation extends PageLogOperation {
 
 	@Override
 	public int getSize() {
-		return 2 * SizeConstants.INT_SIZE + pages.length
+		return 3 * SizeConstants.INT_SIZE + pages.length
 				* (PageID.getSize() + SizeConstants.INT_SIZE) + units.length
 				* SizeConstants.INT_SIZE;
 	}

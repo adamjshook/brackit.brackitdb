@@ -36,7 +36,6 @@ import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.store.blob.BlobStoreAccessException;
 import org.brackit.server.store.blob.impl.SimpleBlobStore;
-import org.brackit.server.store.index.bracket.DeleteExternalizedHook;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.index.bracket.log.FormatLogOperation;
 import org.brackit.server.store.index.bracket.log.PointerLogOperation;
@@ -167,9 +166,21 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 
 	protected void deleteExternalized(List<PageID> externalPageIDs)
 			throws IndexOperationException {
-		if (!externalPageIDs.isEmpty()) {
-			tx.addPostCommitHook(new DeleteExternalizedHook(this,
-					externalPageIDs));
+		
+		List<PageID> exceptionPageIDs = null;
+		for (PageID pageID : externalPageIDs) {				
+			try {
+				drop(tx, pageID);
+			} catch (BlobStoreAccessException e) {
+				if (exceptionPageIDs == null) {
+					exceptionPageIDs = new ArrayList<PageID>();
+				}
+				exceptionPageIDs.add(pageID);
+			}
+		}
+		if (exceptionPageIDs != null) {
+			throw new IndexOperationException(String.format(
+					"Error deleting overflow values %s.", exceptionPageIDs));
 		}
 	}
 
@@ -317,7 +328,7 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 			PageID pageID = page.getPageID();
 			int unitID = page.getUnitID();
 			page.cleanup();
-			page.getBuffer().deletePage(tx, pageID, unitID, true, -1);
+			page.getBuffer().deletePage(tx, pageID, unitID);
 		} catch (BufferException e) {
 			throw new IndexOperationException(e, "Error deleting page");
 		}
