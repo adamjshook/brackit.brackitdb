@@ -128,7 +128,7 @@ public class DefaultBlockSpaceTest {
 		try {
 			bs.open();
 
-			lba1 = bs.allocate(-1, unitID);
+			lba1 = bs.allocate(-1, unitID, false);
 
 			bs.close();
 		} catch (StoreException e) {
@@ -138,7 +138,7 @@ public class DefaultBlockSpaceTest {
 		try {
 			bs.open();
 
-			lba2 = bs.allocate(-1, unitID);
+			lba2 = bs.allocate(-1, unitID, false);
 
 			bs.close();
 		} catch (StoreException e) {
@@ -152,7 +152,7 @@ public class DefaultBlockSpaceTest {
 			bs.open();
 
 			for (int i = 0; i < INIT_SIZE * 2; i++) {
-				bs.allocate(-1, unitID);
+				bs.allocate(-1, unitID, false);
 			}
 
 			bs.close();
@@ -164,7 +164,7 @@ public class DefaultBlockSpaceTest {
 			bs.open();
 
 			for (int i = 0; i < INIT_SIZE * 2; i++) {
-				lba2 = bs.allocate(-1, unitID);
+				lba2 = bs.allocate(-1, unitID, false);
 			}
 			assertTrue(lba2 == 4098);
 
@@ -193,11 +193,11 @@ public class DefaultBlockSpaceTest {
 			bs.open();
 
 			byte[] blk = new byte[BLOCK_SIZE];
-			int lba = bs.allocate(-1, unitID);
+			int lba = bs.allocate(-1, unitID, false);
 
 			// assertTrue(blk[0] == DefaultBlockSpace.BLOCK_IN_USE);
 
-			bs.release(lba, unitID);
+			bs.release(lba, unitID, false);
 
 			// assertTrue(blk[0] == ~DefaultBlockSpace.BLOCK_IN_USE);
 
@@ -210,7 +210,7 @@ public class DefaultBlockSpaceTest {
 			bs.open();
 
 			byte[] blk = new byte[BLOCK_SIZE];
-			int lba = bs.allocate(-1, unitID);
+			int lba = bs.allocate(-1, unitID, false);
 
 			// assertTrue(blk[0] == DefaultBlockSpace.BLOCK_IN_USE);
 
@@ -218,7 +218,7 @@ public class DefaultBlockSpaceTest {
 
 			bs.open();
 
-			bs.release(lba, unitID);
+			bs.release(lba, unitID, false);
 		} catch (StoreException e) {
 			e.printStackTrace();
 		}
@@ -285,7 +285,7 @@ public class DefaultBlockSpaceTest {
 			bs.open();
 
 			for (int i = 0; i < INIT_SIZE; i++) {
-				bs.allocate(-1, unitID);
+				bs.allocate(-1, unitID, false);
 			}
 
 			bs.close();
@@ -333,7 +333,7 @@ public class DefaultBlockSpaceTest {
 				blk[i] = (byte) 1;
 			}
 			for (int i = 0; i < INIT_SIZE; i++) {
-				int lba = bs.allocate(-1, unitID);
+				int lba = bs.allocate(-1, unitID, false);
 				bs.write(lba, blk, 1);
 			}
 
@@ -379,7 +379,7 @@ public class DefaultBlockSpaceTest {
 		int lba = -1;
 		
 		try {
-			lba = bs.allocate(-1, 2);
+			lba = bs.allocate(-1, 2, false);
 		} catch (StoreException ex) {
 			e = ex;
 		}
@@ -390,7 +390,7 @@ public class DefaultBlockSpaceTest {
 		bs.createUnit(-1);
 		e = null;
 		try {
-			lba = bs.allocate(-1, 2);
+			lba = bs.allocate(-1, 2, false);
 		} catch (StoreException ex) {
 			e = ex;
 		}
@@ -398,14 +398,14 @@ public class DefaultBlockSpaceTest {
 		assertNull(e);
 		
 		// release block again
-		bs.release(lba, 99);
+		bs.release(lba, 99, false);
 		
 		// create a third unit
 		bs.createUnit(-1);
 		
 		// allocate blocks in each unit
 		for (int i = 1; i <= 9999; i++) {
-			lba = bs.allocate(-1, (i % 3) + 1);
+			lba = bs.allocate(-1, (i % 3) + 1, false);
 			if (i == 1) {
 				// first allocate should deliver block 1 again
 				assertEquals(lba, 1);
@@ -421,7 +421,7 @@ public class DefaultBlockSpaceTest {
 		bs.createUnit(-1);
 		// fill unit 4
 		for (int i = 1; i <= 3333; i++) {
-			lba = bs.allocate(-1, 4);
+			lba = bs.allocate(-1, 4, false);
 			assertEquals(lba % 3, 0);
 		}
 		
@@ -431,7 +431,7 @@ public class DefaultBlockSpaceTest {
 		bs.createUnit(-1);
 		// fill unit 5
 		for (int i = 1; i <= 3333; i++) {
-			lba = bs.allocate(-1, 5);
+			lba = bs.allocate(-1, 5, false);
 			assertEquals(lba % 3, 1);
 		}
 		
@@ -441,7 +441,7 @@ public class DefaultBlockSpaceTest {
 		bs.createUnit(-1);
 		// fill unit 6
 		for (int i = 1; i <= 3333; i++) {
-			lba = bs.allocate(-1, 6);
+			lba = bs.allocate(-1, 6, false);
 			assertEquals(lba % 3, 2);
 		}		
 	}

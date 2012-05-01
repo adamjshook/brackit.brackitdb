@@ -61,9 +61,12 @@ public interface BlockSpace {
 	 * @param unitID
 	 *            The unitID this block will be assigned to. If the unit does
 	 *            not exist, an exception will be thrown.
+	 * @param force
+	 *            if lba != -1, this flag forces the allocation of the given
+	 *            block, even if it is already allocated
 	 * @return the logical block address (lba) of the newly allocated block
 	 */
-	int allocate(int lba, int unitID) throws StoreException;
+	int allocate(int lba, int unitID, boolean force) throws StoreException;
 
 	/**
 	 * the opposite of allocate: marking the block identified by the lba as
@@ -71,8 +74,11 @@ public interface BlockSpace {
 	 * unitID this block is assigned to. Otherwise, set it to -1.
 	 * 
 	 * @param lba
+	 * @param force
+	 *            this flag forces the deallocation of the given block, even if
+	 *            it is already deallocated
 	 */
-	void release(int lba, int hintUnitID) throws StoreException;
+	void release(int lba, int unitID, boolean force) throws StoreException;
 
 	int read(int lba, byte[] buffer, int numBlocks) throws StoreException;
 

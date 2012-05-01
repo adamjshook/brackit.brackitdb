@@ -89,8 +89,7 @@ public class SimpleBlobStore implements BlobStore {
 			SimpleBlobPage page = new SimpleBlobPage(buffer, nextOverflowHandle);
 
 			page.deleteTail(tx);
-			buffer.deletePage(tx, nextOverflowHandle.getPageID(), nextOverflowHandle.getUnitID(), true, tx
-					.checkPrevLSN());
+			buffer.deletePage(tx, nextOverflowHandle.getPageID(), nextOverflowHandle.getUnitID());
 			page.cleanup();
 		} catch (BufferException e) {
 			throw new BlobStoreAccessException(e, "Could not delete blob page");

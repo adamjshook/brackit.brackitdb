@@ -54,11 +54,20 @@ public interface Buffer {
 
 	public Handle allocatePage(Tx tx, int unitID) throws BufferException;
 
+	/**
+	 * @param force
+	 *            if pageID != null, this flag forces the allocation of the
+	 *            given pageID, even if it is already allocated
+	 */
 	public Handle allocatePage(Tx tx, int unitID, PageID pageID,
-			boolean logged, long undoNextLSN) throws BufferException;
+			boolean logged, long undoNextLSN, boolean force)
+			throws BufferException;
 
-	public void deletePage(Tx tx, PageID pageID, int unitID, boolean logged,
-			long undoNextLSN) throws BufferException;
+	/**
+	 * Deletes a page at the end of transaction.
+	 */
+	public void deletePage(Tx tx, PageID pageID, int unitID)
+			throws BufferException;
 
 	public Handle fixPage(Tx tx, PageID pageID) throws BufferException;
 
@@ -102,9 +111,9 @@ public interface Buffer {
 			throws BufferException;
 
 	/**
-	 * Adds a PostRedoHook to the transaction so that the given pages and
-	 * units are released after the COMMIT log record is found in the log. This
-	 * method has only an effect when invoked during the Redo phase.
+	 * Adds a PostRedoHook to the transaction so that the given pages and units
+	 * are released after the COMMIT log record is found in the log. This method
+	 * has only an effect when invoked during the Redo phase.
 	 */
 	public void releaseAfterRedo(Tx tx, PageUnitPair[] pages, int[] units);
 }

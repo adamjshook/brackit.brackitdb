@@ -74,7 +74,7 @@ public final class AllocatePageLogOperation extends SinglePageLogOperation {
 					log.debug(String.format("Reallocating page %s.", pageID));
 				}
 
-				handle = buffer.allocatePage(tx, unitID, pageID, false, -1);
+				handle = buffer.allocatePage(tx, unitID, pageID, false, -1, true);
 				handle.setLSN(LSN);
 				handle.unlatch();
 

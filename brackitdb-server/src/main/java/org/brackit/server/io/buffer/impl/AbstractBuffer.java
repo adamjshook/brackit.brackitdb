@@ -140,26 +140,31 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 		@Override
 		public void abort(Tx tx) throws ServerException {
-			// nothing to do here, since the log records produced in the prepare
-			// method do not harm in case of an undo.
+			// nothing to do here, since the log record produced in the prepare
+			// method does not harm in case of an undo.
 		}
 
 		@Override
 		public void execute(Tx tx) throws ServerException {
 			// this method is executed right after commit in a separate
 			// transaction -> release the blocks physically
-			execute();
+			executeInternal(false);
 		}
 
 		@Override
 		public void execute() throws ServerException {
+			// this method is executed at the end of the redo recovery phase
+			executeInternal(true);
+		}
+		
+		private void executeInternal(boolean force) throws ServerException {
 			
 			List<PageID> failedPages = new ArrayList<PageID>();
 			List<Integer> failedUnits = new ArrayList<Integer>();
 			
 			for (PageUnitPair entry : pageList) {
 				try {
-					deallocateBlock(entry.pageID, entry.unitID);
+					deallocateBlock(entry.pageID, entry.unitID, force);
 				} catch (BufferException e) {
 					// log the exception, but continue to deallocate the
 					// remaining blocks
@@ -405,11 +410,11 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 	public synchronized Handle allocatePage(Tx tx, int unitID)
 			throws BufferException {
-		return allocatePage(tx, unitID, null, true, -1);
+		return allocatePage(tx, unitID, null, true, -1, false);
 	}
 
 	public synchronized Handle allocatePage(Tx tx, int unitID, PageID pageID,
-			boolean logged, long undoNextLSN) throws BufferException {
+			boolean logged, long undoNextLSN, boolean force) throws BufferException {
 
 		if (DEBUG) {
 			if (unitID <= 0) {
@@ -432,7 +437,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 		try {
 			evict(victim);
-			pageID = allocateBlock(pageID, unitID);
+			pageID = allocateBlock(pageID, unitID, force);
 
 			if (logged) {
 				try {
@@ -475,7 +480,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 	}
 
 	public synchronized void deletePage(Tx transaction, PageID pageID,
-			int unitID, boolean logged, long undoNextLSN)
+			int unitID)
 			throws BufferException {
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Deleting page %s.", pageID));
@@ -535,7 +540,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			frame.drop();
 			pool.remove(frame);
 		}
-		deallocateBlock(pageID, unitID);
+		deallocateBlock(pageID, unitID, true);
 	}
 
 	private int readBlocks(PageID pageID, byte[] buffer, int numOfBlocks)
@@ -573,7 +578,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		}
 	}
 
-	private PageID allocateBlock(PageID pageID, int unitID)
+	private PageID allocateBlock(PageID pageID, int unitID, boolean force)
 			throws BufferException {
 		int blockNo = (pageID != null) ? pageID.getBlockNo() : -1;
 		if (log.isTraceEnabled()) {
@@ -581,7 +586,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 					pageID));
 		}
 		try {
-			int allocatedBlockNo = blockSpace.allocate(blockNo, unitID);
+			int allocatedBlockNo = blockSpace.allocate(blockNo, unitID, force);
 			PageID allocatedPageID = new PageID(getContainerNo(),
 					allocatedBlockNo);
 			if ((pageID == null) && log.isTraceEnabled()) {
@@ -600,14 +605,14 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		tx.addPostRedoHook(new DeallocateHook(pages, units));
 	}
 
-	private void deallocateBlock(PageID pageID, int unitID)
+	private void deallocateBlock(PageID pageID, int unitID, boolean force)
 			throws BufferException {
 		if (log.isDebugEnabled()) {
 			log.debug(String.format("Releasing block %s of page %s",
 					pageID.getBlockNo(), pageID));
 		}
 		try {
-			blockSpace.release(pageID.getBlockNo(), unitID);
+			blockSpace.release(pageID.getBlockNo(), unitID, force);
 		} catch (StoreException e) {
 			throw new BufferException(e,
 					"Releasing block %s of page %s failed",
