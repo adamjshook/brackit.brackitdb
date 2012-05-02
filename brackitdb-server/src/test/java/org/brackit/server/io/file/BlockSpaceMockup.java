@@ -173,13 +173,13 @@ public class BlockSpaceMockup implements BlockSpace {
 	}
 
 	@Override
-	public int createUnit(int unitID) throws StoreException {
+	public int createUnit(int unitID, boolean force) throws StoreException {
 		// TODO Auto-generated method stub
 		return 0;
 	}
 
 	@Override
-	public void dropUnit(int unitID) throws StoreException {
+	public void dropUnit(int unitID, boolean force) throws StoreException {
 		// TODO Auto-generated method stub
 		
 	}

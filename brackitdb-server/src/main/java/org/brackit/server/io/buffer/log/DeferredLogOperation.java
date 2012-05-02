@@ -27,28 +27,60 @@
  */
 package org.brackit.server.io.buffer.log;
 
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.buffer.BufferException;
-import org.brackit.server.io.buffer.Handle;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.log.LogException;
+import org.brackit.server.tx.log.SizeConstants;
 import org.brackit.xquery.util.log.Logger;
 
 /**
- * This log record is only used for undoing page allocations. The Undo operation
- * of this log record is therefore never invoked.
+ * This LogOperation logs the deferred deallocation of single pages and whole
+ * units at once.
  * 
  * @author Sebastian Baechle
  * 
  */
-public final class DeallocatePageLogOperation extends SinglePageLogOperation {
+public final class DeferredLogOperation extends PageLogOperation {
 
 	private final static Logger log = Logger
-			.getLogger(DeallocatePageLogOperation.class.getName());
+			.getLogger(DeferredLogOperation.class.getName());
 
-	public DeallocatePageLogOperation(PageID pageID, int unitID) {
-		super(PageLogOperation.DEALLOCATE, pageID, unitID);
+	private final int containerID;
+	private final PageUnitPair[] pages;
+	private final int[] units;
+
+	public DeferredLogOperation(int containerID,
+			PageUnitPair[] pages, int[] units) {
+		super(PageLogOperation.DEALLOCATE_DEFERRED);
+		this.containerID = containerID;
+		this.pages = pages;
+		this.units = units;
+	}
+
+	@Override
+	public int getSize() {
+		return 3 * SizeConstants.INT_SIZE + pages.length
+				* (PageID.getSize() + SizeConstants.INT_SIZE) + units.length
+				* SizeConstants.INT_SIZE;
+	}
+
+	@Override
+	public void toBytes(ByteBuffer bb) {
+		bb.putInt(containerID);
+		bb.putInt(pages.length);
+		for (PageUnitPair page : pages) {
+			bb.put(page.pageID.getBytes());
+			bb.putInt(page.unitID);
+		}
+		bb.putInt(units.length);
+		for (int unitID : units) {
+			bb.putInt(unitID);
+		}
 	}
 
 	@Override
@@ -56,33 +88,30 @@ public final class DeallocatePageLogOperation extends SinglePageLogOperation {
 		Buffer buffer = null;
 
 		try {
-			buffer = tx.getBufferManager().getBuffer(pageID);
-
-			try {
-				if (log.isDebugEnabled()) {
-					log.debug(String.format("Redeallocating page %s.", pageID));
-				}
-				buffer.releasePageForRecovery(tx, pageID, -1, false, -1);
-			} catch (BufferException e) {
-				throw new LogException(e, "Could not deallocate page %s.",
-						pageID);
-			}
+			buffer = tx.getBufferManager().getBuffer(containerID);
 		} catch (BufferException e) {
-			if (log.isDebugEnabled()) {
-				log.debug(String
-						.format("Page %s is already allocated.", pageID));
-			}
+			throw new LogException(e);
 		}
+
+		if (log.isDebugEnabled()) {
+			log.debug("Adding PostRedoHook to transaction.");
+		}
+
+		buffer.releaseAfterRedo(tx, pages, units);
 	}
 
 	@Override
 	public void undo(Tx tx, long LSN, long undoNextLSN) throws LogException {
-		throw new UnsupportedOperationException(
-				"This log record can only be used as CLR. Undo is therefore impossible.");
+
+		// Tx crashed between logging this record (as PreCommitHook) and Commit
+		// -> don't do anything, since the PostRedoHook created by the redo
+		// method will not be executed
 	}
 
 	@Override
 	public String toString() {
-		return String.format("%s(%s)", getClass().getSimpleName(), pageID);
+		return String.format("%s(Pages: %s, Units: %s)", getClass()
+				.getSimpleName(), Arrays.toString(pages), Arrays
+				.toString(units));
 	}
 }

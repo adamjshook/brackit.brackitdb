@@ -36,57 +36,39 @@ import org.brackit.server.tx.log.LogException;
 import org.brackit.xquery.util.log.Logger;
 
 /**
+ * 
  * @author Sebastian Baechle
  * 
  */
-public final class AllocatePageLogOperation extends SinglePageLogOperation {
+public final class DeallocateLogOperation extends SinglePageLogOperation {
 
 	private final static Logger log = Logger
-			.getLogger(AllocatePageLogOperation.class.getName());
+			.getLogger(DeallocateLogOperation.class.getName());
 
-	public AllocatePageLogOperation(PageID pageID, int unitID) {
-		super(PageLogOperation.ALLOCATE, pageID, unitID);
+	public DeallocateLogOperation(PageID pageID, int unitID) {
+		super(PageLogOperation.DEALLOCATE, pageID, unitID);
 	}
 
 	@Override
 	public void redo(Tx tx, long LSN) throws LogException {
-		Handle handle = null;
 		Buffer buffer = null;
 
 		try {
 			buffer = tx.getBufferManager().getBuffer(pageID);
-			handle = buffer.fixPage(tx, pageID);
 
+			try {
+				if (log.isDebugEnabled()) {
+					log.debug(String.format("Redeallocating page %s.", pageID));
+				}
+				buffer.deletePage(tx, pageID, -1, false, -1, true);
+			} catch (BufferException e) {
+				throw new LogException(e, "Could not deallocate page %s.",
+						pageID);
+			}
+		} catch (BufferException e) {
 			if (log.isDebugEnabled()) {
 				log.debug(String
 						.format("Page %s is already allocated.", pageID));
-			}
-
-			try {
-				buffer.unfixPage(handle);
-			} catch (BufferException e) {
-				throw new LogException(e, "Unfix of page %s failed.", pageID);
-			}
-		} catch (BufferException e) {
-			// page does not exist -> redo
-			try {
-				if (log.isDebugEnabled()) {
-					log.debug(String.format("Reallocating page %s.", pageID));
-				}
-
-				handle = buffer.allocatePage(tx, unitID, pageID, false, -1, true);
-				handle.setLSN(LSN);
-				handle.unlatch();
-
-				try {
-					buffer.unfixPage(handle);
-				} catch (BufferException e2) {
-					throw new LogException(e2, "Unfix of page %s failed.",
-							pageID);
-				}
-			} catch (BufferException e1) {
-				throw new LogException(e1, "Reallocation of page %s failed.",
-						pageID);
 			}
 		}
 	}
@@ -94,27 +76,26 @@ public final class AllocatePageLogOperation extends SinglePageLogOperation {
 	@Override
 	public void undo(Tx tx, long LSN, long undoNextLSN) throws LogException {
 		Buffer buffer = null;
-
-		try {
-			buffer = tx.getBufferManager().getBuffer(pageID);
-		} catch (BufferException e) {
-			/*
-			 * This must not happen because a page allocation/deletion is only
-			 * allowed during an SMO and therefore a the page must not have been
-			 * deleted by a concurrent transaction.
-			 */
-			log.error(String.format("Could not fix page %s.", pageID), e);
-			throw new LogException(e, "Could not fix page %s for deletion.",
-					pageID);
-		}
+		Handle handle = null;
 
 		try {
 			if (log.isDebugEnabled()) {
-				log.debug(String.format("Deallocating page %s.", pageID));
+				log.debug(String.format("Allocating page %s.", pageID));
 			}
-			buffer.releasePageForRecovery(tx, pageID, -1, true, undoNextLSN);
+
+			buffer = tx.getBufferManager().getBuffer(pageID);
+			handle = buffer.allocatePage(tx, unitID, pageID, true, undoNextLSN, false, true);
 		} catch (BufferException e) {
-			throw new LogException(e, "Could not deallocate page %s.", pageID);
+			throw new LogException(e, "Could not allocate page %s.", pageID);
+		}
+
+		handle.unlatch();
+
+		try {
+			buffer.unfixPage(handle);
+		} catch (BufferException e) {
+			log.error("Error unfixing page after failed allocation.", e);
+			throw new LogException(e, "Error unfixing page after allocation");
 		}
 	}
 

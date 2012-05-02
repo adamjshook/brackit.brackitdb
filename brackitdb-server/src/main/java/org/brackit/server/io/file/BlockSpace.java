@@ -43,8 +43,9 @@ public interface BlockSpace {
 	 * @param unitID
 	 *            requested unitID; if -1, the unitID will be assigned
 	 *            automatically.
+	 * @param force TODO
 	 */
-	int createUnit(int unitID) throws StoreException;
+	int createUnit(int unitID, boolean force) throws StoreException;
 
 	void open() throws StoreException;
 
@@ -101,5 +102,5 @@ public interface BlockSpace {
 
 	void sync() throws StoreException;
 
-	void dropUnit(int unitID) throws StoreException;
+	void dropUnit(int unitID, boolean force) throws StoreException;
 }

@@ -129,10 +129,12 @@ public class Handle extends SyncLatch {
 		return Calc.toInt(page, 0);
 	}
 
-	public void init(PageID pageID, int unitID) {
+	public void init(PageID pageID, int unitID, boolean format) {
 		this.pageID = pageID;
 		cache.set(null);
-		Arrays.fill(page, 0, page.length, (byte) 0);
+		if (format) {
+			Arrays.fill(page, 0, page.length, (byte) 0);
+		}
 		setRedoLSN(Long.MAX_VALUE);
 		resetFlags();
 		// set unitID

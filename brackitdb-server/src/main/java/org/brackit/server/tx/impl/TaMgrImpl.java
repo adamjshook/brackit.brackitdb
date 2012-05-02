@@ -179,7 +179,7 @@ public class TaMgrImpl implements TxMgr {
 				logOp.redo(tx, loggable.getLSN());
 				break;
 			case Loggable.TYPE_UPDATE_SPECIAL:
-				tx.setPrevLSN(loggable.getUndoNextLSN());
+				tx.setPrevLSN(loggable.getLSN());
 
 				if (log.isDebugEnabled()) {
 					log.debug(String.format("Performing Redo of UPDATE SPECIAL %s: %s",

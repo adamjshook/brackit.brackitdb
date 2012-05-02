@@ -1164,7 +1164,7 @@ public class KeyValuePageContext extends SimpleBlobStore implements PageContext 
 			PageID pageID = page.getPageID();
 			int unitID = page.getHandle().getUnitID();
 			page.cleanup();
-			page.getBuffer().deletePage(transaction, pageID, unitID);
+			page.getBuffer().deletePageDeferred(transaction, pageID, unitID);
 		} catch (BufferException e) {
 			throw new IndexOperationException(e, "Error deleting page");
 		}

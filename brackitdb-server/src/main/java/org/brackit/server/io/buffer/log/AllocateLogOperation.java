@@ -27,94 +27,99 @@
  */
 package org.brackit.server.io.buffer.log;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.Handle;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.log.LogException;
-import org.brackit.server.tx.log.SizeConstants;
 import org.brackit.xquery.util.log.Logger;
 
 /**
- * This LogOperation logs the deferred deallocation of single pages and whole
- * units at once.
- * 
  * @author Sebastian Baechle
  * 
  */
-public final class DeallocateDeferredPageLogOperation extends PageLogOperation {
+public final class AllocateLogOperation extends SinglePageLogOperation {
 
 	private final static Logger log = Logger
-			.getLogger(DeallocateDeferredPageLogOperation.class.getName());
+			.getLogger(AllocateLogOperation.class.getName());
 
-	private final int containerID;
-	private final PageUnitPair[] pages;
-	private final int[] units;
-
-	public DeallocateDeferredPageLogOperation(int containerID,
-			PageUnitPair[] pages, int[] units) {
-		super(PageLogOperation.DEALLOCATE_DEFERRED);
-		this.containerID = containerID;
-		this.pages = pages;
-		this.units = units;
-	}
-
-	@Override
-	public int getSize() {
-		return 3 * SizeConstants.INT_SIZE + pages.length
-				* (PageID.getSize() + SizeConstants.INT_SIZE) + units.length
-				* SizeConstants.INT_SIZE;
-	}
-
-	@Override
-	public void toBytes(ByteBuffer bb) {
-		bb.putInt(containerID);
-		bb.putInt(pages.length);
-		for (PageUnitPair page : pages) {
-			bb.put(page.pageID.getBytes());
-			bb.putInt(page.unitID);
-		}
-		bb.putInt(units.length);
-		for (int unitID : units) {
-			bb.putInt(unitID);
-		}
+	public AllocateLogOperation(PageID pageID, int unitID) {
+		super(PageLogOperation.ALLOCATE, pageID, unitID);
 	}
 
 	@Override
 	public void redo(Tx tx, long LSN) throws LogException {
+		Handle handle = null;
 		Buffer buffer = null;
 
 		try {
-			buffer = tx.getBufferManager().getBuffer(containerID);
+			buffer = tx.getBufferManager().getBuffer(pageID);
+			handle = buffer.fixPage(tx, pageID);
+
+			if (log.isDebugEnabled()) {
+				log.debug(String
+						.format("Page %s is already allocated.", pageID));
+			}
+
+			try {
+				buffer.unfixPage(handle);
+			} catch (BufferException e) {
+				throw new LogException(e, "Unfix of page %s failed.", pageID);
+			}
 		} catch (BufferException e) {
-			throw new LogException(e);
-		}
+			// page does not exist -> redo
+			try {
+				if (log.isDebugEnabled()) {
+					log.debug(String.format("Reallocating page %s.", pageID));
+				}
 
-		if (log.isDebugEnabled()) {
-			log.debug("Adding PostRedoHook to transaction.");
-		}
+				handle = buffer.allocatePage(tx, unitID, pageID, false, -1, true, false);
+				handle.setLSN(LSN);
+				handle.unlatch();
 
-		buffer.releaseAfterRedo(tx, pages, units);
+				try {
+					buffer.unfixPage(handle);
+				} catch (BufferException e2) {
+					throw new LogException(e2, "Unfix of page %s failed.",
+							pageID);
+				}
+			} catch (BufferException e1) {
+				throw new LogException(e1, "Reallocation of page %s failed.",
+						pageID);
+			}
+		}
 	}
 
 	@Override
 	public void undo(Tx tx, long LSN, long undoNextLSN) throws LogException {
+		Buffer buffer = null;
 
-		// Tx crashed between logging this record (as PreCommitHook) and Commit
-		// -> don't do anything, since the PostRedoHook created by the redo
-		// method will not be executed
+		try {
+			buffer = tx.getBufferManager().getBuffer(pageID);
+		} catch (BufferException e) {
+			/*
+			 * This must not happen because a page allocation/deletion is only
+			 * allowed during an SMO and therefore a the page must not have been
+			 * deleted by a concurrent transaction.
+			 */
+			log.error(String.format("Could not fix page %s.", pageID), e);
+			throw new LogException(e, "Could not fix page %s for deletion.",
+					pageID);
+		}
+
+		try {
+			if (log.isDebugEnabled()) {
+				log.debug(String.format("Deallocating page %s.", pageID));
+			}
+			buffer.deletePage(tx, pageID, -1, true, undoNextLSN, false);
+		} catch (BufferException e) {
+			throw new LogException(e, "Could not deallocate page %s.", pageID);
+		}
 	}
 
 	@Override
 	public String toString() {
-		return String.format("%s(Pages: %s, Units: %s)", getClass()
-				.getSimpleName(), Arrays.toString(pages), Arrays
-				.toString(units));
+		return String.format("%s(%s)", getClass().getSimpleName(), pageID);
 	}
 }

@@ -328,7 +328,7 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 			PageID pageID = page.getPageID();
 			int unitID = page.getUnitID();
 			page.cleanup();
-			page.getBuffer().deletePage(tx, pageID, unitID);
+			page.getBuffer().deletePageDeferred(tx, pageID, unitID);
 		} catch (BufferException e) {
 			throw new IndexOperationException(e, "Error deleting page");
 		}

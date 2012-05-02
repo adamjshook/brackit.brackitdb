@@ -1160,6 +1160,11 @@ public final class BracketTree extends PageContextFactory {
 
 				// Split & insert
 				page = splitInsert(tx, rootPageID, page, nodesToInsert, logged);
+				
+				// skip insertion in case of undo processing
+				if (logged && undoNextLSN != -1) {
+					logDummyCLR(tx, undoNextLSN);
+				}
 			}
 
 			if (log.isTraceEnabled()) {
@@ -2572,7 +2577,6 @@ public final class BracketTree extends PageContextFactory {
 
 			// skip underflow handling during undo processing
 			logDummyCLR(tx, beforeLSN);
-			// }
 
 		} catch (IndexOperationException e) {
 			if (previous != null) {

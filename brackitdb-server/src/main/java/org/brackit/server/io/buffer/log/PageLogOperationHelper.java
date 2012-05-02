@@ -49,6 +49,8 @@ public class PageLogOperationHelper implements LogOperationHelper {
 		operationTypes.add(PageLogOperation.ALLOCATE);
 		operationTypes.add(PageLogOperation.DEALLOCATE);
 		operationTypes.add(PageLogOperation.DEALLOCATE_DEFERRED);
+		operationTypes.add(PageLogOperation.CREATE_UNIT);
+		operationTypes.add(PageLogOperation.DROP_UNIT);
 	}
 
 	@Override
@@ -62,51 +64,62 @@ public class PageLogOperationHelper implements LogOperationHelper {
 
 		switch (type) {
 		case PageLogOperation.ALLOCATE:
-			return createAllocatePageLogOperation(buffer);
+			return createAllocateLogOperation(buffer);
 		case PageLogOperation.DEALLOCATE:
-			return createDeallocatePageLogOperation(buffer);
+			return createDeallocateLogOperation(buffer);
 		case PageLogOperation.DEALLOCATE_DEFERRED:
-			return createDeallocateDeferredPageLogOperation(buffer);
+			return createDeferredLogOperation(buffer);
+		case PageLogOperation.CREATE_UNIT:
+			return createUnitLogOperation(true, buffer);
+		case PageLogOperation.DROP_UNIT:
+			return createUnitLogOperation(false, buffer);
 		default:
 			throw new LogException("Unknown operation type: %s.", type);
 		}
 	}
-	
-	private LogOperation createAllocatePageLogOperation(ByteBuffer bb) {
+
+	private LogOperation createAllocateLogOperation(ByteBuffer bb) {
 		PageID pageID = PageID.read(bb);
 		int unitID = bb.getInt();
-		return new AllocatePageLogOperation(pageID, unitID);
+		return new AllocateLogOperation(pageID, unitID);
 	}
-	
-	private LogOperation createDeallocatePageLogOperation(ByteBuffer bb) {
+
+	private LogOperation createDeallocateLogOperation(ByteBuffer bb) {
 		PageID pageID = PageID.read(bb);
 		int unitID = bb.getInt();
-		return new DeallocatePageLogOperation(pageID, unitID);
+		return new DeallocateLogOperation(pageID, unitID);
 	}
-	
-	private LogOperation createDeallocateDeferredPageLogOperation(ByteBuffer bb) {
-		
+
+	private LogOperation createDeferredLogOperation(ByteBuffer bb) {
+
 		// read containerID
 		int containerID = bb.getInt();
-		
+
 		// read single pages
 		int length = bb.getInt();
 		PageUnitPair[] pages = new PageUnitPair[length];
-		
+
 		for (int i = 0; i < length; i++) {
 			PageID pageID = PageID.read(bb);
 			int unitID = bb.getInt();
 			pages[i] = new PageUnitPair(pageID, unitID);
 		}
-		
+
 		// read units
 		length = bb.getInt();
 		int[] units = new int[length];
-		
+
 		for (int i = 0; i < length; i++) {
 			units[i] = bb.getInt();
 		}
-		
-		return new DeallocateDeferredPageLogOperation(containerID, pages, units);
+
+		return new DeferredLogOperation(containerID, pages, units);
+	}
+
+	private LogOperation createUnitLogOperation(boolean create, ByteBuffer bb) {
+		int containerID = bb.getInt();
+		int unitID = bb.getInt();
+		return (create ? new CreateUnitLogOperation(containerID, unitID)
+				: new DropUnitLogOperation(containerID, unitID));
 	}
 }

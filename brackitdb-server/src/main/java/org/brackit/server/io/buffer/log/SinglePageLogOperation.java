@@ -49,10 +49,6 @@ public abstract class SinglePageLogOperation extends LogOperation {
 		this.unitID = unitID;
 	}
 
-	public PageID getPageID() {
-		return this.pageID;
-	}
-
 	@Override
 	public void toBytes(ByteBuffer bb) {
 		bb.put(pageID.getBytes());

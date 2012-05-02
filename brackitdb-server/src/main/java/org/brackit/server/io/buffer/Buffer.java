@@ -48,9 +48,11 @@ public interface Buffer {
 	 *            requested unitID; if -1, the unitID will be assigned
 	 *            automatically.
 	 */
-	public int createUnit(int unitID) throws BufferException;
+	public int createUnit(Tx tx, int unitID, boolean logged, long undoNextLSN,
+			boolean force) throws BufferException;
 
-	public void dropUnit(int unitID) throws BufferException;
+	public void dropUnit(Tx tx, int unitID, boolean logged, long undoNextLSN,
+			boolean force) throws BufferException;
 
 	public Handle allocatePage(Tx tx, int unitID) throws BufferException;
 
@@ -58,15 +60,16 @@ public interface Buffer {
 	 * @param force
 	 *            if pageID != null, this flag forces the allocation of the
 	 *            given pageID, even if it is already allocated
+	 * @param format TODO
 	 */
 	public Handle allocatePage(Tx tx, int unitID, PageID pageID,
-			boolean logged, long undoNextLSN, boolean force)
+			boolean logged, long undoNextLSN, boolean force, boolean format)
 			throws BufferException;
 
 	/**
 	 * Deletes a page at the end of transaction.
 	 */
-	public void deletePage(Tx tx, PageID pageID, int unitID)
+	public void deletePageDeferred(Tx tx, PageID pageID, int unitID)
 			throws BufferException;
 
 	public Handle fixPage(Tx tx, PageID pageID) throws BufferException;
@@ -102,13 +105,11 @@ public interface Buffer {
 	public boolean isFixed(Handle handle);
 
 	/**
-	 * Releases/deallocates the page immediately. This method may only be used
-	 * during the recovery phase. During normal DB execution the deletePage(...)
-	 * method needs to be used.
+	 * Releases/deallocates the page immediately.
+	 * @param force TODO
 	 */
-	public void releasePageForRecovery(Tx transaction, PageID pageID,
-			int unitID, boolean logged, long undoNextLSN)
-			throws BufferException;
+	public void deletePage(Tx transaction, PageID pageID, int unitID,
+			boolean logged, long undoNextLSN, boolean force) throws BufferException;
 
 	/**
 	 * Adds a PostRedoHook to the transaction so that the given pages and units
@@ -116,4 +117,13 @@ public interface Buffer {
 	 * has only an effect when invoked during the Redo phase.
 	 */
 	public void releaseAfterRedo(Tx tx, PageUnitPair[] pages, int[] units);
+
+	public int createUnit(Tx tx) throws BufferException;
+
+	public void dropUnit(Tx tx, int unitID) throws BufferException;
+
+	public void deletePage(Tx transaction, PageID pageID, int unitID)
+			throws BufferException;
+
+	public void dropUnitDeferred(Tx tx, int unitID);
 }
