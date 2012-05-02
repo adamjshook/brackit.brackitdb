@@ -60,7 +60,7 @@ public final class DeallocateLogOperation extends SinglePageLogOperation {
 				if (log.isDebugEnabled()) {
 					log.debug(String.format("Redeallocating page %s.", pageID));
 				}
-				buffer.deletePage(tx, pageID, -1, false, -1, true);
+				buffer.deletePage(tx, pageID, unitID, false, -1, true);
 			} catch (BufferException e) {
 				throw new LogException(e, "Could not deallocate page %s.",
 						pageID);
@@ -84,7 +84,7 @@ public final class DeallocateLogOperation extends SinglePageLogOperation {
 			}
 
 			buffer = tx.getBufferManager().getBuffer(pageID);
-			handle = buffer.allocatePage(tx, unitID, pageID, true, undoNextLSN, false, true);
+			handle = buffer.allocatePage(tx, unitID, pageID, true, undoNextLSN, false);
 		} catch (BufferException e) {
 			throw new LogException(e, "Could not allocate page %s.", pageID);
 		}

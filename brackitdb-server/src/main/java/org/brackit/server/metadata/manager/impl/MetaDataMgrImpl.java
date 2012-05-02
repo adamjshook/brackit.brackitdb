@@ -108,7 +108,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	private final HookedCache<Integer, DBCollection<?>> collectionCache;
 
 	private final HookedCache<Integer, BlobHandle> blobCache;
-	
+
 	private final BracketStore bracketStore;
 
 	private final BlobStore blobStore;
@@ -140,8 +140,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	}
 
 	@Override
-	public DBCollection<?> lookup(Tx tx, int id)
-			throws ItemNotFoundException, DocumentException {
+	public DBCollection<?> lookup(Tx tx, int id) throws ItemNotFoundException,
+			DocumentException {
 		Item<Directory> item = getItemByID(tx, id, false);
 
 		if (!(item instanceof Collection)) {
@@ -157,16 +157,15 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			throws ItemNotFoundException, DocumentException {
 		// check for temporary document
 		if (storedNamePath.contains("://")) {
-			Collection coll = (Collection) itemCache.get(tx, storedNamePath
-					.toLowerCase());
+			Collection coll = (Collection) itemCache.get(tx,
+					storedNamePath.toLowerCase());
 
 			if (coll == null) {
 				throw new ItemNotFoundException(
 						"Temporary document not found: %s", storedNamePath);
 			}
 
-			DBCollection<?> collection = collectionCache.get(tx, coll
-					.getID());
+			DBCollection<?> collection = collectionCache.get(tx, coll.getID());
 
 			if (collection == null) {
 				throw new ItemNotFoundException(
@@ -198,8 +197,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		} else if (item instanceof Blob) {
 			return getBlob(tx, ((Blob) item).getID());
 		} else {
-			throw new MetaDataException("Unknown item type: %s", item
-					.getClass());
+			throw new MetaDataException("Unknown item type: %s",
+					item.getClass());
 		}
 	}
 
@@ -224,12 +223,13 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		TXCollection<?> collection = null;
 
 		StorageSpec spec = new StorageSpec(name, defaultDictionary);
-		BracketCollection bracketCollection = new BracketCollection(tx, bracketStore);
+		BracketCollection bracketCollection = new BracketCollection(tx,
+				bracketStore);
 		bracketCollection.create(spec, parser);
 
 		collection = bracketCollection;
-		Collection document = new Collection(collection.getID(), name, directory,
-				null);
+		Collection document = new Collection(collection.getID(), name,
+				directory, null);
 		collection.setPersistor(document);
 
 		// Finally persist and put into cache to make it available for others
@@ -243,7 +243,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	private void assertInsertion(Tx tx, Path<QNm> path, Directory parent)
 			throws MetaDataException, DocumentException {
 		Node<?> parentNode = parent.getMasterDocNode();
-		
+
 		// Check if object is already in cache
 		while (true) {
 			Item<Directory> item = itemCache.get(tx, path.toString());
@@ -260,7 +260,7 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 				throw new MetaDataException("%s already exists.", path);
 			}
 
-			// object from the cache has been concurrently deleted. 
+			// object from the cache has been concurrently deleted.
 			// Unlock and retry.
 			mls.unlockNode(tx, item.getMasterDocNode().getDeweyID());
 		}
@@ -270,8 +270,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 				.getIndexController();
 		Str name = new Str(path.toString());
 		Stream<? extends Node<?>> stream = indexController.openCASIndex(
-				mdNameCasIndexNo, null, name, null, true,
-				true, SearchMode.GREATER_OR_EQUAL);
+				mdNameCasIndexNo, null, name, null, true, true,
+				SearchMode.GREATER_OR_EQUAL);
 
 		try {
 			Node<?> child;
@@ -296,16 +296,15 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 		// Put locator in cache and re-assign item because it could have
 		// been loaded by another thread concurrently.
-		collection = collectionCache.putIfAbsent(tx, coll.getID(),
-				collection);
+		collection = collectionCache.putIfAbsent(tx, coll.getID(), collection);
 
 		// Ensure that collection is bound to requesting tx
 		collection = collection.copyFor(tx);
 
 		// Announce shared access to the collection
 		// TODO: shared lock on collection
-//		mls.lockNodeShared(tx, XTCdeweyID.newRootID(collection.getID()), tx
-//				.getIsolationLevel().lockClass(true), false);
+		// mls.lockNodeShared(tx, XTCdeweyID.newRootID(collection.getID()), tx
+		// .getIsolationLevel().lockClass(true), false);
 
 		return collection;
 	}
@@ -396,8 +395,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		try {
 			Node<?> attribute;
 			if ((attribute = stream.next()) != null) {
-				if (Integer.toString(id).equals(attribute.getValue()
-						.stringValue())) {
+				if (Integer.toString(id).equals(
+						attribute.getValue().stringValue())) {
 					name = attribute.getParent().getAttribute(NAME_ATTR)
 							.getValue().stringValue();
 				}
@@ -461,8 +460,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		if (BaseCollection.COLLECTION_TAG.equals(itemRootTag)) {
 			// SubtreePrinter.print(transaction, itemRoot, System.out);
 			int collID = Integer.parseInt(itemRoot
-					.getAttribute(BaseCollection.ID_ATTRIBUTE)
-					.getValue().stringValue());
+					.getAttribute(BaseCollection.ID_ATTRIBUTE).getValue()
+					.stringValue());
 			item = new Collection(collID, name, parent, itemRoot);
 		} else if (DIR_TAG.equals(itemRootTag)) {
 			Directory directory = new Directory(name, parent, itemRoot);
@@ -480,8 +479,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			item = directory;
 		} else if (BaseBlobHandle.BLOB_TAG.equals(itemRootTag)) {
 			int collID = Integer.parseInt(itemRoot
-					.getAttribute(BaseBlobHandle.ID_ATTRIBUTE)
-					.getValue().stringValue());
+					.getAttribute(BaseBlobHandle.ID_ATTRIBUTE).getValue()
+					.stringValue());
 			item = new Blob(collID, name, parent, itemRoot);
 		} else {
 			throw new MetaDataException("Unknown item tag: %s.", itemRootTag);
@@ -532,8 +531,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 			Blob blob = (Blob) item;
 			deleteBlob(tx, blob);
 		} else {
-			throw new MetaDataException("Unknown item type: %s", item
-					.getClass());
+			throw new MetaDataException("Unknown item type: %s",
+					item.getClass());
 		}
 
 		itemCache.remove(item.getName());
@@ -542,8 +541,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	private void deleteDirectory(Tx tx, Directory directory)
 			throws MetaDataException, DocumentException {
 		if (log.isDebugEnabled()) {
-			log.debug(String.format("Deleting directory %s.", directory
-					.getName()));
+			log.debug(String.format("Deleting directory %s.",
+					directory.getName()));
 		}
 
 		if (directory.getName().isEmpty()) {
@@ -577,12 +576,12 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 	private void deleteCollection(final Tx tx, Collection document)
 			throws DocumentException {
 		if (log.isDebugEnabled()) {
-			log.debug(String.format("Deleting collection %s.", document
-					.getName()));
+			log.debug(String.format("Deleting collection %s.",
+					document.getName()));
 		}
 
-		DBCollection<?> cachedCollection = collectionCache.get(tx, document
-				.getID());
+		DBCollection<?> cachedCollection = collectionCache.get(tx,
+				document.getID());
 		final DBCollection<?> collection;
 
 		if (cachedCollection == null) {
@@ -610,20 +609,9 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 		collectionCache.remove(document.getID());
 
-		// finally add an post commit hook to delete document physically
-		tx.addPostCommitHook(new PostCommitHook() {
-			public void execute(Tx tx) throws ServerException {
-				if (log.isDebugEnabled()) {
-					log.debug(String.format("Deleting locator of document %s.",
-							collection.getName()));
-				}
-				try {
-					collection.copyFor(tx).delete();
-				} catch (DocumentException e) {
-					throw new ServerException(e);
-				}
-			}
-		});
+		// physical deletion of the collection will be done at transaction
+		// commit
+		collection.delete();
 	}
 
 	@Override
@@ -750,20 +738,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 		blobCache.remove(blob.getID());
 
-		// finally add an post commit hook to delete document physically
-		tx.addPostCommitHook(new PostCommitHook() {
-			public void execute(Tx tx) throws ServerException {
-				if (log.isDebugEnabled()) {
-					log.debug(String.format("Deleting blob %s.", blobHandle
-							.getName()));
-				}
-				try {
-					blobHandle.copyFor(tx).delete();
-				} catch (DocumentException e) {
-					throw new ServerException(e);
-				}
-			}
-		});
+		// physical deletion of the blob will be done at transaction commit
+		blobHandle.delete();
 	}
 
 	private BlobHandle buildBlob(Tx tx, Blob blob) throws DocumentException {
@@ -820,8 +796,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		Path<String> rootPath = new Path<String>();
 
 		// create master document for cache
-		Collection document = new Collection(mdCollection.getID(), MASTERDOC_NAME,
-				mdRootDir, mdDocNode);
+		Collection document = new Collection(mdCollection.getID(),
+				MASTERDOC_NAME, mdRootDir, mdDocNode);
 		mdCollection.setPersistor(document);
 
 		itemCache.putIfAbsent(tx, rootPath.toString(), mdRootDir, true);
@@ -848,8 +824,8 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 		Path<String> rootPath = new Path<String>();
 
 		// create master document for cache
-		Collection document = new Collection(mdCollection.getID(), MASTERDOC_NAME,
-				mdRootDir, null);
+		Collection document = new Collection(mdCollection.getID(),
+				MASTERDOC_NAME, mdRootDir, null);
 		mdCollection.setPersistor(document);
 
 		itemCache.putIfAbsent(tx, rootPath.toString(), mdRootDir, true);
@@ -860,18 +836,18 @@ public class MetaDataMgrImpl implements MetaDataMgr {
 
 		List<Path<QNm>> paths = new LinkedList<Path<QNm>>();
 		paths.add(Path.parse("//@name"));
-		
-		IndexDef idxDef = 
-			IndexDefBuilder.createCASIdxDef(null, false, null, paths);
+
+		IndexDef idxDef = IndexDefBuilder.createCASIdxDef(null, false, null,
+				paths);
 		mdCollection.getIndexController().createIndexes(idxDef);
 		mdNameCasIndexNo = idxDef.getID();
-		
+
 		paths.clear();
 		paths.add(Path.parse("//@id"));
 		idxDef = IndexDefBuilder.createCASIdxDef(null, false, null, paths);
 		mdCollection.getIndexController().createIndexes(idxDef);
 		mdIDCasIndexNo = idxDef.getID();
-		
+
 		mdCollection.calculateStatistics();
 		mdCollection.persist();
 	}

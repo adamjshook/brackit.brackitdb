@@ -60,10 +60,9 @@ public interface Buffer {
 	 * @param force
 	 *            if pageID != null, this flag forces the allocation of the
 	 *            given pageID, even if it is already allocated
-	 * @param format TODO
 	 */
 	public Handle allocatePage(Tx tx, int unitID, PageID pageID,
-			boolean logged, long undoNextLSN, boolean force, boolean format)
+			boolean logged, long undoNextLSN, boolean force)
 			throws BufferException;
 
 	/**
@@ -126,4 +125,7 @@ public interface Buffer {
 			throws BufferException;
 
 	public void dropUnitDeferred(Tx tx, int unitID);
+
+	public void redoAllocation(Tx tx, PageID pageID, int unitID, long LSN)
+			throws BufferException;
 }

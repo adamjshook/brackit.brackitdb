@@ -50,44 +50,23 @@ public final class AllocateLogOperation extends SinglePageLogOperation {
 
 	@Override
 	public void redo(Tx tx, long LSN) throws LogException {
-		Handle handle = null;
+		
 		Buffer buffer = null;
 
 		try {
 			buffer = tx.getBufferManager().getBuffer(pageID);
-			handle = buffer.fixPage(tx, pageID);
-
-			if (log.isDebugEnabled()) {
-				log.debug(String
-						.format("Page %s is already allocated.", pageID));
-			}
-
-			try {
-				buffer.unfixPage(handle);
-			} catch (BufferException e) {
-				throw new LogException(e, "Unfix of page %s failed.", pageID);
-			}
 		} catch (BufferException e) {
-			// page does not exist -> redo
-			try {
-				if (log.isDebugEnabled()) {
-					log.debug(String.format("Reallocating page %s.", pageID));
-				}
-
-				handle = buffer.allocatePage(tx, unitID, pageID, false, -1, true, false);
-				handle.setLSN(LSN);
-				handle.unlatch();
-
-				try {
-					buffer.unfixPage(handle);
-				} catch (BufferException e2) {
-					throw new LogException(e2, "Unfix of page %s failed.",
-							pageID);
-				}
-			} catch (BufferException e1) {
-				throw new LogException(e1, "Reallocation of page %s failed.",
-						pageID);
-			}
+			throw new LogException(e);
+		}
+		
+		if (log.isDebugEnabled()) {
+			log.debug(String.format("Redo allocation of page %s.", pageID));
+		}
+		
+		try {
+			buffer.redoAllocation(tx, pageID, unitID, LSN);
+		} catch (BufferException e) {
+			throw new LogException(e);
 		}
 	}
 
@@ -110,9 +89,9 @@ public final class AllocateLogOperation extends SinglePageLogOperation {
 
 		try {
 			if (log.isDebugEnabled()) {
-				log.debug(String.format("Deallocating page %s.", pageID));
+				log.debug(String.format("Undo allocating page %s.", pageID));
 			}
-			buffer.deletePage(tx, pageID, -1, true, undoNextLSN, false);
+			buffer.deletePage(tx, pageID, unitID, true, undoNextLSN, false);
 		} catch (BufferException e) {
 			throw new LogException(e, "Could not deallocate page %s.", pageID);
 		}
