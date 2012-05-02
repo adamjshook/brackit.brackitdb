@@ -29,7 +29,6 @@ package org.brackit.server.store.index.aries;
 
 import java.io.PrintStream;
 
-import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.PageID;
@@ -42,9 +41,8 @@ import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.IndexIterator;
 import org.brackit.server.store.index.IndexVisitor;
 import org.brackit.server.store.index.aries.page.PageContext;
-import org.brackit.server.store.index.aries.visitor.PageCollectorVisitor;
 import org.brackit.server.tx.Tx;
-import org.brackit.server.tx.TxException;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * A B+-tree index following the ARIES approach for concurrency control.
@@ -98,29 +96,29 @@ public class BPlusIndex implements Index {
 	}
 
 	@Override
-	public void dropIndex(Tx transaction, PageID rootPageID)
+	public void dropIndex(Tx tx, PageID rootPageID)
 			throws IndexAccessException {
+
+		PageContext page = null;
+		
 		try {
-			long undeNextLSN = transaction.checkPrevLSN();
-			log.warn("Deallocation of overflow pages is not implemented yet.");
-			tree.getTreeLatch().latchS(rootPageID);
-			PageCollectorVisitor visitor = new PageCollectorVisitor();
-			BPlusIndexWalker walker = new BPlusIndexWalker(transaction, tree,
-					rootPageID, visitor);
-			walker.traverse();
-			Buffer buffer = bufferMgr.getBuffer(rootPageID.getContainerNo());
-			for (PageID pageID : visitor.getPages()) {
-				buffer.deletePageDeferred(transaction, pageID, -1);
-			}
-			transaction.logDummyCLR(undeNextLSN);
+			
+			// find out unitID and buffer for this index
+			page = tree.getPage(tx, rootPageID, false, false);
+			int unitID = page.getUnitID();
+			page.cleanup();
+			page = null;
+			
+			Buffer buffer = bufferMgr.getBuffer(rootPageID);
+			
+			// drop unit
+			buffer.dropUnitDeferred(tx, unitID);
+			
+		} catch (IndexOperationException e) {
+			throw new IndexAccessException(e);
 		} catch (BufferException e) {
-			throw new IndexAccessException(e);
-		} catch (TxException e) {
-			log.error("Writing dumy CLR failed", e);
-			throw new IndexAccessException(e);
-		} finally {
-			tree.getTreeLatch().unlatch(rootPageID);
-		}
+			throw new IndexAccessException(e); 
+		}	
 	}
 
 	@Override

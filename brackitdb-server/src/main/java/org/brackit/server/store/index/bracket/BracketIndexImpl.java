@@ -98,21 +98,21 @@ public class BracketIndexImpl implements BracketIndex {
 		
 		try {
 			
-			// find out unitID and buffer of this index
+			// find out unitID and buffer for this index
 			page = tree.getPage(tx, rootPageID, false, false);
 			int unitID = page.getUnitID();
-			Buffer buffer = page.getPage().getBuffer();
 			page.cleanup();
 			page = null;
+			
+			Buffer buffer = bufferMgr.getBuffer(rootPageID);
 			
 			// drop unit
 			buffer.dropUnitDeferred(tx, unitID);
 			
 		} catch (IndexOperationException e) {
-			if (page != null) {
-				page.cleanup();
-			}
 			throw new IndexAccessException(e);
+		} catch (BufferException e) {
+			throw new IndexAccessException(e); 
 		}	
 	}
 

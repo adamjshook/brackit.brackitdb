@@ -606,7 +606,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 		// free blocks that belong to this unit
 		Iterator<Integer> setBits = unit.getSetBits();
 		while (setBits.hasNext()) {
-			freeBlock(setBits.next(), false);
+			freeBlock(setBits.next(), force);
 		}
 	}
 }

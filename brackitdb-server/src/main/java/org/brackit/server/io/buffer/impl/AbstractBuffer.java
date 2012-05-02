@@ -363,6 +363,30 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 		return requested;
 	}
+	
+	@Override
+	public synchronized void redoAllocation(Tx tx, PageID pageID, int unitID, long LSN)
+			throws BufferException {
+		
+		// mark block as used in the free space info
+		allocateBlock(pageID, unitID, true);
+		
+		Frame requested = pageNoToFrame.get(pageID);
+
+		if (requested == null) {
+			faultCnt++;
+			requested = load(pageID);
+		} else {
+			hitCnt++;
+		}
+		
+		if (requested.getLSN() < LSN) {
+			// format handle again
+			requested.init(pageID, unitID);
+			requested.setLSN(LSN);
+			requested.setModified(true);
+		}
+	}
 
 	public synchronized void unfixPage(Handle handle) throws BufferException {
 		if (FIX_DEBUG) {
@@ -527,11 +551,11 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 	public synchronized Handle allocatePage(Tx tx, int unitID)
 			throws BufferException {
-		return allocatePage(tx, unitID, null, true, -1, false, true);
+		return allocatePage(tx, unitID, null, true, -1, false);
 	}
 
 	public synchronized Handle allocatePage(Tx tx, int unitID, PageID pageID,
-			boolean logged, long undoNextLSN, boolean force, boolean format)
+			boolean logged, long undoNextLSN, boolean force)
 			throws BufferException {
 
 		if (DEBUG) {
@@ -582,7 +606,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			throw new RuntimeException();
 
 		victim.fix();
-		victim.init(pageID, unitID, format);
+		victim.init(pageID, unitID);
 		victim.setLSN(LSN);
 		// update page mapping
 		if (pageNoToFrame.put(pageID, victim) != null)
@@ -747,7 +771,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 				throw new RuntimeException();
 
 			PageID pID = new PageID(containerNo, currentBlockNo);
-			frame.init(pID, 0, true); // unitID not relevant, since it is overwritten
+			frame.init(pID, 0); // unitID not relevant, since it is overwritten
 								// in the next line anyway
 			System.arraycopy(buffer, offset, frame.page, 0, pageSize);
 			currentBlockNo++;
