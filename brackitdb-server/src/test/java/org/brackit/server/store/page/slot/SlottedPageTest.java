@@ -826,7 +826,7 @@ public class SlottedPageTest {
 		rand = new Random(123456789);
 		Handle handle = new Handle(BLOCK_SIZE) {
 		};
-		handle.init(new PageID(3), 42);
+		handle.init(new PageID(3), 42, true);
 		page = new SlottedPage(null, handle);
 	}
 

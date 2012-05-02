@@ -62,7 +62,7 @@ public class SimpleBlobStore implements BlobStore {
 			
 			if (unitID == -1) {
 				// create new unit
-				unitID = buffer.createUnit(-1);
+				unitID = buffer.createUnit(tx);
 			}
 			
 			Handle nextOverflowHandle = buffer.allocatePage(tx, unitID);
@@ -89,7 +89,7 @@ public class SimpleBlobStore implements BlobStore {
 			SimpleBlobPage page = new SimpleBlobPage(buffer, nextOverflowHandle);
 
 			page.deleteTail(tx);
-			buffer.deletePage(tx, nextOverflowHandle.getPageID(), nextOverflowHandle.getUnitID());
+			buffer.deletePageDeferred(tx, nextOverflowHandle.getPageID(), nextOverflowHandle.getUnitID());
 			page.cleanup();
 		} catch (BufferException e) {
 			throw new BlobStoreAccessException(e, "Could not delete blob page");

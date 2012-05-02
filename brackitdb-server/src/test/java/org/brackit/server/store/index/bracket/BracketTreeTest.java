@@ -82,29 +82,29 @@ public class BracketTreeTest {
 		bufferManager.createBuffer(BUFFER_SIZE, BLOCK_SIZE, CONTAINER_NO,
 				CONTAINER_NAME, INITIAL_SIZE, EXTEND_SIZE);
 		Buffer buffer = bufferManager.getBuffer(CONTAINER_NO);
-		
-		int unitID = buffer.createUnit(-1);
 
 		tx = txMgr.begin(IsolationLevel.SERIALIZABLE, null, false);
+		
+		int unitID = buffer.createUnit(tx);
 
 		docID = new DocID(99, 0);
 
 		// create root
 		root = new BranchBPContext(bufferManager, tx, new SlottedKeyValuePage(
-				buffer, buffer.allocatePage(tx, unitID, new PageID(99), true, -1, false),
+				buffer, buffer.allocatePage(tx, unitID, new PageID(99), true, -1, false, true),
 				BranchBPContext.RESERVED_SIZE));
 		root.format(new PageID(99), 1, false, true, -1);
 		root.setLastInLevel(true);
 
 		// create three sample leafs
 		leaf1 = new LeafBPContext(bufferManager, tx, new BracketPage(buffer,
-				buffer.allocatePage(tx, unitID, new PageID(1), true, -1, false)));
+				buffer.allocatePage(tx, unitID, new PageID(1), true, -1, false, true)));
 		leaf1.format(new PageID(99), true, -1);
 		leaf2 = new LeafBPContext(bufferManager, tx, new BracketPage(buffer,
-				buffer.allocatePage(tx, unitID, new PageID(2), true, -1, false)));
+				buffer.allocatePage(tx, unitID, new PageID(2), true, -1, false, true)));
 		leaf2.format(new PageID(99), true, -1);
 		leaf3 = new LeafBPContext(bufferManager, tx, new BracketPage(buffer,
-				buffer.allocatePage(tx, unitID, new PageID(3), true, -1, false)));
+				buffer.allocatePage(tx, unitID, new PageID(3), true, -1, false, true)));
 		leaf3.format(new PageID(99), true, -1);
 		
 		// chain leafs

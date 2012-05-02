@@ -59,7 +59,7 @@ public class PageContextFactory {
 		this.bufferMgr = bufferMgr;
 	}
 
-	public PageContext allocate(Tx transaction, int containerNo, int unitID,
+	public PageContext allocate(Tx tx, int containerNo, int unitID,
 			int pageType, PageID rootPageID, Field keyType, Field valueType,
 			boolean unique, boolean compression, boolean logged)
 			throws IndexOperationException {
@@ -73,12 +73,12 @@ public class PageContextFactory {
 			
 			if (unitID == -1) {
 				// create new unit
-				unitID = buffer.createUnit(-1);
+				unitID = buffer.createUnit(tx);
 			}
 			
-			handle = buffer.allocatePage(transaction, unitID);
+			handle = buffer.allocatePage(tx, unitID);
 
-			page = create(transaction, buffer, handle, Latch.MODE_X);
+			page = create(tx, buffer, handle, Latch.MODE_X);
 
 			if (rootPageID == null) {
 				/*

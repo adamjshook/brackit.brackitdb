@@ -106,16 +106,14 @@ public class BracketIndexImpl implements BracketIndex {
 			page = null;
 			
 			// drop unit
-			buffer.dropUnit(unitID);
+			buffer.dropUnitDeferred(tx, unitID);
 			
 		} catch (IndexOperationException e) {
 			if (page != null) {
 				page.cleanup();
 			}
 			throw new IndexAccessException(e);
-		} catch (BufferException e) {
-			throw new IndexAccessException(e);
-		}		
+		}	
 	}
 
 	@Override

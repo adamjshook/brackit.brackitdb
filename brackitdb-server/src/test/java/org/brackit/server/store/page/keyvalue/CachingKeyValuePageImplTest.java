@@ -45,7 +45,7 @@ public class CachingKeyValuePageImplTest extends KeyValuePageImplTest {
 	protected KeyValuePageImpl createPage() throws BufferException {
 		Handle handle = new Handle(BLOCK_SIZE) {
 		};
-		handle.init(new PageID(3), 42);
+		handle.init(new PageID(3), 42, true);
 		return new CachingKeyValuePageImpl(null, handle);
 	}
 

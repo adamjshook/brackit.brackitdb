@@ -70,8 +70,6 @@ public class BufferImplTest {
 	private TxMgr taMgr;
 
 	private Buffer buffer;
-	
-	private int unitID;
 
 	private Tx t1;
 
@@ -128,6 +126,7 @@ public class BufferImplTest {
 
 	@Test
 	public void testUndoDeallocateWithoutFlush() throws ServerException {
+		int unitID = buffer.createUnit(t2);
 		Handle handle = buffer.allocatePage(t2, unitID);
 		PageID pageNo = handle.getPageID();
 		handle.unlatch();
@@ -136,7 +135,7 @@ public class BufferImplTest {
 
 		// handle = buffer.fixPage(ctx, pageNo);
 		// handle.latchExclusive();
-		buffer.deletePage(t1, pageNo, -1);
+		buffer.deletePageDeferred(t1, pageNo, -1);
 		// handle.unlatch();
 		// buffer.unfixPage(handle);
 		t1.rollback();
@@ -152,6 +151,7 @@ public class BufferImplTest {
 
 	@Test
 	public void testUndoDeallocateWithFlush() throws ServerException {
+		int unitID = buffer.createUnit(t2);
 		Handle handle = buffer.allocatePage(t2, unitID);
 		PageID pageNo = handle.getPageID();
 		handle.unlatch();
@@ -160,7 +160,7 @@ public class BufferImplTest {
 
 		// handle = buffer.fixPage(ctx, pageNo);
 		// handle.latchExclusive();
-		buffer.deletePage(t1, pageNo, -1);
+		buffer.deletePageDeferred(t1, pageNo, -1);
 		// handle.unlatch();
 		// buffer.unfixPage(handle);
 		t1.rollback();
@@ -176,6 +176,7 @@ public class BufferImplTest {
 
 	@Test
 	public void testUndoAllocateWithoutFlush() throws ServerException {
+		int unitID = buffer.createUnit(t2);
 		Handle handle = buffer.allocatePage(t2, unitID);
 		PageID pageNo = handle.getPageID();
 		handle.unlatch();
@@ -194,6 +195,7 @@ public class BufferImplTest {
 
 	@Test
 	public void testUndoAllocateWithFlush() throws ServerException {
+		int unitID = buffer.createUnit(t2);
 		Handle handle = buffer.allocatePage(t2, unitID);
 		PageID pageNo = handle.getPageID();
 		handle.unlatch();
@@ -212,6 +214,7 @@ public class BufferImplTest {
 
 	@Test
 	public void testRecoveryWithUndo() throws ServerException, TxException {
+		int unitID = buffer.createUnit(t2);
 		for (int i = 0; i < 4; i++) {
 			Handle handle = buffer.allocatePage(t2, unitID);
 			handle.unlatch();
@@ -223,18 +226,18 @@ public class BufferImplTest {
 		bufferManager.createBuffer(BUFFER_SIZE, BLOCK_SIZE, CONTAINER_NO,
 				CONTAINER_NAME, INITIAL_SIZE, EXTEND_SIZE);
 		buffer = bufferManager.getBuffer(CONTAINER_NO);
-		unitID = buffer.createUnit(-1);
 
 		taMgr.recover();
 	}
 
 	@Test
 	public void testDelete() throws ServerException {
+		int unitID = buffer.createUnit(t2);
 		Handle handle = buffer.allocatePage(t2, unitID);
 		PageID pageNo = handle.getPageID();
 		handle.unlatch();
 		buffer.unfixPage(handle);
-		buffer.deletePage(t2, pageNo, -1);
+		buffer.deletePageDeferred(t2, pageNo, -1);
 		try {
 			Handle fetchDeleted = buffer.fixPage(t2, pageNo);
 			fail("Could fix deleted page");
@@ -245,10 +248,11 @@ public class BufferImplTest {
 
 	@Test
 	public void testNewDelete() throws ServerException {
+		int unitID = buffer.createUnit(t2);
 		Handle handle = buffer.allocatePage(t2, unitID);
 		PageID pageNo = handle.getPageID();
 		handle.unlatch();
-		buffer.deletePage(t2, pageNo, -1);
+		buffer.deletePageDeferred(t2, pageNo, -1);
 		try {
 			Handle fetchDeleted = buffer.fixPage(t2, pageNo);
 			fail("Could fix deleted page");
@@ -267,6 +271,7 @@ public class BufferImplTest {
 		byte[] pattern = null;
 
 		int startOffset = BLOCK_SIZE - Handle.GENERAL_HEADER_SIZE;
+		int unitID = buffer.createUnit(t2);
 		for (int i = 0; i < numberOfPages; i++) {
 			// allocate a new page
 			handle = buffer.allocatePage(t2, unitID);
@@ -348,7 +353,6 @@ public class BufferImplTest {
 		bufferManager.createBuffer(BUFFER_SIZE, BLOCK_SIZE, CONTAINER_NO,
 				CONTAINER_NAME, INITIAL_SIZE, EXTEND_SIZE);
 		buffer = bufferManager.getBuffer(CONTAINER_NO);
-		unitID = buffer.createUnit(-1);
 		t1 = taMgr.begin();
 		t2 = taMgr.begin();
 		t3 = taMgr.begin();

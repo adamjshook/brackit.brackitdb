@@ -73,7 +73,7 @@ public class PageContextFactory {
 			
 			if (unitID == -1) {
 				// create new unit
-				unitID = buffer.createUnit(-1);
+				unitID = buffer.createUnit(tx);
 			}
 			
 			handle = buffer.allocatePage(tx, unitID);
