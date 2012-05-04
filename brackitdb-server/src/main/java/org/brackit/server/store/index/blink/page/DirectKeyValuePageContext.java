@@ -30,6 +30,7 @@ package org.brackit.server.store.index.blink.page;
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.PageID;
+import org.brackit.server.io.buffer.Buffer.PageReleaser;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.store.Field;
 import org.brackit.server.store.SearchMode;
@@ -1039,8 +1040,9 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 		try {
 			PageID pageID = page.getPageID();
 			int unitID = page.getHandle().getUnitID();
+			PageReleaser pr = page.getBuffer().deletePage(transaction, pageID, unitID);
 			page.cleanup();
-			page.getBuffer().deletePageDeferred(transaction, pageID, unitID);
+			pr.release();
 		} catch (BufferException e) {
 			throw new IndexOperationException(e, "Error deleting page");
 		}

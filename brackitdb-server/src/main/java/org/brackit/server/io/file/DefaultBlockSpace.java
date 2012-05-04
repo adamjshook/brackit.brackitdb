@@ -56,6 +56,7 @@ import org.brackit.xquery.util.log.Logger;
  * 
  * @author Ou Yi
  * @author Sebastian Baechle
+ * @author Martin Hiller
  * 
  */
 public class DefaultBlockSpace implements BlockSpace, InfoContributor {

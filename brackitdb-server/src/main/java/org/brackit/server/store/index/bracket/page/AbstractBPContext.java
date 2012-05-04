@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.brackit.server.io.buffer.Buffer.PageReleaser;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
@@ -323,12 +324,25 @@ public abstract class AbstractBPContext extends SimpleBlobStore implements
 	}
 
 	@Override
-	public void deletePage() throws IndexOperationException {
+	public PageReleaser deletePage() throws IndexOperationException {
 		try {
 			PageID pageID = page.getPageID();
 			int unitID = page.getUnitID();
+			PageReleaser pr = page.getBuffer().deletePage(tx, pageID, unitID);
 			page.cleanup();
+			return pr;
+		} catch (BufferException e) {
+			throw new IndexOperationException(e, "Error deleting page");
+		}
+	}
+	
+	@Override
+	public void deletePageDeferred() throws IndexOperationException {
+		try {
+			PageID pageID = page.getPageID();
+			int unitID = page.getUnitID();
 			page.getBuffer().deletePageDeferred(tx, pageID, unitID);
+			page.cleanup();
 		} catch (BufferException e) {
 			throw new IndexOperationException(e, "Error deleting page");
 		}

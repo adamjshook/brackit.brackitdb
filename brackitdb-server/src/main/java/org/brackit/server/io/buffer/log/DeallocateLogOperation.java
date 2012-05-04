@@ -60,7 +60,7 @@ public final class DeallocateLogOperation extends SinglePageLogOperation {
 				if (log.isDebugEnabled()) {
 					log.debug(String.format("Redeallocating page %s.", pageID));
 				}
-				buffer.deletePage(tx, pageID, unitID, false, -1, true);
+				buffer.deletePage(tx, pageID, unitID, false, -1, true).release();
 			} catch (BufferException e) {
 				throw new LogException(e, "Could not deallocate page %s.",
 						pageID);
@@ -75,27 +75,23 @@ public final class DeallocateLogOperation extends SinglePageLogOperation {
 
 	@Override
 	public void undo(Tx tx, long LSN, long undoNextLSN) throws LogException {
+		
 		Buffer buffer = null;
-		Handle handle = null;
 
 		try {
-			if (log.isDebugEnabled()) {
-				log.debug(String.format("Allocating page %s.", pageID));
-			}
-
 			buffer = tx.getBufferManager().getBuffer(pageID);
-			handle = buffer.allocatePage(tx, unitID, pageID, true, undoNextLSN, false);
 		} catch (BufferException e) {
-			throw new LogException(e, "Could not allocate page %s.", pageID);
+			throw new LogException(e);
 		}
-
-		handle.unlatch();
-
+		
+		if (log.isDebugEnabled()) {
+			log.debug(String.format("Undo deallocation of page %s.", pageID));
+		}
+		
 		try {
-			buffer.unfixPage(handle);
+			buffer.undoDeallocation(tx, pageID, unitID, undoNextLSN);
 		} catch (BufferException e) {
-			log.error("Error unfixing page after failed allocation.", e);
-			throw new LogException(e, "Error unfixing page after allocation");
+			throw new LogException(e);
 		}
 	}
 
