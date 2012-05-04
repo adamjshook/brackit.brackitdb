@@ -32,7 +32,9 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 
+import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.PageID;
+import org.brackit.server.io.buffer.Buffer.PageReleaser;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.store.Field;
@@ -1160,9 +1162,9 @@ public final class BracketTree extends PageContextFactory {
 
 				// Split & insert
 				page = splitInsert(tx, rootPageID, page, nodesToInsert, logged);
-				
+
 				// skip insertion in case of undo processing
-				if (logged && undoNextLSN != -1) {
+				if (undoNextLSN != -1) {
 					logDummyCLR(tx, undoNextLSN);
 				}
 			}
@@ -2326,7 +2328,8 @@ public final class BracketTree extends PageContextFactory {
 	}
 
 	private Branch collapseRoot(Tx tx, Branch root, BPContext left,
-			BPContext right, boolean logged) throws IndexAccessException {
+			BPContext right, boolean logged, long dummyLSN)
+			throws IndexAccessException {
 		try {
 			if (log.isTraceEnabled()) {
 				log.trace(String.format("Starting collapse of root page %s.",
@@ -2413,10 +2416,21 @@ public final class BracketTree extends PageContextFactory {
 			}
 
 			// delete pages
-			left.deletePage();
+			PageReleaser leftRelease = left.deletePage();
 			left = null;
-			right.deletePage();
+			PageReleaser rightRelease = right.deletePage();
 			right = null;
+
+			// write CLR to skip tree reorganization during undo
+			logDummyCLR(tx, dummyLSN);
+
+			// not it is safe to physically release the pages
+			try {
+				leftRelease.release();
+				rightRelease.release();
+			} catch (BufferException e) {
+				throw new IndexAccessException(e);
+			}
 
 			// left page became empty after deletion: "next higher" key is now
 			// first in root page
@@ -2572,11 +2586,18 @@ public final class BracketTree extends PageContextFactory {
 			leaf.setPrevPageID(null, logged, -1);
 			leaf.setHighKey(null, logged, -1);
 			leaf.format(rootPageID, logged, -1);
-			leaf.deletePage();
+			PageReleaser pr = leaf.deletePage();
 			leaf = null;
 
 			// skip underflow handling during undo processing
 			logDummyCLR(tx, beforeLSN);
+
+			// release page physically
+			try {
+				pr.release();
+			} catch (BufferException e) {
+				throw new IndexAccessException(e);
+			}
 
 		} catch (IndexOperationException e) {
 			if (previous != null) {
@@ -2635,9 +2656,8 @@ public final class BracketTree extends PageContextFactory {
 				// collapse root if right page is not splitted concurrently
 				// separator is missing
 				if (next.isLastInLevel()) {
-					Branch root = collapseRoot(tx, parent, page, next, logged);
-					// write CLR to skip tree reorganization during undo
-					logDummyCLR(tx, rememberedLSN);
+					Branch root = collapseRoot(tx, parent, page, next, logged,
+							rememberedLSN);
 					return root;
 				}
 			}
@@ -2658,11 +2678,18 @@ public final class BracketTree extends PageContextFactory {
 			page.setLowPageID(null, logged, -1);
 			page.format(rootPageID, page.getHeight(), page.isCompressed(),
 					logged, -1);
-			page.deletePage();
+			PageReleaser pr = page.deletePage();
 			page = null;
 
 			// write CLR to skip tree reorganization during undo
 			logDummyCLR(tx, rememberedLSN);
+
+			// release page physically
+			try {
+				pr.release();
+			} catch (BufferException e) {
+				throw new IndexAccessException(e);
+			}
 
 			return next;
 		} catch (IndexOperationException e) {
@@ -2784,10 +2811,11 @@ public final class BracketTree extends PageContextFactory {
 				navMode).printStats();
 	}
 
-	private void deleteExternalized(Tx tx, List<PageID> externalPageIDs) throws IndexOperationException {
-			
+	private void deleteExternalized(Tx tx, List<PageID> externalPageIDs)
+			throws IndexOperationException {
+
 		List<PageID> exceptionPageIDs = null;
-		for (PageID pageID : externalPageIDs) {				
+		for (PageID pageID : externalPageIDs) {
 			try {
 				blobStore.drop(tx, pageID);
 			} catch (BlobStoreAccessException e) {
@@ -3042,7 +3070,7 @@ public final class BracketTree extends PageContextFactory {
 
 				} else {
 					// deletion finished -> set undoNextLSN
-					if (logged && undoNextLSN != -1) {
+					if (undoNextLSN != -1) {
 						// skip undo processing
 						logDummyCLR(tx, undoNextLSN);
 					}
@@ -3138,7 +3166,7 @@ public final class BracketTree extends PageContextFactory {
 				// leaf is full -> split & insert
 				leaf = splitInsert(tx, rootPageID, leaf, nodesToInsert, logged);
 				// skip insertion in case of undo processing
-				if (logged && undoNextLSN != -1) {
+				if (undoNextLSN != -1) {
 					logDummyCLR(tx, undoNextLSN);
 				}
 			}

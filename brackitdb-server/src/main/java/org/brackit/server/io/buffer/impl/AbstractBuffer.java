@@ -228,6 +228,35 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			}
 		}
 	}
+	
+	private class PageReleaserImpl implements PageReleaser {
+
+		private final PageID pageID;
+		private final int unitID;
+		private final boolean force;
+		
+		private PageReleaserImpl(PageID pageID, int unitID, boolean force) {
+			this.pageID = pageID;
+			this.unitID = unitID;
+			this.force = force;
+		}
+		
+		@Override
+		public void release() throws BufferException {
+			
+			Frame frame = pageNoToFrame.remove(pageID);
+			if (frame != null) {
+				// The handle of a deleted page is allowed to be fixed
+				// by concurrent threads. However, the safe flag should be
+				// used in this case to signal them that they
+				// must not use the handle anymore.
+				// To avoid any change for corruption we drop the handle!
+				frame.drop();
+				pool.remove(frame);
+			}
+			deallocateBlock(pageID, unitID, force);
+		}
+	}
 
 	protected static Comparator<Frame> PAGEID_COMPARATOR = new Comparator<Frame>() {
 		@Override
@@ -386,6 +415,23 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			requested.setLSN(LSN);
 			requested.setModified(true);
 		}
+	}
+	
+	@Override
+	public synchronized void undoDeallocation(Tx tx, PageID pageID, int unitID, long undoNextLSN)
+			throws BufferException {
+		
+		try {
+			tx.logCLR(
+					new AllocateLogOperation(pageID, unitID),
+					undoNextLSN);
+		} catch (TxException e) {
+			throw new BufferException(
+					"Could not write log for page allocation.", e);
+		}
+		
+		// mark block as used in the free space info
+		allocateBlock(pageID, unitID, true);
 	}
 
 	public synchronized void unfixPage(Handle handle) throws BufferException {
@@ -641,12 +687,12 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 	}
 
 	@Override
-	public void deletePage(Tx tx, PageID pageID, int unitID) throws BufferException {
-		deletePage(tx, pageID, unitID, true, -1, false);
+	public PageReleaser deletePage(Tx tx, PageID pageID, int unitID) throws BufferException {
+		return deletePage(tx, pageID, unitID, true, -1, false);
 	}
 
 	@Override
-	public synchronized void deletePage(Tx tx, PageID pageID,
+	public synchronized PageReleaser deletePage(Tx tx, PageID pageID,
 			int unitID, boolean logged, long undoNextLSN, boolean force)
 			throws BufferException {
 
@@ -668,18 +714,8 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 						"Could not write log for page deallocation.", e);
 			}
 		}
-
-		Frame frame = pageNoToFrame.remove(pageID);
-		if (frame != null) {
-			// The handle of a deleted page is allowed to be fixed
-			// by concurrent threads. However, the safe flag should be
-			// used in this case to signal them that they
-			// must not use the handle anymore.
-			// To avoid any change for corruption we drop the handle!
-			frame.drop();
-			pool.remove(frame);
-		}
-		deallocateBlock(pageID, unitID, force);
+		
+		return new PageReleaserImpl(pageID, unitID, force);
 	}
 
 	private int readBlocks(PageID pageID, byte[] buffer, int numOfBlocks)

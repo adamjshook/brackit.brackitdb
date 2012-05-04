@@ -39,6 +39,10 @@ import org.brackit.server.tx.Tx;
  */
 public interface Buffer {
 
+	public interface PageReleaser {
+		public void release() throws BufferException;
+	}
+
 	public int getBufferSize();
 
 	public int getContainerNo();
@@ -104,11 +108,16 @@ public interface Buffer {
 	public boolean isFixed(Handle handle);
 
 	/**
-	 * Releases/deallocates the page immediately.
-	 * @param force TODO
+	 * Two phase page deallocation: when this method is called, a log record
+	 * about the page deallocation is written, but the page is still not
+	 * available for allocations by other transactions. Therefore, call the
+	 * release() method on the result object to physically release the page. At
+	 * this point in time, it has to be ensured that the page is not needed
+	 * anymore for Undo processing.
 	 */
-	public void deletePage(Tx transaction, PageID pageID, int unitID,
-			boolean logged, long undoNextLSN, boolean force) throws BufferException;
+	public PageReleaser deletePage(Tx transaction, PageID pageID, int unitID,
+			boolean logged, long undoNextLSN, boolean force)
+			throws BufferException;
 
 	/**
 	 * Adds a PostRedoHook to the transaction so that the given pages and units
@@ -121,11 +130,14 @@ public interface Buffer {
 
 	public void dropUnit(Tx tx, int unitID) throws BufferException;
 
-	public void deletePage(Tx transaction, PageID pageID, int unitID)
+	public PageReleaser deletePage(Tx transaction, PageID pageID, int unitID)
 			throws BufferException;
 
 	public void dropUnitDeferred(Tx tx, int unitID);
 
 	public void redoAllocation(Tx tx, PageID pageID, int unitID, long LSN)
+			throws BufferException;
+
+	public void undoDeallocation(Tx tx, PageID pageID, int unitID, long undoNextLSN)
 			throws BufferException;
 }

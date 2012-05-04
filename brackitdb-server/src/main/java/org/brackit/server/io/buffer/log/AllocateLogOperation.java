@@ -91,7 +91,7 @@ public final class AllocateLogOperation extends SinglePageLogOperation {
 			if (log.isDebugEnabled()) {
 				log.debug(String.format("Undo allocating page %s.", pageID));
 			}
-			buffer.deletePage(tx, pageID, unitID, true, undoNextLSN, false);
+			buffer.deletePage(tx, pageID, unitID, true, undoNextLSN, false).release();
 		} catch (BufferException e) {
 			throw new LogException(e, "Could not deallocate page %s.", pageID);
 		}
