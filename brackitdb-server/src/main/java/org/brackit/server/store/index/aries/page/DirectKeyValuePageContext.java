@@ -1125,13 +1125,13 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 	}
 
 	@Override
-	public void deletePage() throws IndexOperationException {
+	public PageReleaser deletePage() throws IndexOperationException {
 		try {
 			PageID pageID = page.getPageID();
 			int unitID = page.getHandle().getUnitID();
 			PageReleaser pr = page.getBuffer().deletePage(transaction, pageID, unitID);
 			page.cleanup();
-			pr.release();
+			return pr;
 		} catch (BufferException e) {
 			throw new IndexOperationException(e, "Error deleting page");
 		}

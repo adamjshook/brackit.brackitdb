@@ -27,6 +27,7 @@
  */
 package org.brackit.server.store.index.aries.page;
 
+import org.brackit.server.io.buffer.Buffer.PageReleaser;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.store.Field;
 import org.brackit.server.store.SearchMode;
@@ -169,7 +170,7 @@ public interface PageContext extends Latch {
 
 	public boolean isCompressed() throws IndexOperationException;
 
-	public void deletePage() throws IndexOperationException;
+	public PageReleaser deletePage() throws IndexOperationException;
 
 	public void cleanup();
 
