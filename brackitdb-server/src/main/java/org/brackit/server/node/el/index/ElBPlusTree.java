@@ -27,8 +27,11 @@
  */
 package org.brackit.server.node.el.index;
 
+import java.util.List;
+
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.PageID;
+import org.brackit.server.io.buffer.Buffer.PageReleaser;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.node.el.index.page.ElKeyValuePageContext;
 import org.brackit.server.node.el.index.page.ElPageContext;
@@ -105,7 +108,7 @@ public class ElBPlusTree extends BPlusTree {
 	protected PageContext deleteSpecialFromPage(Tx transaction,
 			PageID rootPageID, PageContext page, byte[] deleteKey,
 			byte[] deleteValue, int level, boolean isStructureModification,
-			boolean logged, long undoNextLSN) throws IndexAccessException {
+			boolean logged, long undoNextLSN, List<PageReleaser> pagesToRelease) throws IndexAccessException {
 		try {
 			if (log.isTraceEnabled()) {
 				log.trace(page.dump(String.format(
@@ -122,7 +125,7 @@ public class ElBPlusTree extends BPlusTree {
 			}
 
 			return handleUnderflow(transaction, rootPageID, page, deleteKey,
-					deleteValue, logged);
+					deleteValue, logged, pagesToRelease);
 		} catch (IndexOperationException e) {
 			page.cleanup();
 			throw new IndexAccessException(e, "Could not log record deletion.");
@@ -265,7 +268,7 @@ public class ElBPlusTree extends BPlusTree {
 
 					leaf = deleteFromPage(transaction, rootPageID, leaf, leaf
 							.getKey(), leaf.getValue(), false, logged,
-							transaction.checkPrevLSN());
+							transaction.checkPrevLSN(), null);
 
 					if (leaf.getKey() == null) {
 						leaf = moveNext(transaction, rootPageID, leaf,
@@ -345,7 +348,7 @@ public class ElBPlusTree extends BPlusTree {
 			 * First delete the entry from the current page but keep it latched.
 			 */
 			leaf = deleteSpecialFromPage(transaction, rootPageID, leaf, key,
-					value, level, false, logged, undoNextLSN);
+					value, level, false, logged, undoNextLSN, null);
 
 			leaf = insertPlaceHolder(transaction, rootPageID, leaf,
 					placeHolderKey, placeHolderValue);
