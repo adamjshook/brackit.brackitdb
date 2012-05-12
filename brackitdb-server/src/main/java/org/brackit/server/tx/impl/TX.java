@@ -35,6 +35,8 @@ import java.util.Map;
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.Buffer;
+import org.brackit.server.io.buffer.Buffer.PageReleaser;
+import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.cache.CachedObjectHook;
 import org.brackit.server.session.Session;
@@ -91,6 +93,8 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 	private final Collection<PostCommitHook> postHooks;
 	
+	private final Collection<PageReleaser> pagesToRelease;
+	
 	private Collection<PostRedoHook> redoHooks;
 
 	private FlushBufferHook flushHook;
@@ -137,6 +141,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 		this.postHooks = new ArrayList<PostCommitHook>(4);
 		this.preHookMap = new HashMap<String, PreCommitHook>(4);
 		this.cacheHooks = new ArrayList<CachedObjectHook>(4);
+		this.pagesToRelease = new ArrayList<PageReleaser>();
 		this.statistics = new TxStats();
 	}
 
@@ -212,6 +217,11 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 		try {
 			if (log.isDebugEnabled()) {
 				log.debug(String.format("Commit of %s started.", toString()));
+			}
+			
+			// check whether deleted pages are also released by now
+			if (releaseDeletedPages()) {
+				throw new ServerException("Some deleted pages were not released by now.");
 			}
 
 			for (PreCommitHook hook : preHooks) {
@@ -543,6 +553,28 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 		}
 
 		flushHook.addContainer(containerNo);
+	}
+	
+	@Override
+	public void addDeletedPage(PageReleaser pr) {
+		pagesToRelease.add(pr);
+	}
+	
+	@Override
+	public boolean releaseDeletedPages() throws TxException {
+		if (pagesToRelease.isEmpty()) {
+			return false;
+		}
+		
+		try {
+			for (PageReleaser pr : pagesToRelease) {
+				pr.release();
+			}
+		} catch (BufferException e) {
+			throw new TxException(e, "Could not release one of the deleted pages.");
+		}
+		
+		return true;
 	}
 
 	public Collection<PreCommitHook> getPreCommitHooks() {

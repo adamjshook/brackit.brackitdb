@@ -28,6 +28,7 @@
 package org.brackit.server.tx;
 
 import org.brackit.server.ServerException;
+import org.brackit.server.io.buffer.Buffer.PageReleaser;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.cache.CachedObjectUser;
 import org.brackit.server.session.Session;
@@ -110,4 +111,8 @@ public interface Tx extends CachedObjectUser {
 	public void addFlushHook(int containerNo);
 
 	public TxStats getStatistics();
+
+	public void addDeletedPage(PageReleaser pr);
+
+	public boolean releaseDeletedPages() throws TxException;
 }
