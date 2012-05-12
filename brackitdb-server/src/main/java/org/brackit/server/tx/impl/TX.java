@@ -382,6 +382,11 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 	public long logCLR(LogOperation logOperation, long undoNextLSN)
 			throws TxException {
+		
+		if (undoNextLSN < 0) {
+			undoNextLSN = -1;
+		}
+		
 		Loggable loggable = taMgr.getLog().getLoggableHelper()
 				.createCLR(txID, prevLSN, logOperation, undoNextLSN);
 		long LSN = log(loggable, false);
@@ -472,7 +477,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 			logOperation = record.getLogOperation();
 			nextUndoLSN = record.getPrevLSN();
-			logOperation.undo(this, record.getLSN(), nextUndoLSN);
+			logOperation.undo(this, record.getLSN(), (nextUndoLSN != -1) ? nextUndoLSN : -2);
 			break;
 		case Loggable.TYPE_UPDATE_SPECIAL:
 			if (log.isDebugEnabled()) {
@@ -482,7 +487,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 			logOperation = record.getLogOperation();
 			nextUndoLSN = record.getUndoNextLSN();
-			logOperation.undo(this, record.getLSN(), nextUndoLSN);
+			logOperation.undo(this, record.getLSN(), (nextUndoLSN != -1) ? nextUndoLSN : -2);
 			break;
 		case Loggable.TYPE_DUMMY:
 		case Loggable.TYPE_CLR:
