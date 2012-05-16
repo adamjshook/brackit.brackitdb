@@ -27,6 +27,7 @@
  */
 package org.brackit.server.node;
 
+import java.io.File;
 import java.util.HashMap;
 
 import org.brackit.server.io.buffer.Buffer;
@@ -50,6 +51,7 @@ import org.brackit.server.tx.locking.services.UnifiedMetaLockService;
 import org.brackit.server.tx.log.Log;
 import org.brackit.server.tx.log.impl.DefaultLog;
 import org.brackit.xquery.node.parser.SubtreeParser;
+import org.brackit.xquery.util.Cfg;
 import org.brackit.xquery.xdm.DocumentException;
 
 /**
@@ -94,8 +96,10 @@ public abstract class StoreMockup<E extends TXNode<E>> {
 
 	public StoreMockup(String containerName, String logfileDir)
 			throws Exception {
+		String tmpdir = System.getProperty("java.io.tmpdir");
+		Cfg.set("org.brackit.server.io.root", tmpdir); 
 		this.CONTAINER_NAME = containerName;
-		this.LOGFILE_DIRECTORY = logfileDir;
+		this.LOGFILE_DIRECTORY = tmpdir + File.separator + logfileDir;
 		create();
 	}
 

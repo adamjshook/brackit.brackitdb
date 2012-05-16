@@ -59,9 +59,9 @@ public abstract class SortTest {
 		}
 		checkSortResult(sorter, noItems);
 		long end = System.currentTimeMillis();
-		System.out.println(String.format(
-				"Sorting %s items (%.2f MB) took %s ms", noItems,
-				bytes / ((double) 1024 * 1024), end - start));
+//		System.out.println(String.format(
+//				"Sorting %s items (%.2f MB) took %s ms", noItems,
+//				bytes / ((double) 1024 * 1024), end - start));
 	}
 
 	@Test
@@ -80,9 +80,9 @@ public abstract class SortTest {
 		}
 		checkSortResult(sorter, noItems);
 		long end = System.currentTimeMillis();
-		System.out.println(String.format(
-				"Sorting %s items (%.2f MB) took %s ms", noItems,
-				bytes / ((double) 1024 * 1024), end - start));
+//		System.out.println(String.format(
+//				"Sorting %s items (%.2f MB) took %s ms", noItems,
+//				bytes / ((double) 1024 * 1024), end - start));
 	}
 
 	@Test
@@ -110,9 +110,9 @@ public abstract class SortTest {
 		checkSortResult(sorter, noItems);
 		long end = System.currentTimeMillis();
 
-		System.out.println(String.format(
-				"Sorting %s items (%.2f MB) took %s ms", noItems,
-				bytes / ((double) 1024 * 1024), end - start));
+//		System.out.println(String.format(
+//				"Sorting %s items (%.2f MB) took %s ms", noItems,
+//				bytes / ((double) 1024 * 1024), end - start));
 	}
 
 	private void checkSortResult(Sort sorter, int noItems) throws Exception {

@@ -107,8 +107,8 @@ public class VirtualLogFileTest {
 				assertEquals("Log was truncated to desired position.",
 						truncateTo, wasTruncatedTo);
 
-				System.out.println(String.format("Truncate to %5d => %5d",
-						truncateTo, wasTruncatedTo));
+//				System.out.println(String.format("Truncate to %5d => %5d",
+//						truncateTo, wasTruncatedTo));
 
 				readLog(byteLength, NUMBER_OF_BYTES_TO_WRITE, wasTruncatedTo);
 
@@ -136,8 +136,8 @@ public class VirtualLogFileTest {
 			assertEquals("Log was truncated to desired position.",
 					truncateTo, wasTruncatedTo);
 
-			System.out.println(String.format("Truncate to %5d => %5d",
-					truncateTo, wasTruncatedTo));
+//			System.out.println(String.format("Truncate to %5d => %5d",
+//					truncateTo, wasTruncatedTo));
 
 			readLog(byteLength, NUMBER_OF_BYTES_TO_WRITE, wasTruncatedTo);
 

@@ -7,13 +7,12 @@
     <groupId>org.brackit</groupId>
     <version>0.1.2</version>
   </parent>
-  <groupId>org.brackit</groupId>
   <artifactId>brackitdb-server</artifactId>
-  <version>0.1.2</version>
   <name>Brackit Database Server</name>
   <url>http://brackit.org</url>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <skipTests>true</skipTests>
   </properties>
   <organization>
   	<name>Brackit Project Team</name>
@@ -109,6 +108,13 @@
 				</configuration>
 			</execution>
 		</executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <skipTests>${skipTests}</skipTests>
+        </configuration>
       </plugin>
   	</plugins>
   </build>

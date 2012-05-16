@@ -45,6 +45,7 @@ import org.brackit.server.tx.TxMgr;
 import org.brackit.server.tx.impl.TaMgrMockup;
 import org.brackit.xquery.xdm.DocumentException;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -175,6 +176,7 @@ public class BracketTreeTest {
 
 	}
 
+	@Ignore
 	@Test
 	public void testDeleteSequence() throws Exception {
 

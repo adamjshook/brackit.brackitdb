@@ -29,7 +29,6 @@ package org.brackit.server.xquery.function.bdb;
 
 import org.brackit.server.metadata.TXQueryContext;
 import org.brackit.server.session.Session;
-import org.brackit.server.xquery.DBCompileChain;
 import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.atomic.IntNumeric;
@@ -50,8 +49,8 @@ import org.brackit.xquery.xdm.type.SequenceType;
  */
 public class SetLockdepth extends AbstractFunction {
 
-	public static final QNm SET_LOCKDEPTH = new QNm(DBCompileChain.BDB_NSURI,
-			DBCompileChain.BDB_PREFIX, "set-lockdepth");
+	public static final QNm SET_LOCKDEPTH = new QNm(BDBFun.BDB_NSURI,
+			BDBFun.BDB_PREFIX, "set-lockdepth");
 
 	public SetLockdepth() {
 		super(SET_LOCKDEPTH, new Signature(new SequenceType(AtomicType.STR,

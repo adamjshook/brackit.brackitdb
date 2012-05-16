@@ -36,7 +36,6 @@ import org.brackit.server.io.buffer.log.PageLogOperationHelper;
 import org.brackit.server.node.el.index.log.ElBPlusIndexLogOperationHelper;
 import org.brackit.server.store.index.aries.log.BPlusIndexLogOperationHelper;
 import org.brackit.server.store.index.bracket.log.BracketIndexLogOperationHelper;
-import org.brackit.server.store.index.blink.log.BlinkIndexLogOperationHelper;
 import org.brackit.server.tx.TxID;
 import org.brackit.server.tx.log.LogException;
 import org.brackit.server.tx.log.LogOperation;
@@ -59,7 +58,6 @@ public class LogRecordHelper implements LoggableHelper {
 		helperSet.add(new EOTLogOperationHelper());
 		helperSet.add(new PageLogOperationHelper());
 		helperSet.add(new BPlusIndexLogOperationHelper());
-		helperSet.add(new BlinkIndexLogOperationHelper());
 		helperSet.add(new ElBPlusIndexLogOperationHelper());
 		helperSet.add(new BracketIndexLogOperationHelper());
 	}

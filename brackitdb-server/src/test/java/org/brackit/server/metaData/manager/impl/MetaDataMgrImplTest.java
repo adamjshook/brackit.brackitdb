@@ -235,7 +235,6 @@ public class MetaDataMgrImplTest {
 			collection = mdm.lookup(tx, "/test.xml");
 			Assert.fail("Locator found after delete.");
 		} catch (DocumentException e) {
-			e.printStackTrace();
 			// expected
 		}
 	}
@@ -244,7 +243,6 @@ public class MetaDataMgrImplTest {
 	public void testGetAliveLocatorByNameFirst() throws Exception {
 		mdm.start(tx, true);
 		mdm.create(tx, "/test.xml", new DocumentParser(DOCUMENT));
-		(new BPlusIndex(sm.bufferManager)).dump(tx, new PageID(5), System.out);
 		DBCollection<?> collection = mdm.lookup(tx, "/test.xml");
 		DBCollection<?> collection2 = mdm.lookup(tx, collection.getID());
 		Assert.assertSame("Got same collection object back", collection,
@@ -299,7 +297,6 @@ public class MetaDataMgrImplTest {
 		mdm.shutdown();
 		mdm.start(tx2, false);
 		DBCollection<?> collection = mdm.lookup(tx, "/test.xml");
-		System.out.println(collection.get(Indexes.class).getIndexDefs());
 	}
 
 	@Test

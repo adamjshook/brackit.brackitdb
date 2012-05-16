@@ -86,8 +86,8 @@ public class SlottedPageTest {
 		do {
 			boolean success = false;
 			Tuple toWrite = generateRandomTuple(6, 6, -1, 6);
-			System.out.println(String.format("Writing %s to slot %s", toWrite,
-					slotNo));
+			// System.out.println(String.format("Writing %s to slot %s",
+			// toWrite, slotNo));
 			success = verifiedWrite(slotNo, toWrite, compressed);
 
 			if (success) {
@@ -144,35 +144,6 @@ public class SlottedPageTest {
 			Tuple shuffled = shuffeElements(tuple);
 			verifiedUpdate(slotNo, tuple, shuffled, compression);
 			slotNo++;
-		}
-	}
-
-	@Test
-	public void test() throws Exception {
-		boolean compressed = true;
-		page.format(page.getHandle().getPageID());
-		RecordGenerator generator = new ElementlessRecordGenerator();
-		new DocumentParser(new File(getClass()
-				.getResource("/xmark/auction.xml").getFile())).parse(generator);
-		List<Record> records = generator.getRecords();
-		int slotNo = 0;
-
-		for (Record record : records) {
-			Tuple toWrite = new ArrayTuple(new byte[][] {
-					record.deweyID.toBytes(), record.record });
-			if (!verifiedWrite(slotNo, toWrite, compressed)) {
-				break;
-			}
-
-			System.out.println("Write tuple " + slotNo);
-			slotNo++;
-		}
-
-		// page.dump(new PrintWriter(System.out));
-
-		for (int i = 0; i < slotNo; i++) {
-			System.out.println(i + " Deleting tuple " + 0);
-			verifiedDelete(0);
 		}
 	}
 
@@ -259,6 +230,11 @@ public class SlottedPageTest {
 
 	@Test
 	public void testUpdateFieldCompressed() {
+		// this takes long!!! use a smaller page size
+		Handle handle = new Handle(1024) {
+		};
+		handle.init(new PageID(3));
+		page = new SlottedPage(null, handle);
 		testUpdateField(true);
 	}
 

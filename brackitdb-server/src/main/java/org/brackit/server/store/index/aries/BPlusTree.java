@@ -625,6 +625,9 @@ public class BPlusTree extends PageContextFactory {
 		byte[] currentValue = null;
 
 		try {
+			currentKey = page.getKey();
+			currentValue = page.getValue();
+
 			if ((lockService != null) && (openMode != OpenMode.LOAD)) {
 				if (openMode.forUpdate()) {
 					lockService.downgradeLock(tx, page.getUnitID(), rootPageID,

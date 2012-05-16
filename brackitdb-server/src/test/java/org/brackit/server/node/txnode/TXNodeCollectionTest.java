@@ -62,7 +62,7 @@ public abstract class TXNodeCollectionTest<E extends TXNode<E>> {
 		try {
 			E document;
 			while ((document = documents.next()) != null) {
-				System.out.print("Doc " + i++);
+				// System.out.print("Doc " + i++);
 				// System.out.println(document.getDeweyID());
 				// IndexPrinter.print(tx,
 				// document.getDeweyID().getDocID().value(), System.out);
