@@ -36,9 +36,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.brackit.server.procedure.InfoContributor;
-import org.brackit.server.procedure.ProcedureUtil;
-import org.brackit.server.procedure.statistics.ListContainers;
 import org.brackit.server.util.BitArrayWrapper;
 import org.brackit.server.util.BitMap;
 import org.brackit.server.util.BitMapTree;
@@ -46,7 +43,6 @@ import org.brackit.server.util.FileUtil;
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.xquery.function.bdb.statistics.InfoContributor;
 import org.brackit.server.xquery.function.bdb.statistics.ListContainers;
-import org.brackit.xquery.util.log.Logger;
 
 /**
  * Default BlockSpace implementation using one BlockFile, simple 1:1 mapping
