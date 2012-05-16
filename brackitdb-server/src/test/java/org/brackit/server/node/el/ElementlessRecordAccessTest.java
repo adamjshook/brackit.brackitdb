@@ -42,19 +42,24 @@ public class ElementlessRecordAccessTest {
 		String storedValue = "1,2,3,4";
 
 		for (byte type = 0; type < 6; type++) {
-			for (int storedPCR = 1; storedPCR < Integer.MAX_VALUE; storedPCR++) {
-				byte[] record = ElRecordAccess.createRecord(storedPCR, type,
-						storedValue);
-
-				int restoredType = ElRecordAccess.getType(record);
-				int restoredPCR = ElRecordAccess.getPCR(record);
-				String restoredValue = ElRecordAccess.getValue(record);
-
-				assertEquals("type is the same", type, restoredType);
-				assertEquals("pcr is the same", storedPCR, restoredPCR);
-				assertTrue("value is the same", storedValue
-						.equals(restoredValue));
+			for (int pcr = 1; pcr < 514; pcr++) {
+				encodeDecode(storedValue, type, pcr);
+			}
+			for (int pcr = Integer.MAX_VALUE - 514; pcr < Integer.MAX_VALUE; pcr++) {
+				encodeDecode(storedValue, type, pcr);
 			}
 		}
+	}
+
+	private void encodeDecode(String val, byte type, int pcr) {
+		byte[] record = ElRecordAccess.createRecord(pcr, type, val);
+
+		int rType = ElRecordAccess.getType(record);
+		int rPCR = ElRecordAccess.getPCR(record);
+		String rVal = ElRecordAccess.getValue(record);
+
+		assertEquals("type is the same", type, rType);
+		assertEquals("pcr is the same", pcr, rPCR);
+		assertTrue("value is the same", val.equals(rVal));
 	}
 }

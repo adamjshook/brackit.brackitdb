@@ -91,43 +91,6 @@ public class AtomicUtil {
 		return toBytes(toType(atomic, type));
 	}
 
-	@Deprecated
-	public static byte[] toBytes(String s, Type type) throws DocumentException {
-		if (!type.isBuiltin()) {
-			throw new DocumentException("%s is not a built-in type", type);
-		}
-		if (type.instanceOf(Type.STR)) {
-			return Calc.fromString(s);
-		}
-		if (type.isNumeric()) {
-			try {
-				if (type.instanceOf(Type.DBL)) {
-					return Calc.fromDouble(Double.parseDouble(s));
-				}
-				if (type.instanceOf(Type.FLO)) {
-					return Calc.fromFloat(Float.parseFloat(s));
-				}
-				if (type.instanceOf(Type.INT)) {
-					return Calc.fromInt(Integer.parseInt(s));
-				}
-				if (type.instanceOf(Type.LON)) {
-					return Calc.fromLong(Long.parseLong(s));
-				}
-				if (type.instanceOf(Type.INR)) {
-					return Calc.fromBigDecimal(new BigDecimal(s));
-				}
-				if (type.instanceOf(Type.DEC)) {
-					return Calc.fromBigDecimal(new BigDecimal(s));
-				}
-			} catch (NumberFormatException e) {
-				throw new DocumentException(new QueryException(
-						ErrorCode.ERR_TYPE_INAPPROPRIATE_TYPE,
-						"Illegal cast from %s to %s", Type.UNA, type));
-			}
-		}
-		throw new DocumentException("Unsupported type: %s", type);
-	}
-
 	public static byte[] toBytes(Atomic atomic) throws DocumentException {
 		if (atomic == null) {
 			return null;

@@ -51,16 +51,18 @@ public class SysMockup {
 	public static final String CONTAINER_NAME = "junit.cnt";
 
 	public static final int CONTAINER_NO = 0;
-
 	public static final int BUFFER_SIZE = 200;
-
 	public static final int EXTEND_SIZE = 300;
-
 	public static final int BLOCK_SIZE = 512;
-
 	public static final int LARGE_BLOCK_SIZE = 4096 * 2;
-
 	public static final int INITIAL_SIZE = 20;
+
+	public int containerNo = CONTAINER_NO;
+	public int bufferSize = BUFFER_SIZE;
+	public int extendSize = EXTEND_SIZE;
+	public int blockSize = LARGE_BLOCK_SIZE;
+	public int initialSize = INITIAL_SIZE;
+	public String containerName = CONTAINER_NAME;
 
 	public TxMgr taMgr;
 
@@ -74,21 +76,26 @@ public class SysMockup {
 
 	public MetaLockService<?> mls;
 
-	public SysMockup() throws Exception {
+	public SysMockup(int blockSize) throws Exception {
+		this.blockSize = blockSize;
 		create(true);
 	}
 	
+	public SysMockup() throws Exception {
+		create(true);
+	}
+
 	public SysMockup(boolean createDictionary) throws Exception {
 		create(createDictionary);
 	}
 
-	private void create(boolean createDictionary) throws BufferException, TxException,
-			DocumentException {
+	public void create(boolean createDictionary) throws BufferException,
+			TxException, DocumentException {
 		taMgr = new TaMgrMockup();
 		bufferManager = (BufferMgrMockup) taMgr.getBufferManager();
-		bufferManager.createBuffer(BUFFER_SIZE, LARGE_BLOCK_SIZE, CONTAINER_NO,
-				CONTAINER_NAME, INITIAL_SIZE, EXTEND_SIZE);
-		buffer = bufferManager.getBuffer(CONTAINER_NO);
+		bufferManager.createBuffer(bufferSize, blockSize, containerNo,
+				containerName, initialSize, extendSize);
+		buffer = bufferManager.getBuffer(containerNo);
 		dictionary = new DictionaryMgr03(bufferManager);
 		mls = new UnifiedMetaLockService();
 		if (createDictionary) {
@@ -99,10 +106,10 @@ public class SysMockup {
 	}
 
 	public Buffer recreateBuffer() throws BufferException {
-		bufferManager.dropBuffer(CONTAINER_NO);
-		bufferManager.createBuffer(BUFFER_SIZE, LARGE_BLOCK_SIZE, CONTAINER_NO,
-				CONTAINER_NAME, INITIAL_SIZE, EXTEND_SIZE);
-		buffer = bufferManager.getBuffer(CONTAINER_NO);
+		bufferManager.dropBuffer(containerNo);
+		bufferManager.createBuffer(bufferSize, blockSize, containerNo,
+				containerName, initialSize, extendSize);
+		buffer = bufferManager.getBuffer(containerNo);
 		return buffer;
 	}
 }

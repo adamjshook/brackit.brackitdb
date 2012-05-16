@@ -27,8 +27,6 @@
  */
 package org.brackit.server.store.page.keyvalue;
 
-import java.util.Arrays;
-
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.Handle;
 import org.brackit.server.io.buffer.PageID;
@@ -71,11 +69,11 @@ public class CachingKeyValuePageImplTest extends KeyValuePageImplTest {
 		Entry toWriteB = new Entry(new byte[] { 12, -28 }, new byte[] { 3 });
 		page.format(page.getHandle().getPageID());
 		verifiedWrite(0, toWriteA, true);
-		System.out.println(page.getRecordCount());
+//		System.out.println(page.getRecordCount());
 		verifiedWrite(1, toWriteB, true);
 		byte[] updateKey = page.getKey(0);
 		updateKey[0] = 8; // directly use returned field for update
 		page.setKey(0, updateKey);
-		System.out.println(Arrays.toString(page.getKey(1)));
+//		System.out.println(Arrays.toString(page.getKey(1)));
 	}
 }

@@ -67,6 +67,8 @@ import org.brackit.server.tx.TxID;
 import org.brackit.server.tx.log.Log;
 import org.brackit.server.tx.log.LogException;
 import org.brackit.server.tx.thread.ThreadCB;
+import org.brackit.server.xquery.function.bdb.statistics.InfoContributor;
+import org.brackit.server.xquery.function.bdb.statistics.ListBuffer;
 import org.brackit.xquery.util.log.Logger;
 
 /**
@@ -350,7 +352,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		this.prefetchBuffer = new byte[prefetchSize * pageSize];
 		this.writeSize = 40;
 		this.writeBuffer = new byte[writeSize * pageSize];
-		ProcedureUtil.register(ListBuffer.class, this);
+		ListBuffer.add(this);
 
 		this.deallocateHookName = String
 				.format("DEALLOC%s", blockSpace.getId());
@@ -1212,6 +1214,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 	@Override
 	public void shutdown(boolean force) throws BufferException {
+		ListBuffer.remove(this);
 		flush();
 
 		synchronized (this) {

@@ -29,6 +29,7 @@ package org.brackit.server.tx.thread;
 
 public class DebugLatch implements Latch {
 	private final Latch latch;
+	private final static boolean CHECK_THREAD_LATCHING = true;
 
 	public DebugLatch(Latch latch) {
 		this.latch = latch;
@@ -45,7 +46,12 @@ public class DebugLatch implements Latch {
 	}
 
 	private int myID() {
-		return ThreadCB.get().id;
+		int id = ThreadCB.get().id;
+		if (id >= states.length) {
+			System.out.println("AHAHAHAHAH");
+			System.exit(-1);
+		}
+		return id;
 	}
 
 	public int getMode() {
@@ -74,6 +80,9 @@ public class DebugLatch implements Latch {
 			throw new RuntimeException(Integer.toString(states[myID]));
 		latch.latchX();
 		states[myID] = -2;
+		if (CHECK_THREAD_LATCHING) {
+			ThreadCB.get().registerExclusiveLatch(this);
+		}
 	}
 
 	public boolean latchXC() {
@@ -81,8 +90,12 @@ public class DebugLatch implements Latch {
 		if (states[myID] != 0)
 			throw new RuntimeException(Integer.toString(states[myID]));
 		boolean res = latch.latchXC();
-		if (res)
+		if (res) {
 			states[myID] = -2;
+			if (CHECK_THREAD_LATCHING) {
+				ThreadCB.get().registerExclusiveLatch(this);
+			}
+		}
 		return res;
 	}
 
@@ -92,6 +105,9 @@ public class DebugLatch implements Latch {
 			throw new RuntimeException(Integer.toString(states[myID]));
 		latch.latchS();
 		states[myID] += 1;
+		if (CHECK_THREAD_LATCHING) {
+			ThreadCB.get().registerSharedLatch(this);
+		}
 	}
 
 	public boolean latchSC() {
@@ -99,8 +115,12 @@ public class DebugLatch implements Latch {
 		if (states[myID] < 0)
 			throw new RuntimeException(Integer.toString(states[myID]));
 		boolean res = latch.latchSC();
-		if (res)
+		if (res) {
 			states[myID] += 1;
+			if (CHECK_THREAD_LATCHING) {
+				ThreadCB.get().registerSharedLatch(this);
+			}
+		}
 		return res;
 	}
 
@@ -117,6 +137,9 @@ public class DebugLatch implements Latch {
 			throw new RuntimeException(Integer.toString(states[myID]));
 		latch.latchU();
 		states[myID] = -1;
+		if (CHECK_THREAD_LATCHING) {
+			ThreadCB.get().registerUpdateLatch(this);
+		}
 	}
 
 	public boolean latchUC() {
@@ -124,8 +147,12 @@ public class DebugLatch implements Latch {
 		if (states[myID] != 0)
 			throw new RuntimeException(Integer.toString(states[myID]));
 		boolean res = latch.latchUC();
-		if (res)
+		if (res) {
 			states[myID] = -1;
+			if (CHECK_THREAD_LATCHING) {
+				ThreadCB.get().registerUpdateLatch(this);
+			}
+		}
 		return res;
 	}
 
@@ -140,6 +167,9 @@ public class DebugLatch implements Latch {
 			states[myID] = 0;
 		else
 			states[myID] -= 1;
+		if (CHECK_THREAD_LATCHING) {
+			ThreadCB.get().registerUnlatch(this);
+		}
 	}
 
 	public void upX() {

@@ -29,13 +29,13 @@ package org.brackit.server.session;
 
 import java.util.Random;
 
-import org.brackit.server.procedure.InfoContributor;
-import org.brackit.server.procedure.ProcedureUtil;
-import org.brackit.server.procedure.statistics.ListConnections;
 import org.brackit.server.session.async.Job;
 import org.brackit.server.session.async.JobScheduler;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.TxMgr;
+import org.brackit.server.xquery.function.FunUtil;
+import org.brackit.server.xquery.function.bdb.statistics.InfoContributor;
+import org.brackit.server.xquery.function.bdb.statistics.ListConnections;
 import org.brackit.xquery.util.Cfg;
 import org.brackit.xquery.util.log.Logger;
 
@@ -90,7 +90,7 @@ public final class SessionMgrImpl implements SessionMgr, InfoContributor {
 		connectionTimeout = Cfg.asInt(CONNECTION_TIMEOUT,
 				DEFAULT_CONNECTION_TIMEOUT);
 		sessions = new Session[maxConnections];
-		ProcedureUtil.register(ListConnections.class, this);
+		ListConnections.add(this);
 	}
 
 	@Override
@@ -126,7 +126,7 @@ public final class SessionMgrImpl implements SessionMgr, InfoContributor {
 
 	@Override
 	public synchronized void shutdown() {
-		ProcedureUtil.deregister(ListConnections.class, this);
+		ListConnections.remove(this);
 		synchronized (sessions) {
 			for (Session session : sessions) {
 				if (session != null) {

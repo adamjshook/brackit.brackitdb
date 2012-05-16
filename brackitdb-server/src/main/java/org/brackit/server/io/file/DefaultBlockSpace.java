@@ -44,6 +44,9 @@ import org.brackit.server.util.BitMap;
 import org.brackit.server.util.BitMapTree;
 import org.brackit.server.util.FileUtil;
 import org.brackit.xquery.util.log.Logger;
+import org.brackit.server.xquery.function.bdb.statistics.InfoContributor;
+import org.brackit.server.xquery.function.bdb.statistics.ListContainers;
+import org.brackit.xquery.util.log.Logger;
 
 /**
  * Default BlockSpace implementation using one BlockFile, simple 1:1 mapping
@@ -98,7 +101,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 		storeRoot = root;
 		dataFileName = storeRoot + File.separator + id + ".cnt";
 		metaFileName = dataFileName + ".meta";
-		ProcedureUtil.register(ListContainers.class, this);
+		ListContainers.add(this);
 	}
 
 	@Override
@@ -261,7 +264,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 	@Override
 	public synchronized void close() throws StoreException {
 		log.info("closing block space: " + id);
-		ProcedureUtil.deregister(ListContainers.class, this);
+		ListContainers.remove(this);
 
 		if (closed) {
 			throw new StoreException("invalid state, space already closed");

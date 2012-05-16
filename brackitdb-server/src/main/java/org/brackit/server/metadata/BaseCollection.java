@@ -34,7 +34,6 @@ import org.brackit.server.metadata.masterDocument.Indexes;
 import org.brackit.server.metadata.materialize.Materializable;
 import org.brackit.server.metadata.materialize.MaterializableFactory;
 import org.brackit.server.metadata.vocabulary.DictionaryMgr;
-import org.brackit.server.node.DocID;
 import org.brackit.server.node.index.definition.IndexDef;
 import org.brackit.server.node.txnode.TXNode;
 import org.brackit.xquery.atomic.QNm;
@@ -64,10 +63,11 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 
 	protected int collID = -1;
 
-	private Map<Class<? extends Materializable>, Materializable> materializables;
+	private final Map<Class<? extends Materializable>, Materializable> materializables;
 
 	public BaseCollection() {
 		super((String) null);
+		this.materializables = new ConcurrentHashMap<Class<? extends Materializable>, Materializable>();
 	}
 
 	protected BaseCollection(BaseCollection<E> collection) {
@@ -81,6 +81,7 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 		super(name);
 		this.dictionary = dictionary;
 		this.collID = collID;
+		this.materializables = new ConcurrentHashMap<Class<? extends Materializable>, Materializable>();
 	}
 
 	public int getID() {
@@ -95,10 +96,6 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 	@Override
 	public <T extends Materializable> T check(Class<T> type)
 			throws DocumentException {
-		if (materializables == null) {
-			return null;
-		}
-
 		Materializable materializable = materializables.get(type);
 
 		if (materializable == null) {
@@ -111,10 +108,6 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 	@Override
 	public <T extends Materializable> T get(Class<T> type)
 			throws DocumentException {
-		if (materializables == null) {
-			materializables = new ConcurrentHashMap<Class<? extends Materializable>, Materializable>();
-		}
-
 		Materializable materializable = materializables.get(type);
 
 		if (materializable == null) {
@@ -133,19 +126,13 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 
 	@Override
 	public <T extends Materializable> void set(T type) throws DocumentException {
-		if (materializables == null) {
-			materializables = new ConcurrentHashMap<Class<? extends Materializable>, Materializable>();
-		}
-
 		materializables.put(type.getClass(), type);
 	}
 
 	@Override
 	public <T extends Materializable> void remove(Class<T> type)
 			throws DocumentException {
-		if (materializables != null) {
-			materializables.remove(type);
-		}
+		materializables.remove(type);
 	}
 
 	@Override
@@ -175,10 +162,8 @@ public abstract class BaseCollection<E extends TXNode<E>> extends
 		helper.openElement(COLLECTION_TAG)
 				.attribute(ID_ATTRIBUTE, new Una(Integer.toString(collID)))
 				.attribute(NAME_ATTRIBUTE, new Una(name));
-		if (materializables != null) {
-			for (Materializable materializable : materializables.values()) {
-				helper.insert(materializable.materialize());
-			}
+		for (Materializable materializable : materializables.values()) {
+			helper.insert(materializable.materialize());
 		}
 		helper.closeElement();
 		return helper.getRoot();

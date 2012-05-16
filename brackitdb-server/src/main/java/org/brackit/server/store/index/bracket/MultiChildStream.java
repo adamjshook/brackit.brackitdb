@@ -100,6 +100,10 @@ public class MultiChildStream extends StreamIterator {
 								NavigationMode.FIRST_CHILD, startDeweyID,
 								OPEN_MODE, page, deweyIDBuffer, navStatus);
 				page = scanRes.resultLeaf;
+				if (page == null) {
+					currentDepth = -1;
+					return;
+				}
 				currentDepth = page.getLevel() - firstChildLevel;
 			}
 
@@ -109,6 +113,10 @@ public class MultiChildStream extends StreamIterator {
 					NavigationMode.FIRST_CHILD, startDeweyID, OPEN_MODE,
 					deweyIDBuffer);
 			page = scanRes.resultLeaf;
+			if (page == null) {
+				currentDepth = -1;
+				return;
+			}
 			currentDepth = page.getLevel() - firstChildLevel;
 
 		}
@@ -135,6 +143,10 @@ public class MultiChildStream extends StreamIterator {
 					NavigationMode.NEXT_SIBLING, currentKey, OPEN_MODE, page,
 					deweyIDBuffer, navStatus);
 			page = scanRes.resultLeaf;
+			if (page == null) {
+				currentDepth = -1;
+				return;
+			}
 			currentDepth = page.getLevel() - firstChildLevel;
 		}
 
@@ -177,6 +189,10 @@ public class MultiChildStream extends StreamIterator {
 							currentKey, OPEN_MODE, page, deweyIDBuffer,
 							navStatus);
 					page = scanRes.resultLeaf;
+					if (page == null) {
+						currentDepth = -1;
+						return;
+					}
 					currentDepth = page.getLevel() - firstChildLevel;
 				}
 
@@ -197,6 +213,10 @@ public class MultiChildStream extends StreamIterator {
 							currentKey, OPEN_MODE, page, deweyIDBuffer,
 							navStatus);
 					page = scanRes.resultLeaf;
+					if (page == null) {
+						currentDepth = -1;
+						return;
+					}
 					currentDepth = page.getLevel() - firstChildLevel;
 				}
 			}

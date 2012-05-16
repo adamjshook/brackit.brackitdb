@@ -35,35 +35,47 @@ public enum TxState {
 	/**
 	 * transaction is active but was aborted, e.g, due to a deadlock
 	 */
-	ABORTED(true),
+	ABORTED(true, false, true),
 
 	/**
 	 * transaction is active in rollback processing
 	 */
-	ROLLBACK(true),
+	ROLLBACK(true, false, false),
 
 	/**
 	 * transaction is active in normal processing
 	 */
-	RUNNING(true),
+	RUNNING(true, true, true),
 
 	/**
 	 * transaction committed and terminated
 	 */
-	COMMITTED(false),
+	COMMITTED(false, false, false),
 
 	/**
 	 * transaction was rolled back and terminated
 	 */
-	ROLLEDBACK(false);
+	ROLLEDBACK(false, false, false);
 
 	private final boolean active;
+	private final boolean commitable;
+	private final boolean rollbackable;
 
-	private TxState(boolean active) {
+	private TxState(boolean active, boolean commitable, boolean rollbackable) {
 		this.active = active;
+		this.commitable = commitable;
+		this.rollbackable = rollbackable;
 	}
 
 	public boolean isActive() {
 		return this.active;
+	}
+
+	public boolean isCommitable() {
+		return commitable;
+	}
+
+	public boolean isRollbackable() {
+		return rollbackable;
 	}
 }

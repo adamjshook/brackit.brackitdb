@@ -27,8 +27,6 @@
  */
 package org.brackit.server.node.bracket;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -47,7 +45,6 @@ import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.XQuery;
 import org.brackit.xquery.node.parser.DocumentParser;
-import org.brackit.xquery.xdm.Collection;
 import org.brackit.xquery.xdm.Item;
 import org.brackit.xquery.xdm.Iter;
 import org.brackit.xquery.xdm.Kind;
@@ -57,12 +54,14 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * @author Martin Hiller
  *
  */
+@Ignore
 public class XMarkComparison {
 	
 	private static final int WARMUP_COUNT = 3;
@@ -79,9 +78,6 @@ public class XMarkComparison {
 	protected static BracketMockup bracketStore;
 	
 	protected static ElMockup elStore;
-	
-//	protected Collection<?> coll;
-//	protected QueryContext ctx;
 
 	protected String readQuery(String dirname, String filename)
 			throws IOException {
