@@ -221,7 +221,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 			
 			// check whether deleted pages are also released by now
 			if (releaseDeletedPages()) {
-				throw new ServerException("Some deleted pages were not released by now.");
+				throw new ServerException("Some deleted pages are not released yet.");
 			}
 
 			for (PreCommitHook hook : preHooks) {
@@ -574,6 +574,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 			throw new TxException(e, "Could not release one of the deleted pages.");
 		}
 		
+		pagesToRelease.clear();		
 		return true;
 	}
 
