@@ -28,6 +28,8 @@
 package org.brackit.server.node.txnode;
 
 import org.brackit.xquery.util.log.Logger;
+import org.brackit.server.metadata.pathSynopsis.NsMapping;
+import org.brackit.server.metadata.vocabulary.DictionaryMgr;
 import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.xquery.atomic.Atomic;

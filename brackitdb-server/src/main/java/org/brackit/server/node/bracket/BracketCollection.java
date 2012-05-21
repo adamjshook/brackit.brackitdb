@@ -43,6 +43,7 @@ import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.node.parser.CollectionParser;
 import org.brackit.xquery.node.parser.ListenMode;
+import org.brackit.xquery.node.parser.SubtreeHandler;
 import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.node.parser.SubtreeParser;
 import org.brackit.xquery.xdm.DocumentException;
@@ -236,21 +237,29 @@ public class BracketCollection extends TXCollection<BracketNode> {
 
 		ArrayList<SubtreeListener<? super BracketNode>> listener = new ArrayList<SubtreeListener<? super BracketNode>>(
 				5);
-		listener.add(new BracketDocIndexListener(ListenMode.INSERT, insertCtrl));
+
 		// listener.add(new DebugListener());
 
 		if (updateIndexes) {
 			listener.addAll(indexController.getIndexListener(ListenMode.INSERT));
+		}
+		
+		SubtreeHandler subtreeHandler = null;
+		if (listener.isEmpty()) {
+			// optimized insertion
+			subtreeHandler = new BracketSubtreeBuilderOpt(this, insertCtrl, -1);
+		} else {
+			listener.add(new BracketDocIndexListener(ListenMode.INSERT, insertCtrl));
+			subtreeHandler = new BracketSubtreeBuilder(this,
+					nextDocNumber, listener.toArray(new SubtreeListener[listener
+							.size()]));
 		}
 
 		// make sure the CollectionParser is used
 		if (!(parser instanceof CollectionParser)) {
 			parser = new CollectionParser(parser);
 		}
-
-		BracketSubtreeBuilder subtreeHandler = new BracketSubtreeBuilder(this,
-				nextDocNumber, listener.toArray(new SubtreeListener[listener
-						.size()]));
+		
 		parser.parse(subtreeHandler);
 
 		// remark: at this point, the insertCtrl is still open for further

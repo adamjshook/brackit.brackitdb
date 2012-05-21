@@ -416,7 +416,7 @@ public final class BracketKey {
 	public BracketKey() {
 	}
 
-	private void set(int roundBrackets, int angleBrackets, int idGaps, Type type) {
+	public void set(int roundBrackets, int angleBrackets, int idGaps, Type type) {
 
 		// check input
 		if (roundBrackets > ROUND_BRACKETS_MAX
