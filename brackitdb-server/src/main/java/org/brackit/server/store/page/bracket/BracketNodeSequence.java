@@ -90,8 +90,11 @@ public final class BracketNodeSequence {
 		BracketKey.Type lowIDType = null;
 		byte[] bracketKeys = null;
 
+		XTCdeweyID lowKey = null;
+
 		if (numberOfAncestors == 0) {
 			physicalLowID = Field.COLLECTIONDEWEYID.encode(deweyID);
+			lowKey = deweyID;
 			if (deweyID.isDocument()) {
 				lowIDType = BracketKey.Type.DOCUMENT;
 			} else if (deweyID.isAttribute()) {
@@ -104,6 +107,7 @@ public final class BracketNodeSequence {
 			XTCdeweyID ancestorKey = BracketNodeSequence.getAncestorKey(
 					deweyID, numberOfAncestors);
 			physicalLowID = Field.COLLECTIONDEWEYID.encode(ancestorKey);
+			lowKey = ancestorKey;
 			lowIDType = ancestorKey.isDocument() ? BracketKey.Type.DOCUMENT
 					: BracketKey.Type.NODATA;
 			bracketKeys = BracketKey.generateBracketKeys(ancestorKey, deweyID);
@@ -140,7 +144,7 @@ public final class BracketNodeSequence {
 		System.arraycopy(value, 0, data, currentOffset, value.length);
 
 		return new BracketNodeSequence(deweyID.getDocID().getCollectionID(),
-				data, 1);
+				data, 1, lowKey);
 	}
 
 	/**
@@ -154,11 +158,12 @@ public final class BracketNodeSequence {
 	 *            sequence
 	 */
 	protected BracketNodeSequence(int collectionID,
-			byte[] internalRepresentation, int numberOfDataRecords) {
+			byte[] internalRepresentation, int numberOfDataRecords,
+			XTCdeweyID hintLowKey) {
 		this.data = internalRepresentation;
 		this.numberOfDataRecords = numberOfDataRecords;
 		this.collectionID = collectionID;
-		this.lowKey = readLowKey();
+		this.lowKey = (hintLowKey != null ? hintLowKey : readLowKey());
 	}
 
 	/**
@@ -574,8 +579,8 @@ public final class BracketNodeSequence {
 				break;
 			}
 		}
-		byte[] secondLowKeyBytes = Field.COLLECTIONDEWEYID.encode(deweyIDbuffer
-				.getDeweyID());
+		XTCdeweyID secondLowKey = deweyIDbuffer.getDeweyID();
+		byte[] secondLowKeyBytes = Field.COLLECTIONDEWEYID.encode(secondLowKey);
 		if (secondLowKeyBytes.length > 255) {
 			throw new RuntimeException("StartDeweyID is too long!");
 		}
@@ -596,7 +601,7 @@ public final class BracketNodeSequence {
 
 		this.data = data1;
 		this.numberOfDataRecords = dataRecords1;
-		return new BracketNodeSequence(collectionID, data2, dataRecords2);
+		return new BracketNodeSequence(collectionID, data2, dataRecords2, secondLowKey);
 	}
 
 	/**
@@ -706,9 +711,8 @@ public final class BracketNodeSequence {
 		numberOfDataRecords = dataRecords1;
 
 		// determine second part's lowkey
-
-		byte[] secondLowKeyBytes = Field.COLLECTIONDEWEYID.encode(deweyIDbuffer
-				.getDeweyID());
+		XTCdeweyID secondLowKey = deweyIDbuffer.getDeweyID();
+		byte[] secondLowKeyBytes = Field.COLLECTIONDEWEYID.encode(secondLowKey);
 		if (secondLowKeyBytes.length > 255) {
 			throw new RuntimeException("StartDeweyID is too long!");
 		}
@@ -730,7 +734,7 @@ public final class BracketNodeSequence {
 
 		this.data = data1;
 		this.numberOfDataRecords = dataRecords1;
-		return new BracketNodeSequence(collectionID, data2, dataRecords2);
+		return new BracketNodeSequence(collectionID, data2, dataRecords2, secondLowKey);
 	}
 
 	private void clear() {
