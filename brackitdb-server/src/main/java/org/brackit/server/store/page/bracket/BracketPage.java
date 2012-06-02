@@ -891,8 +891,10 @@ public final class BracketPage extends BasePage {
 
 		// iterate over all value references
 		int keyAreaEndOffset = getKeyAreaEndOffset();
-		while ((currentOffset = getNextValueRefOffset(currentOffset)) < keyAreaEndOffset) {
-
+		
+		while (currentOffset < keyAreaEndOffset) {
+			currentOffset = getNextValueRefOffset(currentOffset);
+			
 			if (!skipOneRecord || skipValueRefOffset != currentOffset) {
 
 				// jump to offset where the value is located in the buffer
