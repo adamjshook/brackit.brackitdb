@@ -42,7 +42,6 @@ public class RAFBlockFile implements BlockFile {
 
 	String fileName;
 	RandomAccessFile file;
-	boolean autoSync;
 	final int blockSize;
 
 	// first operate on raf, later generalize to virtual files
@@ -52,12 +51,9 @@ public class RAFBlockFile implements BlockFile {
 	}
 
 	@Override
-	public void open(boolean autoSync) throws FileException {
+	public void open() throws FileException {
 		try {
-			file = new RandomAccessFile(fileName,
-					autoSync ? Constants.FILE_MODE_SYNC
-							: Constants.FILE_MODE_UNSY);
-			this.autoSync = autoSync;
+			file = new RandomAccessFile(fileName, Constants.FILE_MODE_UNSY);
 		} catch (FileNotFoundException e) {
 			throw new FileException(e);
 		}
@@ -66,9 +62,7 @@ public class RAFBlockFile implements BlockFile {
 	@Override
 	public void close() throws FileException {
 		try {
-			if (!autoSync) {
-				sync();
-			}
+			sync();
 			file.close();
 		} catch (IOException e) {
 			throw new FileException(e);
@@ -87,13 +81,12 @@ public class RAFBlockFile implements BlockFile {
 	}
 
 	@Override
-	public void write(int blockNo, byte[] block, int numBlocks)
+	public void write(int blockNo, byte[] block, int numBlocks, boolean sync)
 			throws FileException {
 		try {
 			seekToBlock(blockNo);
 			file.write(block, 0, numBlocks * blockSize);
-
-			if (autoSync) {
+			if (sync) {
 				sync();
 			}
 		} catch (IOException e) {

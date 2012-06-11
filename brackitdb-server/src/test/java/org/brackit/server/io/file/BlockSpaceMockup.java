@@ -152,7 +152,7 @@ public class BlockSpaceMockup implements BlockSpace {
 	}
 
 	@Override
-	public void write(int blockNo, byte[] buffer, int numBlocks)
+	public void write(int blockNo, byte[] buffer, int numBlocks, boolean sync)
 			throws StoreException {
 		int offset = 0;
 		for (int i = 0; i < numBlocks; i++) {
@@ -182,5 +182,9 @@ public class BlockSpaceMockup implements BlockSpace {
 	public void dropUnit(int unitID, boolean force) throws StoreException {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public void syncData() throws StoreException {	
 	}
 }
