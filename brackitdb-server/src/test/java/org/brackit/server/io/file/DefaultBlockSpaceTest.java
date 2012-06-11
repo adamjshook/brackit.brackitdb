@@ -324,7 +324,7 @@ public class DefaultBlockSpaceTest {
 
 	/**
 	 * Test method for
-	 * {@link org.brackit.server.io.file.DefaultBlockSpace#write(int, byte[], int, boolean)}
+	 * {@link org.brackit.server.io.file.DefaultBlockSpace#write(int, byte[], int)}
 	 * .
 	 */
 	@Test
@@ -340,7 +340,7 @@ public class DefaultBlockSpaceTest {
 			}
 			for (int i = 0; i < INIT_SIZE; i++) {
 				int lba = bs.allocate(-1, unitID, false);
-				bs.write(lba, blk, 1, true);
+				bs.write(lba, blk, 1);
 			}
 
 			bs.close();
@@ -368,7 +368,7 @@ public class DefaultBlockSpaceTest {
 		}
 		try {
 			bs.open();
-			bs.write(1024, blk, 1, true);
+			bs.write(1024, blk, 1);
 
 			bs.close();
 		} catch (StoreException e) {
