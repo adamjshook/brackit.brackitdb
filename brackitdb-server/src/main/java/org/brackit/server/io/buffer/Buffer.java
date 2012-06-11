@@ -29,6 +29,7 @@ package org.brackit.server.io.buffer;
 
 import java.io.PrintStream;
 
+import org.brackit.server.io.buffer.log.PageLogOperation.PageUnitPair;
 import org.brackit.server.tx.Tx;
 
 /**
@@ -38,17 +39,41 @@ import org.brackit.server.tx.Tx;
  */
 public interface Buffer {
 
+	public interface PageReleaser {
+		public void release() throws BufferException;
+	}
+
 	public int getBufferSize();
 
 	public int getContainerNo();
 
-	public Handle allocatePage(Tx tx) throws BufferException;
+	/**
+	 * @param unitID
+	 *            requested unitID; if -1, the unitID will be assigned
+	 *            automatically.
+	 */
+	public int createUnit(Tx tx, int unitID, boolean logged, long undoNextLSN,
+			boolean force) throws BufferException;
 
-	public Handle allocatePage(Tx tx, PageID pageID, boolean logged,
-			long undoNextLSN) throws BufferException;
+	public void dropUnit(Tx tx, int unitID, boolean logged, long undoNextLSN,
+			boolean force) throws BufferException;
 
-	public void deletePage(Tx tx, PageID pageID, boolean logged,
-			long undoNextLSN) throws BufferException;
+	public Handle allocatePage(Tx tx, int unitID) throws BufferException;
+
+	/**
+	 * @param force
+	 *            if pageID != null, this flag forces the allocation of the
+	 *            given pageID, even if it is already allocated
+	 */
+	public Handle allocatePage(Tx tx, int unitID, PageID pageID,
+			boolean logged, long undoNextLSN, boolean force)
+			throws BufferException;
+
+	/**
+	 * Deletes a page at the end of transaction.
+	 */
+	public void deletePageDeferred(Tx tx, PageID pageID, int unitID)
+			throws BufferException;
 
 	public Handle fixPage(Tx tx, PageID pageID) throws BufferException;
 
@@ -81,4 +106,38 @@ public interface Buffer {
 	public int getPageSize();
 
 	public boolean isFixed(Handle handle);
+
+	/**
+	 * Two phase page deallocation: when this method is called, a log record
+	 * about the page deallocation is written, but the page is still not
+	 * available for allocations by other transactions. Therefore, call the
+	 * release() method on the result object to physically release the page. At
+	 * this point in time, it has to be ensured that the page is not needed
+	 * anymore for Undo processing.
+	 */
+	public PageReleaser deletePage(Tx transaction, PageID pageID, int unitID,
+			boolean logged, long undoNextLSN, boolean force)
+			throws BufferException;
+
+	/**
+	 * Adds a PostRedoHook to the transaction so that the given pages and units
+	 * are released after the COMMIT log record is found in the log. This method
+	 * has only an effect when invoked during the Redo phase.
+	 */
+	public void releaseAfterRedo(Tx tx, PageUnitPair[] pages, int[] units);
+
+	public int createUnit(Tx tx) throws BufferException;
+
+	public void dropUnit(Tx tx, int unitID) throws BufferException;
+
+	public PageReleaser deletePage(Tx transaction, PageID pageID, int unitID)
+			throws BufferException;
+
+	public void dropUnitDeferred(Tx tx, int unitID);
+
+	public void redoAllocation(Tx tx, PageID pageID, int unitID, long LSN)
+			throws BufferException;
+
+	public void undoDeallocation(Tx tx, PageID pageID, int unitID, long undoNextLSN)
+			throws BufferException;
 }

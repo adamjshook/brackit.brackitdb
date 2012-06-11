@@ -28,6 +28,7 @@
 package org.brackit.server.store.index.aries.page;
 
 import org.brackit.xquery.util.log.Logger;
+import org.brackit.server.io.buffer.Buffer.PageReleaser;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
@@ -61,8 +62,7 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 	private static final int PAGE_TYPE_FIELD_NO = 1;
 	private static final int KEY_TYPE_FIELD_NO = 2;
 	private static final int VALUE_TYPE_FIELD_NO = 3;
-	private static final int UNIT_ID_FIELD_NO = 4;
-	private static final int BEFORE_PAGE_FIELD_NO = 4 + SizeConstants.INT_SIZE;
+	private static final int BEFORE_PAGE_FIELD_NO = 4;
 	private static final int NEXT_PAGE_FIELD_NO = 4 + SizeConstants.INT_SIZE;
 	private static final int PREVIOUS_PAGE_FIELD_NO = 4
 			+ SizeConstants.INT_SIZE + PageID.getSize();
@@ -115,22 +115,7 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 
 	@Override
 	public int getUnitID() {
-		byte[] buffer = page.getHandle().page;
-		int offset = reservedOffset + UNIT_ID_FIELD_NO;
-		int id = ((buffer[offset] & 255) << 24)
-				| ((buffer[offset + 1] & 255) << 16)
-				| ((buffer[offset + 2] & 255) << 8)
-				| (buffer[offset + 3] & 255);
-		return id;
-	}
-
-	private void setUnitID(int id) {
-		byte[] buffer = page.getHandle().page;
-		int offset = reservedOffset + UNIT_ID_FIELD_NO;
-		buffer[offset] = (byte) ((id >> 24) & 255);
-		buffer[offset + 1] = (byte) ((id >> 16) & 255);
-		buffer[offset + 2] = (byte) ((id >> 8) & 255);
-		buffer[offset + 3] = (byte) (id & 255);
+		return page.getHandle().getUnitID();
 	}
 
 	@Override
@@ -384,7 +369,7 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 	private byte[] externalize(byte[] value) throws IndexOperationException {
 		try {
 			PageID blobPageID = create(transaction, page.getPageID()
-					.getContainerNo());
+					.getContainerNo(), page.getHandle().getUnitID());
 			write(transaction, blobPageID, value, false);
 			value = blobPageID.getBytes();
 		} catch (BlobStoreAccessException e) {
@@ -476,14 +461,14 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 	}
 
 	@Override
-	public void format(int unitID, int pageType, PageID rootPageID,
+	public void format(int pageType, PageID rootPageID,
 			Field keyType, Field valueType, boolean unique, boolean compressed,
 			boolean logged, long undoNextLSN) throws IndexOperationException {
 		LogOperation operation = null;
 
 		if (logged) {
 			operation = BPlusIndexLogOperationHelper.createFormatLogOperation(
-					getPageID(), getUnitID(), unitID, rootPageID,
+					getPageID(), rootPageID,
 					getPageType(), pageType, getKeyType(), keyType,
 					getValueType(), valueType, isUnique(), unique,
 					isCompressed(), compressed);
@@ -503,7 +488,6 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 		// 1)* PageID.getSize()];
 		// page.insert(0, key, value, compressed);
 
-		setUnitID(unitID);
 		setPageType(pageType);
 		page.setBasePageID(rootPageID);
 		setKeyType(keyType);
@@ -1141,11 +1125,13 @@ public class DirectKeyValuePageContext extends SimpleBlobStore implements
 	}
 
 	@Override
-	public void deletePage() throws IndexOperationException {
+	public PageReleaser deletePage() throws IndexOperationException {
 		try {
 			PageID pageID = page.getPageID();
+			int unitID = page.getHandle().getUnitID();
+			PageReleaser pr = page.getBuffer().deletePage(transaction, pageID, unitID);
 			page.cleanup();
-			page.getBuffer().deletePage(transaction, pageID, true, -1);
+			return pr;
 		} catch (BufferException e) {
 			throw new IndexOperationException(e, "Error deleting page");
 		}

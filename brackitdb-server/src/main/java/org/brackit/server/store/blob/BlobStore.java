@@ -40,9 +40,10 @@ import org.brackit.server.tx.Tx;
  */
 public interface BlobStore {
 	/**
-	 * Allocates a new blob in the given container.
+	 * Allocates a new blob in the given container and unit.
+	 * UnitID of -1 creates a new unit in the container.
 	 */
-	public PageID create(Tx tx, int containerNo)
+	public PageID create(Tx tx, int containerNo, int unitID)
 			throws BlobStoreAccessException;
 
 	/**

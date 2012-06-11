@@ -29,6 +29,8 @@ package org.brackit.server.store.index.bracket;
 
 import java.io.PrintStream;
 
+import org.brackit.server.io.buffer.Buffer;
+import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
@@ -40,6 +42,7 @@ import org.brackit.server.node.el.ElRecordAccess;
 import org.brackit.server.store.OpenMode;
 import org.brackit.server.store.index.IndexAccessException;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
+import org.brackit.server.store.index.bracket.page.BPContext;
 import org.brackit.server.store.index.bracket.page.Leaf;
 import org.brackit.server.store.page.bracket.RecordInterpreter;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
@@ -73,13 +76,44 @@ public class BracketIndexImpl implements BracketIndex {
 	@Override
 	public PageID createIndex(Tx tx, int containerNo)
 			throws IndexAccessException {
-		return createIndex(tx, containerNo, -1);
+		
+		Leaf root = null;
+
+		try {
+			root = tree.allocateLeaf(tx, containerNo, -1, null, true);
+			PageID rootPageID = root.getPageID();
+			root.cleanup();
+
+			return rootPageID;
+		} catch (IndexOperationException e) {
+			throw new IndexAccessException(e,
+					"Could not create index root page.");
+		}		
 	}
 
 	@Override
 	public void dropIndex(Tx tx, PageID rootPageID) throws IndexAccessException {
-		// TODO Auto-generated method stub
-
+		
+		BPContext page = null;
+		
+		try {
+			
+			// find out unitID and buffer for this index
+			page = tree.getPage(tx, rootPageID, false, false);
+			int unitID = page.getUnitID();
+			page.cleanup();
+			page = null;
+			
+			Buffer buffer = bufferMgr.getBuffer(rootPageID);
+			
+			// drop unit
+			buffer.dropUnitDeferred(tx, unitID);
+			
+		} catch (IndexOperationException e) {
+			throw new IndexAccessException(e);
+		} catch (BufferException e) {
+			throw new IndexAccessException(e); 
+		}	
 	}
 
 	@Override
@@ -100,23 +134,6 @@ public class BracketIndexImpl implements BracketIndex {
 	public BracketIter open(Tx tx, PageID rootPageID, NavigationMode navMode,
 			XTCdeweyID key, OpenMode openMode) throws IndexAccessException {
 		return open(tx, rootPageID, navMode, key, openMode, null);
-	}
-
-	@Override
-	public PageID createIndex(Tx tx, int containerNo, int unitID)
-			throws IndexAccessException {
-		Leaf root = null;
-
-		try {
-			root = tree.allocateLeaf(tx, containerNo, unitID, null, true);
-			PageID rootPageID = root.getPageID();
-			root.cleanup();
-
-			return rootPageID;
-		} catch (IndexOperationException e) {
-			throw new IndexAccessException(e,
-					"Could not create index root page.");
-		}
 	}
 
 	@Override

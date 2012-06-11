@@ -280,14 +280,12 @@ public interface Index {
 	 *            indicates whether this is a unique index or not
 	 * @param compression
 	 *            indicates whether this index uses compression or not
-	 * @param unitID
-	 *            id of the unit the index belongs to
 	 * @return the number of the index root page
 	 * @throws IndexAccessException
 	 *             iff an error occurred during index creation
 	 */
 	public PageID createIndex(Tx transaction, int containerNo, Field keyType,
-			Field valueType, boolean unique, boolean compression, int unitID)
+			Field valueType, boolean unique, boolean compression)
 			throws IndexAccessException;
 
 	/**

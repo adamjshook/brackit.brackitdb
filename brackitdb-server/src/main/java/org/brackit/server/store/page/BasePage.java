@@ -155,6 +155,10 @@ public abstract class BasePage implements BufferedPage {
 	public PageID getPageID() {
 		return handle.getPageID();
 	}
+	
+	public int getUnitID() {
+		return handle.getUnitID();
+	}
 
 	public final long getLSN() {
 		return handle.getLSN();

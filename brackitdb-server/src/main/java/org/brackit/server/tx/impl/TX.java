@@ -29,16 +29,21 @@ package org.brackit.server.tx.impl;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.Buffer;
+import org.brackit.server.io.buffer.Buffer.PageReleaser;
+import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.cache.CachedObjectHook;
 import org.brackit.server.session.Session;
 import org.brackit.server.tx.IsolationLevel;
 import org.brackit.server.tx.PostCommitHook;
 import org.brackit.server.tx.PreCommitHook;
+import org.brackit.server.tx.PostRedoHook;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.TxID;
@@ -84,7 +89,13 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 	private final Collection<PreCommitHook> preHooks;
 
+	private final Map<String, PreCommitHook> preHookMap;
+
 	private final Collection<PostCommitHook> postHooks;
+	
+	private final Collection<PageReleaser> pagesToRelease;
+	
+	private Collection<PostRedoHook> redoHooks;
 
 	private FlushBufferHook flushHook;
 
@@ -128,7 +139,9 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 		this.lcb = new LockControlBlock(this, timeout);
 		this.preHooks = new ArrayList<PreCommitHook>(4);
 		this.postHooks = new ArrayList<PostCommitHook>(4);
+		this.preHookMap = new HashMap<String, PreCommitHook>(4);
 		this.cacheHooks = new ArrayList<CachedObjectHook>(4);
+		this.pagesToRelease = new ArrayList<PageReleaser>();
 		this.statistics = new TxStats();
 	}
 
@@ -146,35 +159,35 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 	@Override
 	public void commit() throws TxException {
-		try {
-			int TLSN = 0;
-			boolean doCommit = voteCommit();
+		int TLSN = 0;
+		boolean doCommit = voteCommit();
 
-			if (doCommit) {
-				doCommit();
-			} else {
-				waitEOT();
+		if (doCommit) {
+			doCommit();
+		} else {
+			waitEOT();
 
-				if (getState() != TxState.COMMITTED) {
-					throw new TxException("Commit failed.");
-				}
-			}
-		} finally {
-			// TODO perform the after hooks asynchronously
-			for (PostCommitHook postHook : postHooks) {
-				Tx postTX = taMgr.begin(IsolationLevel.SERIALIZABLE, null,
-						false);
-				try {
-					postHook.execute(postTX);
-					postTX.commit();
-				} catch (ServerException e) {
-					log.error(String.format(
-							"Post commit hook %s for tx %s failed: %s",
-							postHook, this, e.getMessage()), e);
-					postTX.rollback();
-				}
+			if (getState() != TxState.COMMITTED) {
+				throw new TxException("Commit failed.");
 			}
 		}
+
+		// perform after hooks (in case of commit success)
+		for (PostCommitHook postHook : postHooks) {
+			Tx postTX = taMgr.begin(IsolationLevel.SERIALIZABLE, null, false);
+			try {
+				postHook.execute(postTX);
+				postTX.commit();
+			} catch (ServerException e) {
+				log.error(String.format(
+						"Post commit hook %s for tx %s failed: %s", postHook,
+						this, e.getMessage()), e);
+				postTX.rollback();
+			}
+		}
+
+		// remove Tx from table
+		taMgr.getTxTable().remove(txID);
 	}
 
 	@Override
@@ -205,13 +218,18 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 			if (log.isDebugEnabled()) {
 				log.debug(String.format("Commit of %s started.", toString()));
 			}
+			
+			// check whether deleted pages are also released by now
+			if (releaseDeletedPages()) {
+				throw new ServerException("Some deleted pages are not released yet.");
+			}
 
 			for (PreCommitHook hook : preHooks) {
 				hook.prepare(this);
 			}
 
 			if (!readOnly) {
-				long commitLsn = logEOT();
+				long commitLsn = logEOT(true);
 				taMgr.getLog().flush(commitLsn);
 			}
 
@@ -222,7 +240,12 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 			signalEOT(true);
 
-			taMgr.getTxTable().remove(txID);
+			// keep Tx in table, until the PostCommitHooks are executed ->
+			// ensures that in case of Checkpoints between Commit and
+			// PostCommitHooks no log records related to this transaction are
+			// removed
+			
+			// taMgr.getTxTable().remove(txID);
 		} catch (ServerException e) {
 			log.error(String.format(
 					"Prepare of resource managers for commit failed. "
@@ -264,7 +287,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 			}
 
 			try {
-				long commitLsn = logEOT();
+				long commitLsn = logEOT(false);
 			} catch (TxException e) {
 				if (log.isDebugEnabled()) {
 					log.debug(
@@ -317,10 +340,10 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 		return 0;
 	}
 
-	public long logEOT() throws TxException {
+	public long logEOT(boolean commit) throws TxException {
 		if (prevLSN != -1) {
 			Loggable loggable = taMgr.getLog().getLoggableHelper()
-					.createEOT(txID, prevLSN);
+					.createEOT(txID, prevLSN, commit);
 			long LSN = log(loggable, true);
 
 			if (log.isDebugEnabled()) {
@@ -369,6 +392,11 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 	public long logCLR(LogOperation logOperation, long undoNextLSN)
 			throws TxException {
+		
+		if (undoNextLSN < 0) {
+			undoNextLSN = -1;
+		}
+		
 		Loggable loggable = taMgr.getLog().getLoggableHelper()
 				.createCLR(txID, prevLSN, logOperation, undoNextLSN);
 		long LSN = log(loggable, false);
@@ -459,7 +487,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 			logOperation = record.getLogOperation();
 			nextUndoLSN = record.getPrevLSN();
-			logOperation.undo(this, record.getLSN(), nextUndoLSN);
+			logOperation.undo(this, record.getLSN(), (nextUndoLSN != -1) ? nextUndoLSN : -2);
 			break;
 		case Loggable.TYPE_UPDATE_SPECIAL:
 			if (log.isDebugEnabled()) {
@@ -469,7 +497,7 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 
 			logOperation = record.getLogOperation();
 			nextUndoLSN = record.getUndoNextLSN();
-			logOperation.undo(this, record.getLSN(), nextUndoLSN);
+			logOperation.undo(this, record.getLSN(), (nextUndoLSN != -1) ? nextUndoLSN : -2);
 			break;
 		case Loggable.TYPE_DUMMY:
 		case Loggable.TYPE_CLR:
@@ -506,8 +534,12 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 		return this.taMgr.getBufferManager();
 	}
 
-	public void addPreCommitHook(PreCommitHook hook) {
+	public void addPreCommitHook(PreCommitHook hook, String name) {
 		preHooks.add(hook);
+
+		if (name != null) {
+			preHookMap.put(name, hook);
+		}
 	}
 
 	public void addPostCommitHook(PostCommitHook hook) {
@@ -521,6 +553,29 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 		}
 
 		flushHook.addContainer(containerNo);
+	}
+	
+	@Override
+	public void addDeletedPage(PageReleaser pr) {
+		pagesToRelease.add(pr);
+	}
+	
+	@Override
+	public boolean releaseDeletedPages() throws TxException {
+		if (pagesToRelease.isEmpty()) {
+			return false;
+		}
+		
+		try {
+			for (PageReleaser pr : pagesToRelease) {
+				pr.release();
+			}
+		} catch (BufferException e) {
+			throw new TxException(e, "Could not release one of the deleted pages.");
+		}
+		
+		pagesToRelease.clear();		
+		return true;
 	}
 
 	public Collection<PreCommitHook> getPreCommitHooks() {
@@ -558,5 +613,29 @@ public class TX extends TxControlBlock implements org.brackit.server.tx.Tx {
 	@Override
 	public TxStats getStatistics() {
 		return this.statistics;
+	}
+
+	@Override
+	public PreCommitHook getPreCommitHook(String name) {
+		return preHookMap.get(name);
+	}
+
+	@Override
+	public void addPostRedoHook(PostRedoHook hook) {
+		
+		if (redoHooks == null) {
+			redoHooks = new ArrayList<PostRedoHook>();
+		}
+		redoHooks.add(hook);
+	}
+
+	@Override
+	public void executePostRedoHooks() throws ServerException {
+		
+		if (redoHooks != null) {
+			for (PostRedoHook hook : redoHooks) {
+				hook.execute();
+			}
+		}
 	}
 }

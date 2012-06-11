@@ -39,6 +39,14 @@ public interface BlockSpace {
 
 	void create(int blkSize, int iniSize, double extent) throws StoreException;
 
+	/**
+	 * @param unitID
+	 *            requested unitID; if -1, the unitID will be assigned
+	 *            automatically.
+	 * @param force TODO
+	 */
+	int createUnit(int unitID, boolean force) throws StoreException;
+
 	void open() throws StoreException;
 
 	void close() throws StoreException;
@@ -51,17 +59,27 @@ public interface BlockSpace {
 	 *            implementation may choose the to-be-allocated block freely
 	 *            (Normally the next free block from the beginning of the
 	 *            BlockSpace).
+	 * @param unitID
+	 *            The unitID this block will be assigned to. If the unit does
+	 *            not exist, an exception will be thrown.
+	 * @param force
+	 *            if lba != -1, this flag forces the allocation of the given
+	 *            block, even if it is already allocated
 	 * @return the logical block address (lba) of the newly allocated block
 	 */
-	int allocate(int lba) throws StoreException;
+	int allocate(int lba, int unitID, boolean force) throws StoreException;
 
 	/**
 	 * the opposite of allocate: marking the block identified by the lba as
-	 * free.
+	 * free. The hintUnitID can be used to speed up the method by indicating the
+	 * unitID this block is assigned to. Otherwise, set it to -1.
 	 * 
 	 * @param lba
+	 * @param force
+	 *            this flag forces the deallocation of the given block, even if
+	 *            it is already deallocated
 	 */
-	void release(int lba) throws StoreException;
+	void release(int lba, int unitID, boolean force) throws StoreException;
 
 	int read(int lba, byte[] buffer, int numBlocks) throws StoreException;
 
@@ -84,4 +102,5 @@ public interface BlockSpace {
 
 	void sync() throws StoreException;
 
+	void dropUnit(int unitID, boolean force) throws StoreException;
 }

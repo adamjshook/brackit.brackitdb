@@ -70,7 +70,7 @@ public class SimpleBlobPage extends BasePage implements BufferedPage {
 		for (SimpleBlobPage p = getNext(tx, true, false); p != null; p = p
 				.getNext(tx, true, false)) {
 			try {
-				buffer.deletePage(tx, p.getPageID(), true, tx.checkPrevLSN());
+				buffer.deletePageDeferred(tx, p.getPageID(), p.getUnitID());
 				p.cleanup();
 			} catch (BufferException e) {
 				throw new BlobStoreAccessException(e,
@@ -94,7 +94,7 @@ public class SimpleBlobPage extends BasePage implements BufferedPage {
 			} else {
 				if (nextPageID == null) {
 					if (appendNew) {
-						Handle nextOverflowHandle = buffer.allocatePage(tx);
+						Handle nextOverflowHandle = buffer.allocatePage(tx, getUnitID());
 						nextOverflowHandle.setAssignedTo(tx);
 						SimpleBlobPage next = new SimpleBlobPage(buffer,
 								nextOverflowHandle);

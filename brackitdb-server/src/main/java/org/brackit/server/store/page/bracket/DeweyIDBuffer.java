@@ -512,7 +512,7 @@ public final class DeweyIDBuffer implements SimpleDeweyID {
 	 * Sets this buffer to its parent DeweyID. For attributes the corresponding
 	 * element DeweyID is returned.
 	 * 
-	 * @return false if the current DeweyID is the root DeweyID
+	 * @return false if the current DeweyID is a document
 	 */
 	public boolean setToParent() {
 

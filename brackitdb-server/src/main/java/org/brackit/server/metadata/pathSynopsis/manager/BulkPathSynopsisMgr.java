@@ -77,7 +77,7 @@ public class BulkPathSynopsisMgr extends AbstractPathSynopsisMgr implements
 	@Override
 	protected void addNodeToTaList(PathSynopsis pathSynopsis, PathSynopsisNode node) {
 		if (maxPCR == -1) {
-			tx.addPreCommitHook(this);
+			tx.addPreCommitHook(this, null);
 		}
 		int b = node.getPCR();
 

@@ -30,6 +30,7 @@ package org.brackit.server.store.index.aries.page;
 import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.PageID;
+import org.brackit.server.io.buffer.Buffer.PageReleaser;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.store.Field;
 import org.brackit.server.store.SearchMode;
@@ -403,7 +404,7 @@ public class KeyValuePageContext extends SimpleBlobStore implements PageContext 
 	private byte[] externalize(byte[] value) throws IndexOperationException {
 		try {
 			PageID blobPageID = create(transaction, page.getPageID()
-					.getContainerNo());
+					.getContainerNo(), page.getHandle().getUnitID());
 			write(transaction, blobPageID, value, false);
 			value = blobPageID.getBytes();
 		} catch (BlobStoreAccessException e) {
@@ -495,14 +496,14 @@ public class KeyValuePageContext extends SimpleBlobStore implements PageContext 
 	}
 
 	@Override
-	public void format(int unitID, int pageType, PageID rootPageID,
+	public void format(int pageType, PageID rootPageID,
 			Field keyType, Field valueType, boolean unique, boolean compressed,
 			boolean logged, long undoNextLSN) throws IndexOperationException {
 		LogOperation operation = null;
 
 		if (logged) {
 			operation = BPlusIndexLogOperationHelper.createFormatLogOperation(
-					getPageID(), getUnitID(), unitID, rootPageID,
+					getPageID(), rootPageID,
 					getPageType(), pageType, getKeyType(), keyType,
 					getValueType(), valueType, isUnique(), unique,
 					isCompressed(), compressed);
@@ -1159,11 +1160,13 @@ public class KeyValuePageContext extends SimpleBlobStore implements PageContext 
 	}
 
 	@Override
-	public void deletePage() throws IndexOperationException {
+	public PageReleaser deletePage() throws IndexOperationException {
 		try {
 			PageID pageID = page.getPageID();
+			int unitID = page.getHandle().getUnitID();
+			PageReleaser pr = page.getBuffer().deletePage(transaction, pageID, unitID);
 			page.cleanup();
-			page.getBuffer().deletePage(transaction, pageID, true, -1);
+			return pr;
 		} catch (BufferException e) {
 			throw new IndexOperationException(e, "Error deleting page");
 		}

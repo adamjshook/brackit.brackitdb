@@ -30,12 +30,19 @@ package org.brackit.server.io.file;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.brackit.server.util.BitArrayWrapper;
+import org.brackit.server.util.BitMap;
+import org.brackit.server.util.BitMapTree;
 import org.brackit.server.util.FileUtil;
+import org.brackit.xquery.util.log.Logger;
 import org.brackit.server.xquery.function.bdb.statistics.InfoContributor;
 import org.brackit.server.xquery.function.bdb.statistics.ListContainers;
-import org.brackit.xquery.util.log.Logger;
 
 /**
  * Default BlockSpace implementation using one BlockFile, simple 1:1 mapping
@@ -48,6 +55,7 @@ import org.brackit.xquery.util.log.Logger;
  * 
  * @author Ou Yi
  * @author Sebastian Baechle
+ * @author Martin Hiller
  * 
  */
 public class DefaultBlockSpace implements BlockSpace, InfoContributor {
@@ -67,7 +75,11 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 	RandomAccessFile metaFile;
 	int iniSize;
 	int extSize;
-	BitArrayWrapper freeSpaceInfo;
+	BitMap freeSpaceInfo;
+
+	Map<Integer, BitMap> unitMap;
+	int nextUnit = 1;
+
 	int nextFreeBlockHint;
 	boolean closed = true;
 	public byte[] iniBlock;
@@ -97,24 +109,33 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 	}
 
 	@Override
-	public int allocate(int lba) throws StoreException {
+	public int allocate(int lba, int unitID, boolean force)
+			throws StoreException {
 		freeBlockCount--;
 		usedBlockCount++;
-		return allocateImpl(lba);
+		return allocateImpl(lba, unitID, force);
 	}
 
-	private synchronized int allocateImpl(int lba) throws StoreException {
+	private synchronized int allocateImpl(int lba, int unitID, boolean force)
+			throws StoreException {
+
+		BitMap unit = unitMap.get(unitID);
+		if (unit == null) {
+			throw new StoreException(String.format("UnitID %s does not exist!",
+					unitID));
+		}
 
 		// lba >= 0, the caller decides which block to allocate
 		if (lba >= 0) {
 			while (lba >= freeSpaceInfo.logicalSize()) {
 				extendStore();
 			}
-			if (freeSpaceInfo.get(lba)) {
+			if (!force && freeSpaceInfo.get(lba)) {
 				throw new StoreException("block already allocated, lba: " + lba);
 			}
 			nextFreeBlockHint = lba + 1;
 			freeSpaceInfo.set(lba);
+			unit.set(lba);
 			return lba; // Note we use one to one mapping for lba >> blockNo
 		}
 
@@ -127,6 +148,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			if (blockNo >= 0) {
 				nextFreeBlockHint = blockNo + 1;
 				freeSpaceInfo.set(blockNo);
+				unit.set(blockNo);
 				return blockNo; // Note we use one to one mapping for lba >>
 				// blockNo
 			}
@@ -139,42 +161,54 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 
 		nextFreeBlockHint = blockNo + 1;
 		freeSpaceInfo.set(blockNo);
+		unit.set(blockNo);
 		return blockNo; // Note we use one to one mapping for lba >> blockNo
 	}
 
-	private void extendStore() throws StoreException {
-		extendStoreImpl();
-	}
-
-	private synchronized void extendStoreImpl() throws StoreException {
-
+	private synchronized void extendStore() throws StoreException {
+		
 		int newStoreSize = freeSpaceInfo.logicalSize() + extSize;
+		extendStore(newStoreSize);
+	}
+	
+	private synchronized void extendStore(int newSize) throws StoreException {
+		
 		log.debug(String.format(
-				"extending block space, old size: %s, new size %s",
-				freeSpaceInfo.logicalSize(), newStoreSize));
+				"extending block space to size %s", newSize));
 
 		try {
+			
+			if (dataFile.getBlockCnt() < newSize) {
+				// extend data file
+				
+				dataFile.close();
 
-			dataFile.close();
+				// no autoSync to speed up the initialization
+				dataFile.open(false);
 
-			// no autoSync to speed up the initialization
-			dataFile.open(false);
+				for (int i = dataFile.getBlockCnt(); i < newSize; i++) {
+					dataFile.write(i, iniBlock, 1);
+				}
 
-			for (int i = freeSpaceInfo.logicalSize(); i < newStoreSize; i++) {
-				dataFile.write(i, iniBlock, 1);
+				dataFile.close();
+				dataFile.open(true);
 			}
 
-			dataFile.close();
-
-			freeSpaceInfo = freeSpaceInfo.extendTo(newStoreSize);
-			freeBlockCount += extSize;
-			syncMeta(false, false);
-
-			dataFile.open(true);
+			int ext = newSize - freeSpaceInfo.logicalSize();
+			if (ext > 0) {
+				// extend meta data
+				freeSpaceInfo.extendTo(newSize);
+				freeBlockCount += ext;
+				
+				for (BitMap unit : unitMap.values()) {
+					unit.extendTo(newSize);
+				}
+			}
 
 		} catch (FileException e) {
 			throw new StoreException(e);
 		}
+		
 	}
 
 	@Override
@@ -183,14 +217,38 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 	}
 
 	@Override
-	public void release(int lba) throws StoreException {
-		releaseImpl(lba);
+	public void release(int lba, int unitID, boolean force)
+			throws StoreException {
+		releaseImpl(lba, unitID, force);
 		usedBlockCount--;
 		freeBlockCount++;
 	}
 
-	private synchronized void releaseImpl(int lba) throws StoreException {
-		if (!freeSpaceInfo.get(lba)) {
+	private synchronized void releaseImpl(int lba, int unitID, boolean force)
+			throws StoreException {
+
+		// mark block as free
+		freeBlock(lba, force);
+
+		// release block from unit
+		BitMap unit = unitMap.get(unitID);
+		if (unit != null && unit.get(lba)) {
+			unit.clear(lba);
+		} else {
+			if (force) {
+				for (BitMap u : unitMap.values()) {
+					u.clear(lba);
+				}
+			} else {
+				throw new StoreException(String.format(
+						"Block %s does not belong to unit %s.", lba, unitID));
+			}
+		}
+	}
+
+	private void freeBlock(int lba, boolean force) throws StoreException {
+
+		if (!force && !freeSpaceInfo.get(lba)) {
 			throw new StoreException("invalid lba, block not in use");
 		}
 		freeSpaceInfo.clear(lba);
@@ -210,7 +268,8 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 		try {
 			dataFile.close();
 
-			syncMeta(false, true);
+			syncMeta();
+
 			metaFile.close();
 
 			closed = true;
@@ -222,40 +281,45 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 		log.info("block space " + id + " closed");
 	}
 
-	private void syncMeta(boolean writeHeader, boolean markConsistent)
-			throws StoreException {
-		// write the up-to-date length
+	private void syncMeta() throws StoreException {
 		try {
 
-			if (writeHeader) {
-				metaFile.seek(0);
-				metaFile.writeInt(blkSize);
-				metaFile.writeInt(iniSize);
-				metaFile.writeInt(extSize);
-			} else {
-				metaFile.seek(12);
-			}
+			// write header
+			metaFile.seek(0);
+			metaFile.writeInt(blkSize);
+			metaFile.writeInt(iniSize);
+			metaFile.writeInt(extSize);
 
 			// mark metadata as inconsistent before proceeding
-			metaFile.writeInt(1);
-			metaFile.getFD().sync();
+			// metaFile.writeInt(1);
+			// metaFile.getFD().sync();
 
-			// so that we know how many bytes to read for the free space
-			// administration
-			metaFile.writeInt(freeSpaceInfo.toBytes().length);
-			metaFile.write(freeSpaceInfo.toBytes());
+			// write freeSpaceInfo
+			freeSpaceInfo.write(metaFile);
 
 			metaFile.writeInt(freeBlockCount);
 			metaFile.writeInt(usedBlockCount);
 
+			// metaFile.getFD().sync();
+
+			Set<Entry<Integer, BitMap>> units = unitMap.entrySet();
+			// store number of units
+			metaFile.writeInt(units.size());
+
+			// sync unit mappings
+			for (Entry<Integer, BitMap> unit : units) {
+				metaFile.writeInt(unit.getKey());
+				unit.getValue().write(metaFile);
+			}
+
 			metaFile.getFD().sync();
 
-			if (markConsistent) {
-				// everything is OK. mark consistent and flush
-				metaFile.seek(12);
-				metaFile.writeInt(0);
-				metaFile.getFD().sync();
-			}
+			// if (markConsistent) {
+			// // everything is OK. mark consistent and flush
+			// metaFile.seek(12);
+			// metaFile.writeInt(0);
+			// metaFile.getFD().sync();
+			// }
 
 		} catch (IOException e) {
 			throw new StoreException("failure syncing meta file");
@@ -305,6 +369,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			if (meta.exists()) {
 				meta.delete();
 			}
+
 			dataFile = new RAFBlockFile(dataFileName, blkSize);
 
 			// no autoSync to speed up the initialization
@@ -324,10 +389,14 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			// depends on the old IOMgr
 			freeSpaceInfo.set(0);
 
+			// start with empty unit mapping
+			unitMap = new HashMap<Integer, BitMap>();
+			nextUnit = 1;
+
 			metaFile = new RandomAccessFile(metaFileName,
 					Constants.FILE_MODE_UNSY);
 
-			syncMeta(true, true);
+			syncMeta();
 
 			metaFile.close();
 
@@ -353,7 +422,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			iniSize = metaFile.readInt();
 			extSize = metaFile.readInt();
 
-			boolean consistent = (metaFile.readInt() == 0);
+			// boolean consistent = (metaFile.readInt() == 0);
 
 			iniBlock = new byte[blkSize];
 			for (int i = 0; i < iniBlock.length; i++) {
@@ -362,38 +431,29 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			dataFile = new RAFBlockFile(dataFileName, blkSize);
 			dataFile.open(true);
 
-			if (consistent) {
-				int freeSpaceInfoBytes = metaFile.readInt();
-				byte[] b = new byte[freeSpaceInfoBytes];
-				metaFile.readFully(b);
-				freeSpaceInfo = BitArrayWrapper.fromBytes(b);
+			// read freeSpaceInfo from meta file
+			freeSpaceInfo = new BitArrayWrapper();
+			freeSpaceInfo.read(metaFile);
 
-				freeBlockCount = metaFile.readInt();
-				usedBlockCount = metaFile.readInt();
-			} else {
-				int blockCnt = dataFile.getBlockCnt();
-				freeSpaceInfo = new BitArrayWrapper(blockCnt);
+			freeBlockCount = metaFile.readInt();
+			usedBlockCount = metaFile.readInt();
 
-				byte[] block = new byte[blkSize];
+			// read unit files from meta file
+			unitMap = new HashMap<Integer, BitMap>();
+			nextUnit = 1;
 
-				log.warn(String.format(
-						"Repairing freespace information for %s after crash.",
-						dataFileName));
-
-				// the first block reserved, for compatibility with the code
-				// which
-				// depends on the old IOMgr
-				freeSpaceInfo.set(0);
-				for (int i = 1; i < blockCnt; i++) {
-					dataFile.read(i, block, 1);
-					if (block[0] != 0) {
-						freeSpaceInfo.set(i);
-					}
-				}
-
+			int unitCount = metaFile.readInt();
+			for (int i = 0; i < unitCount; i++) {
+				int unitID = metaFile.readInt();
+				BitMap unit = new BitMapTree();
+				unit.read(metaFile);
+				unitMap.put(unitID, unit);
+				nextUnit = Math.max(nextUnit, unitID + 1);
 			}
-
-			syncMeta(false, false);
+			
+			// extend meta or data file to the common store size
+			int storeSize = Math.max(dataFile.getBlockCnt(), freeSpaceInfo.logicalSize());
+			extendStore(storeSize);
 
 			closed = false;
 		} catch (FileException e) {
@@ -446,7 +506,6 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			throw new StoreException("invalid lba");
 		}
 		try {
-			// block[0] = 1;
 			dataFile.write(lba, block, numBlocks);
 		} catch (FileException e) {
 			throw new StoreException(e);
@@ -455,7 +514,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 
 	@Override
 	public synchronized void sync() throws StoreException {
-		syncMeta(false, false);
+		syncMeta();
 	}
 
 	@Override
@@ -498,5 +557,56 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 	@Override
 	public int getInfoID() {
 		return InfoContributor.NO_ID;
+	}
+
+	@Override
+	public synchronized int createUnit(int unitID, boolean force) throws StoreException {
+
+		if (unitID <= 0) {
+			// automatically assign unitID
+			unitID = nextUnit++;
+		} else {
+
+			// check validity of requested unitID
+			if (unitMap.get(unitID) != null) {
+				
+				if (force) {
+					// return existing unit
+					return unitID;
+				}
+				
+				throw new StoreException(String.format(
+						"The requested unitID %s already exists!", unitID));
+			}
+
+			nextUnit = Math.max(nextUnit, unitID + 1);
+		}
+
+		unitMap.put(unitID, new BitMapTree(freeSpaceInfo.logicalSize()));
+
+		return unitID;
+	}
+
+	@Override
+	public synchronized void dropUnit(int unitID, boolean force) throws StoreException {
+
+		// remove unit from main memory map
+		BitMap unit = unitMap.remove(unitID);
+		if (unit == null) {
+			
+			if (force) {
+				// nothing to deallocate
+				return;
+			}
+			
+			throw new StoreException(String.format(
+					"Unit with ID %s does not exist!", unitID));
+		}
+
+		// free blocks that belong to this unit
+		Iterator<Integer> setBits = unit.getSetBits();
+		while (setBits.hasNext()) {
+			freeBlock(setBits.next(), force);
+		}
 	}
 }

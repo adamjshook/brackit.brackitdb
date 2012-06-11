@@ -187,10 +187,4 @@ class SortTestByteEncoder implements IndexEncoder<ElNode> {
 	public byte[] encodeValue(ElNode node) throws DocumentException {
 		return null;
 	}
-
-	@Override
-	public int getUnitID() {
-		return 0;
-	}
-
 }

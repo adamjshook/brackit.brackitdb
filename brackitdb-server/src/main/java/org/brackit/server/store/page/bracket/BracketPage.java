@@ -43,6 +43,7 @@ import org.brackit.server.store.page.bracket.navigation.NavigationProperties;
 import org.brackit.server.store.page.bracket.navigation.NavigationResult;
 import org.brackit.server.store.page.bracket.navigation.NavigationStatus;
 import org.brackit.server.store.page.bracket.navigation.NavigationProperties.NavigationTarget;
+import org.brackit.server.tx.log.SizeConstants;
 import org.brackit.server.util.Calc;
 
 /**
@@ -1158,6 +1159,8 @@ public final class BracketPage extends BasePage {
 		out.append("PageHandle Information:\n");
 		out.append("\tPageID: ");
 		out.append(handle.getPageID());
+		out.append("\n\tUnitID: ");
+		out.append(handle.getUnitID());
 		out.append("\n\tLSN: ");
 		out.append(handle.getLSN());
 
@@ -2703,7 +2706,7 @@ public final class BracketPage extends BasePage {
 		}
 
 		return new BracketNodeSequence(getBasePageID().value(), result,
-				numberDataRecords);
+				numberDataRecords, startDeweyID);
 	}
 
 	/**
@@ -3822,8 +3825,8 @@ public final class BracketPage extends BasePage {
 		// reservedSpace for the highKey
 		int reservedSpace = 0;
 		if (afterKeys == null) {
-			reservedSpace = Field.COLLECTIONDEWEYID.encode(lastNodeDeweyID).length
-					* ((getContextDataOffset() == 0) ? 2 : 1);
+			// enough space to store the lastNodeDeweyID even uncompressed
+			reservedSpace = (lastNodeDeweyID.level + 1) * SizeConstants.INT_SIZE;
 		}
 		// allocate required space
 		if (!allocateRequiredSpace(requiredSpace, reservedSpace)) {

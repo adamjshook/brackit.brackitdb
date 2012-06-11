@@ -27,8 +27,11 @@
  */
 package org.brackit.server.util;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.Iterator;
 
 /**
  * A wrapper for the BitArray to eliminate the restriction that the size must be
@@ -37,7 +40,8 @@ import java.util.Arrays;
  * @author Ou Yi
  * 
  */
-public class BitArrayWrapper {
+public class BitArrayWrapper implements BitMap {
+	
 	private BitArray ba;
 	private int logicalSize;
 
@@ -46,29 +50,22 @@ public class BitArrayWrapper {
 		int physicalSize = toPhysicalSize(logicalSize);
 		ba = new BitArray(physicalSize);
 	}
-
-	public static BitArrayWrapper fromBytes(byte[] bytes) {
-		ByteBuffer bb = ByteBuffer.wrap(bytes);
-		int logicalSize = bb.getInt();
-		BitArrayWrapper baw = new BitArrayWrapper(logicalSize);
-		bb.get(baw.ba.words);
-		return baw;
+	
+	public BitArrayWrapper() {
 	}
 
-	public byte[] toBytes() {
-		ByteBuffer bb = ByteBuffer.allocate(Integer.SIZE / Byte.SIZE
-				+ ba.words.length);
-		bb.putInt(logicalSize);
-		bb.put(ba.words);
-		return bb.array();
+	@Override
+	public void extendTo(int newLogicalSize) {
+		
+		byte[] old = ba.words;
+		
+		this.logicalSize = newLogicalSize;
+		this.ba = new BitArray(toPhysicalSize(newLogicalSize));
+		
+		System.arraycopy(old, 0, ba.words, 0, old.length);
 	}
 
-	public BitArrayWrapper extendTo(int newLogicalSize) {
-		BitArrayWrapper baw = new BitArrayWrapper(newLogicalSize);
-		baw.ba.words = Arrays.copyOf(ba.words, toPhysicalSize(newLogicalSize));
-		return baw;
-	}
-
+	@Override
 	public int logicalSize() {
 		return logicalSize;
 	}
@@ -79,18 +76,21 @@ public class BitArrayWrapper {
 						* BitArray.BITS_PER_WORD);
 	}
 
+	@Override
 	public boolean get(int bitIndex) {
 		if (bitIndex < 0 || bitIndex >= logicalSize)
 			throw new IndexOutOfBoundsException("bitIndex: " + bitIndex);
 		return ba.get(bitIndex);
 	}
 
+	@Override
 	public void set(int bitIndex) {
 		if (bitIndex < 0 || bitIndex >= logicalSize)
 			throw new IndexOutOfBoundsException("bitIndex: " + bitIndex);
 		ba.set(bitIndex);
 	}
 
+	@Override
 	public void clear(int bitIndex) {
 		if (bitIndex < 0 || bitIndex >= logicalSize)
 			throw new IndexOutOfBoundsException("bitIndex: " + bitIndex);
@@ -106,6 +106,7 @@ public class BitArrayWrapper {
 	 *            the index to start checking from (inclusive).
 	 * @return
 	 */
+	@Override
 	public int nextClearBit(int fromIndex) {
 		if (fromIndex < 0 || fromIndex >= logicalSize)
 			throw new IndexOutOfBoundsException("fromIndex: " + fromIndex);
@@ -114,5 +115,23 @@ public class BitArrayWrapper {
 			return pos;
 		}
 		return -1;
+	}
+
+	@Override
+	public Iterator<Integer> getSetBits() {
+		return ba.getSetBits();
+	}
+
+	@Override
+	public void write(DataOutput out) throws IOException {
+		out.writeInt(logicalSize);
+		out.write(ba.words);
+	}
+
+	@Override
+	public void read(DataInput in) throws IOException {
+		logicalSize = in.readInt();
+		ba = new BitArray(toPhysicalSize(logicalSize));
+		in.readFully(ba.words);		
 	}
 }

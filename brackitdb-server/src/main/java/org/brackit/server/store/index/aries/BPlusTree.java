@@ -144,24 +144,19 @@ public class BPlusTree extends PageContextFactory {
 						}
 
 						if (log.isTraceEnabled()) {
-							log
-									.trace(String
-											.format(
-													"Stopping scan for (%s,%s) in mode=%s"
-															+ " in page %s at (%s,%s) after (%s,%s)",
-													keyType.toString(key),
-													valueType.toString(value),
-													searchMode,
-													leaf,
-													keyType.toString(leaf
-															.getKey()),
-													valueType.toString(leaf
-															.getValue()),
-													keyType.toString(leaf
-															.getPreviousKey()),
-													valueType
-															.toString(leaf
-																	.getPreviousValue())));
+							log.trace(String
+									.format("Stopping scan for (%s,%s) in mode=%s"
+											+ " in page %s at (%s,%s) after (%s,%s)",
+											keyType.toString(key),
+											valueType.toString(value),
+											searchMode,
+											leaf,
+											keyType.toString(leaf.getKey()),
+											valueType.toString(leaf.getValue()),
+											keyType.toString(leaf
+													.getPreviousKey()),
+											valueType.toString(leaf
+													.getPreviousValue())));
 						}
 
 						return leaf;
@@ -192,11 +187,11 @@ public class BPlusTree extends PageContextFactory {
 						if (log.isTraceEnabled()) {
 							log.trace(String.format(
 									"Stopping scan for (%s,%s)  in mode=%s "
-											+ "in page %s at (%s,%s)", keyType
-											.toString(key), valueType
-											.toString(value), searchMode, leaf,
-									keyType.toString(leaf.getKey()), valueType
-											.toString(leaf.getValue())));
+											+ "in page %s at (%s,%s)",
+									keyType.toString(key),
+									valueType.toString(value), searchMode,
+									leaf, keyType.toString(leaf.getKey()),
+									valueType.toString(leaf.getValue())));
 						}
 
 						return leaf;
@@ -384,8 +379,8 @@ public class BPlusTree extends PageContextFactory {
 					log.trace(String.format(
 							"Stopping scan for (%s,%s) in mode=%s "
 									+ "in previous %s at last record (%s,%s).",
-							keyType.toString(searchKey), valueType
-									.toString(searchValue), searchMode,
+							keyType.toString(searchKey),
+							valueType.toString(searchValue), searchMode,
 							previous, keyType.toString(previous.getKey()),
 							valueType.toString(previous.getValue())));
 				}
@@ -395,10 +390,10 @@ public class BPlusTree extends PageContextFactory {
 			if (log.isTraceEnabled()) {
 				log.trace(String.format("Stopping scan for (%s,%s) in mode=%s "
 						+ "in current page %s at first record (%s,%s).",
-						keyType.toString(searchKey), valueType
-								.toString(searchValue), searchMode, page,
-						keyType.toString(page.getKey()), valueType
-								.toString(page.getValue())));
+						keyType.toString(searchKey),
+						valueType.toString(searchValue), searchMode, page,
+						keyType.toString(page.getKey()),
+						valueType.toString(page.getValue())));
 			}
 			return 1;
 		}
@@ -406,9 +401,9 @@ public class BPlusTree extends PageContextFactory {
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Reached beginning of page %s"
 					+ " (type=%s, lowKey=%s). " + "Proceed with scan for "
-					+ "(key=%s,  mode=%s) in previous page %s", page, page
-					.getPageType(), keyType.toString(page.getKey()), keyType
-					.toString(searchKey), searchMode, previous));
+					+ "(key=%s,  mode=%s) in previous page %s", page,
+					page.getPageType(), keyType.toString(page.getKey()),
+					keyType.toString(searchKey), searchMode, previous));
 			log.trace(page.dump("Current page"));
 			log.trace(previous.dump("Previous page"));
 		}
@@ -436,10 +431,10 @@ public class BPlusTree extends PageContextFactory {
 					if (log.isTraceEnabled()) {
 						log.trace(String.format("Stopping scan for (%s,%s)"
 								+ " in mode=%s in current page "
-								+ "%s after last record (%s,%s).", keyType
-								.toString(searchKey), valueType
-								.toString(searchValue), searchMode, page,
-								keyType.toString(page.getPreviousKey()),
+								+ "%s after last record (%s,%s).",
+								keyType.toString(searchKey),
+								valueType.toString(searchValue), searchMode,
+								page, keyType.toString(page.getPreviousKey()),
 								valueType.toString(page.getPreviousValue())));
 					}
 					return -1;
@@ -447,11 +442,11 @@ public class BPlusTree extends PageContextFactory {
 					if (log.isTraceEnabled()) {
 						log.trace(String.format("Stopping scan for (%s,%s)"
 								+ " in mode=%s" + " in next %s at "
-								+ "first record (%s,%s).", keyType
-								.toString(searchKey), valueType
-								.toString(searchValue), searchMode, next,
-								keyType.toString(next.getKey()), valueType
-										.toString(next.getValue())));
+								+ "first record (%s,%s).",
+								keyType.toString(searchKey),
+								valueType.toString(searchValue), searchMode,
+								next, keyType.toString(next.getKey()),
+								valueType.toString(next.getValue())));
 					}
 					return 0;
 				}
@@ -459,9 +454,10 @@ public class BPlusTree extends PageContextFactory {
 		} else if ((!currentKeyIsInside) || (!currentValueIsInside)) {
 			if (log.isTraceEnabled()) {
 				log.trace(String.format("Stopping scan for (%s,%s) in mode=%s "
-						+ "in current page %s at last record (%s,%s).", keyType
-						.toString(searchKey), valueType.toString(searchValue),
-						searchMode, page, keyType.toString(page.getKey()),
+						+ "in current page %s at last record (%s,%s).",
+						keyType.toString(searchKey),
+						valueType.toString(searchValue), searchMode, page,
+						keyType.toString(page.getKey()),
 						valueType.toString(page.getValue())));
 			}
 			return -1;
@@ -470,9 +466,9 @@ public class BPlusTree extends PageContextFactory {
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Reached end of page %s "
 					+ "(type=%s, highKey=%s). " + "Proceed with scan for "
-					+ "(key=%s,  mode=%s) in next page %s", page, page
-					.getPageType(), keyType.toString(page.getKey()), keyType
-					.toString(searchKey), searchMode, next));
+					+ "(key=%s,  mode=%s) in next page %s", page,
+					page.getPageType(), keyType.toString(page.getKey()),
+					keyType.toString(searchKey), searchMode, next));
 			log.trace(page.dump("Current page"));
 			log.trace(next.dump("Next page"));
 		}
@@ -645,8 +641,8 @@ public class BPlusTree extends PageContextFactory {
 						updateLockEntry(tx, rootPageID, page, page.getKey(),
 								page.getValue());
 					} else {
-						readLockEntry(tx, rootPageID, page, page.getKey(), page
-								.getValue());
+						readLockEntry(tx, rootPageID, page, page.getKey(),
+								page.getValue());
 					}
 				}
 				return page;
@@ -654,8 +650,8 @@ public class BPlusTree extends PageContextFactory {
 
 			if (log.isTraceEnabled()) {
 				log.trace(String.format("Reached end of current page %s. "
-						+ "Attempting to proceed to next page %s.", page, page
-						.getNextPageID()));
+						+ "Attempting to proceed to next page %s.", page,
+						page.getNextPageID()));
 			}
 
 			if (!page.hasNextPageID()) {
@@ -669,16 +665,16 @@ public class BPlusTree extends PageContextFactory {
 						updateLockEntry(tx, rootPageID, page, page.getKey(),
 								page.getValue());
 					} else {
-						readLockEntry(tx, rootPageID, page, page.getKey(), page
-								.getValue());
+						readLockEntry(tx, rootPageID, page, page.getKey(),
+								page.getValue());
 					}
 				}
 
 				return page;
 			}
 
-			PageContext next = getNextPage(tx, rootPageID, page, openMode
-					.forUpdate());
+			PageContext next = getNextPage(tx, rootPageID, page,
+					openMode.forUpdate());
 
 			if (log.isTraceEnabled()) {
 				log.trace(String.format("Switching to next page %s.", next));
@@ -689,11 +685,11 @@ public class BPlusTree extends PageContextFactory {
 			// lock key or EOF
 			if ((lockService != null) && (openMode != OpenMode.LOAD)) {
 				if (openMode.forUpdate()) {
-					updateLockEntry(tx, rootPageID, page, page.getKey(), page
-							.getValue());
+					updateLockEntry(tx, rootPageID, page, page.getKey(),
+							page.getValue());
 				} else {
-					readLockEntry(tx, rootPageID, page, page.getKey(), page
-							.getValue());
+					readLockEntry(tx, rootPageID, page, page.getKey(),
+							page.getValue());
 				}
 			}
 
@@ -731,8 +727,8 @@ public class BPlusTree extends PageContextFactory {
 						updateLockEntry(tx, rootPageID, page, page.getKey(),
 								page.getValue());
 					} else {
-						readLockEntry(tx, rootPageID, page, page.getKey(), page
-								.getValue());
+						readLockEntry(tx, rootPageID, page, page.getKey(),
+								page.getValue());
 					}
 				}
 
@@ -767,11 +763,11 @@ public class BPlusTree extends PageContextFactory {
 
 			if ((lockService != null) && (openMode != OpenMode.LOAD)) {
 				if (openMode.forUpdate()) {
-					updateLockEntry(tx, rootPageID, page, page.getKey(), page
-							.getValue());
+					updateLockEntry(tx, rootPageID, page, page.getKey(),
+							page.getValue());
 				} else {
-					readLockEntry(tx, rootPageID, page, page.getKey(), page
-							.getValue());
+					readLockEntry(tx, rootPageID, page, page.getKey(),
+							page.getValue());
 				}
 			}
 
@@ -959,8 +955,8 @@ public class BPlusTree extends PageContextFactory {
 				throw new IndexOperationException(
 						"%s index %s already contains an entry (%s, %s).",
 						(leaf.isUnique()) ? "Unique" : "Non-unique",
-						rootPageID, keyType.toString(key), valueType
-								.toString(value));
+						rootPageID, keyType.toString(key),
+						valueType.toString(value));
 			}
 		}
 
@@ -1253,11 +1249,11 @@ public class BPlusTree extends PageContextFactory {
 				// check if delete key is present
 				if ((leaf.getKey() == null)
 						|| (keyType.compare(key, leaf.getKey()) != 0)
-						|| ((value != null) && (valueType.compare(value, leaf
-								.getValue()) != 0))) {
+						|| ((value != null) && (valueType.compare(value,
+								leaf.getValue()) != 0))) {
 					if ((lockService != null) && (logged)) {
-						if (!lockService.lockRead(tx, unitID, rootPageID, leaf
-								.getKey(), leaf.getValue(), true)) {
+						if (!lockService.lockRead(tx, unitID, rootPageID,
+								leaf.getKey(), leaf.getValue(), true)) {
 							long beforeLSN = leaf.getLSN();
 							leaf.unlatch();
 
@@ -1285,8 +1281,8 @@ public class BPlusTree extends PageContextFactory {
 					}
 					throw new IndexOperationException(
 							"Index %s does not contain an entry (%s, %s).",
-							rootPageID, keyType.toString(key), valueType
-									.toString(value));
+							rootPageID, keyType.toString(key),
+							valueType.toString(value));
 				}
 
 				if ((!leaf.isAfterLast()) || (!leaf.hasNextPageID())) {
@@ -1397,8 +1393,8 @@ public class BPlusTree extends PageContextFactory {
 
 		if (hintPageID != null) {
 			try {
-				PageContext hintPage = getPage(tx, hintPageID, openMode
-						.forUpdate(), openMode.forUpdate());
+				PageContext hintPage = getPage(tx, hintPageID,
+						openMode.forUpdate(), openMode.forUpdate());
 
 				if ((hintPage.getLSN() != LSN)
 						|| (!hintPage.getRootPageID().equals(rootPageID))) {
@@ -1446,8 +1442,8 @@ public class BPlusTree extends PageContextFactory {
 						value, openMode.forUpdate(), false);
 
 				if (lockService != null) {
-					readLockEntry(tx, rootPageID, leaf, leaf.getKey(), leaf
-							.getValue());
+					readLockEntry(tx, rootPageID, leaf, leaf.getKey(),
+							leaf.getValue());
 				}
 
 				if (!openMode.doLog()) {
@@ -1485,8 +1481,8 @@ public class BPlusTree extends PageContextFactory {
 				if (log.isTraceEnabled()) {
 					log.trace(String.format(
 							"Splitting page %s for insert of (%s, %s).", page,
-							keyType.toString(insertKey), valueType
-									.toString(insertValue)));
+							keyType.toString(insertKey),
+							valueType.toString(insertValue)));
 				}
 
 				page = split(tx, rootPageID, page, insertKey, insertValue,
@@ -1527,8 +1523,8 @@ public class BPlusTree extends PageContextFactory {
 				if (log.isTraceEnabled()) {
 					log.trace(String.format(
 							"Splitting page %s for insert of (%s, %s).", page,
-							keyType.toString(insertKey), valueType
-									.toString(insertValue)));
+							keyType.toString(insertKey),
+							valueType.toString(insertValue)));
 				}
 
 				page = split(tx, rootPageID, page, insertKey, insertValue,
@@ -1763,13 +1759,11 @@ public class BPlusTree extends PageContextFactory {
 
 			while (!page.hasEnoughSpaceForInsert(key, oldValue)) {
 				if (log.isTraceEnabled()) {
-					log.trace(String
-							.format("Splitting page %s for update"
-									+ " of (%s, %s) to (%s, %s).", page,
-									keyType.toString(key), valueType
-											.toString(oldValue), keyType
-											.toString(key), valueType
-											.toString(newValue)));
+					log.trace(String.format("Splitting page %s for update"
+							+ " of (%s, %s) to (%s, %s).", page,
+							keyType.toString(key),
+							valueType.toString(oldValue),
+							keyType.toString(key), valueType.toString(newValue)));
 				}
 
 				page = split(tx, rootPageID, page, key, oldValue, false, logged);
@@ -1791,8 +1785,8 @@ public class BPlusTree extends PageContextFactory {
 
 		try {
 			if (log.isTraceEnabled()) {
-				log.trace(String.format("Splitting non-root page %s.", left
-						.getPageID()));
+				log.trace(String.format("Splitting non-root page %s.",
+						left.getPageID()));
 				log.trace(left.dump("Split Page"));
 			}
 
@@ -1811,8 +1805,8 @@ public class BPlusTree extends PageContextFactory {
 			Field keyType = left.getKeyType();
 			Field valueType = left.getValueType();
 			right = allocate(tx, -1, left.getUnitID(), leftPageType,
-					rootPageID, keyType, valueType, left.isUnique(), left
-							.isCompressed(), logged);
+					rootPageID, keyType, valueType, left.isUnique(),
+					left.isCompressed(), logged);
 
 			if (leftPageType == PageType.INDEX_TREE) {
 				// skip current record and set before page of right page
@@ -1934,12 +1928,12 @@ public class BPlusTree extends PageContextFactory {
 
 		if (entryCount < 3) {
 			log.error(String.format("Cannot split page %s because"
-					+ " it contains less than three records.", splitPage
-					.getPageID()));
+					+ " it contains less than three records.",
+					splitPage.getPageID()));
 			log.error(splitPage.dump("Page to split"));
 			throw new IndexOperationException("Cannot split page %s because"
-					+ " it contains less than three records.", splitPage
-					.getPageID());
+					+ " it contains less than three records.",
+					splitPage.getPageID());
 		}
 
 		if (compact) {
@@ -1976,8 +1970,8 @@ public class BPlusTree extends PageContextFactory {
 					keyType, valueType, root.isUnique(), root.isCompressed(),
 					logged);
 			right = allocate(tx, -1, root.getUnitID(), rootPageType,
-					rootPageID, keyType, valueType, root.isUnique(), root
-							.isCompressed(), logged);
+					rootPageID, keyType, valueType, root.isUnique(),
+					root.isCompressed(), logged);
 
 			// find out where to split
 			int insertPosition = root.getPosition();
@@ -2021,9 +2015,9 @@ public class BPlusTree extends PageContextFactory {
 				right.setPreviousPageID(left.getPageID(), logged, -1);
 
 				// convert root from leaf into tree page
-				root.format(root.getUnitID(), PageType.INDEX_TREE, rootPageID,
-						keyType, Field.PAGEID, root.isUnique(), root
-								.isCompressed(), logged, -1);
+				root.format(PageType.INDEX_TREE, rootPageID, keyType,
+						Field.PAGEID, root.isUnique(), root.isCompressed(),
+						logged, -1);
 				// reposition context in converted root page
 				root.moveFirst();
 			}
@@ -2124,11 +2118,9 @@ public class BPlusTree extends PageContextFactory {
 			}
 
 			if (log.isTraceEnabled()) {
-				log
-						.trace(String.format("Inspecting tree page %s "
-								+ "using key %s searching for parent of %s.",
-								page, page.getKeyType().toString(separatorKey),
-								targetPageID));
+				log.trace(String.format("Inspecting tree page %s "
+						+ "using key %s searching for parent of %s.", page,
+						page.getKeyType().toString(separatorKey), targetPageID));
 				log.trace(page.dump("tree page"));
 			}
 
@@ -2155,8 +2147,8 @@ public class BPlusTree extends PageContextFactory {
 
 			if (parentPage != null) {
 				if (log.isTraceEnabled()) {
-					log.trace(String.format("Found parent page %s of %s.", page
-							.getPageID(), targetPageID));
+					log.trace(String.format("Found parent page %s of %s.",
+							page.getPageID(), targetPageID));
 				}
 
 				if (forUpdate) {
@@ -2186,15 +2178,15 @@ public class BPlusTree extends PageContextFactory {
 			PageContext parentPage = null;
 
 			if (page.search(SearchMode.GREATER_OR_EQUAL, separatorKey, null) <= 0) {
-				parentPage = descendToParent(tx, rootPageID, page
-						.getPreviousAfterPageID(), separatorKey, targetPageID,
-						forUpdate);
+				parentPage = descendToParent(tx, rootPageID,
+						page.getPreviousAfterPageID(), separatorKey,
+						targetPageID, forUpdate);
 			}
 
 			if (parentPage == null) {
 				do {
-					parentPage = descendToParent(tx, rootPageID, page
-							.getAfterPageID(), separatorKey, targetPageID,
+					parentPage = descendToParent(tx, rootPageID,
+							page.getAfterPageID(), separatorKey, targetPageID,
 							forUpdate);
 				} while ((parentPage == null) && (page.hasNext())
 						&& (keyType.compare(separatorKey, page.getKey()) <= 0));
@@ -2223,8 +2215,8 @@ public class BPlusTree extends PageContextFactory {
 
 			if (log.isTraceEnabled()) {
 				log.trace(String.format("Deleting (%s, %s) from page %s.",
-						keyType.toString(deleteKey), valueType
-								.toString(deleteValue), page.getPageID()));
+						keyType.toString(deleteKey),
+						valueType.toString(deleteValue), page.getPageID()));
 			}
 
 			page.delete(isStructureModification, logged, undoNextLSN);
@@ -2261,11 +2253,23 @@ public class BPlusTree extends PageContextFactory {
 				long rememberedLSN = tx.checkPrevLSN();
 
 				try {
+
+					if (tx.releaseDeletedPages()) {
+						// invalid state -> there was an unfinished deletion
+						// operation in the past
+						throw new RuntimeException("Invalid State: unfinished deletion operation!");
+					}
+
 					// delete empty leaf page
 					page = deleteLeaf(tx, rootPageID, page, deleteKey,
 							deleteValue, logged);
 
 					logDummyCLR(tx, rememberedLSN);
+					
+					// release all pages that have been deleted during the
+					// previous (recursive) tree reorganization
+					tx.releaseDeletedPages();
+					
 				} catch (IndexAccessException e) {
 					log.error(e);
 					undo(tx, rememberedLSN);
@@ -2276,6 +2280,11 @@ public class BPlusTree extends PageContextFactory {
 					page.cleanup();
 					throw new IndexAccessException(e,
 							"Could not log dummy CLR after leaf deletion.");
+				} catch (TxException e) {
+					log.error(e);
+					undo(tx, rememberedLSN);
+					page.cleanup();
+					throw new IndexAccessException(e);
 				}
 			}
 		}
@@ -2501,11 +2510,9 @@ public class BPlusTree extends PageContextFactory {
 			if (parent.hasPrevious()) {
 				// simply delete separator to context page from parent
 				if (log.isTraceEnabled()) {
-					log
-							.trace(String
-									.format(
-											"Deleting separator to leaf page %s from parent %s",
-											leaf, parent));
+					log.trace(String
+							.format("Deleting separator to leaf page %s from parent %s",
+									leaf, parent));
 				}
 
 				parent = deleteFromPage(tx, rootPageID, parent,
@@ -2513,12 +2520,9 @@ public class BPlusTree extends PageContextFactory {
 			} else {
 				// make next page new before page in parent
 				if (log.isTraceEnabled()) {
-					log
-							.trace(String
-									.format(
-											"Deleting separator to new before leaf page %s (current value = %s) in parent %s.",
-											leaf, parent.getAfterPageID(),
-											parent));
+					log.trace(String
+							.format("Deleting separator to new before leaf page %s (current value = %s) in parent %s.",
+									leaf, parent.getAfterPageID(), parent));
 				}
 
 				parent.setBeforePageID(parent.getAfterPageID(), logged, -1);
@@ -2530,10 +2534,11 @@ public class BPlusTree extends PageContextFactory {
 			// the log
 			leaf.setNextPageID(null, logged, -1);
 			leaf.setPreviousPageID(null, logged, -1);
-			leaf.format(leaf.getUnitID(), PageType.INDEX_LEAF, rootPageID, leaf
-					.getKeyType(), leaf.getValueType(), leaf.isUnique(), leaf
-					.isCompressed(), logged, -1);
-			leaf.deletePage();
+			leaf.format(PageType.INDEX_LEAF, rootPageID, leaf.getKeyType(),
+					leaf.getValueType(), leaf.isUnique(), leaf.isCompressed(),
+					logged, -1);
+			
+			tx.addDeletedPage(leaf.deletePage());
 
 			parent.cleanup();
 			tx.getStatistics().increment(TxStats.BTREE_LEAF_DEALLOCATIONS);
@@ -2679,9 +2684,7 @@ public class BPlusTree extends PageContextFactory {
 			// append separator for before page in left page
 			left.moveAfterLast();
 			PageID beforePageID = right.getBeforePageID();
-			left
-					.insert(separatorKey, beforePageID.getBytes(), true,
-							logged, -1);
+			left.insert(separatorKey, beforePageID.getBytes(), true, logged, -1);
 
 			// append right page to left page
 			if (right.moveFirst()) {
@@ -2700,10 +2703,11 @@ public class BPlusTree extends PageContextFactory {
 			 * the log
 			 */
 			right.setBeforePageID(null, logged, -1);
-			right.format(right.getUnitID(), PageType.INDEX_TREE, rootPageID,
-					right.getKeyType(), right.getValueType(), right.isUnique(),
+			right.format(PageType.INDEX_TREE, rootPageID, right.getKeyType(),
+					right.getValueType(), right.isUnique(),
 					right.isCompressed(), logged, -1);
-			right.deletePage();
+			
+			tx.addDeletedPage(right.deletePage());
 
 			if (log.isTraceEnabled()) {
 				log.trace("Finished merge of right page to left sibling.");
@@ -2770,10 +2774,11 @@ public class BPlusTree extends PageContextFactory {
 			// "Reset" page properties to get the required undo information in
 			// the log
 			left.setBeforePageID(null, logged, -1);
-			left.format(left.getUnitID(), PageType.INDEX_TREE, rootPageID, left
-					.getKeyType(), left.getValueType(), left.isUnique(), left
-					.isCompressed(), logged, -1);
-			left.deletePage();
+			left.format(PageType.INDEX_TREE, rootPageID, left.getKeyType(),
+					left.getValueType(), left.isUnique(), left.isCompressed(),
+					logged, -1);
+			
+			tx.addDeletedPage(left.deletePage());
 
 			if (log.isTraceEnabled()) {
 				log.trace("Finished merge of left page to right sibling.");
@@ -2843,22 +2848,20 @@ public class BPlusTree extends PageContextFactory {
 				// in the log
 				right.setBeforePageID(null, logged, -1);
 				left.setBeforePageID(null, logged, -1);
-				left.format(left.getUnitID(), PageType.INDEX_TREE, left
-						.getRootPageID(), left.getKeyType(), left
-						.getValueType(), left.isUnique(), left.isCompressed(),
-						logged, -1);
-				right.format(right.getUnitID(), PageType.INDEX_TREE, left
-						.getRootPageID(), right.getKeyType(), right
-						.getValueType(), right.isUnique(), left.isCompressed(),
-						logged, -1);
+				left.format(PageType.INDEX_TREE, left.getRootPageID(),
+						left.getKeyType(), left.getValueType(),
+						left.isUnique(), left.isCompressed(), logged, -1);
+				right.format(PageType.INDEX_TREE, left.getRootPageID(),
+						right.getKeyType(), right.getValueType(),
+						right.isUnique(), left.isCompressed(), logged, -1);
 			} else {
 				// delete separator from root page
 				root.delete(true, logged, -1);
 
 				// switch root page type and update pointers
 				root.setBeforePageID(null, logged, -1);
-				root.format(left.getUnitID(), PageType.INDEX_LEAF, root
-						.getPageID(), left.getKeyType(), left.getValueType(),
+				root.format(PageType.INDEX_LEAF, root.getPageID(),
+						left.getKeyType(), left.getValueType(),
 						left.isUnique(), left.isCompressed(), logged, -1);
 				root.moveFirst();
 				root.setPreviousPageID(null, logged, -1);
@@ -2888,14 +2891,12 @@ public class BPlusTree extends PageContextFactory {
 				left.setNextPageID(null, logged, -1);
 				right.setPreviousPageID(null, logged, -1);
 				left.setPreviousPageID(null, logged, -1);
-				left.format(left.getUnitID(), PageType.INDEX_LEAF, left
-						.getRootPageID(), left.getKeyType(), left
-						.getValueType(), left.isUnique(), left.isCompressed(),
-						logged, -1);
-				right.format(right.getUnitID(), PageType.INDEX_LEAF, left
-						.getRootPageID(), right.getKeyType(), right
-						.getValueType(), right.isUnique(),
-						right.isCompressed(), logged, -1);
+				left.format(PageType.INDEX_LEAF, left.getRootPageID(),
+						left.getKeyType(), left.getValueType(),
+						left.isUnique(), left.isCompressed(), logged, -1);
+				right.format(PageType.INDEX_LEAF, left.getRootPageID(),
+						right.getKeyType(), right.getValueType(),
+						right.isUnique(), right.isCompressed(), logged, -1);
 			}
 
 			if (log.isTraceEnabled()) {
@@ -2908,8 +2909,8 @@ public class BPlusTree extends PageContextFactory {
 			right.setSafe(true);
 
 			// delete pages
-			left.deletePage();
-			right.deletePage();
+			tx.addDeletedPage(left.deletePage());
+			tx.addDeletedPage(right.deletePage());
 
 			if (root.search(SearchMode.GREATER_OR_EQUAL, deletedKey,
 					deletedValue) > 0) {

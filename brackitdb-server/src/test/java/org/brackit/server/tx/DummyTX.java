@@ -27,6 +27,7 @@
  */
 package org.brackit.server.tx;
 
+import org.brackit.server.io.buffer.Buffer.PageReleaser;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.cache.CachedObjectHook;
 import org.brackit.server.session.Session;
@@ -52,7 +53,7 @@ public class DummyTX implements Tx {
 	}
 
 	@Override
-	public void addPreCommitHook(PreCommitHook hook) {
+	public void addPreCommitHook(PreCommitHook hook, String name) {
 	}
 
 	@Override
@@ -164,5 +165,27 @@ public class DummyTX implements Tx {
 	@Override
 	public Session getSession() {
 		return null;
+	}
+
+	@Override
+	public PreCommitHook getPreCommitHook(String name) {
+		return null;
+	}
+
+	@Override
+	public void addPostRedoHook(PostRedoHook hook) {
+	}
+
+	@Override
+	public void executePostRedoHooks() {
+	}
+
+	@Override
+	public void addDeletedPage(PageReleaser pr) {
+	}
+
+	@Override
+	public boolean releaseDeletedPages() throws TxException {
+		return false;
 	}
 }
