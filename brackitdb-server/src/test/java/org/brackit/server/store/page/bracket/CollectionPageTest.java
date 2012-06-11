@@ -83,7 +83,7 @@ public class CollectionPageTest {
 
 		Handle handle = new Handle(8192) {
 		};
-		handle.init(new PageID(collectionID));
+		handle.init(new PageID(collectionID), 42);
 
 		page = new BracketPage(null, handle);
 		page.format(new PageID(collectionID));

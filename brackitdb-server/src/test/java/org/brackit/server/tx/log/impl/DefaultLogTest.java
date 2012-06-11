@@ -72,13 +72,13 @@ public class DefaultLogTest {
 	@Test
 	public void testFlush() throws LogException, TxException {
 		Loggable loggable1 = log.getLoggableHelper().createEOT(t1.getID(),
-				t1.checkPrevLSN());
+				t1.checkPrevLSN(), true);
 		Loggable loggable2 = log.getLoggableHelper().createEOT(t2.getID(),
-				t1.checkPrevLSN());
+				t1.checkPrevLSN(), true);
 		Loggable loggable3 = log.getLoggableHelper().createEOT(t1.getID(),
-				t1.checkPrevLSN());
+				t1.checkPrevLSN(), true);
 		Loggable loggable4 = log.getLoggableHelper().createEOT(t2.getID(),
-				t1.checkPrevLSN());
+				t1.checkPrevLSN(), true);
 
 		long lsn1 = log.append(loggable1);
 		long lsn2 = log.append(loggable2);

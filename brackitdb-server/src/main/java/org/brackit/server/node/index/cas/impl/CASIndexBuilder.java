@@ -114,8 +114,7 @@ class CASIndexBuilder<E extends Node<E>> extends DefaultListener<E> implements
 			long medium = System.nanoTime();
 
 			PageID rootPageID = index.createIndex(tx, containerNo, encoder
-					.getKeyType(), encoder.getValueType(), false, true, encoder
-					.getUnitID());
+					.getKeyType(), encoder.getValueType(), false, true);
 			IndexIterator iterator = index.open(tx, rootPageID,
 					SearchMode.FIRST, null, null, OpenMode.LOAD);
 			iterator.triggerStatistics();

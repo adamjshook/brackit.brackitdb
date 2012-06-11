@@ -34,20 +34,30 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
+import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.Buffer;
 import org.brackit.server.io.buffer.BufferException;
 import org.brackit.server.io.buffer.Handle;
 import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.io.buffer.log.PageLogOperationHelper;
+import org.brackit.server.io.buffer.log.AllocateLogOperation;
+import org.brackit.server.io.buffer.log.CreateUnitLogOperation;
+import org.brackit.server.io.buffer.log.DeferredLogOperation;
+import org.brackit.server.io.buffer.log.DeallocateLogOperation;
+import org.brackit.server.io.buffer.log.DropUnitLogOperation;
+import org.brackit.server.io.buffer.log.PageLogOperation.PageUnitPair;
 import org.brackit.server.io.file.BlockSpace;
 import org.brackit.server.io.file.StoreException;
 import org.brackit.server.io.manager.BufferMgr;
+import org.brackit.server.tx.PostCommitHook;
+import org.brackit.server.tx.PreCommitHook;
+import org.brackit.server.tx.PostRedoHook;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.TxException;
 import org.brackit.server.tx.TxID;
@@ -81,6 +91,170 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		abstract boolean isFixed();
 
 		abstract int fixCount();
+	}
+
+	private final class DeallocateHook implements PreCommitHook,
+			PostCommitHook, PostRedoHook {
+
+		private final List<PageUnitPair> pageList;
+		private final List<Integer> unitList;
+
+		public DeallocateHook() {
+			pageList = new ArrayList<PageUnitPair>();
+			unitList = new ArrayList<Integer>();
+		}
+
+		public DeallocateHook(PageUnitPair[] pages, int[] units) {
+			pageList = Arrays.asList(pages);
+
+			unitList = new ArrayList<Integer>(units.length);
+			for (int unit : units) {
+				unitList.add(unit);
+			}
+		}
+
+		public void addPage(PageID pageID, int unitID) {
+			pageList.add(new PageUnitPair(pageID, unitID));
+		}
+
+		public void addUnit(int unitID) {
+			unitList.add(unitID);
+		}
+
+		@Override
+		public void prepare(Tx tx) throws ServerException {
+			// do not physically deallocate the pages in the metadata, but just
+			// write the corresponding log records (so that this can be redone
+			// in case of a crash)
+
+			PageUnitPair[] pages = pageList.toArray(new PageUnitPair[pageList
+					.size()]);
+			int[] units = new int[unitList.size()];
+			for (int i = 0; i < units.length; i++) {
+				units[i] = unitList.get(i);
+			}
+
+			tx.logUpdate(new DeferredLogOperation(blockSpace.getId(), pages,
+					units));
+
+			// register a PostCommitHook to physically release the blocks
+			tx.addPostCommitHook(this);
+		}
+
+		@Override
+		public void abort(Tx tx) throws ServerException {
+			// nothing to do here, since the log record produced in the prepare
+			// method does not harm in case of an undo.
+		}
+
+		@Override
+		public void execute(Tx tx) throws ServerException {
+			// this method is executed right after commit in a separate
+			// transaction -> release the blocks physically
+			executeInternal(false);
+		}
+
+		@Override
+		public void execute() throws ServerException {
+			// this method is executed at the end of the redo recovery phase
+			executeInternal(true);
+		}
+
+		private void executeInternal(boolean force) throws ServerException {
+
+			List<PageID> failedPages = new ArrayList<PageID>();
+			List<Integer> failedUnits = new ArrayList<Integer>();			
+
+			// release single pages
+			for (PageUnitPair entry : pageList) {
+				try {
+					Frame frame = pageNoToFrame.remove(entry.pageID);
+					if (frame != null) {
+						// The handle of a deleted page is allowed to be fixed
+						// by concurrent threads. However, the safe flag should be
+						// used in this case to signal them that they
+						// must not use the handle anymore.
+						// To avoid any change for corruption we drop the handle!
+						frame.drop();
+						pool.remove(frame);
+					}
+					
+					deallocateBlock(entry.pageID, entry.unitID, force);
+				} catch (BufferException e) {
+					// log the exception, but continue to deallocate the
+					// remaining blocks
+					log.error(String.format(
+							"Error deallocating page %s from unit %s.",
+							entry.pageID, entry.unitID), e);
+					failedPages.add(entry.pageID);
+				}
+			}
+			
+			// drop units
+			for (int unitID : unitList) {
+				try {
+					ArrayList<Frame> toDrop = new ArrayList<Frame>();
+
+					// determine frames that belong to this unit
+					for (Frame frame : pool) {
+						if (frame.getUnitID() == unitID) {
+							pageNoToFrame.remove(frame.getPageID());
+							frame.drop();
+							toDrop.add(frame);
+						}
+					}
+
+					// drop frames
+					for (Frame frame : toDrop) {
+						pool.remove(frame);
+					}
+					
+					blockSpace.dropUnit(unitID, force);
+				} catch (StoreException e) {
+					// log the exception, but continue to drop the
+					// remaining units
+					log.error(String.format(
+							"Error dropping unit %s.",
+							unitID), e);
+					failedUnits.add(unitID);
+				}
+			}
+
+			if (!failedPages.isEmpty() || !failedUnits.isEmpty()) {
+				throw new ServerException(String.format(
+						"Exceptions during releasing pages %s and units %s.",
+						failedPages, failedUnits));
+			}
+		}
+	}
+	
+	private class PageReleaserImpl implements PageReleaser {
+
+		private final PageID pageID;
+		private final int unitID;
+		private final boolean force;
+		
+		private PageReleaserImpl(PageID pageID, int unitID, boolean force) {
+			this.pageID = pageID;
+			this.unitID = unitID;
+			this.force = force;
+		}
+		
+		@Override
+		public void release() throws BufferException {
+			
+			Frame frame = pageNoToFrame.remove(pageID);
+			if (frame != null) {
+				// The handle of a deleted page is allowed to be fixed
+				// by concurrent threads. However, the safe flag should be
+				// used in this case to signal them that they
+				// must not use the handle anymore.
+				// To avoid any change for corruption we drop the handle!
+				frame.drop();
+				pool.remove(frame);
+			}
+			deallocateBlock(pageID, unitID, force);
+		}
 	}
 
 	protected static Comparator<Frame> PAGEID_COMPARATOR = new Comparator<Frame>() {
@@ -138,17 +312,6 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 	 */
 	private final int bufferSize;
 
-	/**
-	 * {@link org.brackit.server.io.buffer.BufferMgr.BufferManager} for Logging
-	 * purposes
-	 */
-	private final BufferMgr bufferMgr;
-
-	/**
-	 * Helper for creating log entries
-	 */
-	private final PageLogOperationHelper loggableHelper;
-
 	private final Log transactionLog;
 
 	private final BlockSpace blockSpace;
@@ -171,10 +334,10 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 	private int faultCnt;
 
+	private final String deallocateHookName;
+
 	public AbstractBuffer(BlockSpace blockSpace, int bufferSize,
 			Log transactionLog, BufferMgr bufferMgr) throws BufferException {
-		this.bufferMgr = bufferMgr;
-		this.loggableHelper = new PageLogOperationHelper(bufferMgr);
 		this.transactionLog = transactionLog;
 		this.blockSpace = blockSpace;
 		this.bufferSize = bufferSize;
@@ -187,6 +350,9 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		this.writeSize = 40;
 		this.writeBuffer = new byte[writeSize * pageSize];
 		ListBuffer.add(this);
+
+		this.deallocateHookName = String
+				.format("DEALLOC%s", blockSpace.getId());
 	}
 
 	protected abstract Frame shrink();
@@ -224,6 +390,47 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		}
 
 		return requested;
+	}
+	
+	@Override
+	public synchronized void redoAllocation(Tx tx, PageID pageID, int unitID, long LSN)
+			throws BufferException {
+		
+		// mark block as used in the free space info
+		allocateBlock(pageID, unitID, true);
+		
+		Frame requested = pageNoToFrame.get(pageID);
+
+		if (requested == null) {
+			faultCnt++;
+			requested = load(pageID);
+		} else {
+			hitCnt++;
+		}
+		
+		if (requested.getLSN() < LSN) {
+			// format handle again
+			requested.init(pageID, unitID);
+			requested.setLSN(LSN);
+			requested.setModified(true);
+		}
+	}
+	
+	@Override
+	public synchronized void undoDeallocation(Tx tx, PageID pageID, int unitID, long undoNextLSN)
+			throws BufferException {
+		
+		try {
+			tx.logCLR(
+					new AllocateLogOperation(pageID, unitID),
+					undoNextLSN);
+		} catch (TxException e) {
+			throw new BufferException(
+					"Could not write log for page allocation.", e);
+		}
+		
+		// mark block as used in the free space info
+		allocateBlock(pageID, unitID, true);
 	}
 
 	public synchronized void unfixPage(Handle handle) throws BufferException {
@@ -280,13 +487,129 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		return frame.getRedoLSN();
 	}
 
-	public synchronized Handle allocatePage(Tx transaction)
-			throws BufferException {
-		return allocatePage(transaction, null, true, -1);
+	@Override
+	public int createUnit(Tx tx) throws BufferException {
+		return createUnit(tx, -1, true, -1, false);
 	}
 
-	public synchronized Handle allocatePage(Tx transaction, PageID pageID,
-			boolean logged, long undoNextLSN) throws BufferException {
+	@Override
+	public synchronized int createUnit(Tx tx, int unitID, boolean logged,
+			long undoNextLSN, boolean force) throws BufferException {
+
+		if (log.isTraceEnabled()) {
+			log.trace(String.format("Creating unit %s.", unitID));
+		}		
+
+		try {
+			unitID = blockSpace.createUnit(unitID, force);
+		} catch (StoreException e) {
+			throw new BufferException("Error creating unit.", e);
+		}
+		
+		if (logged) {
+			try {
+				if (undoNextLSN == -1) {
+					tx.logUpdate(new CreateUnitLogOperation(blockSpace
+							.getId(), unitID));
+				} else {
+					tx.logCLR(new CreateUnitLogOperation(
+							blockSpace.getId(), unitID), undoNextLSN);
+				}
+			} catch (TxException e) {
+				throw new BufferException(
+						"Could not write log for unit creation.", e);
+			}
+		}
+		
+		return unitID;
+	}
+
+	@Override
+	public synchronized void dropUnit(Tx tx, int unitID, boolean logged,
+			long undoNextLSN, boolean force) throws BufferException {
+
+		if (log.isTraceEnabled()) {
+			log.trace(String.format("Dropping unit %s.", unitID));
+		}
+		
+		if (logged) {
+			try {
+				if (undoNextLSN == -1) {
+					tx.logUpdate(new DropUnitLogOperation(blockSpace
+							.getId(), unitID));
+				} else {
+					tx.logCLR(new DropUnitLogOperation(blockSpace.getId(),
+							unitID), undoNextLSN);
+				}
+			} catch (TxException e) {
+				throw new BufferException(
+						"Could not write log for dropping unit.", e);
+			}
+		}
+
+		ArrayList<Frame> toDrop = new ArrayList<Frame>();
+
+		// determine frames that belong to this unit
+		for (Frame frame : pool) {
+			if (frame.getUnitID() == unitID) {
+				pageNoToFrame.remove(frame.getPageID());
+				frame.drop();
+				toDrop.add(frame);
+			}
+		}
+
+		// drop frames
+		for (Frame frame : toDrop) {
+			pool.remove(frame);
+		}
+
+		try {
+			blockSpace.dropUnit(unitID, force);
+		} catch (StoreException e) {
+			throw new BufferException(String.format("Error dropping unit %s.",
+					unitID), e);
+		}
+	}
+
+	@Override
+	public synchronized void dropUnitDeferred(Tx tx, int unitID) {
+		
+		if (log.isTraceEnabled()) {
+			log.trace(String.format("Dropping unit %s at Commit.", unitID));
+		}
+
+		// do not release the unit right now, but at transaction commit
+		// all deallocations for this container are done in a single
+		// PreCommitHook
+		PreCommitHook hook = tx.getPreCommitHook(deallocateHookName);
+		if (hook == null) {
+			hook = new DeallocateHook();
+			tx.addPreCommitHook(hook, deallocateHookName);
+		}
+		((DeallocateHook) hook).addUnit(unitID);
+	}
+
+	@Override
+	public void dropUnit(Tx tx, int unitID) throws BufferException {
+		dropUnit(tx, unitID, true, -1, false);
+	}
+
+	public synchronized Handle allocatePage(Tx tx, int unitID)
+			throws BufferException {
+		return allocatePage(tx, unitID, null, true, -1, false);
+	}
+
+	public synchronized Handle allocatePage(Tx tx, int unitID, PageID pageID,
+			boolean logged, long undoNextLSN, boolean force)
+			throws BufferException {
+
+		if (DEBUG) {
+			if (unitID <= 0) {
+				throw new IllegalArgumentException(
+						"UnitID must be greater than Zero!");
+			}
+		}
+
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Allocating page %s.", pageID));
 		}
@@ -301,16 +624,16 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 		try {
 			evict(victim);
-			pageID = allocateBlock(pageID);
+			pageID = allocateBlock(pageID, unitID, force);
 
 			if (logged) {
 				try {
 					if (undoNextLSN == -1) {
-						LSN = transaction.logUpdate(loggableHelper
-								.createAllocateLogOp(pageID));
+						LSN = tx.logUpdate(new AllocateLogOperation(pageID,
+								unitID));
 					} else {
-						LSN = transaction.logCLR(
-								loggableHelper.createAllocateLogOp(pageID),
+						LSN = tx.logCLR(
+								new AllocateLogOperation(pageID, unitID),
 								undoNextLSN);
 					}
 				} catch (TxException e) {
@@ -328,7 +651,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			throw new RuntimeException();
 
 		victim.fix();
-		victim.init(pageID);
+		victim.init(pageID, unitID);
 		victim.setLSN(LSN);
 		// update page mapping
 		if (pageNoToFrame.put(pageID, victim) != null)
@@ -344,8 +667,34 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		return victim;
 	}
 
-	public synchronized void deletePage(Tx transaction, PageID pageID,
-			boolean logged, long undoNextLSN) throws BufferException {
+	@Override
+	public synchronized void deletePageDeferred(Tx tx, PageID pageID,
+			int unitID) throws BufferException {
+		if (log.isTraceEnabled()) {
+			log.trace(String.format("Deleting page %s at Commit.", pageID));
+		}
+
+		// do not release the block right now, but at transaction commit
+		// all deallocations for this container are done in a single
+		// PreCommitHook
+		PreCommitHook hook = tx.getPreCommitHook(deallocateHookName);
+		if (hook == null) {
+			hook = new DeallocateHook();
+			tx.addPreCommitHook(hook, deallocateHookName);
+		}
+		((DeallocateHook) hook).addPage(pageID, unitID);
+	}
+
+	@Override
+	public PageReleaser deletePage(Tx tx, PageID pageID, int unitID) throws BufferException {
+		return deletePage(tx, pageID, unitID, true, -1, false);
+	}
+
+	@Override
+	public synchronized PageReleaser deletePage(Tx tx, PageID pageID,
+			int unitID, boolean logged, long undoNextLSN, boolean force)
+			throws BufferException {
+
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Deleting page %s.", pageID));
 		}
@@ -353,30 +702,19 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		if (logged) {
 			try {
 				if (undoNextLSN == -1) {
-					transaction.logUpdate(loggableHelper
-							.createDeallocateLogOp(pageID));
+					tx.logUpdate(new DeallocateLogOperation(pageID,
+							unitID));
 				} else {
-					transaction.logCLR(
-							loggableHelper.createDeallocateLogOp(pageID),
-							undoNextLSN);
+					tx.logCLR(new DeallocateLogOperation(pageID,
+							unitID), undoNextLSN);
 				}
 			} catch (TxException e) {
 				throw new BufferException(
 						"Could not write log for page deallocation.", e);
 			}
 		}
-
-		Frame frame = pageNoToFrame.remove(pageID);
-		if (frame != null) {
-			// The handle of a deleted page is allowed to be fixed
-			// by concurrent threads. However, the safe flag should be
-			// used in this case to signal them that they
-			// must not use the handle anymore.
-			// To avoid any change for corruption we drop the handle!
-			frame.drop();
-			pool.remove(frame);
-		}
-		deallocateBlock(pageID);
+		
+		return new PageReleaserImpl(pageID, unitID, force);
 	}
 
 	private int readBlocks(PageID pageID, byte[] buffer, int numOfBlocks)
@@ -414,14 +752,15 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		}
 	}
 
-	private PageID allocateBlock(PageID pageID) throws BufferException {
+	private PageID allocateBlock(PageID pageID, int unitID, boolean force)
+			throws BufferException {
 		int blockNo = (pageID != null) ? pageID.getBlockNo() : -1;
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Allocating block %s of page %s", blockNo,
 					pageID));
 		}
 		try {
-			int allocatedBlockNo = blockSpace.allocate(blockNo);
+			int allocatedBlockNo = blockSpace.allocate(blockNo, unitID, force);
 			PageID allocatedPageID = new PageID(getContainerNo(),
 					allocatedBlockNo);
 			if ((pageID == null) && log.isTraceEnabled()) {
@@ -435,13 +774,19 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		}
 	}
 
-	private void deallocateBlock(PageID pageID) throws BufferException {
+	@Override
+	public void releaseAfterRedo(Tx tx, PageUnitPair[] pages, int[] units) {
+		tx.addPostRedoHook(new DeallocateHook(pages, units));
+	}
+
+	private void deallocateBlock(PageID pageID, int unitID, boolean force)
+			throws BufferException {
 		if (log.isDebugEnabled()) {
 			log.debug(String.format("Releasing block %s of page %s",
 					pageID.getBlockNo(), pageID));
 		}
 		try {
-			blockSpace.release(pageID.getBlockNo());
+			blockSpace.release(pageID.getBlockNo(), unitID, force);
 		} catch (StoreException e) {
 			throw new BufferException(e,
 					"Releasing block %s of page %s failed",
@@ -461,7 +806,8 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 				throw new RuntimeException();
 
 			PageID pID = new PageID(containerNo, currentBlockNo);
-			frame.init(pID);
+			frame.init(pID, 0); // unitID not relevant, since it is overwritten
+								// in the next line anyway
 			System.arraycopy(buffer, offset, frame.page, 0, pageSize);
 			currentBlockNo++;
 			offset += pageSize;
@@ -472,8 +818,6 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		int offset = 0;
 		for (Frame frame : frames) {
 			System.arraycopy(frame.page, 0, buffer, offset, pageSize);
-			// mark block as used
-			buffer[offset] = 1;
 			offset += pageSize;
 		}
 	}
@@ -894,7 +1238,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 	}
 
 	@Override
-	public void sync() throws BufferException {
+	public synchronized void sync() throws BufferException {
 		try {
 			blockSpace.sync();
 		} catch (StoreException e) {

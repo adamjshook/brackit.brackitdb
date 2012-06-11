@@ -55,6 +55,7 @@ public class LogRecordHelper implements LoggableHelper {
 
 	static {
 		helperSet = new HashSet<LogOperationHelper>();
+		helperSet.add(new EOTLogOperationHelper());
 		helperSet.add(new PageLogOperationHelper());
 		helperSet.add(new BPlusIndexLogOperationHelper());
 		helperSet.add(new ElBPlusIndexLogOperationHelper());
@@ -85,8 +86,8 @@ public class LogRecordHelper implements LoggableHelper {
 		return helper.fromBytes(type, buffer);
 	}
 
-	public Loggable createEOT(TxID taID, long prevLSN) {
-		return new LogRecord(Loggable.TYPE_EOT, taID, prevLSN, null, -1);
+	public Loggable createEOT(TxID taID, long prevLSN, boolean commit) {
+		return new LogRecord(Loggable.TYPE_EOT, taID, prevLSN, new EOTLogOperation(commit), -1);
 	}
 
 	public Loggable createUpdate(TxID taID, long prevLSN,
@@ -133,12 +134,11 @@ public class LogRecordHelper implements LoggableHelper {
 			return new LogRecord(logRecordType, taId, prevLSN, null,
 					undoNextLSN);
 		case Loggable.TYPE_UPDATE:
+		case Loggable.TYPE_EOT:
 			logOperationType = buffer.get();
 			logOperation = fromBytes(logOperationType, buffer.slice());
 			return new LogRecord(logRecordType, taId, prevLSN,
 					logOperation, -1);
-		case Loggable.TYPE_EOT:
-			return new LogRecord(logRecordType, taId, prevLSN, null, -1);
 		default:
 			return new LogRecord(logRecordType, taId, prevLSN, null, -1);
 		}

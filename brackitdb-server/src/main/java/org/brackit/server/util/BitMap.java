@@ -25,42 +25,44 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.store.page.slot;
+package org.brackit.server.util;
 
-import org.brackit.server.io.buffer.Handle;
-import org.brackit.server.io.buffer.PageID;
-import org.junit.Test;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Iterator;
 
 /**
  * 
- * @author Sebastian Baechle
- * 
+ * @author Martin Hiller
+ *
  */
-public class FieldCachingSlottedPageTest extends SlottedPageTest {
+public interface BitMap {
+	
+	public void write(DataOutput out) throws IOException;
+	
+	public void read(DataInput in) throws IOException;
 
-	@Override
-	public void setUp() throws Exception {
-		super.setUp();
-		Handle handle = new Handle(BLOCK_SIZE) {
-		};
-		handle.init(new PageID(3), 42);
-		page = new FieldCachingSlottedPage(null, handle);
-	}
+	public void extendTo(int newLogicalSize);
 
-	@Test
-	public void testUpdateOfFieldBug() {
-		page.format(page.getHandle().getPageID());
-		byte[][] elementsA = new byte[][] { new byte[] { 12 },
-				new byte[] { 3 }, new byte[] { 1 }, new byte[] { 1 },
-				new byte[] { 8, 0, 0, 12 }, new byte[] { 8, 0, 0, 5 } };
-		byte[][] elementsB = new byte[][] { new byte[] { 12, -28 },
-				new byte[] { 12, -26 } };
-		Tuple toWriteA = new ArrayTuple(elementsA);
-		Tuple toWriteB = new ArrayTuple(elementsB);
-		verifiedWrite(0, toWriteA, true);
-		verifiedWrite(1, toWriteB, true);
-		byte[] updatedField = page.readField(0, 0);
-		updatedField[0] = 8; // directly use returned field for update
-		verifiedFieldUpdate(0, 0, updatedField);
-	}
+	public int logicalSize();
+
+	public boolean get(int bitIndex);
+
+	public void set(int bitIndex);
+
+	public void clear(int bitIndex);
+
+	/**
+	 * Returns the index of the first bit that is set to false that occurs on or
+	 * after the specified starting index. If there is no such bit, -1 will be
+	 * returned.
+	 * 
+	 * @param fromIndex
+	 *            the index to start checking from (inclusive).
+	 * @return
+	 */
+	public int nextClearBit(int fromIndex);
+	
+	public Iterator<Integer> getSetBits();
 }

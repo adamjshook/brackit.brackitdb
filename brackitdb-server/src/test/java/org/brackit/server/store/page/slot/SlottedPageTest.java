@@ -233,7 +233,7 @@ public class SlottedPageTest {
 		// this takes long!!! use a smaller page size
 		Handle handle = new Handle(1024) {
 		};
-		handle.init(new PageID(3));
+		handle.init(new PageID(3), 42);
 		page = new SlottedPage(null, handle);
 		testUpdateField(true);
 	}
@@ -802,7 +802,7 @@ public class SlottedPageTest {
 		rand = new Random(123456789);
 		Handle handle = new Handle(BLOCK_SIZE) {
 		};
-		handle.init(new PageID(3));
+		handle.init(new PageID(3), 42);
 		page = new SlottedPage(null, handle);
 	}
 

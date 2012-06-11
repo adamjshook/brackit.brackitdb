@@ -110,7 +110,7 @@ public class BaseBlobHandle implements BlobHandle, Materializable {
 	public void create(String name, int containerNo, InputStream in)
 			throws DocumentException {
 		try {
-			PageID pageID = store.create(tx, containerNo);
+			PageID pageID = store.create(tx, containerNo, -1);
 			store.writeStream(tx, pageID, in, false);
 			this.name = name;
 			this.collID = pageID.value();

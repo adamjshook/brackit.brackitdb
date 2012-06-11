@@ -25,56 +25,38 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.store.index.bracket;
+package org.brackit.server.io.buffer.log;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.ByteBuffer;
 
-import org.brackit.server.ServerException;
 import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.store.blob.BlobStore;
-import org.brackit.server.store.blob.BlobStoreAccessException;
-import org.brackit.server.tx.PostCommitHook;
-import org.brackit.server.tx.Tx;
+import org.brackit.server.tx.log.LogOperation;
+import org.brackit.server.tx.log.SizeConstants;
 
 /**
- * Deletes a list of externalized value given by their PageID.
- * 
- * @author Martin Hiller
+ * @author Sebastian Baechle
  * 
  */
-public class DeleteExternalizedHook implements PostCommitHook {
+public abstract class SinglePageLogOperation extends LogOperation {
+	protected static final int BASE_SIZE = PageID.getSize() + SizeConstants.INT_SIZE;
 
-	private final BlobStore blobStore;
-	private final List<PageID> externalPageIDs;
+	protected PageID pageID;
+	protected int unitID;
 
-	public DeleteExternalizedHook(BlobStore blobStore,
-			List<PageID> externalPageIDs) {
-		this.blobStore = blobStore;
-		this.externalPageIDs = externalPageIDs;
+	protected SinglePageLogOperation(byte type, PageID pageID, int unitID) {
+		super(type);
+		this.pageID = pageID;
+		this.unitID = unitID;
 	}
 
-	/**
-	 * @see org.brackit.server.tx.PostCommitHook#execute(org.brackit.server.tx.Tx)
-	 */
 	@Override
-	public void execute(Tx tx) throws ServerException {
-
-		List<PageID> exceptionPageIDs = null;
-		for (PageID pageID : externalPageIDs) {
-			try {
-				blobStore.drop(tx, pageID);
-			} catch (BlobStoreAccessException e) {
-				if (exceptionPageIDs == null) {
-					exceptionPageIDs = new ArrayList<PageID>();
-				}
-				exceptionPageIDs.add(pageID);
-			}
-		}
-		if (exceptionPageIDs != null) {
-			throw new ServerException(String.format(
-					"Error deleting overflow values %s.", exceptionPageIDs));
-		}
+	public void toBytes(ByteBuffer bb) {
+		bb.put(pageID.getBytes());
+		bb.putInt(unitID);
 	}
-
+	
+	@Override
+	public int getSize() {
+		return BASE_SIZE;
+	}
 }

@@ -27,6 +27,8 @@
  */
 package org.brackit.server.util;
 
+import java.util.Iterator;
+
 /**
  * BitArray (used for free space administration). We can't use boolean[],
  * because size of a boolean primitive type is one byte. We can't use
@@ -135,5 +137,76 @@ public class BitArray {
 		return -1;
 
 	}
+	
+	public Iterator<Integer> getSetBits() {
+		
+		return new Iterator<Integer>() {
+			
+			private int wIndex = 0;
+			private int bIndex = 0;
+			private Integer next = null;
 
+			@Override
+			public boolean hasNext() {
+				
+				if (next == null) {
+					nextInternal();
+				}
+				return (next != null);
+			}
+
+			@Override
+			public Integer next() {
+				
+				if (next == null) {
+					nextInternal();
+				}
+				Integer res = next;
+				next = null;
+				return res;				
+			}
+			
+			private void nextInternal() {
+				
+				while (true) {
+					
+					if (wIndex >= words.length) {
+						next = null;
+						return;
+					}
+					
+					if (words[wIndex] == (byte) 0) {
+						// no set bit in this byte
+						wIndex++;
+						bIndex = 0;
+					} else {
+						
+						boolean bitIsSet = false;
+						
+						if ((words[wIndex] & ((byte) 1 << bIndex)) != 0) {
+							// bit is set
+							bitIsSet = true;
+							next = wIndex * BITS_PER_WORD + bIndex;
+						}
+						
+						bIndex++;
+						if (bIndex == BITS_PER_WORD) {
+							wIndex++;
+							bIndex = 0;
+						}
+						
+						if (bitIsSet) {
+							return;
+						}
+					}
+				}
+				
+			}
+
+			@Override
+			public void remove() {
+				throw new UnsupportedOperationException();
+			}
+		};		
+	}
 }

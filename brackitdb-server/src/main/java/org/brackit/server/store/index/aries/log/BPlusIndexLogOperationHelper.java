@@ -99,13 +99,13 @@ public class BPlusIndexLogOperationHelper implements LogOperationHelper {
 	}
 
 	public static FormatLogOperation createFormatLogOperation(PageID pageID,
-			int oldUnitID, int unitID, PageID rootPageID, int oldPageType,
-			int pageType, Field oldKeyType, Field keyType, Field oldValueType,
-			Field valueType, boolean oldUnique, boolean unique,
-			boolean oldCompression, boolean compression) {
-		return new FormatLogOperation(pageID, oldUnitID, unitID, rootPageID,
-				oldPageType, pageType, oldKeyType, keyType, oldValueType,
-				valueType, oldUnique, unique, oldCompression, compression);
+			PageID rootPageID, int oldPageType, int pageType, Field oldKeyType,
+			Field keyType, Field oldValueType, Field valueType,
+			boolean oldUnique, boolean unique, boolean oldCompression,
+			boolean compression) {
+		return new FormatLogOperation(pageID, rootPageID, oldPageType,
+				pageType, oldKeyType, keyType, oldValueType, valueType,
+				oldUnique, unique, oldCompression, compression);
 	}
 
 	public static PointerLogOperation createrPointerLogOperation(byte type,
@@ -143,8 +143,6 @@ public class BPlusIndexLogOperationHelper implements LogOperationHelper {
 
 	private LogOperation createFormatLogOperation(ByteBuffer buffer,
 			PageID pageID, PageID rootPageID) {
-		int oldUnitID = buffer.getInt();
-		int unitID = buffer.getInt();
 		int oldPageType = buffer.get();
 		int pageType = buffer.get();
 		Field oldKeyType = Field.fromId(buffer.get());
@@ -156,7 +154,7 @@ public class BPlusIndexLogOperationHelper implements LogOperationHelper {
 		boolean oldCompression = (buffer.get() != 0);
 		boolean compression = (buffer.get() != 0);
 
-		return createFormatLogOperation(pageID, oldUnitID, unitID, rootPageID,
+		return createFormatLogOperation(pageID, rootPageID,
 				oldPageType, pageType, oldKeyType, keyType, oldValueType,
 				valueType, oldUnique, unique, oldCompression, compression);
 	}

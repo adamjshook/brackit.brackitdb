@@ -51,15 +51,16 @@ public class BranchUpdateLogOperation extends BracketIndexLogOperation {
 			.getLogger(BranchUpdateLogOperation.class);
 
 	public enum ActionType {
-		INSERT(BracketIndexLogOperation.BRANCH_INSERT),
-		DELETE(BracketIndexLogOperation.BRANCH_DELETE),
-		UPDATE(BracketIndexLogOperation.BRANCH_UPDATE);
-		
+		INSERT(BracketIndexLogOperation.BRANCH_INSERT), DELETE(
+				BracketIndexLogOperation.BRANCH_DELETE), UPDATE(
+				BracketIndexLogOperation.BRANCH_UPDATE);
+
 		private byte type;
+
 		private ActionType(byte type) {
 			this.type = type;
 		}
-		
+
 		public byte getType() {
 			return type;
 		}
@@ -73,16 +74,16 @@ public class BranchUpdateLogOperation extends BracketIndexLogOperation {
 
 	protected byte[] oldValue;
 
-	public BranchUpdateLogOperation(ActionType actionType, PageID pageID, PageID rootPageID,
-			byte[] key, byte[] oldValue, byte[] value) {
+	public BranchUpdateLogOperation(ActionType actionType, PageID pageID,
+			PageID rootPageID, byte[] key, byte[] oldValue, byte[] value) {
 		super(actionType.getType(), pageID, rootPageID);
 		this.key = key;
 		this.oldValue = oldValue;
 		this.value = value;
 	}
-	
-	public BranchUpdateLogOperation(byte type, PageID pageID, PageID rootPageID,
-			byte[] key, byte[] oldValue, byte[] value) {
+
+	public BranchUpdateLogOperation(byte type, PageID pageID,
+			PageID rootPageID, byte[] key, byte[] oldValue, byte[] value) {
 		super(type, pageID, rootPageID);
 		this.key = key;
 		this.oldValue = oldValue;
@@ -208,12 +209,13 @@ public class BranchUpdateLogOperation extends BracketIndexLogOperation {
 									+ " failed because it does not belong "
 									+ "to index %s.", pageID, rootPageID);
 				}
-				
+
 				if (page.isLeaf()) {
 					page.cleanup();
-					throw new IndexAccessException("LogOperation type not valid for leaf pages.");
+					throw new IndexAccessException(
+							"LogOperation type not valid for leaf pages.");
 				}
-				
+
 				Branch branch = (Branch) page;
 
 				int searchResult = branch.search(SearchMode.GREATER_OR_EQUAL,
@@ -267,27 +269,26 @@ public class BranchUpdateLogOperation extends BracketIndexLogOperation {
 			page = tree.getPage(tx, pageID, true, false);
 
 			if (page.getEntryCount() == 0) {
-				// TODO
-				throw new RuntimeException("Not supported!");
-//				page.cleanup();
-//				page = tree.descendToPosition(tx, rootPageID,
-//						SearchMode.GREATER_OR_EQUAL, key, value, true,
-//						actionType == ActionType.DELETE);
-			} else if ((page.getLSN() != LSN)
-					|| ((page.getRootPageID() != null)
-							&& (!page.getRootPageID().equals(rootPageID)))) {
+				throw new RuntimeException("Branch page with zero entries!");
+				// page.cleanup();
+				// page = tree.descendToPosition(tx, rootPageID,
+				// SearchMode.GREATER_OR_EQUAL, key, value, true,
+				// actionType == ActionType.DELETE);
+			} else if ((page.getRootPageID() != null)
+					&& ((!page.getRootPageID().equals(rootPageID)))) {
 				page.cleanup();
 				throw new IndexAccessException(
 						"Undo content update of page %s failed"
 								+ " because it does not belong to index %s.",
 						pageID, rootPageID);
 			}
-			
+
 			if (page.isLeaf()) {
 				page.cleanup();
-				throw new IndexAccessException("LogOperation type not valid for leaf pages.");
+				throw new IndexAccessException(
+						"LogOperation type not valid for leaf pages.");
 			}
-			
+
 			Branch branch = (Branch) page;
 
 			int searchResult = branch.search(SearchMode.GREATER_OR_EQUAL, key,

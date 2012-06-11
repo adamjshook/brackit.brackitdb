@@ -27,6 +27,8 @@
  */
 package org.brackit.server.tx;
 
+import org.brackit.server.ServerException;
+import org.brackit.server.io.buffer.Buffer.PageReleaser;
 import org.brackit.server.io.manager.BufferMgr;
 import org.brackit.server.metadata.cache.CachedObjectUser;
 import org.brackit.server.session.Session;
@@ -42,7 +44,7 @@ public interface Tx extends CachedObjectUser {
 	public TxID getID();
 
 	public IsolationLevel getIsolationLevel();
-	
+
 	public Session getSession();
 
 	public boolean isReadOnly();
@@ -80,10 +82,25 @@ public interface Tx extends CachedObjectUser {
 
 	public long logUpdateSpecial(LogOperation logOperation, long undoNextLSN)
 			throws TxException;
-
-	public void addPreCommitHook(PreCommitHook hook);
+	
+	/**
+	 * Adds a (named) PreCommitHook to this transaction. The name can be used
+	 * to retrieve the PreCommitHook with the method 'getPreCommitHook(...)'.
+	 * It may also be null.
+	 */
+	public void addPreCommitHook(PreCommitHook hook, String name);
 
 	public void addPostCommitHook(PostCommitHook hook);
+	
+	public void addPostRedoHook(PostRedoHook hook);
+	
+	public void executePostRedoHooks() throws ServerException;
+
+	/**
+	 * Returns the PreCommitHook with the specified name. It returns null of no
+	 * such PreCommitHook exists.
+	 */
+	public PreCommitHook getPreCommitHook(String name);
 
 	public void leave() throws TxException;
 
@@ -94,4 +111,8 @@ public interface Tx extends CachedObjectUser {
 	public void addFlushHook(int containerNo);
 
 	public TxStats getStatistics();
+
+	public void addDeletedPage(PageReleaser pr);
+
+	public boolean releaseDeletedPages() throws TxException;
 }

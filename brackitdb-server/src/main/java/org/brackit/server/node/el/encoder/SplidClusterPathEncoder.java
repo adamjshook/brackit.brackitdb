@@ -104,11 +104,6 @@ public class SplidClusterPathEncoder implements IndexEncoder<ElNode> {
 	}
 
 	@Override
-	public int getUnitID() {
-		return collection.getID();
-	}
-
-	@Override
 	public boolean sortKey() {
 		return false;
 	}

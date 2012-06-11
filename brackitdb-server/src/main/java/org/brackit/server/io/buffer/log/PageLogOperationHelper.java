@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import org.brackit.server.io.buffer.PageID;
-import org.brackit.server.io.manager.BufferMgr;
+import org.brackit.server.io.buffer.log.PageLogOperation.PageUnitPair;
 import org.brackit.server.tx.log.LogException;
 import org.brackit.server.tx.log.LogOperation;
 import org.brackit.server.tx.log.LogOperationHelper;
@@ -48,16 +48,9 @@ public class PageLogOperationHelper implements LogOperationHelper {
 		operationTypes = new ArrayList<Byte>();
 		operationTypes.add(PageLogOperation.ALLOCATE);
 		operationTypes.add(PageLogOperation.DEALLOCATE);
-	}
-
-	private final BufferMgr bufferMgr;
-
-	public PageLogOperationHelper() {
-		this(null);
-	}
-
-	public PageLogOperationHelper(BufferMgr bufferMgr) {
-		this.bufferMgr = bufferMgr;
+		operationTypes.add(PageLogOperation.DEALLOCATE_DEFERRED);
+		operationTypes.add(PageLogOperation.CREATE_UNIT);
+		operationTypes.add(PageLogOperation.DROP_UNIT);
 	}
 
 	@Override
@@ -68,23 +61,65 @@ public class PageLogOperationHelper implements LogOperationHelper {
 	@Override
 	public LogOperation fromBytes(byte type, ByteBuffer buffer)
 			throws LogException {
-		PageID pageID = PageID.read(buffer);
 
 		switch (type) {
 		case PageLogOperation.ALLOCATE:
-			return new AllocatePageLogOperation(pageID);
+			return createAllocateLogOperation(buffer);
 		case PageLogOperation.DEALLOCATE:
-			return new DeallocatePageLogOperation(pageID);
+			return createDeallocateLogOperation(buffer);
+		case PageLogOperation.DEALLOCATE_DEFERRED:
+			return createDeferredLogOperation(buffer);
+		case PageLogOperation.CREATE_UNIT:
+			return createUnitLogOperation(true, buffer);
+		case PageLogOperation.DROP_UNIT:
+			return createUnitLogOperation(false, buffer);
 		default:
 			throw new LogException("Unknown operation type: %s.", type);
 		}
 	}
 
-	public AllocatePageLogOperation createAllocateLogOp(PageID pageID) {
-		return new AllocatePageLogOperation(pageID);
+	private LogOperation createAllocateLogOperation(ByteBuffer bb) {
+		PageID pageID = PageID.read(bb);
+		int unitID = bb.getInt();
+		return new AllocateLogOperation(pageID, unitID);
 	}
 
-	public DeallocatePageLogOperation createDeallocateLogOp(PageID pageID) {
-		return new DeallocatePageLogOperation(pageID);
+	private LogOperation createDeallocateLogOperation(ByteBuffer bb) {
+		PageID pageID = PageID.read(bb);
+		int unitID = bb.getInt();
+		return new DeallocateLogOperation(pageID, unitID);
+	}
+
+	private LogOperation createDeferredLogOperation(ByteBuffer bb) {
+
+		// read containerID
+		int containerID = bb.getInt();
+
+		// read single pages
+		int length = bb.getInt();
+		PageUnitPair[] pages = new PageUnitPair[length];
+
+		for (int i = 0; i < length; i++) {
+			PageID pageID = PageID.read(bb);
+			int unitID = bb.getInt();
+			pages[i] = new PageUnitPair(pageID, unitID);
+		}
+
+		// read units
+		length = bb.getInt();
+		int[] units = new int[length];
+
+		for (int i = 0; i < length; i++) {
+			units[i] = bb.getInt();
+		}
+
+		return new DeferredLogOperation(containerID, pages, units);
+	}
+
+	private LogOperation createUnitLogOperation(boolean create, ByteBuffer bb) {
+		int containerID = bb.getInt();
+		int unitID = bb.getInt();
+		return (create ? new CreateUnitLogOperation(containerID, unitID)
+				: new DropUnitLogOperation(containerID, unitID));
 	}
 }

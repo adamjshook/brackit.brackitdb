@@ -59,7 +59,7 @@ public class PageContextFactory {
 		this.bufferMgr = bufferMgr;
 	}
 
-	public PageContext allocate(Tx transaction, int containerNo, int unitID,
+	public PageContext allocate(Tx tx, int containerNo, int unitID,
 			int pageType, PageID rootPageID, Field keyType, Field valueType,
 			boolean unique, boolean compression, boolean logged)
 			throws IndexOperationException {
@@ -70,9 +70,15 @@ public class PageContextFactory {
 		try {
 			buffer = (containerNo != -1) ? bufferMgr.getBuffer(containerNo)
 					: bufferMgr.getBuffer(rootPageID);
-			handle = buffer.allocatePage(transaction);
+			
+			if (unitID == -1) {
+				// create new unit
+				unitID = buffer.createUnit(tx);
+			}
+			
+			handle = buffer.allocatePage(tx, unitID);
 
-			page = create(transaction, buffer, handle, Latch.MODE_X);
+			page = create(tx, buffer, handle, Latch.MODE_X);
 
 			if (rootPageID == null) {
 				/*
@@ -82,7 +88,7 @@ public class PageContextFactory {
 				rootPageID = page.getPageID();
 			}
 
-			page.format(unitID, pageType, rootPageID, keyType, valueType,
+			page.format(pageType, rootPageID, keyType, valueType,
 					unique, compression, logged, -1);
 		} catch (BufferException e) {
 			throw new IndexOperationException(e,

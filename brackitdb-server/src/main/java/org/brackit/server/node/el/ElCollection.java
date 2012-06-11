@@ -212,7 +212,7 @@ public class ElCollection extends TXCollection<ElNode> {
 		try {
 			PageID rootPageID = store.index.createIndex(tx,
 					new PageID(collID).getContainerNo(), Field.DEWEYID,
-					Field.EL_REC, true, true, -1);
+					Field.EL_REC, true, true);
 			
 			DocID docID = new DocID(collID, rootPageID.value());
 			
@@ -248,7 +248,7 @@ public class ElCollection extends TXCollection<ElNode> {
 		try {
 			PageID rootPageID = store.index.createIndex(tx,
 					spec.getContainerID(), Field.DEWEYID, Field.EL_REC, true,
-					spec.isKeyCompression(), -1);
+					spec.isKeyCompression());
 
 			collID = rootPageID.value();
 			DocID docID = new DocID(collID, rootPageID.value());

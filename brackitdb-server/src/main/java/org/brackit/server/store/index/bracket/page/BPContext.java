@@ -27,6 +27,7 @@
  */
 package org.brackit.server.store.index.bracket.page;
 
+import org.brackit.server.io.buffer.Buffer.PageReleaser;
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.store.index.bracket.IndexOperationException;
 import org.brackit.server.store.page.BasePage;
@@ -69,11 +70,11 @@ public interface BPContext extends Latch {
 
 	public String dump(String pageTitle) throws IndexOperationException;
 
-	public BPContext format(boolean leaf, int unitID, PageID rootPageID,
+	public BPContext format(boolean leaf, PageID rootPageID,
 			int height, boolean compressed, boolean logged, long undoNextLSN)
 			throws IndexOperationException;
 
-	public void deletePage() throws IndexOperationException;
+	public PageReleaser deletePage() throws IndexOperationException;
 
 	public void cleanup();
 
@@ -96,5 +97,7 @@ public interface BPContext extends Latch {
 	public boolean externalizeValue(byte[] value);
 	
 	public byte[] externalize(byte[] value) throws IndexOperationException;
+
+	public void deletePageDeferred() throws IndexOperationException;
 
 }

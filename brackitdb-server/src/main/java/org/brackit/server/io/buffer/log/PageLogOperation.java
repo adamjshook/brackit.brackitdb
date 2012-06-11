@@ -27,8 +27,6 @@
  */
 package org.brackit.server.io.buffer.log;
 
-import java.nio.ByteBuffer;
-
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.tx.log.LogOperation;
 
@@ -37,25 +35,33 @@ import org.brackit.server.tx.log.LogOperation;
  * 
  */
 public abstract class PageLogOperation extends LogOperation {
-	protected static final int BASE_SIZE = PageID.getSize();
 
-	public static final byte ALLOCATE = 1;
+	public static final class PageUnitPair {
+		public final PageID pageID;
+		public final int unitID;
 
-	public static final byte DEALLOCATE = 2;
+		public PageUnitPair(PageID pageID, int unitID) {
+			this.pageID = pageID;
+			this.unitID = unitID;
+		}
+		
+		@Override
+		public String toString() {
+			return String.format("(Page %s, Unit %s)", pageID, unitID);
+		}
+	}
 
-	protected PageID pageID;
+	public static final byte ALLOCATE = 3;
+	
+	public static final byte DEALLOCATE = 4;
 
-	protected PageLogOperation(byte type, PageID pageID) {
+	public static final byte DEALLOCATE_DEFERRED = 5;
+	
+	public static final byte CREATE_UNIT = 6;
+	
+	public static final byte DROP_UNIT = 7;
+	
+	public PageLogOperation(byte type) {
 		super(type);
-		this.pageID = pageID;
-	}
-
-	public PageID getPageID() {
-		return this.pageID;
-	}
-
-	@Override
-	public void toBytes(ByteBuffer bb) {
-		bb.put(pageID.getBytes());
 	}
 }
