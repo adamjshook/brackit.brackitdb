@@ -453,10 +453,9 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		if (!handle.isModified()) {
 			return;
 		}
-		List<Frame> toFlush = new ArrayList<AbstractBuffer.Frame>();
-		boolean allAssigned = buildRun((Frame) handle, toFlush);
+		List<Frame> toFlush = buildRun((Frame) handle);
 		try {
-			flushRun(toFlush, !allAssigned);
+			flushRun(toFlush);
 		} finally {
 			for (Frame f : toFlush) {
 				if (f != handle) {
@@ -734,8 +733,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		}
 	}
 
-	private void writeBlocks(PageID pageID, byte[] buffer, int numOfBlocks,
-			boolean sync) throws BufferException {
+	private void writeBlocks(PageID pageID, byte[] buffer, int numOfBlocks) throws BufferException {
 		if (log.isTraceEnabled()) {
 			log.trace(String.format(
 					"Writing %s blocks [%s-%s] starting with block of page %s",
@@ -743,8 +741,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 							+ numOfBlocks - 1, pageID));
 		}
 		try {
-			blockSpace.write(pageID.getBlockNo(), writeBuffer, numOfBlocks,
-					sync);
+			blockSpace.write(pageID.getBlockNo(), writeBuffer, numOfBlocks);
 		} catch (StoreException e) {
 			throw new BufferException(e,
 					"Writing %s blocks [%s-%s] starting with block of page %s",
@@ -872,18 +869,9 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		return frames;
 	}
 
-	/**
-	 * @param run
-	 *            List of frames in which the run is collected
-	 * @return true if all collected frames are assigned
-	 */
-	protected boolean buildRun(Frame frame, List<Frame> run) {
-		boolean allAssigned = true;
-
+	protected List<Frame> buildRun(Frame frame) {
+		List<Frame> run = new ArrayList<AbstractBuffer.Frame>();
 		run.add(frame);
-		if (frame.getAssignedTo() == null) {
-			allAssigned = false;
-		}
 
 		PageID start = frame.getPageID();
 		PageID current = new PageID(start.value() + 1);
@@ -896,9 +884,6 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 				break;
 			}
 			run.add(tmp);
-			if (tmp.getAssignedTo() == null) {
-				allAssigned = false;
-			}
 			current = new PageID(current.value() + 1);
 		}
 		tmp = null;
@@ -911,9 +896,6 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 				break;
 			}
 			run.add(0, tmp);
-			if (tmp.getAssignedTo() == null) {
-				allAssigned = false;
-			}
 			current = new PageID(current.value() - 1);
 			start = current;
 		}
@@ -926,7 +908,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			}
 			log.trace(buf);
 		}
-		return allAssigned;
+		return run;
 	}
 
 	private Frame load(PageID pageID) throws BufferException {
@@ -981,8 +963,6 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 	}
 
 	private void evict(List<Frame> frames) throws BufferException {
-		boolean allAssigned = true;
-
 		List<Frame> toFlush = null;
 		for (Frame frame : frames) {
 			if (frame.getPageID() == null) {
@@ -997,9 +977,6 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 					toFlush = new ArrayList<Frame>();
 				}
 				toFlush.add(frame);
-				if (frame.getAssignedTo() == null) {
-					allAssigned = false;
-				}
 			} else {
 				// TODO remove
 				if (frame.getAssignedTo() != null) {
@@ -1014,10 +991,6 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 		if (toFlush != null) {
 			flush(toFlush);
-			if (!allAssigned) {
-				// sync data
-				syncData();
-			}
 
 			// remove now also the flushed pages
 			// from the mapping and
@@ -1107,7 +1080,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 			if ((runSize > 0)
 					&& ((runSize == writeSize) || (prevBlockNo + 1 != blockNo))) {
-				flushRun(run, false);
+				flushRun(run);
 				run.clear();
 				runSize = 0;
 			}
@@ -1117,7 +1090,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		}
 
 		if (runSize > 0) {
-			flushRun(run, false);
+			flushRun(run);
 		}
 	}
 
@@ -1135,7 +1108,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		}
 	}
 
-	private void flushRun(List<Frame> run, boolean sync) throws BufferException {
+	private void flushRun(List<Frame> run) throws BufferException {
 		PageID firstPageID = run.get(0).getPageID();
 
 		if (log.isTraceEnabled()) {
@@ -1152,7 +1125,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		// checkBuffer();
 
 		transferToBuffer(run, writeBuffer);
-		writeBlocks(firstPageID, writeBuffer, run.size(), sync);
+		writeBlocks(firstPageID, writeBuffer, run.size());
 
 		for (Frame frame : run) {
 			// unlink clean pages from a transaction

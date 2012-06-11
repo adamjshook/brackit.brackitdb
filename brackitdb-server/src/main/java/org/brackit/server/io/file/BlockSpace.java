@@ -83,7 +83,7 @@ public interface BlockSpace {
 
 	int read(int lba, byte[] buffer, int numBlocks) throws StoreException;
 
-	void write(int lba, byte[] buffer, int numBlocks, boolean sync) throws StoreException;
+	void write(int lba, byte[] buffer, int numBlocks) throws StoreException;
 
 	/**
 	 * Returns the length of the block header in bytes

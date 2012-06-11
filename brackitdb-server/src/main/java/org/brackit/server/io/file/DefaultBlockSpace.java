@@ -180,13 +180,9 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			
 			if (dataFile.getBlockCnt() < newSize) {
 				// extend data file
-
-				// no autoSync to speed up the initialization
 				for (int i = dataFile.getBlockCnt(); i < newSize; i++) {
-					dataFile.write(i, iniBlock, 1, false);
+					dataFile.write(i, iniBlock, 1);
 				}
-				
-				dataFile.sync();
 			}
 
 			int ext = newSize - freeSpaceInfo.logicalSize();
@@ -366,14 +362,10 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			}
 
 			dataFile = new RAFBlockFile(dataFileName, blkSize);
-
-			// no autoSync to speed up the initialization
 			dataFile.open();
-
 			for (int i = 0; i < iniSize; i++) {
-				dataFile.write(i, iniBlock, 1, false);
+				dataFile.write(i, iniBlock, 1);
 			}
-
 			dataFile.close();
 
 			// no need to clear the bits individually, they are all clear by
@@ -490,18 +482,18 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 	}
 
 	@Override
-	public void write(int lba, byte[] buffer, int numBlocks, boolean sync)
+	public void write(int lba, byte[] buffer, int numBlocks)
 			throws StoreException {
-		writeImpl(lba, buffer, numBlocks, sync);
+		writeImpl(lba, buffer, numBlocks);
 	}
 
-	private synchronized void writeImpl(int lba, byte[] block, int numBlocks, boolean sync)
+	private synchronized void writeImpl(int lba, byte[] block, int numBlocks)
 			throws StoreException {
 		if (lba < 0 || lba >= freeSpaceInfo.logicalSize()) {
 			throw new StoreException("invalid lba");
 		}
 		try {
-			dataFile.write(lba, block, numBlocks, sync);
+			dataFile.write(lba, block, numBlocks);
 		} catch (FileException e) {
 			throw new StoreException(e);
 		}

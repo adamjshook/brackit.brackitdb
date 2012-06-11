@@ -81,14 +81,11 @@ public class RAFBlockFile implements BlockFile {
 	}
 
 	@Override
-	public void write(int blockNo, byte[] block, int numBlocks, boolean sync)
+	public void write(int blockNo, byte[] block, int numBlocks)
 			throws FileException {
 		try {
 			seekToBlock(blockNo);
 			file.write(block, 0, numBlocks * blockSize);
-			if (sync) {
-				sync();
-			}
 		} catch (IOException e) {
 			throw new FileException(e);
 		}

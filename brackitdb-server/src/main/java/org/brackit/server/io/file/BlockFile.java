@@ -42,7 +42,7 @@ public interface BlockFile {
 
 	void read(int blockNo, byte[] buffer, int numBlocks) throws FileException;
 
-	void write(int blockNo, byte[] buffer, int numBlocks, boolean sync) throws FileException;
+	void write(int blockNo, byte[] buffer, int numBlocks) throws FileException;
 
 	void sync() throws FileException;
 
