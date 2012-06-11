@@ -163,7 +163,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		private void executeInternal(boolean force) throws ServerException {
 
 			List<PageID> failedPages = new ArrayList<PageID>();
-			List<Integer> failedUnits = new ArrayList<Integer>();			
+			List<Integer> failedUnits = new ArrayList<Integer>();
 
 			// release single pages
 			for (PageUnitPair entry : pageList) {
@@ -171,14 +171,16 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 					Frame frame = pageNoToFrame.remove(entry.pageID);
 					if (frame != null) {
 						// The handle of a deleted page is allowed to be fixed
-						// by concurrent threads. However, the safe flag should be
+						// by concurrent threads. However, the safe flag should
+						// be
 						// used in this case to signal them that they
 						// must not use the handle anymore.
-						// To avoid any change for corruption we drop the handle!
+						// To avoid any change for corruption we drop the
+						// handle!
 						frame.drop();
 						pool.remove(frame);
 					}
-					
+
 					deallocateBlock(entry.pageID, entry.unitID, force);
 				} catch (BufferException e) {
 					// log the exception, but continue to deallocate the
@@ -189,7 +191,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 					failedPages.add(entry.pageID);
 				}
 			}
-			
+
 			// drop units
 			for (int unitID : unitList) {
 				try {
@@ -208,14 +210,13 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 					for (Frame frame : toDrop) {
 						pool.remove(frame);
 					}
-					
+
 					blockSpace.dropUnit(unitID, force);
 				} catch (StoreException e) {
 					// log the exception, but continue to drop the
 					// remaining units
-					log.error(String.format(
-							"Error dropping unit %s.",
-							unitID), e);
+					log.error(String.format("Error dropping unit %s.", unitID),
+							e);
 					failedUnits.add(unitID);
 				}
 			}
@@ -227,22 +228,22 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			}
 		}
 	}
-	
+
 	private class PageReleaserImpl implements PageReleaser {
 
 		private final PageID pageID;
 		private final int unitID;
 		private final boolean force;
-		
+
 		private PageReleaserImpl(PageID pageID, int unitID, boolean force) {
 			this.pageID = pageID;
 			this.unitID = unitID;
 			this.force = force;
 		}
-		
+
 		@Override
 		public void release() throws BufferException {
-			
+
 			Frame frame = pageNoToFrame.remove(pageID);
 			if (frame != null) {
 				// The handle of a deleted page is allowed to be fixed
@@ -391,14 +392,14 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 		return requested;
 	}
-	
+
 	@Override
-	public synchronized void redoAllocation(Tx tx, PageID pageID, int unitID, long LSN)
-			throws BufferException {
-		
+	public synchronized void redoAllocation(Tx tx, PageID pageID, int unitID,
+			long LSN) throws BufferException {
+
 		// mark block as used in the free space info
 		allocateBlock(pageID, unitID, true);
-		
+
 		Frame requested = pageNoToFrame.get(pageID);
 
 		if (requested == null) {
@@ -407,7 +408,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		} else {
 			hitCnt++;
 		}
-		
+
 		if (requested.getLSN() < LSN) {
 			// format handle again
 			requested.init(pageID, unitID);
@@ -415,20 +416,18 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			requested.setModified(true);
 		}
 	}
-	
+
 	@Override
-	public synchronized void undoDeallocation(Tx tx, PageID pageID, int unitID, long undoNextLSN)
-			throws BufferException {
-		
+	public synchronized void undoDeallocation(Tx tx, PageID pageID, int unitID,
+			long undoNextLSN) throws BufferException {
+
 		try {
-			tx.logCLR(
-					new AllocateLogOperation(pageID, unitID),
-					undoNextLSN);
+			tx.logCLR(new AllocateLogOperation(pageID, unitID), undoNextLSN);
 		} catch (TxException e) {
 			throw new BufferException(
 					"Could not write log for page allocation.", e);
 		}
-		
+
 		// mark block as used in the free space info
 		allocateBlock(pageID, unitID, true);
 	}
@@ -454,9 +453,10 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		if (!handle.isModified()) {
 			return;
 		}
-		List<Frame> toFlush = buildRun((Frame) handle);
+		List<Frame> toFlush = new ArrayList<AbstractBuffer.Frame>();
+		boolean allAssigned = buildRun((Frame) handle, toFlush);
 		try {
-			flushRun(toFlush);
+			flushRun(toFlush, !allAssigned);
 		} finally {
 			for (Frame f : toFlush) {
 				if (f != handle) {
@@ -498,29 +498,29 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Creating unit %s.", unitID));
-		}		
+		}
 
 		try {
 			unitID = blockSpace.createUnit(unitID, force);
 		} catch (StoreException e) {
 			throw new BufferException("Error creating unit.", e);
 		}
-		
+
 		if (logged) {
 			try {
 				if (undoNextLSN == -1) {
-					tx.logUpdate(new CreateUnitLogOperation(blockSpace
-							.getId(), unitID));
+					tx.logUpdate(new CreateUnitLogOperation(blockSpace.getId(),
+							unitID));
 				} else {
-					tx.logCLR(new CreateUnitLogOperation(
-							blockSpace.getId(), unitID), undoNextLSN);
+					tx.logCLR(new CreateUnitLogOperation(blockSpace.getId(),
+							unitID), undoNextLSN);
 				}
 			} catch (TxException e) {
 				throw new BufferException(
 						"Could not write log for unit creation.", e);
 			}
 		}
-		
+
 		return unitID;
 	}
 
@@ -531,12 +531,12 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Dropping unit %s.", unitID));
 		}
-		
+
 		if (logged) {
 			try {
 				if (undoNextLSN == -1) {
-					tx.logUpdate(new DropUnitLogOperation(blockSpace
-							.getId(), unitID));
+					tx.logUpdate(new DropUnitLogOperation(blockSpace.getId(),
+							unitID));
 				} else {
 					tx.logCLR(new DropUnitLogOperation(blockSpace.getId(),
 							unitID), undoNextLSN);
@@ -573,7 +573,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 	@Override
 	public synchronized void dropUnitDeferred(Tx tx, int unitID) {
-		
+
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Dropping unit %s at Commit.", unitID));
 		}
@@ -668,8 +668,8 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 	}
 
 	@Override
-	public synchronized void deletePageDeferred(Tx tx, PageID pageID,
-			int unitID) throws BufferException {
+	public synchronized void deletePageDeferred(Tx tx, PageID pageID, int unitID)
+			throws BufferException {
 		if (log.isTraceEnabled()) {
 			log.trace(String.format("Deleting page %s at Commit.", pageID));
 		}
@@ -686,7 +686,8 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 	}
 
 	@Override
-	public PageReleaser deletePage(Tx tx, PageID pageID, int unitID) throws BufferException {
+	public PageReleaser deletePage(Tx tx, PageID pageID, int unitID)
+			throws BufferException {
 		return deletePage(tx, pageID, unitID, true, -1, false);
 	}
 
@@ -702,18 +703,17 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		if (logged) {
 			try {
 				if (undoNextLSN == -1) {
-					tx.logUpdate(new DeallocateLogOperation(pageID,
-							unitID));
+					tx.logUpdate(new DeallocateLogOperation(pageID, unitID));
 				} else {
-					tx.logCLR(new DeallocateLogOperation(pageID,
-							unitID), undoNextLSN);
+					tx.logCLR(new DeallocateLogOperation(pageID, unitID),
+							undoNextLSN);
 				}
 			} catch (TxException e) {
 				throw new BufferException(
 						"Could not write log for page deallocation.", e);
 			}
 		}
-		
+
 		return new PageReleaserImpl(pageID, unitID, force);
 	}
 
@@ -734,8 +734,8 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		}
 	}
 
-	private void writeBlocks(PageID pageID, byte[] buffer, int numOfBlocks)
-			throws BufferException {
+	private void writeBlocks(PageID pageID, byte[] buffer, int numOfBlocks,
+			boolean sync) throws BufferException {
 		if (log.isTraceEnabled()) {
 			log.trace(String.format(
 					"Writing %s blocks [%s-%s] starting with block of page %s",
@@ -743,7 +743,8 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 							+ numOfBlocks - 1, pageID));
 		}
 		try {
-			blockSpace.write(pageID.getBlockNo(), writeBuffer, numOfBlocks);
+			blockSpace.write(pageID.getBlockNo(), writeBuffer, numOfBlocks,
+					sync);
 		} catch (StoreException e) {
 			throw new BufferException(e,
 					"Writing %s blocks [%s-%s] starting with block of page %s",
@@ -871,9 +872,19 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		return frames;
 	}
 
-	protected List<Frame> buildRun(Frame frame) {
-		List<Frame> run = new ArrayList<Frame>();
+	/**
+	 * @param run
+	 *            List of frames in which the run is collected
+	 * @return true if all collected frames are assigned
+	 */
+	protected boolean buildRun(Frame frame, List<Frame> run) {
+		boolean allAssigned = true;
+
 		run.add(frame);
+		if (frame.getAssignedTo() == null) {
+			allAssigned = false;
+		}
+
 		PageID start = frame.getPageID();
 		PageID current = new PageID(start.value() + 1);
 		Frame tmp;
@@ -885,6 +896,9 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 				break;
 			}
 			run.add(tmp);
+			if (tmp.getAssignedTo() == null) {
+				allAssigned = false;
+			}
 			current = new PageID(current.value() + 1);
 		}
 		tmp = null;
@@ -897,6 +911,9 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 				break;
 			}
 			run.add(0, tmp);
+			if (tmp.getAssignedTo() == null) {
+				allAssigned = false;
+			}
 			current = new PageID(current.value() - 1);
 			start = current;
 		}
@@ -909,7 +926,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 			}
 			log.trace(buf);
 		}
-		return run;
+		return allAssigned;
 	}
 
 	private Frame load(PageID pageID) throws BufferException {
@@ -964,6 +981,8 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 	}
 
 	private void evict(List<Frame> frames) throws BufferException {
+		boolean allAssigned = true;
+
 		List<Frame> toFlush = null;
 		for (Frame frame : frames) {
 			if (frame.getPageID() == null) {
@@ -978,6 +997,9 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 					toFlush = new ArrayList<Frame>();
 				}
 				toFlush.add(frame);
+				if (frame.getAssignedTo() == null) {
+					allAssigned = false;
+				}
 			} else {
 				// TODO remove
 				if (frame.getAssignedTo() != null) {
@@ -992,6 +1014,10 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 		if (toFlush != null) {
 			flush(toFlush);
+			if (!allAssigned) {
+				// sync data
+				syncData();
+			}
 
 			// remove now also the flushed pages
 			// from the mapping and
@@ -1048,12 +1074,16 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 				}
 			}
 		}
+
+		// sync data file
+		syncData();
 	}
 
+	/**
+	 * Flushes the given list of frames. WARNING: does not sync the data file on
+	 * disk. If this behavior is needed, call {@link #syncData()} afterwards.
+	 */
 	private void flush(List<Frame> frames) throws BufferException {
-		if (frames.isEmpty()) {
-			return;
-		}
 		Collections.sort(frames, PAGEID_COMPARATOR);
 
 		if (log.isTraceEnabled()) {
@@ -1077,7 +1107,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 
 			if ((runSize > 0)
 					&& ((runSize == writeSize) || (prevBlockNo + 1 != blockNo))) {
-				flushRun(run);
+				flushRun(run, false);
 				run.clear();
 				runSize = 0;
 			}
@@ -1087,7 +1117,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		}
 
 		if (runSize > 0) {
-			flushRun(run);
+			flushRun(run, false);
 		}
 	}
 
@@ -1105,7 +1135,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		}
 	}
 
-	private void flushRun(List<Frame> run) throws BufferException {
+	private void flushRun(List<Frame> run, boolean sync) throws BufferException {
 		PageID firstPageID = run.get(0).getPageID();
 
 		if (log.isTraceEnabled()) {
@@ -1122,7 +1152,7 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 		// checkBuffer();
 
 		transferToBuffer(run, writeBuffer);
-		writeBlocks(firstPageID, writeBuffer, run.size());
+		writeBlocks(firstPageID, writeBuffer, run.size(), sync);
 
 		for (Frame frame : run) {
 			// unlink clean pages from a transaction
@@ -1241,6 +1271,14 @@ public abstract class AbstractBuffer implements Buffer, InfoContributor {
 	public synchronized void sync() throws BufferException {
 		try {
 			blockSpace.sync();
+		} catch (StoreException e) {
+			throw new BufferException(e);
+		}
+	}
+
+	private synchronized void syncData() throws BufferException {
+		try {
+			blockSpace.syncData();
 		} catch (StoreException e) {
 			throw new BufferException(e);
 		}

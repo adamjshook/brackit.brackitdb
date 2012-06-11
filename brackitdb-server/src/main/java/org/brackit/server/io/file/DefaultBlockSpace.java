@@ -180,18 +180,13 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			
 			if (dataFile.getBlockCnt() < newSize) {
 				// extend data file
-				
-				dataFile.close();
 
 				// no autoSync to speed up the initialization
-				dataFile.open(false);
-
 				for (int i = dataFile.getBlockCnt(); i < newSize; i++) {
-					dataFile.write(i, iniBlock, 1);
+					dataFile.write(i, iniBlock, 1, false);
 				}
-
-				dataFile.close();
-				dataFile.open(true);
+				
+				dataFile.sync();
 			}
 
 			int ext = newSize - freeSpaceInfo.logicalSize();
@@ -322,7 +317,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			// }
 
 		} catch (IOException e) {
-			throw new StoreException("failure syncing meta file");
+			throw new StoreException("Error syncing meta file.");
 		}
 	}
 
@@ -373,10 +368,10 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 			dataFile = new RAFBlockFile(dataFileName, blkSize);
 
 			// no autoSync to speed up the initialization
-			dataFile.open(false);
+			dataFile.open();
 
 			for (int i = 0; i < iniSize; i++) {
-				dataFile.write(i, iniBlock, 1);
+				dataFile.write(i, iniBlock, 1, false);
 			}
 
 			dataFile.close();
@@ -429,7 +424,7 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 				iniBlock[i] = (byte) 0;
 			}
 			dataFile = new RAFBlockFile(dataFileName, blkSize);
-			dataFile.open(true);
+			dataFile.open();
 
 			// read freeSpaceInfo from meta file
 			freeSpaceInfo = new BitArrayWrapper();
@@ -495,18 +490,18 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 	}
 
 	@Override
-	public void write(int lba, byte[] buffer, int numBlocks)
+	public void write(int lba, byte[] buffer, int numBlocks, boolean sync)
 			throws StoreException {
-		writeImpl(lba, buffer, numBlocks);
+		writeImpl(lba, buffer, numBlocks, sync);
 	}
 
-	private synchronized void writeImpl(int lba, byte[] block, int numBlocks)
+	private synchronized void writeImpl(int lba, byte[] block, int numBlocks, boolean sync)
 			throws StoreException {
 		if (lba < 0 || lba >= freeSpaceInfo.logicalSize()) {
 			throw new StoreException("invalid lba");
 		}
 		try {
-			dataFile.write(lba, block, numBlocks);
+			dataFile.write(lba, block, numBlocks, sync);
 		} catch (FileException e) {
 			throw new StoreException(e);
 		}
@@ -514,7 +509,23 @@ public class DefaultBlockSpace implements BlockSpace, InfoContributor {
 
 	@Override
 	public synchronized void sync() throws StoreException {
+		
 		syncMeta();
+		
+		try {
+			dataFile.sync();
+		} catch (FileException e) {
+			throw new StoreException("Error syncing data file.");
+		}
+	}
+	
+	@Override
+	public synchronized void syncData() throws StoreException {		
+		try {
+			dataFile.sync();
+		} catch (FileException e) {
+			throw new StoreException("Error syncing data file.");
+		}
 	}
 
 	@Override

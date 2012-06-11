@@ -36,13 +36,13 @@ package org.brackit.server.io.file;
  */
 public interface BlockFile {
 
-	void open(boolean autoSync) throws FileException;
+	void open() throws FileException;
 
 	void close() throws FileException;
 
 	void read(int blockNo, byte[] buffer, int numBlocks) throws FileException;
 
-	void write(int blockNo, byte[] buffer, int numBlocks) throws FileException;
+	void write(int blockNo, byte[] buffer, int numBlocks, boolean sync) throws FileException;
 
 	void sync() throws FileException;
 
