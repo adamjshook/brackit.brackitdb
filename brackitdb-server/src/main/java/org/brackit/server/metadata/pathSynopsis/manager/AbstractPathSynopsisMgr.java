@@ -391,6 +391,25 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 			return pcrsForPath;
 		}
 	}
+	
+	@Override
+	public int[] matchChildPath(Path<QNm> path) throws DocumentException {
+		try {
+			try {
+				ls.lock(tx, path, LockClass.COMMIT_DURATION, true);
+			} catch (TxException e) {
+				throw new DocumentException(e);
+			}
+		} catch (Exception e) {
+			log.error(e); // TODO
+			// https://lgis-devel.informatik.uni-kl.de:3276/XTC/trac/ticket/115
+			throw new DocumentException(e);
+		}
+
+		synchronized (ps) {
+			return ps.getPCRsForChildPath(tx, path);
+		}
+	}
 
 	@Override
 	public PSNode get(int pcr) throws DocumentException {

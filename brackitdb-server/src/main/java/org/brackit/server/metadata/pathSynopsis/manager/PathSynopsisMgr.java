@@ -116,4 +116,6 @@ public interface PathSynopsisMgr extends TXObject<PathSynopsisMgr> {
 	 */
 	public PSNode getChildIfExists(int parentPcr, QNm name, byte kind,
 			NsMapping nsMapping) throws DocumentException;
+
+	public int[] matchChildPath(Path<QNm> path) throws DocumentException;
 }

@@ -84,6 +84,8 @@ public class BracketNode extends TXNode<BracketNode> {
 	private BracketScope scope;
 
 	public HintPageInformation hintPageInfo;
+	
+	public String[][] outputPrefetch = null;
 
 	public BracketNode(BracketLocator locator) {
 		super(new XTCdeweyID(locator.docID), Kind.DOCUMENT.ID);
@@ -388,7 +390,7 @@ public class BracketNode extends TXNode<BracketNode> {
 
 		Stream<BracketNode> aStream = locator.collection.store.index
 				.openAttributeStream(locator, deweyID, hintPageInfo,
-						new PSNodeFilter(attributePSNode));
+						new PSNodeFilter(locator.pathSynopsis, attributePSNode));
 
 		BracketNode attribute = aStream.next();
 		aStream.close();
