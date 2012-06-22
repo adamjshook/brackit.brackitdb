@@ -28,8 +28,10 @@
 package org.brackit.server.metadata.pathSynopsis.manager;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.brackit.server.metadata.pathSynopsis.NsMapping;
@@ -169,6 +171,71 @@ public class PathSynopsis {
 			}
 			pathCache.put(path, pcrSet);
 			return pcrSet;
+		} catch (PathException e) {
+			throw new DocumentException(e);
+		}
+	}
+	
+	public int[] getPCRsForChildPath(Tx transaction, Path<QNm> path)
+			throws DocumentException {
+		try {
+			// assert: path only consists of childsteps
+			
+			int pathLength = path.getLength();
+			
+			int[] pathPCRs = new int[pathLength];
+			for (int i = 0; i < pathPCRs.length; i++) {
+				pathPCRs[i] = -1;
+			}
+			
+			// decompose path
+			List<Path<QNm>> paths = new ArrayList<Path<QNm>>(pathLength);	
+			paths.add(path);
+			for (int i = 1; i < pathLength; i++) {
+				path = path.leading();
+				paths.add(path);
+			}
+			Collections.reverse(paths);
+			
+			// path lookup in cache			
+			for (int i = 0; i < pathPCRs.length; i++) {
+				Set<Integer> pcrSet = pathCache.get(paths.get(i));
+	
+				if (pcrSet != null) {
+					for (int pcr : pcrSet) {
+						pathPCRs[i] = pcr;
+					}
+				}
+			}
+
+			for (int i = 1; i <= pcr; i++) {
+				PathSynopsisNode node = pcrTable[i];
+
+				if (node == null) {
+					continue;
+				}
+				
+				for (int j = 0; j < pathPCRs.length; j++) {
+					if (pathPCRs[j] == -1) {
+						// PCR not already fetched
+						
+						if (paths.get(j).matches(node.getPath())) {
+							pathPCRs[j] = node.getPCR();
+						}
+					}
+				}
+			}
+			
+			for (int j = 0; j < pathPCRs.length; j++) {
+				if (pathPCRs[j] != -1) {
+					// PCR successfully fetched
+					Set<Integer> s = new HashSet<Integer>();
+					s.add(pathPCRs[j]);
+					pathCache.put(paths.get(j), s);
+				}
+			}
+			
+			return pathPCRs;
 		} catch (PathException e) {
 			throw new DocumentException(e);
 		}

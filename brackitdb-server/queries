@@ -1,0 +1,27 @@
+let $auction := . return
+ for $t in $auction/site/people/person
+ where $t/@id = "person0"
+  return
+    <personne>
+      <statistiques>
+        <sexe>{$t/profile/gender/text()}</sexe>
+        <age>{$t/profile/age/text()}</age>
+        <education>{$t/profile/education/text()}</education>
+      </statistiques>
+    </personne>
+
+
+ let $auction := . return
+ for $t in $auction/site/people/person
+ where $t/@id = "person0"
+ let $t1 := $t/profile/gender/text()
+ let $t2 := $t/profile/age/text()
+ let $t3 := $t/profile/education/text()
+  return
+    <personne>
+      <statistiques>
+        <sexe>{$t1}</sexe>
+        <age>{$t2}</age>
+        <education>{$t3}</education>
+      </statistiques>
+    </personne>

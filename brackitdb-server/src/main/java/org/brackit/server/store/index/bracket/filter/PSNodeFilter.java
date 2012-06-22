@@ -27,10 +27,17 @@
  */
 package org.brackit.server.store.index.bracket.filter;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.brackit.server.metadata.pathSynopsis.PSNode;
+import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
 import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
 import org.brackit.server.store.page.bracket.RecordInterpreter;
+import org.brackit.xquery.xdm.DocumentException;
 
 /**
  * Only accepts nodes with a given PSNode.
@@ -40,12 +47,26 @@ import org.brackit.server.store.page.bracket.RecordInterpreter;
  */
 public class PSNodeFilter extends BracketFilter {
 
+	private final PathSynopsisMgr psMgr;
+	private final Set<Integer> descendents;
+	private final List<Integer> temp;
+	
 	private final int pcr;
 	private final PSNode psNode;
+	private final int level;
 	
-	public PSNodeFilter(PSNode psNode) {
+	public PSNodeFilter(PathSynopsisMgr psMgr, int pcr) throws DocumentException {
+		this(psMgr, psMgr.get(pcr));
+	}
+	
+	public PSNodeFilter(PathSynopsisMgr psMgr, PSNode psNode) {
+		this.psMgr = psMgr;
 		this.psNode = psNode;
 		this.pcr = psNode.getPCR();
+		this.level = psNode.getLevel();
+		this.descendents = new HashSet<Integer>();
+		this.descendents.add(psNode.getPCR());
+		this.temp = new ArrayList<Integer>();
 	}
 
 	@Override
@@ -62,8 +83,41 @@ public class PSNodeFilter extends BracketFilter {
 			}
 			
 		} else {
-			// TODO
-			throw new RuntimeException("TODO");
+			// delivered record belongs to a descendent of this node
+			try {
+				if (deweyID.getLevel() != level) {
+					return false;
+				}
+				
+				int currentPCR = value.getPCR();
+				if (descendents.contains(currentPCR)) {
+					// PCR is definitely a descendent
+					value.setPsNode(psNode);
+					return true;
+				}
+				
+				// lookup node
+				PSNode current = psMgr.get(currentPCR);
+				temp.add(currentPCR);
+				while (current.getLevel() > level) {
+					
+					current = current.getParent();
+					currentPCR = current.getPCR();
+					if (descendents.contains(currentPCR)) {
+						descendents.addAll(temp);
+						temp.clear();
+						value.setPsNode(psNode);
+						return true;
+					}
+					temp.add(currentPCR);
+				}
+				
+				temp.clear();
+				return false;
+				
+			} catch (DocumentException e) {
+				throw new RuntimeException("TODO: Proper error handling.");
+			}
 		}
 		
 	}
