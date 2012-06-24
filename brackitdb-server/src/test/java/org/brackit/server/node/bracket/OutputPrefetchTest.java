@@ -27,6 +27,10 @@
  */
 package org.brackit.server.node.bracket;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -40,7 +44,11 @@ import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.index.bracket.filter.PSNodeFilter;
 import org.brackit.server.tx.IsolationLevel;
 import org.brackit.server.tx.Tx;
+import org.brackit.xquery.QueryContext;
+import org.brackit.xquery.QueryException;
+import org.brackit.xquery.XQuery;
 import org.brackit.xquery.atomic.QNm;
+import org.brackit.xquery.node.parser.DocumentParser;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
@@ -50,29 +58,38 @@ import org.brackit.xquery.xdm.Kind;
  * @author Martin Hiller
  * 
  */
-public class OutputPrefetch {
+public class OutputPrefetchTest {
+	
+	// main method requires an xmark document stored in the DB
+	// set "install" to true in order to load the xmark document referenced by "xmarkPath" into the DB
+	private static final boolean install = false;
+	private static final String xmarkPath = "./xmark1.xml";
+	
+	private static final int WARMUP_COUNT = 3;
+	private static final int TEST_COUNT = 5;
+	
+	// prints the query output into a file (only once for each method, just to evaluate the "correctness")
+	private static final boolean PRINT_TO_FILE = false;
+	private static final String PRINT_TO_FILE_PATH = "./output";
+	
+	private static String query = "let $auction := .\r\n" + 
+			"for $t in $auction/site/people/person\r\n" + 
+			"where $t/@id != \"person0\"\r\n" + 
+			"return\r\n" + 
+			"  <personne>\r\n" + 
+			"    <statistiques>\r\n" + 
+			"      <sexe>{$t/profile/gender/text()}</sexe>\r\n" + 
+			"      <age>{$t/profile/age/text()}</age>\r\n" + 
+			"      <education>{$t/profile/education/text()}</education>\r\n" + 
+			"    </statistiques>\r\n" + 
+			"  </personne>";
 
-	private static abstract class Predicate {
-		public final String attribute;
-
-		public Predicate(String attribute) {
-			this.attribute = attribute;
-		}
-
-		public abstract boolean eval(String value);
-	}
-
-	private static Tx tx;
-	private static BracketCollection coll;
-	private static BracketIndex index;
-	private static BracketNode doc;
-
-	// BEGIN: specify query
+	// BEGIN: specify query for the optimized execution
 	private static String mainPath = "/site/people/person";
 	private static Predicate pred = new Predicate("id") {
 		@Override
 		public boolean eval(String value) {
-			return value.compareTo("person1587") <= 0;
+			return value.compareTo("person0") != 0;
 		}
 	};
 	private static String[] outputPaths = new String[] { "/profile/gender",
@@ -92,13 +109,73 @@ public class OutputPrefetch {
 	}
 	// END: specify query
 
+	private static abstract class Predicate {
+		public final String attribute;
+
+		public Predicate(String attribute) {
+			this.attribute = attribute;
+		}
+
+		public abstract boolean eval(String value);
+	}
+	
+	private static interface ResultAggregator {
+		public double aggregate(long[] results);
+	}
+	
+	private static final ResultAggregator AVG = new ResultAggregator() {	
+		@Override
+		public double aggregate(long[] results) {
+			long sum = 0;
+			long count = 0;
+			for (long result : results) {
+				sum += result;
+				count++;
+			}
+			return sum / (double) count;
+		}
+	};
+	
+	private static final ResultAggregator MIN = new ResultAggregator() {	
+		@Override
+		public double aggregate(long[] results) {
+			long min = Long.MAX_VALUE;
+			for (long result : results) {
+				min = Math.min(min, result);
+			}
+			return min;
+		}
+	};
+
+	private static Tx tx;
+	private static BracketCollection coll;
+	private static BracketIndex index;
+	private static BracketNode doc;
+	private static QueryContext ctx;
+	private static XQuery xQuery;
+	private static PrintWriter out;
+	private static ByteArrayOutputStream byteOut;
+	private static PrintWriter fileOut;
+
 	/**
 	 * @param args
 	 * @throws ServerException
-	 * @throws DocumentException
+	 * @throws QueryException 
+	 * @throws FileNotFoundException 
 	 */
 	public static void main(String[] args) throws ServerException,
-			DocumentException {
+			QueryException, FileNotFoundException {
+		
+		if (install) {
+			System.out.println("Load xmark document into the DB...");
+			BrackitDB brackitDB = new BrackitDB(true);
+			tx = brackitDB.getTaMgr().begin(IsolationLevel.NONE, null, false);
+			brackitDB.getMetadataMgr().create(tx, "/xmark.xml", new DocumentParser(new File(xmarkPath)));
+			tx.commit();
+			brackitDB.shutdown();
+			System.out.println("Completed! Start program again with \"install\" set to false.");
+			return;
+		}
 
 		// start server
 		BrackitDB brackitDB = new BrackitDB(false);
@@ -113,18 +190,116 @@ public class OutputPrefetch {
 
 		// get index
 		index = coll.store.index;
+		
+		// prepare Query + Context
+		ctx = new QueryContext();
+		ctx.setContextItem(doc);
+		xQuery = new XQuery(query);
+		
+		// prepare output writer
+		byteOut = new ByteArrayOutputStream();
+		out = new PrintWriter(byteOut);
+		if (PRINT_TO_FILE) {
+			fileOut = new PrintWriter(PRINT_TO_FILE_PATH);
+		}
 
-		executeQueryWithPrefetch();
+		// execute query the usual way
+		double result1 = performTest("Usual Execution", AVG, true, new Runnable() {
+			@Override
+			public void run() {
+				try {
+					executeQuery();
+				} catch (QueryException e) {
+					System.err.print(e);
+				}
+			}
+		});
+		
+		System.out.println();
+		
+		// execute query with MultiChildStreams, Data prefetch etc.
+		double result2 = performTest("Optimized Execution", AVG, true, new Runnable() {
+			@Override
+			public void run() {
+				try {
+					executeQueryWithPrefetch();
+				} catch (QueryException e) {
+					System.err.print(e);
+				}
+			}
+		});
+		
+		out.close();
+		if (PRINT_TO_FILE) {
+			fileOut.close();
+		}
 
 		// commit TX
 		tx.commit();
 		// shutdown DB
 		brackitDB.shutdown();
 	}
+	
+	private static double performTest(String name, ResultAggregator aggr, boolean status, Runnable testMethod) {
+		
+		if (status) {
+			System.out.println(String.format("Perform '%s':", name));	
+		}
+		
+		if (PRINT_TO_FILE) {
+			fileOut.println(String.format("\n\nQuery output for method '%s':\n", name));
+			PrintWriter tmp = out;
+			out = fileOut;
+			testMethod.run();
+			out = tmp;
+		}
+		
+		for (int i = 0; i < WARMUP_COUNT; i++) {
+			// warm up phase
+			
+			if (status) {
+				if (i == 0) {
+					System.out.print("\tWarmup 1...");
+				} else {
+					System.out.print(String.format(" %s...", i + 1));
+				}
+			}
+			
+			testMethod.run();
+			byteOut.reset();
+		}
+		
+		long[] results = new long[TEST_COUNT];
+		
+		for (int i = 0; i < TEST_COUNT; i++) {
+			// perform tests
+			
+			if (status) {
+				if (i == 0) {
+					System.out.print("\n\tTestrun 1...");
+				} else {
+					System.out.print(String.format(" %s...", i + 1));
+				}
+			}
+			
+			long start = System.currentTimeMillis();
+			testMethod.run();
+			long end = System.currentTimeMillis();
+			results[i] = end - start;
+			byteOut.reset();
+		}
+		
+		double total = aggr.aggregate(results);
+		
+		if (status) {
+			System.out.println(String.format("\n\tResults: %s", Arrays.toString(results)));
+			System.out.println(String.format("\tTotal: %s", total));
+		}
+		
+		return total;
+	}
 
 	private static void executeQueryWithPrefetch() throws DocumentException {
-
-		// start time measuring
 
 		// lookup PCRs for following MultiChildStream access
 		Path<QNm> path = Path.parse(mainPath);
@@ -139,7 +314,7 @@ public class OutputPrefetch {
 			}
 		}
 
-		// lookup PCR for evaluating where clause
+		// lookup PCR for evaluating predicate
 		PSNode attributePSNode = coll.pathSynopsis.getChildIfExists(
 				psNode.getPCR(), new QNm(pred.attribute), Kind.ATTRIBUTE.ID,
 				null);
@@ -232,10 +407,13 @@ public class OutputPrefetch {
 							: ((qualified.outputPrefetch[i].length == 1) ? qualified.outputPrefetch[i][0]
 									: Arrays.toString(qualified.outputPrefetch[i]));
 				}
-				System.out.println(String.format(returnFormat, (Object[]) output));
+				out.println(String.format(returnFormat, (Object[]) output));
 			}
 		}
 		iter.close();
-
+	}
+	
+	private static void executeQuery() throws QueryException {		
+		xQuery.serialize(ctx, out);
 	}
 }
