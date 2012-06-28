@@ -390,7 +390,7 @@ public class BracketNode extends TXNode<BracketNode> {
 
 		Stream<BracketNode> aStream = locator.collection.store.index
 				.openAttributeStream(locator, deweyID, hintPageInfo,
-						new PSNodeFilter(locator.pathSynopsis, attributePSNode));
+						new PSNodeFilter(locator.pathSynopsis, attributePSNode, true));
 
 		BracketNode attribute = aStream.next();
 		aStream.close();

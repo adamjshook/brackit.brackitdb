@@ -34,6 +34,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 import org.brackit.server.BrackitDB;
 import org.brackit.server.ServerException;
@@ -41,7 +42,9 @@ import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.store.index.bracket.BracketIndex;
 import org.brackit.server.store.index.bracket.StreamIterator;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
+import org.brackit.server.store.index.bracket.filter.MultiFilter;
 import org.brackit.server.store.index.bracket.filter.PSNodeFilter;
+import org.brackit.server.store.index.bracket.filter.MultiFilter.Type;
 import org.brackit.server.tx.IsolationLevel;
 import org.brackit.server.tx.Tx;
 import org.brackit.xquery.QueryContext;
@@ -222,7 +225,7 @@ public class OutputPrefetchTest {
 			@Override
 			public void run() {
 				try {
-					executeQueryWithPrefetch();
+					executeQueryWithPrefetch2();
 				} catch (QueryException e) {
 					System.err.print(e);
 				}
@@ -308,7 +311,7 @@ public class OutputPrefetchTest {
 		PSNode psNode = null;
 		for (int i = 0; i < pcrs.length; i++) {
 			PSNode current = coll.pathSynopsis.get(pcrs[i]);
-			mainPathFilters[i] = new PSNodeFilter(coll.pathSynopsis, current);
+			mainPathFilters[i] = new PSNodeFilter(coll.pathSynopsis, current, false);
 			if (i == pcrs.length - 1) {
 				psNode = current;
 			}
@@ -333,7 +336,7 @@ public class OutputPrefetchTest {
 
 			for (int j = 0; j < pcrs.length; j++) {
 				outputPathFilters[i][j] = new PSNodeFilter(coll.pathSynopsis,
-						pcrs[j]);
+						pcrs[j], false);
 			}
 
 			// to obtain the text node, use the last PSNodeFilter twice
@@ -348,7 +351,7 @@ public class OutputPrefetchTest {
 
 			// check attribute predicate
 			StreamIterator attributeStream = index.forkAttributeStream(iter,
-					new PSNodeFilter(coll.pathSynopsis, attributePSNode));
+					new PSNodeFilter(coll.pathSynopsis, attributePSNode, true));
 			BracketNode attribute = attributeStream.next();
 			attributeStream.close();
 			boolean conditionFulfilled = pred.eval(attribute.getValue()
@@ -391,6 +394,131 @@ public class OutputPrefetchTest {
 					qualified.outputPrefetch[i] = collect
 							.toArray(new String[collect.size()]);
 					collect.clear();
+				}
+
+				// System.out.println(qualified);
+				// for (int i = 0; i < outputPaths.length; i++) {
+				// System.out.println(String.format("Prefetch for path %s: %s",
+				// outputPaths[i],
+				// Arrays.toString(qualified.outputPrefetch[i])));
+				// }
+
+				// return statement
+				String[] output = new String[outputPaths.length];
+				for (int i = 0; i < output.length; i++) {
+					output[i] = (qualified.outputPrefetch[i].length == 0) ? ""
+							: ((qualified.outputPrefetch[i].length == 1) ? qualified.outputPrefetch[i][0]
+									: Arrays.toString(qualified.outputPrefetch[i]));
+				}
+				out.println(String.format(returnFormat, (Object[]) output));
+			}
+		}
+		iter.close();
+	}
+	
+	private static void executeQueryWithPrefetch2() throws DocumentException {
+
+		// lookup PCRs for following MultiChildStream access
+		Path<QNm> path = Path.parse(mainPath);
+		int[] pcrs = coll.pathSynopsis.matchChildPath(path);
+		BracketFilter[] mainPathFilters = new BracketFilter[pcrs.length];
+		PSNode psNode = null;
+		for (int i = 0; i < pcrs.length; i++) {
+			PSNode current = coll.pathSynopsis.get(pcrs[i]);
+			mainPathFilters[i] = new PSNodeFilter(coll.pathSynopsis, current, false);
+			if (i == pcrs.length - 1) {
+				psNode = current;
+			}
+		}
+
+		// lookup PCR for evaluating predicate
+		PSNode attributePSNode = coll.pathSynopsis.getChildIfExists(
+				psNode.getPCR(), new QNm(pred.attribute), Kind.ATTRIBUTE.ID,
+				null);
+		if (attributePSNode == null) {
+			throw new RuntimeException();
+		}
+
+		// lookup PCRs for the output paths
+		BracketFilter[] outputPathFilters = new BracketFilter[outputPaths.length];
+		for (int i = 0; i < outputPaths.length; i++) {
+			Path<QNm> outputPath = Path.parse(outputPaths[i]);
+			
+			Set<Integer> pcrSet = coll.pathSynopsis.match(path.copy().append(
+					outputPath));
+			if (pcrSet.size() != 1) {
+				throw new RuntimeException();
+			}
+			int pcr = -1;
+			for (int current : pcrSet) {
+				pcr = current;
+			}
+			
+			outputPathFilters[i] = new PSNodeFilter(coll.pathSynopsis,
+					pcr, true);
+		}
+		
+		// create MultiFilter for future subtree scans
+		MultiFilter multiFilter = new MultiFilter(Type.DISJUNCTION, outputPathFilters);
+
+		// open MultiChildStream
+		StreamIterator iter = index.openMultiChildStream(doc.locator,
+				doc.getDeweyID(), doc.hintPageInfo, mainPathFilters);
+		while (iter.moveNext()) {
+			// for each node: check where clause
+
+			// check attribute predicate
+			StreamIterator attributeStream = index.forkAttributeStream(iter,
+					new PSNodeFilter(coll.pathSynopsis, attributePSNode, true));
+			BracketNode attribute = attributeStream.next();
+			attributeStream.close();
+			boolean conditionFulfilled = pred.eval(attribute.getValue()
+					.stringValue());
+
+			if (conditionFulfilled) {
+				// load data
+
+				// load BracketNode itself
+				BracketNode qualified = iter.loadCurrent();
+
+				// DEBUG: print complete subtree of qualified node
+				// StreamIterator s = index.forkSubtreeStream(iter, null, true,
+				// false);
+				// while (s.moveNext()) {
+				// System.out.println(s.loadCurrent());
+				// }
+				// s.close();
+
+				// use a 2D string array:
+				// 1st dimension: different output paths
+				// 2nd dimension: String value for each qualified text node
+				qualified.outputPrefetch = new String[outputPathFilters.length][];
+				
+				List<String>[] collect = new List[outputPathFilters.length];
+				for (int i = 0; i < collect.length; i++) {
+					collect[i] = new ArrayList<String>();
+				}
+				
+				// subtree scan for qualified node: collect all needed output
+				StreamIterator outputIter = index.forkSubtreeStream(iter, multiFilter, false, true);
+				while (outputIter.moveNext()) {
+					
+					// load text
+					BracketNode textNode = outputIter.loadCurrent();
+					
+					// check which BracketFilter accepted this node
+					boolean[] lastResults = multiFilter.getLastResults();
+					int i = 0;
+					while (!lastResults[i]) {
+						i++;
+					}
+					
+					collect[i].add(textNode.getValue().stringValue());
+				}
+				outputIter.close();
+				
+				for (int i = 0; i < collect.length; i++) {
+					qualified.outputPrefetch[i] = collect[i].toArray(new String[collect[i].size()]);
 				}
 
 				// System.out.println(qualified);
