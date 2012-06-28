@@ -54,12 +54,13 @@ public class PSNodeFilter extends BracketFilter {
 	private final int pcr;
 	private final PSNode psNode;
 	private final int level;
+	private final boolean checkLeafsOnly;
 	
-	public PSNodeFilter(PathSynopsisMgr psMgr, int pcr) throws DocumentException {
-		this(psMgr, psMgr.get(pcr));
+	public PSNodeFilter(PathSynopsisMgr psMgr, int pcr, boolean checkLeafsOnly) throws DocumentException {
+		this(psMgr, psMgr.get(pcr), checkLeafsOnly);
 	}
 	
-	public PSNodeFilter(PathSynopsisMgr psMgr, PSNode psNode) {
+	public PSNodeFilter(PathSynopsisMgr psMgr, PSNode psNode, boolean checkLeafsOnly) {
 		this.psMgr = psMgr;
 		this.psNode = psNode;
 		this.pcr = psNode.getPCR();
@@ -67,6 +68,7 @@ public class PSNodeFilter extends BracketFilter {
 		this.descendents = new HashSet<Integer>();
 		this.descendents.add(psNode.getPCR());
 		this.temp = new ArrayList<Integer>();
+		this.checkLeafsOnly = checkLeafsOnly;
 	}
 
 	@Override
@@ -83,7 +85,12 @@ public class PSNodeFilter extends BracketFilter {
 			}
 			
 		} else {
-			// delivered record belongs to a descendent of this node
+			
+			if (checkLeafsOnly) {
+				return false;
+			}
+			
+			// delivered record might belong to a descendent of this node
 			try {
 				if (deweyID.getLevel() != level) {
 					return false;
