@@ -71,28 +71,34 @@ public class MultiChildStep extends Walker {
 					len++;
 				} else {
 					if (len > 1) {					
-						merge(node, i - len, len);
+						merge(node, i - len, len, skipDDO, checkInput);
 						i -= len;
 					}
+					checkInput = false;
+					skipDDO = false;
 					len = 0;
 				}
 			} else {
 				if (len > 1) {
-					merge(node, i - len, len - 1);
+					merge(node, i - len, len - 1, skipDDO, checkInput);
 					i -= len - 1;
 				}
+				checkInput = false;
+				skipDDO = false;
 				len = 0;
 			}
 		}
 		if (len > 0) {
-			merge(node, node.getChildCount() - len, len - 1);
+			merge(node, node.getChildCount() - len, len - 1, skipDDO, checkInput);
 		}
 		
 		return node;
 	}
 
-	private void merge(AST node, int start, int len) {
+	private void merge(AST node, int start, int len, boolean skipDDO, boolean checkInput) {
 		AST multistep = new AST(XQExt.MultiStepExpr, XQExt.toName(XQExt.MultiStepExpr));
+		multistep.setProperty("skipDDO", skipDDO);
+		multistep.setProperty("checkInput", checkInput);
 		for (int j = 0; j <= len; j++) {
 			AST pstep = node.getChild(start);
 			for (int k = 0; k < pstep.getChildCount(); k++) {
