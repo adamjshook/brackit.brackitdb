@@ -29,7 +29,9 @@ package org.brackit.server.store.page.bracket;
 
 import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.node.el.ElRecordAccess;
+import org.brackit.server.util.Calc;
 import org.brackit.xquery.atomic.Atomic;
+import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.atomic.Una;
 import org.brackit.xquery.xdm.Kind;
 
@@ -37,7 +39,7 @@ import org.brackit.xquery.xdm.Kind;
  * @author Martin Hiller
  *
  */
-public class RecordInterpreter {
+public class RecordInterpreter extends ElRecordAccess {
 	
 	private final byte[] buf;
 	private final int offset;
@@ -74,21 +76,27 @@ public class RecordInterpreter {
 	
 	public int getPCR() {
 		if (pcr == -1) {
-			pcr = ElRecordAccess.getPCR(buf, offset, len);
+			int pcrSize = ((buf[offset] & PCR_SIZE_MASK) + 1);
+			pcr = (pcrSize > 0) ? Calc.toInt(buf, offset + 1, pcrSize) : 0;
 		}
 		return pcr;
 	}
 	
 	public byte getType() {
 		if (type == -1) {
-			type = ElRecordAccess.getType(buf, offset, len);
+			type = (byte) ((buf[offset] >> 2) & TYPE_MASK);
 		}
 		return type;
 	}
 	
 	public Atomic getValue() {
 		if (value == null) {
-			value = ElRecordAccess.getTypedValue(buf, offset, len, getType());
+			String untypedValue = getValue(buf, offset, len);
+			if (type == Kind.COMMENT.ID || type == Kind.PROCESSING_INSTRUCTION.ID) {
+				value = new Str(untypedValue);
+			} else {
+				value = new Una(untypedValue);
+			}
 		}
 		return value;
 	}

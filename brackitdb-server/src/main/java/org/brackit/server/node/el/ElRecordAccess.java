@@ -50,12 +50,12 @@ public class ElRecordAccess implements ElPlaceHolderHelper {
 	/**
 	 * 0000 0011
 	 */
-	private final static int PCR_SIZE_MASK = 3;
+	protected final static int PCR_SIZE_MASK = 3;
 
 	/**
 	 * 0000 0111
 	 */
-	private final static int TYPE_MASK = 7;
+	protected final static int TYPE_MASK = 7;
 
 	public final static int getPCR(byte[] physicalRecord) {
 		int pcrSize = getPCRsize(physicalRecord);
@@ -129,7 +129,7 @@ public class ElRecordAccess implements ElPlaceHolderHelper {
 		return getTypedValue(type, untypedValue);
 	}
 	
-	private static final Atomic getTypedValue(byte type, String untypedValue) {
+	protected static final Atomic getTypedValue(byte type, String untypedValue) {
 		// default type mapping
 		if (type == Kind.COMMENT.ID || type == Kind.PROCESSING_INSTRUCTION.ID) {
 			return new Str(untypedValue);
