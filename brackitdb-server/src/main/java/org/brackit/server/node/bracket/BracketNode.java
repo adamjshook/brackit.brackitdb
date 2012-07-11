@@ -50,11 +50,13 @@ import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.StreamIterator;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.index.bracket.filter.ElementFilter;
+import org.brackit.server.store.index.bracket.filter.NodeTypeFilter;
 import org.brackit.server.store.index.bracket.filter.PSNodeFilter;
 import org.brackit.server.store.index.bracket.filter.TextFilter;
 import org.brackit.server.store.page.bracket.RecordInterpreter;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.locking.services.MetaLockService;
+import org.brackit.xquery.QueryException;
 import org.brackit.xquery.atomic.Atomic;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Una;
@@ -80,8 +82,9 @@ import org.brackit.xquery.xdm.type.NodeType;
  */
 public class BracketNode extends TXNode<BracketNode> {
 
-	public static final boolean OPTIMIZE = Cfg.asBool("org.brackit.server.node.bracket.optimize", false);
-	
+	public static final boolean OPTIMIZE = Cfg.asBool(
+			"org.brackit.server.node.bracket.optimize", false);
+
 	public static final int NODE_CLASS_ID = 2;
 
 	protected final BracketLocator locator;
@@ -534,16 +537,17 @@ public class BracketNode extends TXNode<BracketNode> {
 
 	private String getText() throws DocumentException {
 		TextFilter filter = new TextFilter();
-		StreamIterator it = locator.collection.store.index.openSubtreeStream(locator,
-				deweyID, hintPageInfo, filter, false, true);
-		
+		StreamIterator it = locator.collection.store.index.openSubtreeStream(
+				locator, deweyID, hintPageInfo, filter, false, true);
+
 		try {
-			while (it.next() != null);
+			while (it.next() != null)
+				;
 		} finally {
 			it.close();
 		}
 		return filter.getString();
-		
+
 	}
 
 	@Override
@@ -618,29 +622,42 @@ public class BracketNode extends TXNode<BracketNode> {
 				int pcr = matches.nextSetBit(0);
 				PSNode targetPSN = ps.get(pcr);
 				if (targetPSN.getLevel() == deweyID.getLevel() + 1) {
-					return locator.collection.store.index.openChildStream(locator, deweyID,
-							hintPageInfo, filter);
+					return locator.collection.store.index.openChildStream(
+							locator, deweyID, hintPageInfo, filter);
 				}
 			}
 			return locator.collection.store.index.openSubtreeStream(locator,
 					deweyID, hintPageInfo, filter, false, true);
 		}
-		if ((axis == Axis.DESCENDANT_OR_SELF) && (test.getNodeKind() == Kind.ELEMENT)) {
+		if ((axis == Axis.DESCENDANT_OR_SELF)
+				&& (test.getNodeKind() == Kind.ELEMENT)) {
 			return locator.collection.store.index.openSubtreeStream(locator,
-					deweyID, hintPageInfo, createFilter(test.getQName()), true, true);
+					deweyID, hintPageInfo, createFilter(test.getQName()), true,
+					true);
 		}
 		if ((axis == Axis.CHILD) && (test.getNodeKind() == Kind.ELEMENT)) {
-			return locator.collection.store.index.openChildStream(locator, deweyID,
-					hintPageInfo, createFilter(test.getQName()));
+			return locator.collection.store.index.openChildStream(locator,
+					deweyID, hintPageInfo, createFilter(test.getQName()));
 		}
 		return null;
 	}
-	
+
+	public Stream<? extends Node<?>> getChildPath(NodeType[] tests)
+			throws QueryException {
+		BracketFilter[] filters = new BracketFilter[tests.length];
+		PathSynopsisMgr ps = getPathSynopsis();
+		for (int i = 0; i < tests.length; i++) {
+			filters[i] = new NodeTypeFilter(ps, tests[i]);
+		}
+		return locator.collection.store.index.openMultiChildStream(locator,
+				deweyID, hintPageInfo, filters);
+	}
+
 	private BracketFilter createFilter(QNm name) throws DocumentException {
 		PathSynopsisMgr ps = getPathSynopsis();
 		BitSet matches = ps.match(name, deweyID.getLevel());
 		if (matches.cardinality() == 1) {
-			
+
 		}
 		return new ElementFilter(ps, name, matches);
 	}

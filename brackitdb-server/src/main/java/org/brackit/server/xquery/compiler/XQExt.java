@@ -25,55 +25,26 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery.compiler.optimizer;
+package org.brackit.server.xquery.compiler;
 
-import java.util.Map;
-
-import org.brackit.server.metadata.manager.MetaDataMgr;
-import org.brackit.server.tx.Tx;
-import org.brackit.server.xquery.compiler.optimizer.walker.MultiChildStep;
-import org.brackit.xquery.QueryException;
-import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.atomic.Str;
-import org.brackit.xquery.compiler.AST;
-import org.brackit.xquery.compiler.optimizer.Stage;
-import org.brackit.xquery.compiler.optimizer.TopDownOptimizer;
-import org.brackit.xquery.module.StaticContext;
+import org.brackit.xquery.compiler.XQ;
 
 /**
  * @author Sebastian Baechle
  * 
  */
-public class DBOptimizer extends TopDownOptimizer {
+public class XQExt {
 
-	public DBOptimizer(Map<QNm, Str> options, MetaDataMgr mdm, Tx tx) {
-		super(options);
-		// perform index matching as last step
-		getStages().add(new Stage() {
-			@Override
-			public AST rewrite(StaticContext sctx, AST ast)
-					throws QueryException {
-				ast = new MultiChildStep(sctx).walk(ast);
-				return ast;
-			}
-			
-		});
-		getStages().add(new IndexMatching(mdm, tx));
-	}
+	private static final int OFFSET = XQ.allocate(1);
 
-	private static class IndexMatching implements Stage {
-		private final MetaDataMgr mdm;
-		private final Tx tx;
+	public static final int MultiStepExpr = OFFSET + 0;
 
-		public IndexMatching(MetaDataMgr mdm, Tx tx) {
-			this.mdm = mdm;
-			this.tx = tx;
-		}
+	public static final int ConstExpr = OFFSET + 1;
 
-		@Override
-		public AST rewrite(StaticContext sctx, AST ast) throws QueryException {
-			// TODO add rules for index resolution here
-			return ast;
-		}
+	public static final String NAMES[] = new String[] { "MultiStepExpr",
+			"ConstExpr" };
+
+	public static Object toName(int key) {
+		return NAMES[key - OFFSET];
 	}
 }

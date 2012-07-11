@@ -25,55 +25,69 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package org.brackit.server.xquery.compiler.optimizer;
+package org.brackit.server.store.index.bracket.filter;
 
-import java.util.Map;
-
-import org.brackit.server.metadata.manager.MetaDataMgr;
-import org.brackit.server.tx.Tx;
-import org.brackit.server.xquery.compiler.optimizer.walker.MultiChildStep;
-import org.brackit.xquery.QueryException;
+import org.brackit.server.metadata.pathSynopsis.PSNode;
+import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
+import org.brackit.server.node.bracket.BracketNode;
+import org.brackit.server.store.page.bracket.DeweyIDBuffer;
+import org.brackit.server.store.page.bracket.RecordInterpreter;
 import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.atomic.Str;
-import org.brackit.xquery.compiler.AST;
-import org.brackit.xquery.compiler.optimizer.Stage;
-import org.brackit.xquery.compiler.optimizer.TopDownOptimizer;
-import org.brackit.xquery.module.StaticContext;
+import org.brackit.xquery.xdm.DocumentException;
+import org.brackit.xquery.xdm.Kind;
+import org.brackit.xquery.xdm.Type;
+import org.brackit.xquery.xdm.type.NodeType;
 
 /**
  * @author Sebastian Baechle
- * 
+ *
  */
-public class DBOptimizer extends TopDownOptimizer {
+public class NodeTypeFilter extends BracketFilter {
 
-	public DBOptimizer(Map<QNm, Str> options, MetaDataMgr mdm, Tx tx) {
-		super(options);
-		// perform index matching as last step
-		getStages().add(new Stage() {
-			@Override
-			public AST rewrite(StaticContext sctx, AST ast)
-					throws QueryException {
-				ast = new MultiChildStep(sctx).walk(ast);
-				return ast;
+	private final PathSynopsisMgr ps;
+	private final byte kind;
+	private final QNm name;
+	private final Type type;
+	
+	public NodeTypeFilter(PathSynopsisMgr ps, NodeType nodeType) {
+		Kind k = nodeType.getNodeKind();
+		this.kind = (k != null) ? k.ID : -1;
+		this.name = nodeType.getQName();
+		this.type = nodeType.getType(); // FIXME not checked!
+		this.ps = ps;
+	}
+	
+	@Override
+	public boolean accept(DeweyIDBuffer deweyID, boolean hasRecord,
+			RecordInterpreter value) {
+		if ((kind != -1) && (kind != kind(hasRecord, value))) {
+			return false;
+		}
+		if (name != null) {
+			PSNode psn = value.getPsNode();
+			if (psn == null) {
+				int pcr = value.getPCR();
+				try {
+					psn = ps.get(pcr);
+				} catch (DocumentException e) {
+					return false;
+				}
+				value.setPsNode(psn);
 			}
-			
-		});
-		getStages().add(new IndexMatching(mdm, tx));
+			int dist = deweyID.getLevel() - psn.getLevel();
+			if (dist > 1) {
+				throw new RuntimeException();
+			}
+			while (dist++ < 0) {
+				psn = psn.getParent();
+			}
+			return (psn.getName().atomicCmp(name) == 0);
+		}
+		return true;
 	}
 
-	private static class IndexMatching implements Stage {
-		private final MetaDataMgr mdm;
-		private final Tx tx;
-
-		public IndexMatching(MetaDataMgr mdm, Tx tx) {
-			this.mdm = mdm;
-			this.tx = tx;
-		}
-
-		@Override
-		public AST rewrite(StaticContext sctx, AST ast) throws QueryException {
-			// TODO add rules for index resolution here
-			return ast;
-		}
+	@Override
+	public boolean accept(BracketNode node) {
+		return false;
 	}
 }
