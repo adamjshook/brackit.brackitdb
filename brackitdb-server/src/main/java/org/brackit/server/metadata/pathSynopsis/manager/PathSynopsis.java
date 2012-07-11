@@ -28,13 +28,16 @@
 package org.brackit.server.metadata.pathSynopsis.manager;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.brackit.server.metadata.pathSynopsis.NsMapping;
+import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.tx.Tx;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.util.path.Path;
@@ -78,11 +81,14 @@ public class PathSynopsis {
 
 	// needs to be cleared when a path is added or removed !!
 	private HashMap<Path<QNm>, Set<Integer>> pathCache = new HashMap<Path<QNm>, Set<Integer>>();
+	
+	protected final Map<QNm, ArrayList<PSNode>> map;
 
 	public PathSynopsis(int idxNo) {
 		this.psIdxNo = idxNo;
 		this.roots = new PathSynopsisNode[1];
 		this.pcrTable = new PathSynopsisNode[20];
+		this.map = new HashMap<QNm, ArrayList<PSNode>>();
 	}
 
 	public PathSynopsisNode getNewNode(int pcr, QNm name, int uriVocID,
@@ -121,8 +127,29 @@ public class PathSynopsis {
 
 			roots[i] = psN;
 		}
+		
+		ArrayList<PSNode> list = map.get(name);
+		if (list == null) {
+			list = new ArrayList<PSNode>(4);
+			map.put(name, list);
+		}
+		list.add(psN);
 
 		return psN;
+	}
+	
+	public BitSet match(QNm name, int minLevel) {
+		ArrayList<PSNode> list = map.get(name);
+		if (list == null) {
+			return new BitSet(0);
+		}
+		BitSet matches = new BitSet();
+		for (PSNode psn : list) {
+			if (psn.getLevel() > minLevel) {
+				matches.set(psn.getPCR());
+			}
+		}
+		return matches;
 	}
 
 	public PathSynopsisNode getNewNode(QNm name, int uriVocID, int prefixVocID,
