@@ -108,4 +108,8 @@ public class RecordInterpreter extends ElRecordAccess {
 	public void setPsNode(PSNode psNode) {
 		this.psNode = psNode;
 	}
+	
+	public String getStringValue() {
+		return (value != null) ? value.stringValue() : getValue(buf, offset, len);
+	}
 }
