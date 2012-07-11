@@ -51,7 +51,7 @@ public class ElementFilter extends BracketFilter {
 	public ElementFilter(PathSynopsisMgr ps, QNm name, BitSet matches) {
 		this.ps = ps;
 		this.name = name;
-		this.matches = null;
+		this.matches = matches;
 	}
 
 	@Override
@@ -90,5 +90,9 @@ public class ElementFilter extends BracketFilter {
 	public boolean accept(BracketNode node) {
 		// TODO Auto-generated method stub
 		return false;
+	}
+
+	public BitSet getMatches() {
+		return matches;
 	}
 }

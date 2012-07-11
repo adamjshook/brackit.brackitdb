@@ -35,9 +35,11 @@ import java.util.Map;
 
 import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
+import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.index.bracket.filter.ChildPathNodeTypeFilter;
+import org.brackit.server.store.index.bracket.filter.ElementFilter;
 import org.brackit.server.xquery.compiler.XQExt;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.atomic.QNm;
@@ -85,7 +87,7 @@ public class DBTranslator extends TopDownTranslator {
 			child = node.getChild(pos++);
 			tests.add(nodeTest(child, Axis.CHILD));
 		}
-		Accessor accessor = new MultiChildAccessor(
+		Accessor accessor = new MultiChild(
 				tests.toArray(new NodeType[tests.size()]));
 		Expr in = table.resolve(Bits.FS_DOT);
 
@@ -114,12 +116,25 @@ public class DBTranslator extends TopDownTranslator {
 				bindSize);
 	}
 
-	private static class MultiChildAccessor extends Accessor {
+	@Override
+	protected Accessor axis(AST node) throws QueryException {
+		switch (node.getType()) {
+		case XQ.DESCENDANT:
+			return new DescOrSelf(Axis.DESCENDANT);
+		case XQ.DESCENDANT_OR_SELF:
+			return new DescOrSelf(Axis.DESCENDANT_OR_SELF);
+		case XQ.CHILD:
+			return new Child();
+		default:
+			return super.axis(node);
+		}
+	}
 
+	private static class MultiChild extends Accessor {
 		private final NodeType[] tests;
 		private final Map<Integer, BracketFilter[]> filtersMap;
 
-		public MultiChildAccessor(NodeType[] names) {
+		public MultiChild(NodeType[] names) {
 			super(Axis.CHILD);
 			this.tests = names;
 			this.filtersMap = new HashMap<Integer, BracketFilter[]>();
@@ -130,7 +145,7 @@ public class DBTranslator extends TopDownTranslator {
 				throws QueryException {
 			BracketNode bn = (BracketNode) node;
 			PSNode psNode = bn.getPSNode();
-			int pcr = (psNode != null) ? psNode.getPCR() : -1;			
+			int pcr = (psNode != null) ? psNode.getPCR() : -1;
 			BracketFilter[] filters = filtersMap.get(pcr);
 
 			if (filters == null) {
@@ -146,6 +161,83 @@ public class DBTranslator extends TopDownTranslator {
 			}
 
 			return bn.getChildPath(filters);
+		}
+
+		@Override
+		public Stream<? extends Node<?>> performStep(Node<?> node)
+				throws QueryException {
+			return null;
+		}
+	}
+
+	private static class DescOrSelf extends Accessor {
+		private final boolean self;
+		private final Map<Integer, ElementFilter> filterMap;
+
+		public DescOrSelf(Axis axis) {
+			super(axis);
+			this.self = (axis == Axis.DESCENDANT_OR_SELF);
+			this.filterMap = new HashMap<Integer, ElementFilter>();
+		}
+
+		@Override
+		public Stream<? extends Node<?>> performStep(Node<?> node, NodeType test)
+				throws QueryException {
+
+			BracketNode bn = (BracketNode) node;
+			PathSynopsisMgr ps = bn.getPathSynopsis();
+			XTCdeweyID deweyID = bn.getDeweyID();
+			int level = deweyID.getLevel();
+
+			ElementFilter filter = filterMap.get(level);
+			if (filter == null) {
+				QNm name = test.getQName();
+				BitSet matches = ps.match(name, level);
+				filter = new ElementFilter(ps, name, matches);
+				filterMap.put(level, filter);
+			}
+			if (filter.getMatches().cardinality() == 1) {
+				int pcr = filter.getMatches().nextSetBit(0);
+				PSNode targetPSN = ps.get(pcr);
+				if (targetPSN.getLevel() == level + 1) {
+					return bn.getChildren(filter);
+				}
+			}
+			return bn.getDescendants(self, filter);
+		}
+
+		@Override
+		public Stream<? extends Node<?>> performStep(Node<?> node)
+				throws QueryException {
+			return null;
+		}
+	}
+	
+	private static class Child extends Accessor {
+		private final Map<Integer, ElementFilter> filterMap;
+
+		public Child() {
+			super(Axis.CHILD);
+			this.filterMap = new HashMap<Integer, ElementFilter>();
+		}
+
+		@Override
+		public Stream<? extends Node<?>> performStep(Node<?> node, NodeType test)
+				throws QueryException {
+
+			BracketNode bn = (BracketNode) node;
+			PathSynopsisMgr ps = bn.getPathSynopsis();
+			XTCdeweyID deweyID = bn.getDeweyID();
+			int level = deweyID.getLevel();
+
+			ElementFilter filter = filterMap.get(level);
+			if (filter == null) {
+				QNm name = test.getQName();
+				BitSet matches = ps.match(name, level);
+				filter = new ElementFilter(ps, name, matches);
+				filterMap.put(level, filter);
+			}
+			return bn.getChildren(filter);
 		}
 
 		@Override
