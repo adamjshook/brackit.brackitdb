@@ -121,16 +121,16 @@ public class ScanCASIndex extends AbstractFunction {
 			@Override
 			public Iter iterate() {
 				return new BaseIter() {
-					Stream<Node<?>> s;
+					Stream s;
 
 					@Override
 					public Item next() throws QueryException {
 						if (s == null) {
-							s = (Stream<Node<?>>) ic.openCASIndex(idx, filter,
+							s = ic.openCASIndex(idx, filter,
 									low, high, incLow, incMax,
 									SearchMode.LESS_OR_EQUAL);
 						}
-						return s.next();
+						return (Item) s.next();
 					}
 
 					@Override
