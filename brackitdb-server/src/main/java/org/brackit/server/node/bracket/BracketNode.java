@@ -31,8 +31,6 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 
-import javax.security.auth.login.Configuration;
-
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.metadata.pathSynopsis.NsMapping;
 import org.brackit.server.metadata.pathSynopsis.PSNode;
@@ -41,7 +39,6 @@ import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr.SubtreeC
 import org.brackit.server.node.DocID;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.el.ElRecordAccess;
-import org.brackit.server.node.txnode.DebugListener;
 import org.brackit.server.node.txnode.TXCollection;
 import org.brackit.server.node.txnode.TXNode;
 import org.brackit.server.store.OpenMode;
@@ -50,9 +47,11 @@ import org.brackit.server.store.index.bracket.BracketIter;
 import org.brackit.server.store.index.bracket.HintPageInformation;
 import org.brackit.server.store.index.bracket.InsertController;
 import org.brackit.server.store.index.bracket.NavigationMode;
+import org.brackit.server.store.index.bracket.StreamIterator;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.index.bracket.filter.ElementFilter;
 import org.brackit.server.store.index.bracket.filter.PSNodeFilter;
+import org.brackit.server.store.index.bracket.filter.TextFilter;
 import org.brackit.server.store.page.bracket.RecordInterpreter;
 import org.brackit.server.tx.Tx;
 import org.brackit.server.tx.locking.services.MetaLockService;
@@ -534,52 +533,17 @@ public class BracketNode extends TXNode<BracketNode> {
 	}
 
 	private String getText() throws DocumentException {
-
-		BracketStore r = locator.collection.store;
-		StringBuilder text = new StringBuilder();
-
+		TextFilter filter = new TextFilter();
+		StreamIterator it = locator.collection.store.index.openSubtreeStream(locator,
+				deweyID, hintPageInfo, filter, false, true);
+		
 		try {
-
-			XTCdeweyID openDeweyID = (type == Kind.DOCUMENT.ID) ? XTCdeweyID
-					.newRootID(locator.docID) : deweyID;
-			BracketIter iterator = r.index.open(getTX(), locator.rootPageID,
-					NavigationMode.TO_KEY, openDeweyID, OpenMode.READ,
-					hintPageInfo);
-
-			if (iterator != null) {
-
-				if (type == Kind.ELEMENT.ID) {
-					// move iterator to next node
-					if (!iterator.next()) {
-						return "";
-					}
-				}
-
-				do {
-					XTCdeweyID currentDeweyID = iterator.getKey();
-
-					if (deweyID.isPrefixOf(currentDeweyID)) {
-						if (!currentDeweyID.isAttribute()) {
-
-							String textValue = iterator.getRecord().getValue()
-									.stringValue();
-
-							if (textValue != null) {
-								text.append(textValue);
-							}
-						}
-					} else {
-						break;
-					}
-				} while (iterator.next());
-
-				iterator.close();
-			}
-
-			return text.toString();
-		} catch (IndexAccessException e) {
-			throw new DocumentException(e);
+			while (it.next() != null);
+		} finally {
+			it.close();
 		}
+		return filter.getString();
+		
 	}
 
 	@Override
