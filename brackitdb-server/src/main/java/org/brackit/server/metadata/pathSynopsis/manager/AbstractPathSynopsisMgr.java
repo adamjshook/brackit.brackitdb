@@ -27,6 +27,8 @@
  */
 package org.brackit.server.metadata.pathSynopsis.manager;
 
+import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -408,6 +410,12 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 
 		synchronized (ps) {
 			return ps.getPCRsForChildPath(tx, path);
+		}
+	}
+	
+	public BitSet match(QNm name, int minLevel) throws DocumentException {
+		synchronized (ps) {
+			return ps.match(name, minLevel);
 		}
 	}
 

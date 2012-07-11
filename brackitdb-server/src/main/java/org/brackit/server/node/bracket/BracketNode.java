@@ -28,7 +28,10 @@
 package org.brackit.server.node.bracket;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
+
+import javax.security.auth.login.Configuration;
 
 import org.brackit.server.io.buffer.PageID;
 import org.brackit.server.metadata.pathSynopsis.NsMapping;
@@ -48,6 +51,7 @@ import org.brackit.server.store.index.bracket.HintPageInformation;
 import org.brackit.server.store.index.bracket.InsertController;
 import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
+import org.brackit.server.store.index.bracket.filter.ElementFilter;
 import org.brackit.server.store.index.bracket.filter.PSNodeFilter;
 import org.brackit.server.store.page.bracket.RecordInterpreter;
 import org.brackit.server.tx.Tx;
@@ -61,11 +65,15 @@ import org.brackit.xquery.node.parser.SubtreeHandler;
 import org.brackit.xquery.node.parser.SubtreeListener;
 import org.brackit.xquery.node.parser.SubtreeParser;
 import org.brackit.xquery.node.stream.AtomStream;
+import org.brackit.xquery.util.Cfg;
+import org.brackit.xquery.xdm.Axis;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
+import org.brackit.xquery.xdm.Node;
 import org.brackit.xquery.xdm.OperationNotSupportedException;
 import org.brackit.xquery.xdm.Scope;
 import org.brackit.xquery.xdm.Stream;
+import org.brackit.xquery.xdm.type.NodeType;
 
 /**
  * @author Martin Hiller
@@ -73,6 +81,8 @@ import org.brackit.xquery.xdm.Stream;
  */
 public class BracketNode extends TXNode<BracketNode> {
 
+	public static final boolean OPTIMIZE = Cfg.asBool("org.brackit.server.node.bracket.optimize", false);
+	
 	public static final int NODE_CLASS_ID = 2;
 
 	protected final BracketLocator locator;
@@ -84,7 +94,7 @@ public class BracketNode extends TXNode<BracketNode> {
 	private BracketScope scope;
 
 	public HintPageInformation hintPageInfo;
-	
+
 	public String[][] outputPrefetch = null;
 
 	public BracketNode(BracketLocator locator) {
@@ -390,7 +400,8 @@ public class BracketNode extends TXNode<BracketNode> {
 
 		Stream<BracketNode> aStream = locator.collection.store.index
 				.openAttributeStream(locator, deweyID, hintPageInfo,
-						new PSNodeFilter(locator.pathSynopsis, attributePSNode, true));
+						new PSNodeFilter(locator.pathSynopsis, attributePSNode,
+								true));
 
 		BracketNode attribute = aStream.next();
 		aStream.close();
@@ -508,9 +519,9 @@ public class BracketNode extends TXNode<BracketNode> {
 
 		ArrayList<SubtreeListener<? super BracketNode>> listener = new ArrayList<SubtreeListener<? super BracketNode>>(
 				5);
-		listener.add(new BracketDocIndexListener(locator, rootDeweyID, ListenMode.INSERT,
-				openMode));
-		//listener.add(new DebugListener());
+		listener.add(new BracketDocIndexListener(locator, rootDeweyID,
+				ListenMode.INSERT, openMode));
+		// listener.add(new DebugListener());
 
 		if (updateIndexes) {
 			listener.addAll(getListener(ListenMode.INSERT));
@@ -622,10 +633,52 @@ public class BracketNode extends TXNode<BracketNode> {
 		return subtree;
 	}
 
-	protected Stream<? extends BracketNode> getDescendants(boolean self,
+	public Stream<? extends BracketNode> getDescendants(boolean self,
 			BracketFilter filter) {
 		return locator.collection.store.index.openSubtreeStream(locator,
 				deweyID, hintPageInfo, filter, self, true);
+	}
+
+	@Override
+	public Stream<? extends Node<?>> performStep(Axis axis, NodeType test)
+			throws DocumentException {
+		if (!OPTIMIZE) {
+			return null;
+		}
+		if ((axis == Axis.DESCENDANT) && (test.getNodeKind() == Kind.ELEMENT)) {
+			QNm name = test.getQName();
+			PathSynopsisMgr ps = getPathSynopsis();
+			BitSet matches = ps.match(name, deweyID.getLevel());
+			ElementFilter filter = new ElementFilter(ps, name, matches);
+			if (matches.cardinality() == 1) {
+				int pcr = matches.nextSetBit(0);
+				PSNode targetPSN = ps.get(pcr);
+				if (targetPSN.getLevel() == deweyID.getLevel() + 1) {
+					return locator.collection.store.index.openChildStream(locator, deweyID,
+							hintPageInfo, filter);
+				}
+			}
+			return locator.collection.store.index.openSubtreeStream(locator,
+					deweyID, hintPageInfo, filter, false, true);
+		}
+		if ((axis == Axis.DESCENDANT_OR_SELF) && (test.getNodeKind() == Kind.ELEMENT)) {
+			return locator.collection.store.index.openSubtreeStream(locator,
+					deweyID, hintPageInfo, createFilter(test.getQName()), true, true);
+		}
+		if ((axis == Axis.CHILD) && (test.getNodeKind() == Kind.ELEMENT)) {
+			return locator.collection.store.index.openChildStream(locator, deweyID,
+					hintPageInfo, createFilter(test.getQName()));
+		}
+		return null;
+	}
+	
+	private BracketFilter createFilter(QNm name) throws DocumentException {
+		PathSynopsisMgr ps = getPathSynopsis();
+		BitSet matches = ps.match(name, deweyID.getLevel());
+		if (matches.cardinality() == 1) {
+			
+		}
+		return new ElementFilter(ps, name, matches);
 	}
 
 	protected void setNsMappingAndName(NsMapping nsMapping, QNm name)

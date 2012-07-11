@@ -27,6 +27,7 @@
  */
 package org.brackit.server.metadata.pathSynopsis.manager;
 
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -72,6 +73,8 @@ public interface PathSynopsisMgr extends TXObject<PathSynopsisMgr> {
 
 	public Set<Integer> match(Path<QNm> path) throws DocumentException;
 
+	public BitSet match(QNm name, int minLevel) throws DocumentException;
+	
 	public PSNode get(int pcr) throws DocumentException;
 
 	public PSNode getAncestor(int pcr, int level) throws DocumentException;
