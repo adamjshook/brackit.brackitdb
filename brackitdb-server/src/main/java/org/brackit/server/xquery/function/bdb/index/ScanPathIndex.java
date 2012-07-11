@@ -109,15 +109,15 @@ public class ScanPathIndex extends AbstractFunction {
 			@Override
 			public Iter iterate() {
 				return new BaseIter() {
-					Stream<Node<?>> s;
+					Stream s;
 
 					@Override
 					public Item next() throws QueryException {
 						if (s == null) {
-							s = (Stream<Node<?>>) ic.openPathIndex(idx, filter,
+							s = ic.openPathIndex(idx, filter,
 									SearchMode.LESS_OR_EQUAL);
 						}
-						return s.next();
+						return (Item) s.next();
 					}
 
 					@Override
