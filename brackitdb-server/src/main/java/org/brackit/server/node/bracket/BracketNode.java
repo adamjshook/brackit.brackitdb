@@ -143,7 +143,7 @@ public class BracketNode extends TXNode<BracketNode> {
 	public PathSynopsisMgr getPathSynopsis() {
 		return locator.pathSynopsis;
 	}
-	
+
 	public PSNode getPSNode() {
 		return psNode;
 	}
@@ -606,6 +606,11 @@ public class BracketNode extends TXNode<BracketNode> {
 		return subtree;
 	}
 
+	public Stream<? extends BracketNode> getChildren(BracketFilter filter) {
+		return locator.collection.store.index.openChildStream(locator, deweyID,
+				hintPageInfo, filter);
+	}
+
 	public Stream<? extends BracketNode> getDescendants(boolean self,
 			BracketFilter filter) {
 		return locator.collection.store.index.openSubtreeStream(locator,
@@ -648,7 +653,7 @@ public class BracketNode extends TXNode<BracketNode> {
 	}
 
 	public Stream<? extends Node<?>> getChildPath(BracketFilter[] filters)
-			throws QueryException {		
+			throws QueryException {
 		return locator.collection.store.index.openMultiChildStream(locator,
 				deweyID, hintPageInfo, filters);
 	}
