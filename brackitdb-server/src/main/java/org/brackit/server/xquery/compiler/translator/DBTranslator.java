@@ -28,10 +28,16 @@
 package org.brackit.server.xquery.compiler.translator;
 
 import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.brackit.server.metadata.pathSynopsis.PSNode;
+import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
 import org.brackit.server.node.bracket.BracketNode;
+import org.brackit.server.store.index.bracket.filter.BracketFilter;
+import org.brackit.server.store.index.bracket.filter.ChildPathNodeTypeFilter;
 import org.brackit.server.xquery.compiler.XQExt;
 import org.brackit.xquery.QueryException;
 import org.brackit.xquery.atomic.QNm;
@@ -111,16 +117,35 @@ public class DBTranslator extends TopDownTranslator {
 	private static class MultiChildAccessor extends Accessor {
 
 		private final NodeType[] tests;
+		private final Map<Integer, BracketFilter[]> filtersMap;
 
 		public MultiChildAccessor(NodeType[] names) {
 			super(Axis.CHILD);
 			this.tests = names;
+			this.filtersMap = new HashMap<Integer, BracketFilter[]>();
 		}
 
 		@Override
 		public Stream<? extends Node<?>> performStep(Node<?> node, NodeType test)
 				throws QueryException {
-			return ((BracketNode) node).getChildPath(tests);
+			BracketNode bn = (BracketNode) node;
+			PSNode psNode = bn.getPSNode();
+			int pcr = (psNode != null) ? psNode.getPCR() : -1;			
+			BracketFilter[] filters = filtersMap.get(pcr);
+
+			if (filters == null) {
+				filters = new BracketFilter[tests.length];
+				PathSynopsisMgr ps = bn.getPathSynopsis();
+				BitSet matches = ps.matchChildPath(tests, pcr);
+				for (int i = 0; i < tests.length; i++) {
+					filters[i] = new ChildPathNodeTypeFilter(ps, tests[i],
+							matches);
+					// filters[i] = new NodeTypeFilter(ps, tests[i]);
+				}
+				filtersMap.put(pcr, filters);
+			}
+
+			return bn.getChildPath(filters);
 		}
 
 		@Override
@@ -128,6 +153,5 @@ public class DBTranslator extends TopDownTranslator {
 				throws QueryException {
 			return null;
 		}
-
 	}
 }

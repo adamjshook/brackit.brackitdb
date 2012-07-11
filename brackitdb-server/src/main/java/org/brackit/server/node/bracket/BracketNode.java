@@ -143,6 +143,10 @@ public class BracketNode extends TXNode<BracketNode> {
 	public PathSynopsisMgr getPathSynopsis() {
 		return locator.pathSynopsis;
 	}
+	
+	public PSNode getPSNode() {
+		return psNode;
+	}
 
 	@Override
 	public Tx getTX() {
@@ -643,16 +647,8 @@ public class BracketNode extends TXNode<BracketNode> {
 		return null;
 	}
 
-	public Stream<? extends Node<?>> getChildPath(NodeType[] tests)
+	public Stream<? extends Node<?>> getChildPath(BracketFilter[] filters)
 			throws QueryException {		
-		BracketFilter[] filters = new BracketFilter[tests.length];
-		PathSynopsisMgr ps = getPathSynopsis();
-		BitSet matches = ps.matchChildPath(tests, (psNode != null) ? psNode.getPCR() : -1);
-		
-		for (int i = 0; i < tests.length; i++) {
-			filters[i] = new ChildPathNodeTypeFilter(ps, tests[i], matches);
-			//filters[i] = new NodeTypeFilter(ps, tests[i]);
-		}
 		return locator.collection.store.index.openMultiChildStream(locator,
 				deweyID, hintPageInfo, filters);
 	}
