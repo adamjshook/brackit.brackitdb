@@ -78,8 +78,10 @@ public class ElementFilter extends BracketFilter {
 			while (dist++ < 0) {
 				psn = psn.getParent();
 			}
-			return (((matches != null) && (matches.get(psn.getPCR()))) || (psn
-					.getName().atomicCmp(name) == 0));
+			if (matches != null) {
+				return matches.get(psn.getPCR());
+			}
+			return (psn.getName().atomicCmp(name) == 0);
 		}
 		return true;
 	}
