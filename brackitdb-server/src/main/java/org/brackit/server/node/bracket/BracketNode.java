@@ -49,6 +49,7 @@ import org.brackit.server.store.index.bracket.InsertController;
 import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.StreamIterator;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
+import org.brackit.server.store.index.bracket.filter.ChildPathNodeTypeFilter;
 import org.brackit.server.store.index.bracket.filter.ElementFilter;
 import org.brackit.server.store.index.bracket.filter.NodeTypeFilter;
 import org.brackit.server.store.index.bracket.filter.PSNodeFilter;
@@ -643,11 +644,14 @@ public class BracketNode extends TXNode<BracketNode> {
 	}
 
 	public Stream<? extends Node<?>> getChildPath(NodeType[] tests)
-			throws QueryException {
+			throws QueryException {		
 		BracketFilter[] filters = new BracketFilter[tests.length];
 		PathSynopsisMgr ps = getPathSynopsis();
+		BitSet matches = ps.matchChildPath(tests, (psNode != null) ? psNode.getPCR() : -1);
+		
 		for (int i = 0; i < tests.length; i++) {
-			filters[i] = new NodeTypeFilter(ps, tests[i]);
+			filters[i] = new ChildPathNodeTypeFilter(ps, tests[i], matches);
+			//filters[i] = new NodeTypeFilter(ps, tests[i]);
 		}
 		return locator.collection.store.index.openMultiChildStream(locator,
 				deweyID, hintPageInfo, filters);

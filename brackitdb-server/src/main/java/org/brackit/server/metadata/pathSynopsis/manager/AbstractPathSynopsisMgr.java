@@ -51,6 +51,7 @@ import org.brackit.xquery.util.log.Logger;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
+import org.brackit.xquery.xdm.type.NodeType;
 
 /**
  * Abstract base for path synopsis managers.
@@ -416,6 +417,13 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 	public BitSet match(QNm name, int minLevel) throws DocumentException {
 		synchronized (ps) {
 			return ps.match(name, minLevel);
+		}
+	}
+
+	@Override
+	public BitSet matchChildPath(NodeType[] types, int pcr) throws DocumentException {
+		synchronized (ps) {
+			return ps.matchChildPath(types, pcr);
 		}
 	}
 

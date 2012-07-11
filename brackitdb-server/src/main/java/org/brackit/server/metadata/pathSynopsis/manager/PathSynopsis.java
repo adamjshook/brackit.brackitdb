@@ -44,6 +44,9 @@ import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.util.path.PathException;
 import org.brackit.xquery.xdm.DocumentException;
 import org.brackit.xquery.xdm.Kind;
+import org.brackit.xquery.xdm.type.ElementType;
+import org.brackit.xquery.xdm.type.NodeType;
+import org.brackit.xquery.xdm.type.TextType;
 
 /**
  * Realizes the path synopsis as a tree.
@@ -81,7 +84,7 @@ public class PathSynopsis {
 
 	// needs to be cleared when a path is added or removed !!
 	private HashMap<Path<QNm>, Set<Integer>> pathCache = new HashMap<Path<QNm>, Set<Integer>>();
-	
+
 	protected final Map<QNm, ArrayList<PSNode>> map;
 
 	public PathSynopsis(int idxNo) {
@@ -95,7 +98,7 @@ public class PathSynopsis {
 			int prefixVocID, int localNameVocID, byte kind,
 			NsMapping nsMapping, PathSynopsisNode parent) {
 		pathCache.clear();
-		
+
 		if (nsMapping != null) {
 			nsMapping.finalize();
 		}
@@ -127,7 +130,7 @@ public class PathSynopsis {
 
 			roots[i] = psN;
 		}
-		
+
 		ArrayList<PSNode> list = map.get(name);
 		if (list == null) {
 			list = new ArrayList<PSNode>(4);
@@ -137,7 +140,7 @@ public class PathSynopsis {
 
 		return psN;
 	}
-	
+
 	public BitSet match(QNm name, int minLevel) {
 		ArrayList<PSNode> list = map.get(name);
 		if (list == null) {
@@ -150,6 +153,56 @@ public class PathSynopsis {
 			}
 		}
 		return matches;
+	}
+
+	public BitSet matchChildPath(NodeType[] type, int pcr) {
+		BitSet matches = new BitSet();
+		PathSynopsisNode n = getNodeByPcr(pcr);
+		matchChildPath(matches, n, type, 0);					
+		return matches;
+	}
+	
+	public static void main(String[] args) throws Exception {
+		PathSynopsis ps = new PathSynopsis(1);
+		PathSynopsisNode a = ps.getNewNode(new QNm("a"), -1, -1, -1, Kind.ELEMENT.ID, null, null, 0);
+		PathSynopsisNode b = ps.getNewNode(new QNm("b"), -1, -1, -1, Kind.ELEMENT.ID, null, a, 0);
+		PathSynopsisNode c = ps.getNewNode(new QNm("c"), -1, -1, -1, Kind.ELEMENT.ID, null, b, 0);
+		PathSynopsisNode d = ps.getNewNode(new QNm("d"), -1, -1, -1, Kind.ELEMENT.ID, null, c, 0);
+		PathSynopsisNode e = ps.getNewNode(new QNm("e"), -1, -1, -1, Kind.ELEMENT.ID, null, d, 0);
+		PathSynopsisNode f = ps.getNewNode(new QNm("f"), -1, -1, -1, Kind.ELEMENT.ID, null, d, 0);
+		PathSynopsisNode g = ps.getNewNode(new QNm("g"), -1, -1, -1, Kind.ATTRIBUTE.ID, null, d, 0);
+		NodeType[] path = {new ElementType(new QNm("b")), new ElementType(new QNm("c")), new ElementType(new QNm("d"))};
+		System.out.println(ps.matchChildPath(path, a.getPCR()));
+	}
+
+	private void matchChildPath(BitSet matches, PathSynopsisNode n,
+			NodeType[] type, int step) {
+		if ((type[step].getNodeKind() != null) && (type[step].getNodeKind() != Kind.ELEMENT)) {
+			if (n != null) {
+				matches.set(n.getPCR());
+			}
+			return;
+		}		
+		PathSynopsisNode[] children = (n != null) ? n.children : roots;
+		QNm name = type[step].getQName();
+		for (PathSynopsisNode c : children) {			
+			if ((name == null) || (c.name.atomicCmp(name) == 0)) {
+				if (++step == type.length) {
+					addAll(matches, c);
+				} else {
+					matches.set(c.getPCR());
+					matchChildPath(matches, c, type, step);	
+				}
+				return;
+			}
+		}
+	}
+
+	private void addAll(BitSet matches, PathSynopsisNode n) {
+		matches.set(n.getPCR());
+		for (PathSynopsisNode c : n.children) {
+			addAll(matches, c);
+		}
 	}
 
 	public PathSynopsisNode getNewNode(QNm name, int uriVocID, int prefixVocID,
@@ -202,32 +255,32 @@ public class PathSynopsis {
 			throw new DocumentException(e);
 		}
 	}
-	
+
 	public int[] getPCRsForChildPath(Tx transaction, Path<QNm> path)
 			throws DocumentException {
 		try {
 			// assert: path only consists of childsteps
-			
+
 			int pathLength = path.getLength();
-			
+
 			int[] pathPCRs = new int[pathLength];
 			for (int i = 0; i < pathPCRs.length; i++) {
 				pathPCRs[i] = -1;
 			}
-			
+
 			// decompose path
-			List<Path<QNm>> paths = new ArrayList<Path<QNm>>(pathLength);	
+			List<Path<QNm>> paths = new ArrayList<Path<QNm>>(pathLength);
 			paths.add(path);
 			for (int i = 1; i < pathLength; i++) {
 				path = path.leading();
 				paths.add(path);
 			}
 			Collections.reverse(paths);
-			
-			// path lookup in cache			
+
+			// path lookup in cache
 			for (int i = 0; i < pathPCRs.length; i++) {
 				Set<Integer> pcrSet = pathCache.get(paths.get(i));
-	
+
 				if (pcrSet != null) {
 					for (int pcr : pcrSet) {
 						pathPCRs[i] = pcr;
@@ -241,18 +294,18 @@ public class PathSynopsis {
 				if (node == null) {
 					continue;
 				}
-				
+
 				for (int j = 0; j < pathPCRs.length; j++) {
 					if (pathPCRs[j] == -1) {
 						// PCR not already fetched
-						
+
 						if (paths.get(j).matches(node.getPath())) {
 							pathPCRs[j] = node.getPCR();
 						}
 					}
 				}
 			}
-			
+
 			for (int j = 0; j < pathPCRs.length; j++) {
 				if (pathPCRs[j] != -1) {
 					// PCR successfully fetched
@@ -261,7 +314,7 @@ public class PathSynopsis {
 					pathCache.put(paths.get(j), s);
 				}
 			}
-			
+
 			return pathPCRs;
 		} catch (PathException e) {
 			throw new DocumentException(e);
@@ -297,10 +350,14 @@ public class PathSynopsis {
 		}
 
 		StringBuffer buf = levelBuffers.get(node.getLevel() - 1);
-		String str = String.format("[%s:%s]  ", node.getPCR(),
-				((node.getKind() == Kind.ATTRIBUTE.ID) ? "@" : "")
-						+ String.format("(%s,%s,%s)", node.getURIVocID(), node
-								.getPrefixVocID(), node.getLocalNameVocID()));
+		String str = String
+				.format("[%s:%s]  ",
+						node.getPCR(),
+						((node.getKind() == Kind.ATTRIBUTE.ID) ? "@" : "")
+								+ String.format("(%s,%s,%s)",
+										node.getURIVocID(),
+										node.getPrefixVocID(),
+										node.getLocalNameVocID()));
 		buf.append(str);
 
 		if (levelBuffers.size() - 1 > node.getLevel()) // child level exists

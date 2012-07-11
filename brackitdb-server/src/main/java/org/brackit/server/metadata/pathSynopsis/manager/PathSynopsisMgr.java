@@ -39,6 +39,7 @@ import org.brackit.server.metadata.pathSynopsis.PSSnapshotBuilder;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.util.path.Path;
 import org.brackit.xquery.xdm.DocumentException;
+import org.brackit.xquery.xdm.type.NodeType;
 
 /**
  * Handles access, loading and storing of the path synopsis.
@@ -74,6 +75,8 @@ public interface PathSynopsisMgr extends TXObject<PathSynopsisMgr> {
 	public Set<Integer> match(Path<QNm> path) throws DocumentException;
 
 	public BitSet match(QNm name, int minLevel) throws DocumentException;
+	
+	public BitSet matchChildPath(NodeType[] types, int pcr) throws DocumentException;
 	
 	public PSNode get(int pcr) throws DocumentException;
 
