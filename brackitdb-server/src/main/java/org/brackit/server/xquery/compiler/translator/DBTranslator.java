@@ -41,7 +41,9 @@ import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.index.bracket.filter.ChildPathNodeTypeFilter;
 import org.brackit.server.store.index.bracket.filter.ElementFilter;
 import org.brackit.server.xquery.compiler.XQExt;
+import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
+import org.brackit.xquery.Tuple;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.compiler.AST;
@@ -50,10 +52,15 @@ import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.translator.Binding;
 import org.brackit.xquery.compiler.translator.TopDownTranslator;
 import org.brackit.xquery.expr.Accessor;
+import org.brackit.xquery.expr.PredicateExpr;
 import org.brackit.xquery.expr.StepExpr;
+import org.brackit.xquery.util.Cfg;
+import org.brackit.xquery.util.ExprUtil;
 import org.brackit.xquery.xdm.Axis;
 import org.brackit.xquery.xdm.Expr;
+import org.brackit.xquery.xdm.Item;
 import org.brackit.xquery.xdm.Node;
+import org.brackit.xquery.xdm.Sequence;
 import org.brackit.xquery.xdm.Stream;
 import org.brackit.xquery.xdm.type.NodeType;
 import org.brackit.xquery.xdm.type.SequenceType;
@@ -64,6 +71,9 @@ import org.brackit.xquery.xdm.type.SequenceType;
  */
 public class DBTranslator extends TopDownTranslator {
 
+	public static final boolean OPTIMIZE = Cfg.asBool(
+			"org.brackit.server.xquery.optimize.accessor", false);
+	
 	public DBTranslator(Map<QNm, Str> options) {
 		super(options);
 	}
@@ -118,6 +128,9 @@ public class DBTranslator extends TopDownTranslator {
 
 	@Override
 	protected Accessor axis(AST node) throws QueryException {
+		if (!OPTIMIZE) {
+			return super.axis(node);
+		}
 		switch (node.getType()) {
 		case XQ.DESCENDANT:
 			return new DescOrSelf(Axis.DESCENDANT);
@@ -246,4 +259,25 @@ public class DBTranslator extends TopDownTranslator {
 			return null;
 		}
 	}
+//	
+//	private static class MultiChildProjectAndFilterStep extends PredicateExpr {
+//
+//		@Override
+//		public Sequence evaluate(QueryContext ctx, Tuple tuple)
+//				throws QueryException {
+//			// TODO Auto-generated method stub
+//			return null;
+//		}
+//
+//		@Override
+//		public Item evaluateToItem(QueryContext ctx, Tuple tuple)
+//				throws QueryException {
+//			return ExprUtil.asItem(evaluate(ctx, tuple));
+//		}
+//
+//		@Override
+//		public boolean isVacuous() {
+//			return false;
+//		}		
+//	}
 }

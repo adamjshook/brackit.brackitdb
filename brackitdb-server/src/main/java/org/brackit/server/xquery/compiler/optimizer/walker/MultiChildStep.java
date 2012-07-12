@@ -29,14 +29,11 @@ package org.brackit.server.xquery.compiler.optimizer.walker;
 
 import org.brackit.server.xquery.DBCompileChain;
 import org.brackit.server.xquery.compiler.XQExt;
-import org.brackit.xquery.QueryException;
 import org.brackit.xquery.XQuery;
-import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.optimizer.walker.Walker;
 import org.brackit.xquery.module.StaticContext;
-import org.brackit.xquery.xdm.Function;
 
 /**
  * @author Sebastian Baechle
@@ -58,8 +55,7 @@ public class MultiChildStep extends Walker {
 		boolean checkInput = false;
 		boolean skipDDO = false;
 		int len = 0;
-		int stepCount = node.getChildCount();		
-		
+
 		for (int i = 1; i < node.getChildCount(); i++) {
 			AST step = node.getChild(i);
 			boolean childStep = ((step.getType() == XQ.StepExpr) && (getAxis(step) == XQ.CHILD));
@@ -113,72 +109,6 @@ public class MultiChildStep extends Walker {
 	public static void main(String[] args) throws Exception {
 		//new XQuery(new DBCompileChain(null, null), "let $a := <x/> return $a/b/c/d//e/x/y/z//u/v/w");
 		new XQuery(new DBCompileChain(null, null), "let $a := <x/> return $a/b/@aha");
-	}
-
-	/**
-	 * Try to infer if this path step returns only a single item or the empty
-	 * sequence
-	 */
-	private boolean isAtomicOrEmpty(AST step) {
-		// TODO
-		// Life would be great if we already had static typing...
-		if (step.getType() == XQ.ContextItemExpr) {
-			return true;
-		}
-		if (step.getType() == XQ.FunctionCall) {
-			int childCount = step.getChildCount();
-			QNm name = (QNm) step.getValue();
-			Function fun = sctx.getFunctions().resolve(name, childCount);
-			return fun.getSignature().getResultType().getCardinality()
-					.atMostOne();
-		}
-		if (step.getType() == XQ.VariableRef) {
-			// TODO check if if we can derive information
-			// about this variable (e.g., if for-bound)
-		}
-		return false;
-	}
-
-	protected boolean sortAfterStep(AST node, int position, int lastPosition)
-			throws QueryException {
-		AST child = node.getChild(position);
-
-		if (child.getType() != XQ.StepExpr) {
-			return true;
-		}
-
-		int axis = getAxis(child);
-		if ((axis == XQ.CHILD) || (axis == XQ.ATTRIBUTE) || (axis == XQ.SELF)) {
-			return true;
-		}
-		return false;
-	}
-
-	private boolean isForwardStep(AST step) {
-		return ((step.getType() == XQ.StepExpr) && isForwardAxis(getAxis(step)));
-	}
-
-	private boolean isBackwardStep(AST step) {
-		return ((step.getType() == XQ.StepExpr) && !isForwardAxis(getAxis(step)));
-	}
-
-	private boolean isDescOrDescOSStep(AST step) {
-		if (step.getType() != XQ.StepExpr) {
-			return false;
-		}
-		int axis = getAxis(step);
-		return ((axis == XQ.DESCENDANT) || (axis == XQ.DESCENDANT_OR_SELF));
-	}
-
-	private boolean isForwardAxis(int axis) {
-		return ((axis == XQ.CHILD) || (axis == XQ.DESCENDANT)
-				|| (axis == XQ.ATTRIBUTE) || (axis == XQ.SELF)
-				|| (axis == XQ.DESCENDANT_OR_SELF)
-				|| (axis == XQ.FOLLOWING_SIBLING) || (axis == XQ.FOLLOWING));
-	}
-
-	private boolean isReverseAxis(int axis) {
-		return !isForwardAxis(axis);
 	}
 
 	private int getAxis(AST stepExpr) {

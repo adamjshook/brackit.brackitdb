@@ -40,6 +40,7 @@ import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.compiler.CompileChain;
 import org.brackit.xquery.compiler.optimizer.Optimizer;
 import org.brackit.xquery.compiler.translator.Translator;
+import org.brackit.xquery.util.Cfg;
 
 /**
  * @author Sebastian Baechle
@@ -47,6 +48,9 @@ import org.brackit.xquery.compiler.translator.Translator;
  */
 public class DBCompileChain extends CompileChain {
 
+	public static final boolean OPTIMIZE = Cfg.asBool(
+			"org.brackit.server.xquery.optimize.multichild", false);
+	
 	static {
 		// define function namespaces and functions in these namespaces		
 		BDBFun.register();
@@ -64,6 +68,9 @@ public class DBCompileChain extends CompileChain {
 
 	@Override
 	protected Translator getTranslator(Map<QNm, Str> options) {
+		if (!OPTIMIZE) {
+			return super.getTranslator(options);
+		}
 		return new DBTranslator(options);
 	}
 
