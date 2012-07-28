@@ -48,9 +48,9 @@ import org.brackit.server.store.index.bracket.HintPageInformation;
 import org.brackit.server.store.index.bracket.InsertController;
 import org.brackit.server.store.index.bracket.NavigationMode;
 import org.brackit.server.store.index.bracket.StreamIterator;
-import org.brackit.server.store.index.bracket.filter.AttrFilter;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.index.bracket.filter.ElementFilter;
+import org.brackit.server.store.index.bracket.filter.PSNodeFilter;
 import org.brackit.server.store.index.bracket.filter.TextFilter;
 import org.brackit.server.store.page.bracket.RecordInterpreter;
 import org.brackit.server.tx.Tx;
@@ -394,18 +394,17 @@ public class BracketNode extends TXNode<BracketNode> {
 
 	@Override
 	public BracketNode getAttributeInternal(QNm name) throws DocumentException {
-//		// look for the requested attribute PSNode
-//		PSNode attributePSNode = locator.pathSynopsis.getChildIfExists(
-//				psNode.getPCR(), name, Kind.ATTRIBUTE.ID, null);
-//
-//		if (attributePSNode == null) {
-//			return null;
-//		}
-//
-//		PSNodeFilter filter = new PSNodeFilter(locator.pathSynopsis, attributePSNode,
-//				true);
-		BracketFilter filter = new AttrFilter(locator.pathSynopsis, name, null);		
-		
+		// look for the requested attribute PSNode
+		PSNode attributePSNode = locator.pathSynopsis.getChildIfExists(
+				psNode.getPCR(), name, Kind.ATTRIBUTE.ID, null);
+
+		if (attributePSNode == null) {
+			return null;
+		}
+
+		PSNodeFilter filter = new PSNodeFilter(locator.pathSynopsis, attributePSNode,
+				true);
+
 		Stream<BracketNode> aStream = locator.collection.store.index
 				.openAttributeStream(locator, deweyID, hintPageInfo,
 						filter);

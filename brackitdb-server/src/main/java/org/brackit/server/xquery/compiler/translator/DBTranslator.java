@@ -37,13 +37,13 @@ import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
 import org.brackit.server.node.XTCdeweyID;
 import org.brackit.server.node.bracket.BracketNode;
+import org.brackit.server.store.index.bracket.filter.AttrFilter;
 import org.brackit.server.store.index.bracket.filter.BracketFilter;
 import org.brackit.server.store.index.bracket.filter.ChildPathNodeTypeFilter;
 import org.brackit.server.store.index.bracket.filter.ElementFilter;
+import org.brackit.server.store.index.bracket.filter.NodeKindFilter;
 import org.brackit.server.xquery.compiler.XQExt;
-import org.brackit.xquery.QueryContext;
 import org.brackit.xquery.QueryException;
-import org.brackit.xquery.Tuple;
 import org.brackit.xquery.atomic.QNm;
 import org.brackit.xquery.atomic.Str;
 import org.brackit.xquery.compiler.AST;
@@ -52,15 +52,12 @@ import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.translator.Binding;
 import org.brackit.xquery.compiler.translator.TopDownTranslator;
 import org.brackit.xquery.expr.Accessor;
-import org.brackit.xquery.expr.PredicateExpr;
 import org.brackit.xquery.expr.StepExpr;
 import org.brackit.xquery.util.Cfg;
-import org.brackit.xquery.util.ExprUtil;
 import org.brackit.xquery.xdm.Axis;
 import org.brackit.xquery.xdm.Expr;
-import org.brackit.xquery.xdm.Item;
+import org.brackit.xquery.xdm.Kind;
 import org.brackit.xquery.xdm.Node;
-import org.brackit.xquery.xdm.Sequence;
 import org.brackit.xquery.xdm.Stream;
 import org.brackit.xquery.xdm.type.NodeType;
 import org.brackit.xquery.xdm.type.SequenceType;
@@ -73,7 +70,7 @@ public class DBTranslator extends TopDownTranslator {
 
 	public static final boolean OPTIMIZE = Cfg.asBool(
 			"org.brackit.server.xquery.optimize.accessor", false);
-	
+
 	public DBTranslator(Map<QNm, Str> options) {
 		super(options);
 	}
@@ -97,8 +94,8 @@ public class DBTranslator extends TopDownTranslator {
 			child = node.getChild(pos++);
 			tests.add(nodeTest(child, Axis.CHILD));
 		}
-		Accessor accessor = new MultiChild(
-				tests.toArray(new NodeType[tests.size()]));
+		Accessor accessor = new MultiChild(tests.toArray(new NodeType[tests
+				.size()]));
 		Expr in = table.resolve(Bits.FS_DOT);
 
 		int noOfPredicates = Math.max(node.getChildCount() - pos, 0);
@@ -138,6 +135,8 @@ public class DBTranslator extends TopDownTranslator {
 			return new DescOrSelf(Axis.DESCENDANT_OR_SELF);
 		case XQ.CHILD:
 			return new Child();
+		case XQ.ATTRIBUTE:
+			return new Attribute();
 		default:
 			return super.axis(node);
 		}
@@ -225,13 +224,13 @@ public class DBTranslator extends TopDownTranslator {
 			return null;
 		}
 	}
-	
+
 	private static class Child extends Accessor {
-		private final Map<Integer, ElementFilter> filterMap;
+		private final Map<Integer, BracketFilter> filterMap;
 
 		public Child() {
 			super(Axis.CHILD);
-			this.filterMap = new HashMap<Integer, ElementFilter>();
+			this.filterMap = new HashMap<Integer, BracketFilter>();
 		}
 
 		@Override
@@ -243,11 +242,15 @@ public class DBTranslator extends TopDownTranslator {
 			XTCdeweyID deweyID = bn.getDeweyID();
 			int level = deweyID.getLevel();
 
-			ElementFilter filter = filterMap.get(level);
+			BracketFilter filter = filterMap.get(level);
 			if (filter == null) {
-				QNm name = test.getQName();
-				BitSet matches = ps.match(name, level);
-				filter = new ElementFilter(ps, name, matches);
+				if (test.getNodeKind() == Kind.ELEMENT) {
+					QNm name = test.getQName();
+					BitSet matches = ps.match(name, level);
+					filter = new ElementFilter(ps, name, matches);
+				} else {
+					filter = new NodeKindFilter(test.getNodeKind());
+				}
 				filterMap.put(level, filter);
 			}
 			return bn.getChildren(filter);
@@ -259,25 +262,60 @@ public class DBTranslator extends TopDownTranslator {
 			return null;
 		}
 	}
-//	
-//	private static class MultiChildProjectAndFilterStep extends PredicateExpr {
-//
-//		@Override
-//		public Sequence evaluate(QueryContext ctx, Tuple tuple)
-//				throws QueryException {
-//			// TODO Auto-generated method stub
-//			return null;
-//		}
-//
-//		@Override
-//		public Item evaluateToItem(QueryContext ctx, Tuple tuple)
-//				throws QueryException {
-//			return ExprUtil.asItem(evaluate(ctx, tuple));
-//		}
-//
-//		@Override
-//		public boolean isVacuous() {
-//			return false;
-//		}		
-//	}
+	
+	private static class Attribute extends Accessor {
+		private final Map<Integer, BracketFilter> filterMap;
+
+		public Attribute() {
+			super(Axis.ATTRIBUTE);
+			this.filterMap = new HashMap<Integer, BracketFilter>();
+		}
+
+		@Override
+		public Stream<? extends Node<?>> performStep(Node<?> node, NodeType test)
+				throws QueryException {
+
+			BracketNode bn = (BracketNode) node;
+			PathSynopsisMgr ps = bn.getPathSynopsis();
+			XTCdeweyID deweyID = bn.getDeweyID();
+			int level = deweyID.getLevel();
+
+			BracketFilter filter = filterMap.get(level);
+			if (filter == null) {
+				QNm name = test.getQName();
+				BitSet matches = ps.match(name, level);
+				filter = new AttrFilter(ps, name, matches);
+				filterMap.put(level, filter);
+			}
+			return bn.getChildren(filter);
+		}
+
+		@Override
+		public Stream<? extends Node<?>> performStep(Node<?> node)
+				throws QueryException {
+			return null;
+		}
+	}
+	//
+	// private static class MultiChildProjectAndFilterStep extends PredicateExpr
+	// {
+	//
+	// @Override
+	// public Sequence evaluate(QueryContext ctx, Tuple tuple)
+	// throws QueryException {
+	// // TODO Auto-generated method stub
+	// return null;
+	// }
+	//
+	// @Override
+	// public Item evaluateToItem(QueryContext ctx, Tuple tuple)
+	// throws QueryException {
+	// return ExprUtil.asItem(evaluate(ctx, tuple));
+	// }
+	//
+	// @Override
+	// public boolean isVacuous() {
+	// return false;
+	// }
+	// }
 }
