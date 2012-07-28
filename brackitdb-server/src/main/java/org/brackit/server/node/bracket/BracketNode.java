@@ -402,12 +402,11 @@ public class BracketNode extends TXNode<BracketNode> {
 			return null;
 		}
 
-		PSNodeFilter filter = new PSNodeFilter(locator.pathSynopsis, attributePSNode,
-				true);
+		PSNodeFilter filter = new PSNodeFilter(locator.pathSynopsis,
+				attributePSNode, true);
 
 		Stream<BracketNode> aStream = locator.collection.store.index
-				.openAttributeStream(locator, deweyID, hintPageInfo,
-						filter);
+				.openAttributeStream(locator, deweyID, hintPageInfo, filter);
 
 		BracketNode attribute = aStream.next();
 		aStream.close();
@@ -608,6 +607,11 @@ public class BracketNode extends TXNode<BracketNode> {
 	public Stream<? extends BracketNode> getChildren(BracketFilter filter) {
 		return locator.collection.store.index.openChildStream(locator, deweyID,
 				hintPageInfo, filter);
+	}
+
+	public Stream<? extends BracketNode> getAttributes(BracketFilter filter) {
+		return locator.collection.store.index.openAttributeStream(locator,
+				deweyID, hintPageInfo, filter);
 	}
 
 	public Stream<? extends BracketNode> getDescendants(boolean self,
