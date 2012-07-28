@@ -404,7 +404,7 @@ public class BracketNode extends TXNode<BracketNode> {
 //
 //		PSNodeFilter filter = new PSNodeFilter(locator.pathSynopsis, attributePSNode,
 //				true);
-		BracketFilter filter = new AttrFilter(null, name, null);		
+		BracketFilter filter = new AttrFilter(locator.pathSynopsis, name, null);		
 		
 		Stream<BracketNode> aStream = locator.collection.store.index
 				.openAttributeStream(locator, deweyID, hintPageInfo,
