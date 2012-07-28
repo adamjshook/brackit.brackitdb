@@ -287,7 +287,7 @@ public class DBTranslator extends TopDownTranslator {
 				filter = new AttrFilter(ps, name, matches);
 				filterMap.put(level, filter);
 			}
-			return bn.getChildren(filter);
+			return bn.getAttributes(filter);
 		}
 
 		@Override
