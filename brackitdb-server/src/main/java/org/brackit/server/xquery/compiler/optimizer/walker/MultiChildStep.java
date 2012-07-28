@@ -34,12 +34,16 @@ import org.brackit.xquery.compiler.AST;
 import org.brackit.xquery.compiler.XQ;
 import org.brackit.xquery.compiler.optimizer.walker.Walker;
 import org.brackit.xquery.module.StaticContext;
+import org.brackit.xquery.util.Cfg;
 
 /**
  * @author Sebastian Baechle
  * 
  */
 public class MultiChildStep extends Walker {
+
+	private static final int MIN_CHILD_STEP_LENGTH = Cfg.asInt(
+			"org.brackit.server.xquery.optimize.multichild.length", 3);
 
 	public MultiChildStep(StaticContext sctx) {
 		super(sctx);
@@ -66,7 +70,7 @@ public class MultiChildStep extends Walker {
 				if (!hasPredicate) {
 					len++;
 				} else {
-					if (len > 1) {					
+					if (len > MIN_CHILD_STEP_LENGTH) {
 						merge(node, i - len, len, skipDDO, checkInput);
 						i -= len;
 					}
@@ -75,7 +79,7 @@ public class MultiChildStep extends Walker {
 					len = 0;
 				}
 			} else {
-				if (len > 1) {
+				if (len > MIN_CHILD_STEP_LENGTH) {
 					merge(node, i - len, len - 1, skipDDO, checkInput);
 					i -= len - 1;
 				}
@@ -84,10 +88,11 @@ public class MultiChildStep extends Walker {
 				len = 0;
 			}
 		}
-		if (len > 0) {
-			merge(node, node.getChildCount() - len, len - 1, skipDDO, checkInput);
+		if (len > MIN_CHILD_STEP_LENGTH) {
+			merge(node, node.getChildCount() - len, len - 1, skipDDO,
+					checkInput);
 		}
-		
+
 		return node;
 	}
 
