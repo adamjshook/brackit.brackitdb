@@ -68,14 +68,14 @@ public class DBCompileChain extends CompileChain {
 
 	@Override
 	protected Translator getTranslator(Map<QNm, Str> options) {
-		if (!OPTIMIZE) {
-			return super.getTranslator(options);
-		}
 		return new DBTranslator(options);
 	}
 
 	@Override
 	protected Optimizer getOptimizer(Map<QNm, Str> options) {
+		if (!OPTIMIZE) {
+			return super.getOptimizer(options);
+		}
 		return new DBOptimizer(options, mdm, tx);
 	}
 }
