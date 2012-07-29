@@ -52,14 +52,16 @@ public class ChildPathNodeTypeFilter extends BracketFilter {
 	private final QNm name;
 	private final Type type;
 	private final BitSet matches;
+	private final BitSet candidates;
 	
-	public ChildPathNodeTypeFilter(PathSynopsisMgr ps, NodeType nodeType, BitSet matches) {
+	public ChildPathNodeTypeFilter(PathSynopsisMgr ps, NodeType nodeType, BitSet matches, BitSet candidates) {
 		this.ps = ps;
 		Kind k = nodeType.getNodeKind();
 		this.kind = (k != null) ? k.ID : -1;
 		this.name = nodeType.getQName();
 		this.type = nodeType.getType(); // FIXME not checked!
 		this.matches = matches;
+		this.candidates = candidates;
 	}
 	
 	@Override
@@ -69,7 +71,7 @@ public class ChildPathNodeTypeFilter extends BracketFilter {
 			return false;
 		}
 		int pcr = value.getPCR();
-		if (matches.get(pcr)) {
+		if ((candidates != null) && (candidates.get(pcr))) {
 			return true;
 		}
 		PSNode psn = value.getPsNode();
