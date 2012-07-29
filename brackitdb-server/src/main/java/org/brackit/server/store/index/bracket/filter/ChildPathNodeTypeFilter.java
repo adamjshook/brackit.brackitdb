@@ -27,10 +27,7 @@
  */
 package org.brackit.server.store.index.bracket.filter;
 
-import java.util.BitSet;
-
 import org.brackit.server.metadata.pathSynopsis.PSNode;
-import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsis;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
 import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
@@ -51,15 +48,17 @@ public class ChildPathNodeTypeFilter extends BracketFilter {
 	private final byte kind;
 	private final QNm name;
 	private final Type type;
-	private final BitSet matches;
+	private final PSNode psn;
+	private final int pcr;
 	
-	public ChildPathNodeTypeFilter(PathSynopsisMgr ps, NodeType nodeType, BitSet matches) {
+	public ChildPathNodeTypeFilter(PathSynopsisMgr ps, NodeType nodeType, PSNode psn) {
 		this.ps = ps;
 		Kind k = nodeType.getNodeKind();
 		this.kind = (k != null) ? k.ID : -1;
 		this.name = nodeType.getQName();
 		this.type = nodeType.getType(); // FIXME not checked!
-		this.matches = matches;
+		this.psn = psn;
+		this.pcr = psn.getPCR();
 	}
 	
 	@Override
@@ -68,12 +67,9 @@ public class ChildPathNodeTypeFilter extends BracketFilter {
 		if ((kind != -1) && (kind != kind(hasRecord, value))) {
 			return false;
 		}
-		int pcr = value.getPCR();
-		if (matches.get(pcr)) {
-			return true;
-		}
 		PSNode psn = value.getPsNode();
 		if (psn == null) {
+			int pcr = value.getPCR();
 			try {
 				psn = ps.get(pcr);
 			} catch (DocumentException e) {
@@ -88,7 +84,7 @@ public class ChildPathNodeTypeFilter extends BracketFilter {
 		while (dist++ < 0) {
 			psn = psn.getParent();
 		}
-		return matches.get(psn.getPCR());
+		return (pcr == psn.getPCR());
 	}
 
 	@Override
