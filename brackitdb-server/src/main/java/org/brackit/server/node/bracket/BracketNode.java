@@ -620,6 +620,7 @@ public class BracketNode extends TXNode<BracketNode> {
 				deweyID, hintPageInfo, filter, self, true);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public Stream<? extends Node<?>> performStep(Axis axis, NodeType test)
 			throws DocumentException {
@@ -630,7 +631,8 @@ public class BracketNode extends TXNode<BracketNode> {
 			QNm name = test.getQName();
 			PathSynopsisMgr ps = getPathSynopsis();
 			BitSet matches = ps.match(name, deweyID.getLevel());
-			ElementFilter filter = new ElementFilter(ps, name, matches);
+			BitSet candidates = ps.descendantMatches(matches);
+			ElementFilter filter = new ElementFilter(ps, name, matches, candidates);
 			if (matches.cardinality() == 1) {
 				int pcr = matches.nextSetBit(0);
 				PSNode targetPSN = ps.get(pcr);
@@ -649,8 +651,29 @@ public class BracketNode extends TXNode<BracketNode> {
 					true);
 		}
 		if ((axis == Axis.CHILD) && (test.getNodeKind() == Kind.ELEMENT)) {
-			return locator.collection.store.index.openChildStream(locator,
-					deweyID, hintPageInfo, createFilter(test.getQName()));
+			final StreamIterator children = locator.collection.store.index.openChildStream(locator,
+					deweyID, hintPageInfo, createFilter(test.getQName()));			
+			if (deweyID.isDocument()) {
+				return new Stream<BracketNode>() {
+					boolean first;
+
+					@Override
+					public BracketNode next() throws DocumentException {
+						if (first) {
+							return null;
+						}
+						first = true;
+						return children.next();
+					}
+
+					@Override
+					public void close() {
+						children.close();
+					}
+					
+				};
+			}
+			return children;
 		}
 		return null;
 	}
@@ -667,7 +690,8 @@ public class BracketNode extends TXNode<BracketNode> {
 		if (matches.cardinality() == 1) {
 
 		}
-		return new ElementFilter(ps, name, matches);
+		BitSet candidates = ps.descendantMatches(matches);
+		return new ElementFilter(ps, name, matches, candidates);
 	}
 
 	protected void setNsMappingAndName(NsMapping nsMapping, QNm name)

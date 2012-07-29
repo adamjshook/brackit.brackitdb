@@ -426,6 +426,13 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 			return ps.matchChildPath(types, pcr);
 		}
 	}
+	
+	@Override
+	public BitSet descendantMatches(BitSet matches) throws DocumentException {
+		synchronized (ps) {
+			return ps.descendantMatches(matches);
+		}
+	}
 
 	@Override
 	public PSNode get(int pcr) throws DocumentException {

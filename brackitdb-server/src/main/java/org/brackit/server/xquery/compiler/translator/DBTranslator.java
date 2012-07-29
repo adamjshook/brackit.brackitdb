@@ -164,10 +164,10 @@ public class DBTranslator extends TopDownTranslator {
 				filters = new BracketFilter[tests.length];
 				PathSynopsisMgr ps = bn.getPathSynopsis();
 				BitSet matches = ps.matchChildPath(tests, pcr);
+				BitSet candidates = ps.descendantMatches(matches);
 				for (int i = 0; i < tests.length; i++) {
 					filters[i] = new ChildPathNodeTypeFilter(ps, tests[i],
-							matches);
-					// filters[i] = new NodeTypeFilter(ps, tests[i]);
+							matches, candidates);
 				}
 				filtersMap.put(pcr, filters);
 			}
@@ -205,7 +205,8 @@ public class DBTranslator extends TopDownTranslator {
 			if (filter == null) {
 				QNm name = test.getQName();
 				BitSet matches = ps.match(name, level);
-				filter = new ElementFilter(ps, name, matches);
+				BitSet descMatches = ps.descendantMatches(matches);
+				filter = new ElementFilter(ps, name, matches, descMatches);
 				filterMap.put(level, filter);
 			}
 			if (filter.getMatches().cardinality() == 1) {
@@ -247,7 +248,8 @@ public class DBTranslator extends TopDownTranslator {
 				if (test.getNodeKind() == Kind.ELEMENT) {
 					QNm name = test.getQName();
 					BitSet matches = ps.match(name, level);
-					filter = new ElementFilter(ps, name, matches);
+					BitSet descMatches = ps.descendantMatches(matches);
+					filter = new ElementFilter(ps, name, matches, descMatches);
 				} else {
 					filter = new NodeKindFilter(test.getNodeKind());
 				}
@@ -262,7 +264,7 @@ public class DBTranslator extends TopDownTranslator {
 			return null;
 		}
 	}
-	
+
 	private static class Attribute extends Accessor {
 		private final Map<Integer, BracketFilter> filterMap;
 
