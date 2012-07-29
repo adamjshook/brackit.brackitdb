@@ -47,20 +47,11 @@ public class ElementFilter extends BracketFilter {
 	private final PathSynopsisMgr ps;
 	private final QNm name;
 	private final BitSet matches;
-	private final BitSet candidates;
 
 	public ElementFilter(PathSynopsisMgr ps, QNm name, BitSet matches) {
 		this.ps = ps;
 		this.name = name;
 		this.matches = matches;
-		this.candidates = null;
-	}
-	
-	public ElementFilter(PathSynopsisMgr ps, QNm name, BitSet matches, BitSet candidates) {
-		this.ps = ps;
-		this.name = name;
-		this.matches = matches;
-		this.candidates = candidates;
 	}
 
 	@Override
@@ -69,34 +60,30 @@ public class ElementFilter extends BracketFilter {
 		if (Kind.ELEMENT.ID != kind(hasRecord, value)) {
 			return false;
 		}
-		if (name == null) {
-			return true;
-		}
-		int pcr = value.getPCR();
-		if ((candidates != null) && (!candidates.get(pcr))) {
-			return false;
-		}
-		PSNode psn = value.getPsNode();
-		if (psn == null) {				
-			try {
-				psn = ps.get(pcr);
-			} catch (DocumentException e) {
-				return false;
+		if (name != null) {
+			PSNode psn = value.getPsNode();
+			if (psn == null) {
+				int pcr = value.getPCR();
+				try {
+					psn = ps.get(pcr);
+				} catch (DocumentException e) {
+					return false;
+				}
+				value.setPsNode(psn);
 			}
-			value.setPsNode(psn);
+			int dist = deweyID.getLevel() - psn.getLevel();
+			if (dist > 1) {
+				throw new RuntimeException();
+			}
+			while (dist++ < 0) {
+				psn = psn.getParent();
+			}
+			if (matches != null) {
+				return matches.get(psn.getPCR());
+			}
+			return (psn.getName().atomicCmp(name) == 0);
 		}
-		int dist = deweyID.getLevel() - psn.getLevel();
-		if (dist > 1) {
-			throw new RuntimeException();
-		}
-		while (dist++ < 0) {
-			psn = psn.getParent();
-		}
-		if (matches != null) {
-			boolean hit = matches.get(psn.getPCR());
-			return hit;
-		}
-		return (psn.getName().atomicCmp(name) == 0);
+		return true;
 	}
 
 	@Override
