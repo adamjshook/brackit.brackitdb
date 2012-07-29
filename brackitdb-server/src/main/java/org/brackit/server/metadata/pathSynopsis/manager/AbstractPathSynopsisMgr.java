@@ -251,9 +251,6 @@ public abstract class AbstractPathSynopsisMgr implements PathSynopsisMgr {
 							&& (child.localNameVocID == localNameVocID)
 							&& (child.kind == kind)
 							&& (child.hasNsMapping(nsMapping))) {
-						if (!child.isStored()) {
-							addNodeToTaList(ps, child);
-						}
 						return child;
 					}
 				}
