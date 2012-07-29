@@ -155,61 +155,43 @@ public class PathSynopsis {
 		return matches;
 	}
 
-	public BitSet descendantMatches(BitSet matches) {
-		BitSet descendants = new BitSet(matches.length());
-		for (int i = matches.nextSetBit(0); i >= 0; i = matches
-				.nextSetBit(i + 1)) {
-			addAll(descendants, getNodeByPcr(i));
-		}
-		return descendants;
-	}
-
 	public BitSet matchChildPath(NodeType[] type, int pcr) {
 		BitSet matches = new BitSet();
 		PathSynopsisNode n = getNodeByPcr(pcr);
-		matchChildPath(matches, n, type, 0);
+		matchChildPath(matches, n, type, 0);					
 		return matches;
 	}
-
+	
 	public static void main(String[] args) throws Exception {
 		PathSynopsis ps = new PathSynopsis(1);
-		PathSynopsisNode a = ps.getNewNode(new QNm("a"), -1, -1, -1,
-				Kind.ELEMENT.ID, null, null, 0);
-		PathSynopsisNode b = ps.getNewNode(new QNm("b"), -1, -1, -1,
-				Kind.ELEMENT.ID, null, a, 0);
-		PathSynopsisNode c = ps.getNewNode(new QNm("c"), -1, -1, -1,
-				Kind.ELEMENT.ID, null, b, 0);
-		PathSynopsisNode d = ps.getNewNode(new QNm("d"), -1, -1, -1,
-				Kind.ELEMENT.ID, null, c, 0);
-		PathSynopsisNode e = ps.getNewNode(new QNm("e"), -1, -1, -1,
-				Kind.ELEMENT.ID, null, d, 0);
-		PathSynopsisNode f = ps.getNewNode(new QNm("f"), -1, -1, -1,
-				Kind.ELEMENT.ID, null, d, 0);
-		PathSynopsisNode g = ps.getNewNode(new QNm("g"), -1, -1, -1,
-				Kind.ATTRIBUTE.ID, null, d, 0);
-		NodeType[] path = { new ElementType(new QNm("b")),
-				new ElementType(new QNm("c")), new ElementType(new QNm("d")) };
+		PathSynopsisNode a = ps.getNewNode(new QNm("a"), -1, -1, -1, Kind.ELEMENT.ID, null, null, 0);
+		PathSynopsisNode b = ps.getNewNode(new QNm("b"), -1, -1, -1, Kind.ELEMENT.ID, null, a, 0);
+		PathSynopsisNode c = ps.getNewNode(new QNm("c"), -1, -1, -1, Kind.ELEMENT.ID, null, b, 0);
+		PathSynopsisNode d = ps.getNewNode(new QNm("d"), -1, -1, -1, Kind.ELEMENT.ID, null, c, 0);
+		PathSynopsisNode e = ps.getNewNode(new QNm("e"), -1, -1, -1, Kind.ELEMENT.ID, null, d, 0);
+		PathSynopsisNode f = ps.getNewNode(new QNm("f"), -1, -1, -1, Kind.ELEMENT.ID, null, d, 0);
+		PathSynopsisNode g = ps.getNewNode(new QNm("g"), -1, -1, -1, Kind.ATTRIBUTE.ID, null, d, 0);
+		NodeType[] path = {new ElementType(new QNm("b")), new ElementType(new QNm("c")), new ElementType(new QNm("d"))};
 		System.out.println(ps.matchChildPath(path, a.getPCR()));
 	}
 
 	private void matchChildPath(BitSet matches, PathSynopsisNode n,
 			NodeType[] type, int step) {
-		if ((type[step].getNodeKind() != null)
-				&& (type[step].getNodeKind() != Kind.ELEMENT)) {
+		if ((type[step].getNodeKind() != null) && (type[step].getNodeKind() != Kind.ELEMENT)) {
 			if (n != null) {
 				matches.set(n.getPCR());
 			}
 			return;
-		}
+		}		
 		PathSynopsisNode[] children = (n != null) ? n.children : roots;
 		QNm name = type[step].getQName();
-		for (PathSynopsisNode c : children) {
+		for (PathSynopsisNode c : children) {			
 			if ((name == null) || (c.name.atomicCmp(name) == 0)) {
 				if (++step == type.length) {
 					addAll(matches, c);
 				} else {
 					matches.set(c.getPCR());
-					matchChildPath(matches, c, type, step);
+					matchChildPath(matches, c, type, step);	
 				}
 				return;
 			}

@@ -78,8 +78,6 @@ public interface PathSynopsisMgr extends TXObject<PathSynopsisMgr> {
 	
 	public BitSet matchChildPath(NodeType[] types, int pcr) throws DocumentException;
 	
-	public BitSet descendantMatches(BitSet matches) throws DocumentException;
-	
 	public PSNode get(int pcr) throws DocumentException;
 
 	public PSNode getAncestor(int pcr, int level) throws DocumentException;
