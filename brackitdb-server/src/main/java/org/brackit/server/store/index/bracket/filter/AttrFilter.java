@@ -27,16 +27,12 @@
  */
 package org.brackit.server.store.index.bracket.filter;
 
-import java.util.BitSet;
-
 import org.brackit.server.metadata.pathSynopsis.PSNode;
 import org.brackit.server.metadata.pathSynopsis.manager.PathSynopsisMgr;
 import org.brackit.server.node.bracket.BracketNode;
 import org.brackit.server.store.page.bracket.DeweyIDBuffer;
 import org.brackit.server.store.page.bracket.RecordInterpreter;
 import org.brackit.xquery.atomic.QNm;
-import org.brackit.xquery.xdm.DocumentException;
-import org.brackit.xquery.xdm.Kind;
 
 /**
  * @author Sebastian Baechle
@@ -46,46 +42,30 @@ public class AttrFilter extends BracketFilter {
 
 	private final PathSynopsisMgr ps;
 	private final QNm name;
-	private final BitSet matches;
+	private final PSNode psn;
+	private final int pcr;
 
-	public AttrFilter(PathSynopsisMgr ps, QNm name, BitSet matches) {
+	public AttrFilter(PathSynopsisMgr ps, QNm name, PSNode psn) {
 		this.ps = ps;
 		this.name = name;
-		this.matches = matches;
+		this.psn = psn;
+		this.pcr = psn.getPCR();
 	}
 
 	@Override
 	public boolean accept(DeweyIDBuffer deweyID, boolean hasRecord,
 			RecordInterpreter value) {
-		if (Kind.ATTRIBUTE.ID != kind(hasRecord, value)) {
+		if (value.getPCR() == pcr) {
+			value.setPsNode(psn);
+			return true;
+		} else {
 			return false;
 		}
-		if (name != null) {
-			PSNode psn = value.getPsNode();
-			if (psn == null) {
-				int pcr = value.getPCR();
-				try {
-					psn = ps.get(pcr);
-				} catch (DocumentException e) {
-					return false;
-				}
-				value.setPsNode(psn);
-			}
-			if (matches != null) {
-				return matches.get(psn.getPCR());
-			}
-			return (psn.getName().atomicCmp(name) == 0);
-		}
-		return true;
 	}
 
 	@Override
 	public boolean accept(BracketNode node) {
 		// TODO Auto-generated method stub
 		return false;
-	}
-
-	public BitSet getMatches() {
-		return matches;
 	}
 }

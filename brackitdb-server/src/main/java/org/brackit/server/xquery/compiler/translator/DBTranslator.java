@@ -197,20 +197,23 @@ public class DBTranslator extends TopDownTranslator {
 				throws QueryException {
 
 			BracketNode bn = (BracketNode) node;
-			PathSynopsisMgr ps = bn.getPathSynopsis();
-			XTCdeweyID deweyID = bn.getDeweyID();
-			int level = deweyID.getLevel();
-
-			ElementFilter filter = filterMap.get(level);
+			PSNode psNode = bn.getPSNode();
+			int pcr = (psNode != null) ? psNode.getPCR() : -1;
+			ElementFilter filter = filterMap.get(pcr);
+			
 			if (filter == null) {
+				int level = bn.getDeweyID().getLevel();
 				QNm name = test.getQName();
+				PathSynopsisMgr ps = bn.getPathSynopsis();
 				BitSet matches = ps.match(name, level);
 				filter = new ElementFilter(ps, name, matches);
-				filterMap.put(level, filter);
+				filterMap.put(pcr, filter);
 			}
 			if (filter.getMatches().cardinality() == 1) {
-				int pcr = filter.getMatches().nextSetBit(0);
-				PSNode targetPSN = ps.get(pcr);
+				int level = bn.getDeweyID().getLevel();
+				int pcr2 = filter.getMatches().nextSetBit(0);
+				PathSynopsisMgr ps = bn.getPathSynopsis();
+				PSNode targetPSN = ps.get(pcr2);
 				if (targetPSN.getLevel() == level + 1) {
 					return bn.getChildren(filter);
 				}
@@ -238,20 +241,21 @@ public class DBTranslator extends TopDownTranslator {
 				throws QueryException {
 
 			BracketNode bn = (BracketNode) node;
-			PathSynopsisMgr ps = bn.getPathSynopsis();
-			XTCdeweyID deweyID = bn.getDeweyID();
-			int level = deweyID.getLevel();
-
-			BracketFilter filter = filterMap.get(level);
+			PSNode psNode = bn.getPSNode();
+			int pcr = (psNode != null) ? psNode.getPCR() : -1;
+			BracketFilter filter = filterMap.get(pcr);
+						
 			if (filter == null) {
+				int level = bn.getDeweyID().getLevel();
 				if (test.getNodeKind() == Kind.ELEMENT) {
 					QNm name = test.getQName();
+					PathSynopsisMgr ps = bn.getPathSynopsis();
 					BitSet matches = ps.match(name, level);
 					filter = new ElementFilter(ps, name, matches);
 				} else {
 					filter = new NodeKindFilter(test.getNodeKind());
 				}
-				filterMap.put(level, filter);
+				filterMap.put(pcr, filter);
 			}
 			return bn.getChildren(filter);
 		}
@@ -276,16 +280,16 @@ public class DBTranslator extends TopDownTranslator {
 				throws QueryException {
 
 			BracketNode bn = (BracketNode) node;
-			PathSynopsisMgr ps = bn.getPathSynopsis();
-			XTCdeweyID deweyID = bn.getDeweyID();
-			int level = deweyID.getLevel();
+			PSNode psNode = bn.getPSNode();
+			int pcr = (psNode != null) ? psNode.getPCR() : -1;
+			BracketFilter filter = filterMap.get(pcr);
 
-			BracketFilter filter = filterMap.get(level);
 			if (filter == null) {
 				QNm name = test.getQName();
-				BitSet matches = ps.match(name, level);
-				filter = new AttrFilter(ps, name, matches);
-				filterMap.put(level, filter);
+				PathSynopsisMgr ps = bn.getPathSynopsis();
+				PSNode psn = ps.getChildIfExists(bn.getPCR(), name, Kind.ATTRIBUTE.ID, null);				
+				filter = new AttrFilter(ps, name, psn);
+				filterMap.put(pcr, filter);
 			}
 			return bn.getAttributes(filter);
 		}
@@ -296,26 +300,4 @@ public class DBTranslator extends TopDownTranslator {
 			return null;
 		}
 	}
-	//
-	// private static class MultiChildProjectAndFilterStep extends PredicateExpr
-	// {
-	//
-	// @Override
-	// public Sequence evaluate(QueryContext ctx, Tuple tuple)
-	// throws QueryException {
-	// // TODO Auto-generated method stub
-	// return null;
-	// }
-	//
-	// @Override
-	// public Item evaluateToItem(QueryContext ctx, Tuple tuple)
-	// throws QueryException {
-	// return ExprUtil.asItem(evaluate(ctx, tuple));
-	// }
-	//
-	// @Override
-	// public boolean isVacuous() {
-	// return false;
-	// }
-	// }
 }
