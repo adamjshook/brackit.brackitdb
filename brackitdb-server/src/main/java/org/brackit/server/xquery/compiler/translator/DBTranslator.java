@@ -164,11 +164,20 @@ public class DBTranslator extends TopDownTranslator {
 			if (filters == null) {
 				filters = new BracketFilter[tests.length];
 				PathSynopsisMgr ps = bn.getPathSynopsis();
-				BitSet matches = ps.matchChildPath(tests, pcr);
+				int parentPCR = pcr;
 				for (int i = 0; i < tests.length; i++) {
-					filters[i] = new ChildPathNodeTypeFilter(ps, tests[i],
-							matches);
-					// filters[i] = new NodeTypeFilter(ps, tests[i]);
+					Kind kind = tests[i].getNodeKind();
+					if (kind == Kind.ELEMENT) { 
+						QNm name = tests[i].getQName();					
+						PSNode childPSN = ps.getChildIfExists(parentPCR, name,
+								kind.ID, null);
+						filters[i] = new ChildPathNodeTypeFilter(ps, tests[i],
+								childPSN);
+						parentPCR = childPSN.getPCR();
+					} else {
+						filters[i] = new NodeKindFilter(kind) ;
+						break; // TODO CHECK
+					}					
 				}
 				filtersMap.put(pcr, filters);
 			}
@@ -201,7 +210,7 @@ public class DBTranslator extends TopDownTranslator {
 			PSNode psNode = bn.getPSNode();
 			int pcr = (psNode != null) ? psNode.getPCR() : -1;
 			ElementFilter filter = filterMap.get(pcr);
-			
+
 			if (filter == null) {
 				int level = bn.getDeweyID().getLevel();
 				QNm name = test.getQName();
@@ -245,7 +254,7 @@ public class DBTranslator extends TopDownTranslator {
 			PSNode psNode = bn.getPSNode();
 			int pcr = (psNode != null) ? psNode.getPCR() : -1;
 			BracketFilter filter = filterMap.get(pcr);
-						
+
 			if (filter == null) {
 				int level = bn.getDeweyID().getLevel();
 				if (test.getNodeKind() == Kind.ELEMENT) {
@@ -267,7 +276,7 @@ public class DBTranslator extends TopDownTranslator {
 			return null;
 		}
 	}
-	
+
 	private static class Attribute extends Accessor {
 		private final Map<Integer, BracketFilter> filterMap;
 
@@ -288,7 +297,8 @@ public class DBTranslator extends TopDownTranslator {
 			if (filter == null) {
 				QNm name = test.getQName();
 				PathSynopsisMgr ps = bn.getPathSynopsis();
-				PSNode psn = ps.getChildIfExists(bn.getPCR(), name, Kind.ATTRIBUTE.ID, null);				
+				PSNode psn = ps.getChildIfExists(bn.getPCR(), name,
+						Kind.ATTRIBUTE.ID, null);
 				filter = new AttrFilter(ps, name, psn);
 				filterMap.put(pcr, filter);
 			}
