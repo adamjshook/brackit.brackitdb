@@ -53,6 +53,7 @@ import org.brackit.xquery.compiler.translator.Binding;
 import org.brackit.xquery.compiler.translator.TopDownTranslator;
 import org.brackit.xquery.expr.Accessor;
 import org.brackit.xquery.expr.StepExpr;
+import org.brackit.xquery.node.stream.AtomStream;
 import org.brackit.xquery.util.Cfg;
 import org.brackit.xquery.xdm.Axis;
 import org.brackit.xquery.xdm.Expr;
@@ -291,7 +292,10 @@ public class DBTranslator extends TopDownTranslator {
 				filter = new AttrFilter(ps, name, psn);
 				filterMap.put(pcr, filter);
 			}
-			return bn.getAttributes(filter);
+			Stream<? extends BracketNode> attr = bn.getAttributes(filter);
+			BracketNode att = attr.next();
+			attr.close();
+			return new AtomStream<Node<?>>(att);
 		}
 
 		@Override
