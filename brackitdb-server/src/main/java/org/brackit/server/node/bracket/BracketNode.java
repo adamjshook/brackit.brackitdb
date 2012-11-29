@@ -620,7 +620,6 @@ public class BracketNode extends TXNode<BracketNode> {
 				deweyID, hintPageInfo, filter, self, true);
 	}
 
-	@Override
 	public Stream<? extends Node<?>> performStep(Axis axis, NodeType test)
 			throws DocumentException {
 		if (!OPTIMIZE) {
