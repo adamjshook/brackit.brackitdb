@@ -228,7 +228,7 @@ public class TCPConnector implements Runnable {
 			} catch (Throwable e) {
 				log.error(e);
 				try {
-					if (tx == null) {
+					if (session.isAutoCommit()) {
 						session.rollback();
 					}
 				} catch (ServerException e1) {
