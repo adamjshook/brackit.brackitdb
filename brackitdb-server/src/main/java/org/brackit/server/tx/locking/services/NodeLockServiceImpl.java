@@ -152,7 +152,7 @@ public class NodeLockServiceImpl<T extends TreeLockMode<T>> extends
 	protected T lockNode(Tx tx, XTCdeweyID deweyID, int tail, T mode,
 			LockClass lockClass, boolean conditional) throws LockException {
 		int lockDepth = tx.getLockDepth();
-		int level = deweyID.level;
+		int level = deweyID.level + ((tail == 0) ? 0 : 1);
 
 		if (mode != null) {
 			if (lockDepth >= 0) {
@@ -169,6 +169,7 @@ public class NodeLockServiceImpl<T extends TreeLockMode<T>> extends
 
 					deweyID = deweyID.getAncestor(lockDepth);
 					mode = mode.escalate(distanceToTargetLevel);
+					tail = 0;
 				}
 
 				if (log.isTraceEnabled()) {
