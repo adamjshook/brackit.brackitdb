@@ -181,6 +181,8 @@ public class Header<T extends LockMode<T>> extends SyncLatch implements Latch {
 									+ "Remember it for later", request));
 				}
 
+				// update granted mode by looking at trailing requests
+				// before attempting to convert current request
 				for (Request<T> trailing = request.getNext(); trailing != null; trailing = trailing
 						.getNext()) {
 					LockState trailingState = trailing.getState();
@@ -188,13 +190,13 @@ public class Header<T extends LockMode<T>> extends SyncLatch implements Latch {
 					if ((trailingState == LockState.GRANTED)
 							|| (trailingState == LockState.CONVERTING)) {
 						T newMode = (grantedMode != null) ? grantedMode
-								.convert(request.getMode()) : request.getMode();
+								.convert(trailing.getMode()) : trailing.getMode();
 
 						if (log.isTraceEnabled()) {
 							log.trace(String.format("Trailing request %s "
 									+ "is already granted. "
 									+ "Updating granted mode"
-									+ " from %s to %s", request, grantedMode,
+									+ " from %s to %s", trailing, grantedMode,
 									newMode));
 						}
 
@@ -250,8 +252,37 @@ public class Header<T extends LockMode<T>> extends SyncLatch implements Latch {
 								request, grantedMode, grantedMode
 										.convert(request.getMode())));
 					}
-
+					
 					grantedMode = grantedMode.convert(request.getMode());
+
+					// CAVEAT: We need to check here the trailing requests
+					// again because we might have downgraded the granted mode!
+					// TODO: We could save the 2nd scan over the trailing requests here
+					// if we could derive it from the lock modes, although this makes
+					// the lock mode interface more complex ...
+					for (Request<T> trailing = request.getNext(); trailing != null; trailing = trailing
+							.getNext()) {
+						LockState trailingState = trailing.getState();
+
+						if ((trailingState == LockState.GRANTED)
+								|| (trailingState == LockState.CONVERTING)) {
+							T newMode = (grantedMode != null) ? grantedMode
+									.convert(trailing.getMode()) : trailing.getMode();
+
+							if (log.isTraceEnabled()) {
+								log.trace(String.format("Trailing request %s "
+										+ "is already granted. "
+										+ "Updating granted mode"
+										+ " from %s to %s", trailing, grantedMode,
+										newMode));
+							}
+
+							grantedMode = newMode;
+						} else {
+							break;
+						}
+					}
+					
 					wait = true;
 					break;
 				}
@@ -305,7 +336,7 @@ public class Header<T extends LockMode<T>> extends SyncLatch implements Latch {
 
 		if (log.isTraceEnabled()) {
 			log.trace("Finished granting in lock chain");
-			// log.trace(printLockChain());
+			log.trace(printLockChain());
 		}
 	}
 
