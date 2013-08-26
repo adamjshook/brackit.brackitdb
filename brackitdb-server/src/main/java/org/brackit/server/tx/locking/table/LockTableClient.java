@@ -431,12 +431,12 @@ public class LockTableClient<T extends LockMode<T>> implements
 	private boolean lockWait(Header<T> header, Request<T> request) {
 		long blockTime = 0;
 
-		synchronized (request) {
-			blockedAt.add(request);
-			header.unlatch();
-			lscb.unlatch();
+		try {
+			synchronized (request) {
+				blockedAt.add(request);
+				header.unlatch();
+				lscb.unlatch();
 
-			try {
 				if (log.isTraceEnabled()) {
 					log.trace(String.format("%s is waiting for %s at %s.", tx
 							.toShortString(), blockedAt, this));
@@ -450,11 +450,11 @@ public class LockTableClient<T extends LockMode<T>> implements
 				long waitEnd = System.currentTimeMillis();
 				blockTime = (waitEnd - waitBegin);
 				lscb.addBlockTime(blockTime);
-			} finally {
-				lscb.latchX();
-				header.latchX();
-				blockedAt.remove(request);
 			}
+		} finally {
+			lscb.latchX();
+			header.latchX();
+			blockedAt.remove(request);
 		}
 
 		if (tx.getState() == TxState.ABORTED) {
